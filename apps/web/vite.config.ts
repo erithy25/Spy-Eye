@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 const apiTarget = process.env['SPY_EYE_API'] ?? 'http://127.0.0.1:8787';
 
 export default defineConfig({
+  // Relative asset URLs: the built client works under any path prefix.
+  base: './',
   plugins: [react()],
   server: {
     host: '127.0.0.1',

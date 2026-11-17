@@ -18,9 +18,9 @@ export class EventHub {
     this.clients.add(res);
     res.on('close', () => this.clients.delete(res));
     res.on('error', () => this.clients.delete(res));
-    this.heartbeat ??= setInterval(() => {
-      for (const client of this.clients) client.write(': ping\n\n');
-    }, 15_000).unref();
+    // A real event (not an SSE comment) so the browser can tell a live stream from one that a
+    // proxy is buffering, and fall back to polling.
+    this.heartbeat ??= setInterval(() => this.broadcast({ type: 'ping' }), 5_000).unref();
   }
 
   private write(res: ServerResponse, event: ServerEvent): void {

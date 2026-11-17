@@ -62,7 +62,9 @@ export function frameFileName(n: number): string {
 }
 
 export function frameUrl(videoId: string, n: number): string {
-  return `/media/${videoId}/frames/${frameFileName(n)}`;
+  // Relative on purpose: the client resolves it against its own base URL, so the app also works
+  // behind a reverse proxy that serves it under a path prefix.
+  return `media/${videoId}/frames/${frameFileName(n)}`;
 }
 
 export function sceneId(videoId: string, index: number): string {

@@ -22,9 +22,14 @@ export interface ServerConnection {
   live: LiveFeed;
 }
 
+/** The server pings every 5 s; a longer silence means the event stream is not getting through. */
+const STREAM_SILENCE_MS = 12_000;
+const POLL_INTERVAL_MS = 2_000;
+
 /**
  * Keeps the app state in sync through the server-sent event stream.
  * High-frequency analysis events bypass React state and go to `live` subscribers.
+ * If the stream is blocked or buffered (some proxies do that), the state is polled instead.
  */
 export function useServer(): ServerConnection {
   const [state, setState] = useState<AppState | null>(null);
@@ -40,14 +45,39 @@ export function useServer(): ServerConnection {
   });
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchState(controller.signal)
-      .then((initial) => setState((current) => current ?? initial))
-      .catch(() => undefined);
+    let lastStreamMessage = 0;
+    let disposed = false;
 
-    const source = new EventSource('/api/events');
-    source.onopen = () => setConnected(true);
-    source.onerror = () => setConnected(false);
+    /** Replaces the whole state and reports index changes (used for snapshots and polling). */
+    const applySnapshot = (next: AppState): void => {
+      const previous = statuses.current;
+      const current = new Map(next.videos.map((v) => [v.id, v.status]));
+      let changed = previous.size !== current.size;
+      for (const [id, status] of current) {
+        if (previous.get(id) !== status && (status === 'ready' || status === 'error' || !previous.has(id))) changed = true;
+      }
+      statuses.current = current;
+      setState(next);
+      if (changed) setIndexVersion((v) => v + 1);
+    };
+
+    const poll = (): void => {
+      fetchState()
+        .then((next) => {
+          if (disposed) return;
+          applySnapshot(next);
+          setConnected(true);
+        })
+        .catch(() => {
+          if (!disposed && Date.now() - lastStreamMessage > STREAM_SILENCE_MS) setConnected(false);
+        });
+    };
+    poll();
+    const pollTimer = window.setInterval(() => {
+      if (Date.now() - lastStreamMessage > STREAM_SILENCE_MS) poll();
+    }, POLL_INTERVAL_MS);
+
+    const source = new EventSource('api/events');
     source.onmessage = (message: MessageEvent<string>) => {
       let event: ServerEvent;
       try {
@@ -55,11 +85,13 @@ export function useServer(): ServerConnection {
       } catch {
         return;
       }
+      lastStreamMessage = Date.now();
+      setConnected(true);
       switch (event.type) {
+        case 'ping':
+          break;
         case 'state':
-          statuses.current = new Map(event.state.videos.map((v) => [v.id, v.status]));
-          setState(event.state);
-          setIndexVersion((v) => v + 1);
+          applySnapshot(event.state);
           break;
         case 'model': {
           const model = event.model;
@@ -101,7 +133,8 @@ export function useServer(): ServerConnection {
       }
     };
     return () => {
-      controller.abort();
+      disposed = true;
+      window.clearInterval(pollTimer);
       source.close();
     };
   }, []);

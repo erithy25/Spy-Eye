@@ -10,7 +10,7 @@ import type { EventHub } from './events.js';
 import type { EmbeddingModel } from './ml/model.js';
 import type { Pipeline } from './pipeline.js';
 import { SearchError, type SearchEngine } from './search.js';
-import { frameFileName, isValidVideoId, type Store } from './store.js';
+import { frameUrl, isValidVideoId, type Store } from './store.js';
 import {
   DETAIL_LEVELS,
   SAMPLE_FPS_OPTIONS,
@@ -185,7 +185,7 @@ export async function registerRoutes(app: FastifyInstance, deps: RouteDeps): Pro
     if (!entry || !scene) return sendError(reply, 404, 'Szene nicht gefunden.');
     const frames = entry.frames
       .slice(scene.firstFrame, scene.lastFrame + 1)
-      .map((f) => ({ frameNumber: f.n, time: f.t, url: `/media/${id}/frames/${frameFileName(f.n)}` }));
+      .map((f) => ({ frameNumber: f.n, time: f.t, url: frameUrl(id, f.n) }));
     const body: SceneFramesResponse = { video: entry.info, scene: store.sceneInfo(entry, scene), frames };
     return body;
   });

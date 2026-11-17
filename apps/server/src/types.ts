@@ -120,6 +120,7 @@ export interface FrameEvent {
 
 export type ServerEvent =
   | { type: 'state'; state: AppState }
+  | { type: 'ping' }
   | { type: 'model'; model: ModelState }
   | { type: 'video'; video: VideoInfo; stats: Stats; queueLength: number }
   | { type: 'video-removed'; videoId: string; stats: Stats }

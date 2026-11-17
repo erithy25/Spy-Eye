@@ -150,7 +150,7 @@ export function SceneModal({ target, onClose, onPrev, onNext }: SceneModalProps)
               <video
                 key={`${target.videoId}-${target.sceneIndex}`}
                 className="player"
-                src={`/media/${target.videoId}/source#t=${Math.max(0, scene.start).toFixed(2)}`}
+                src={`media/${target.videoId}/source#t=${Math.max(0, scene.start).toFixed(2)}`}
                 controls
                 autoPlay
                 onError={() => {

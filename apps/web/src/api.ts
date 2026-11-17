@@ -46,12 +46,12 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 }
 
 export function fetchState(signal?: AbortSignal): Promise<AppState> {
-  return getJson<AppState>('/api/state', signal);
+  return getJson<AppState>('api/state', signal);
 }
 
 export function searchScenes(query: string, limit: number, signal?: AbortSignal): Promise<SearchResponse> {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
-  return getJson<SearchResponse>(`/api/search?${params.toString()}`, signal);
+  return getJson<SearchResponse>(`api/search?${params.toString()}`, signal);
 }
 
 export function explainFrame(
@@ -61,28 +61,28 @@ export function explainFrame(
   signal?: AbortSignal,
 ): Promise<ExplainResponse> {
   const params = new URLSearchParams({ videoId, frame: String(frameNumber), q: query });
-  return getJson<ExplainResponse>(`/api/explain?${params.toString()}`, signal);
+  return getJson<ExplainResponse>(`api/explain?${params.toString()}`, signal);
 }
 
 export function fetchMap(signal?: AbortSignal): Promise<MapResponse> {
-  return getJson<MapResponse>('/api/map', signal);
+  return getJson<MapResponse>('api/map', signal);
 }
 
 export function fetchVideoScenes(videoId: string, signal?: AbortSignal): Promise<VideoScenesResponse> {
-  return getJson<VideoScenesResponse>(`/api/videos/${videoId}/scenes`, signal);
+  return getJson<VideoScenesResponse>(`api/videos/${videoId}/scenes`, signal);
 }
 
 export function fetchSceneFrames(videoId: string, sceneIndex: number, signal?: AbortSignal): Promise<SceneFramesResponse> {
-  return getJson<SceneFramesResponse>(`/api/videos/${videoId}/scenes/${sceneIndex}/frames`, signal);
+  return getJson<SceneFramesResponse>(`api/videos/${videoId}/scenes/${sceneIndex}/frames`, signal);
 }
 
 export async function deleteVideo(videoId: string): Promise<void> {
-  const response = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
+  const response = await fetch(`api/videos/${videoId}`, { method: 'DELETE' });
   if (!response.ok && response.status !== 404) throw await parseError(response);
 }
 
 export async function retryVideo(videoId: string): Promise<void> {
-  const response = await fetch(`/api/videos/${videoId}/retry`, { method: 'POST' });
+  const response = await fetch(`api/videos/${videoId}/retry`, { method: 'POST' });
   if (!response.ok) throw await parseError(response);
 }
 
@@ -100,7 +100,7 @@ export function uploadVideo(
   const xhr = new XMLHttpRequest();
   const promise = new Promise<UploadResponse>((resolve, reject) => {
     const params = new URLSearchParams({ fps: String(options.sampleFps), detail: options.detail });
-    xhr.open('POST', `/api/videos?${params.toString()}`);
+    xhr.open('POST', `api/videos?${params.toString()}`);
     xhr.responseType = 'json';
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && event.total > 0) onProgress(event.loaded / event.total);
