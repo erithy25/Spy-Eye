@@ -66,8 +66,9 @@ Daten liegen in `data/videos/<id>/`: Quelldatei, `frames/*.jpg`, `embeddings.f32
 | `Xenova/mobileclip_s0` | 4.2 s | 70 s | ~300 MB | 0.87 |
 | `Xenova/siglip-base-patch16-224` | 9.8 s | 307 s | ~800 MB | 0.88 |
 
-\* 16 Test-Queries auf 135 gelabelten COCO-Bildern, als Videos kodiert. Die Szenenerkennung trifft mit
-allen drei Modellen 135 von 135 Schnitten ohne Fehlalarm.
+\* 16 Test-Queries auf 135 gelabelten COCO-Bildern, als Videos kodiert. Der SigLIP-Wert stammt aus einem
+früheren Lauf, in dem eines der drei Testvideos mit `detail` indexiert war; er ist also leicht begünstigt.
+Die Szenenerkennung trifft mit allen drei Modellen 135 von 135 Schnitten ohne Fehlalarm.
 
 Die Zeiten skalieren linear mit der Videomenge: Inferenz ist der Engpass und nutzt bereits alle Kerne.
 Der Grob-Durchlauf kostet auf dieser Maschine rund 0.1 s pro Video, der Fein-Durchlauf rund 0.25 s pro
