@@ -1,0 +1,27 @@
+{
+  "name": "spy-eye",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local, self-hosted semantic video search: upload a video dataset, index it with a local vision-language model, search scenes by free text.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter @spy-eye/server start",
+    "typecheck": "pnpm -r typecheck",
+    "models:download": "pnpm --filter @spy-eye/server models:download"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ],
+    "ignoredBuiltDependencies": [
+      "onnxruntime-node",
+      "protobufjs"
+    ]
+  }
+}
