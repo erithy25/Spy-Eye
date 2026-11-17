@@ -53,6 +53,9 @@ interface PersistedMeta {
 const ID_PATTERN = /^[a-f0-9]{16}$/;
 const PLAYABLE_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.mov', '.ogv']);
 
+/** Removal options that tolerate short-lived file locks (Windows releases handles lazily). */
+export const RM_OPTIONS = { recursive: true, force: true, maxRetries: 8, retryDelay: 150 } as const;
+
 export function isValidVideoId(id: string): boolean {
   return ID_PATTERN.test(id);
 }
@@ -254,7 +257,7 @@ export class Store {
     entry.cancelled = true;
     this.entries.delete(id);
     this.version++;
-    await fs.rm(this.videoDir(id), { recursive: true, force: true });
+    await fs.rm(this.videoDir(id), RM_OPTIONS);
     return true;
   }
 
@@ -276,7 +279,7 @@ export class Store {
       } catch {
         // Upload was interrupted before the metadata was written: remove the leftovers.
         log(`Removing incomplete upload ${id}`);
-        await fs.rm(dir, { recursive: true, force: true });
+        await fs.rm(dir, RM_OPTIONS);
         continue;
       }
       if (meta.version !== 1 || meta.info?.id !== id || typeof meta.sourceFile !== 'string') {

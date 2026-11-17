@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import sharp from 'sharp';
 import type { DetailLevel, NormRect } from '../types.js';
 
@@ -16,7 +17,10 @@ export interface DecodedFrame {
 }
 
 export async function decodeFrame(filePath: string): Promise<DecodedFrame> {
-  const { data, info } = await sharp(filePath, { failOn: 'none' })
+  // Decode from memory: when sharp opens a path itself, libvips can keep the file handle open,
+  // which on Windows blocks deleting the frame afterwards.
+  const encoded = await fs.readFile(filePath);
+  const { data, info } = await sharp(encoded, { failOn: 'none' })
     .toColourspace('srgb')
     .removeAlpha()
     .raw()

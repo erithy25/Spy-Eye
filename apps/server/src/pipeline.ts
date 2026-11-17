@@ -16,7 +16,7 @@ import {
   type PixelRect,
 } from './ml/preprocess.js';
 import type { VocabularyIndex } from './ml/vocab.js';
-import { frameUrl, type SceneRecord, type Store, type VideoEntry } from './store.js';
+import { RM_OPTIONS, frameUrl, type SceneRecord, type Store, type VideoEntry } from './store.js';
 import type { FrameEvent, NormRect, Tag } from './types.js';
 
 /** Scene segmentation thresholds on cosine distance between whole-frame embeddings. */
@@ -149,7 +149,7 @@ export class Pipeline {
           this.store.resetAnalysis(entry);
           entry.info.status = 'error';
           entry.info.error = message;
-          await fs.rm(this.store.framesDir(id), { recursive: true, force: true }).catch(() => undefined);
+          await fs.rm(this.store.framesDir(id), RM_OPTIONS).catch(() => undefined);
           await this.store.persistMeta(entry).catch(() => undefined);
         }
         this.current = null;
@@ -173,7 +173,7 @@ export class Pipeline {
     entry.info.status = 'processing';
     this.broadcastVideo(entry);
 
-    await fs.rm(framesDir, { recursive: true, force: true });
+    await fs.rm(framesDir, RM_OPTIONS);
     await fs.mkdir(framesDir, { recursive: true });
 
     const probe = await probeVideo(store.sourcePath(entry));
@@ -281,7 +281,7 @@ export class Pipeline {
               tiles: [],
               msPerFrame,
             });
-            await fs.rm(store.framePath(id, n), { force: true });
+            await fs.rm(store.framePath(id, n), { force: true, maxRetries: 8, retryDelay: 150 });
             continue;
           }
           lastSignature = signature;

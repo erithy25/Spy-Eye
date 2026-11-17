@@ -1,2 +1,11 @@
 packages:
   - "apps/*"
+
+# Only these dependencies may run install scripts. onnxruntime-node's script would download
+# several hundred MB of GPU libraries that are not needed for CPU inference.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+ignoredBuiltDependencies:
+  - onnxruntime-node
+  - protobufjs

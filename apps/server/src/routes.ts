@@ -10,7 +10,7 @@ import type { EventHub } from './events.js';
 import type { EmbeddingModel } from './ml/model.js';
 import type { Pipeline } from './pipeline.js';
 import { SearchError, type SearchEngine } from './search.js';
-import { frameUrl, isValidVideoId, type Store } from './store.js';
+import { RM_OPTIONS, frameUrl, isValidVideoId, type Store } from './store.js';
 import {
   DETAIL_LEVELS,
   SAMPLE_FPS_OPTIONS,
@@ -136,7 +136,7 @@ export async function registerRoutes(app: FastifyInstance, deps: RouteDeps): Pro
         response.accepted.push(entry.info);
         hub.broadcast({ type: 'video', video: entry.info, stats: store.stats(), queueLength: pipeline.queueLength });
       } catch (err: unknown) {
-        await fs.rm(store.videoDir(id), { recursive: true, force: true });
+        await fs.rm(store.videoDir(id), RM_OPTIONS);
         response.rejected.push({ name, reason: err instanceof Error ? err.message : String(err) });
       }
     }
