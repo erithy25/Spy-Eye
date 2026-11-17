@@ -28,6 +28,7 @@ interface RelevanceCalibration {
 const RELEVANCE: Readonly<Record<ModelFamily, RelevanceCalibration>> = {
   siglip: { floor: 0.06, ceiling: 0.09, prior: 0.075, width: 0.012, k: 2.5 },
   clip: { floor: 0.24, ceiling: 0.285, prior: 0.27, width: 0.012, k: 2.5 },
+  mobileclip: { floor: 0.225, ceiling: 0.26, prior: 0.245, width: 0.012, k: 2.5 },
 };
 
 const MIN_SCENES_FOR_STATS = 40;

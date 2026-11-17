@@ -12,7 +12,7 @@ import { config } from '../config.js';
 import type { ModelState } from '../types.js';
 import { l2normalizeRows } from './math.js';
 
-export type ModelFamily = 'siglip' | 'clip';
+export type ModelFamily = 'siglip' | 'clip' | 'mobileclip';
 
 type ProgressListener = (state: ModelState) => void;
 
@@ -25,7 +25,28 @@ interface CallableTokenizer {
 }
 
 function detectFamily(modelId: string): ModelFamily {
-  return /siglip/i.test(modelId) ? 'siglip' : 'clip';
+  if (/siglip/i.test(modelId)) return 'siglip';
+  if (/mobileclip/i.test(modelId)) return 'mobileclip';
+  return 'clip';
+}
+
+/** Preprocessing constants used when the model's processor config does not state them. */
+const DEFAULT_NORMALIZATION: Readonly<
+  Record<ModelFamily, { mean: [number, number, number]; std: [number, number, number] }>
+> = {
+  siglip: { mean: [0.5, 0.5, 0.5], std: [0.5, 0.5, 0.5] },
+  clip: { mean: [0.48145466, 0.4578275, 0.40821073], std: [0.26862954, 0.26130258, 0.27577711] },
+  // MobileCLIP only rescales pixels to 0..1.
+  mobileclip: { mean: [0, 0, 0], std: [1, 1, 1] },
+};
+
+/** Devices to try in order for the configured ML_DEVICE. */
+function deviceCandidates(): string[] {
+  if (config.device === 'cpu') return ['cpu'];
+  if (config.device !== 'auto') return [config.device, 'cpu'];
+  if (process.platform === 'win32') return ['dml', 'cpu'];
+  if (process.platform === 'linux' && process.arch === 'x64') return ['cuda', 'cpu'];
+  return ['cpu'];
 }
 
 function asNumberTriple(value: unknown, fallback: [number, number, number]): [number, number, number] {
@@ -95,6 +116,7 @@ export class EmbeddingModel {
       dim: null,
       imageSize: null,
       dtype: config.modelDtype,
+      device: 'cpu',
       threads: config.threads,
       progress: 0,
       message: 'Initialisiere …',
@@ -156,12 +178,6 @@ export class EmbeddingModel {
       });
     };
 
-    const modelOptions = {
-      dtype: config.modelDtype,
-      progress_callback,
-      session_options: { intraOpNumThreads: config.threads, interOpNumThreads: 1 },
-    };
-
     this.updateState({ phase: 'loading', progress: 0, message: 'Lade Tokenizer …' });
     const tokenizer = await AutoTokenizer.from_pretrained(config.modelId, { progress_callback });
     this.tokenizer = tokenizer as unknown as CallableTokenizer;
@@ -171,35 +187,57 @@ export class EmbeddingModel {
       .image_processor;
     const ipc = imageProcessor?.config ?? {};
     this.imageSize = readImageSize(ipc);
-    const defaultMean: [number, number, number] =
-      this.family === 'siglip' ? [0.5, 0.5, 0.5] : [0.48145466, 0.4578275, 0.40821073];
-    const defaultStd: [number, number, number] =
-      this.family === 'siglip' ? [0.5, 0.5, 0.5] : [0.26862954, 0.26130258, 0.27577711];
-    this.imageMean = asNumberTriple(ipc['image_mean'], defaultMean);
-    this.imageStd = asNumberTriple(ipc['image_std'], defaultStd);
+    const normalization = DEFAULT_NORMALIZATION[this.family];
+    this.imageMean = asNumberTriple(ipc['image_mean'], normalization.mean);
+    this.imageStd = asNumberTriple(ipc['image_std'], normalization.std);
 
-    this.updateState({ message: 'Lade Text-Encoder …' });
     const TextModel = this.family === 'siglip' ? SiglipTextModel : CLIPTextModelWithProjection;
-    this.textModel = (await TextModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
-
-    this.updateState({ message: 'Lade Bild-Encoder …' });
     const VisionModel = this.family === 'siglip' ? SiglipVisionModel : CLIPVisionModelWithProjection;
-    this.visionModel = (await VisionModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
 
-    this.updateState({ progress: 0.99, message: 'Wärme Modell auf …' });
-    const warm = await this.embedPixels(new Float32Array(3 * this.imageSize * this.imageSize), 1);
-    this.dim = warm.length;
-    if (this.dim <= 0) throw new Error('Vision model returned an empty embedding.');
-    const warmText = await this.embedTexts(['warm-up']);
-    if (warmText.length !== this.dim) {
-      throw new Error(`Text (${warmText.length}) and image (${this.dim}) embedding sizes differ.`);
+    // Try the requested execution provider first; a GPU provider that fails to initialise or to
+    // run the warm-up falls back to the CPU instead of taking the whole app down.
+    const candidates = deviceCandidates();
+    let lastError: unknown = null;
+    let active: string | null = null;
+    for (const device of candidates) {
+      try {
+        const modelOptions = {
+          dtype: config.modelDtype,
+          progress_callback,
+          ...(device === 'cpu' ? {} : { device: device as 'dml' }),
+          session_options: { intraOpNumThreads: config.threads, interOpNumThreads: 1 },
+        };
+        this.updateState({ message: `Lade Text-Encoder (${device}) …` });
+        this.textModel = (await TextModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
+        this.updateState({ message: `Lade Bild-Encoder (${device}) …` });
+        this.visionModel = (await VisionModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
+
+        this.updateState({ progress: 0.99, message: 'Wärme Modell auf …' });
+        const warm = await this.embedPixels(new Float32Array(3 * this.imageSize * this.imageSize), 1);
+        if (warm.length <= 0 || !warm.every((v) => Number.isFinite(v))) {
+          throw new Error('Vision model returned an empty or non-finite embedding.');
+        }
+        this.dim = warm.length;
+        const warmText = await this.embedTexts(['warm-up']);
+        if (warmText.length !== this.dim) {
+          throw new Error(`Text (${warmText.length}) and image (${this.dim}) embedding sizes differ.`);
+        }
+        active = device;
+        break;
+      } catch (err: unknown) {
+        lastError = err;
+        this.textModel = null;
+        this.visionModel = null;
+      }
     }
+    if (active === null) throw lastError instanceof Error ? lastError : new Error(String(lastError));
 
     this.updateState({
       phase: 'ready',
       progress: 1,
       dim: this.dim,
       imageSize: this.imageSize,
+      device: active,
       message: 'Bereit',
     });
   }
@@ -243,9 +281,9 @@ export class EmbeddingModel {
     if (!model || !tokenizer) return Promise.reject(new Error('Model is not loaded yet.'));
     if (texts.length === 0) return Promise.resolve(new Float32Array(0));
     return this.textLock.run(async () => {
-      // SigLIP was trained with fixed-length padding; CLIP uses dynamic padding.
+      // SigLIP and MobileCLIP expect fixed-length padding; CLIP uses dynamic padding.
       const inputs = tokenizer(texts, {
-        padding: this.family === 'siglip' ? 'max_length' : true,
+        padding: this.family === 'clip' ? true : 'max_length',
         truncation: true,
       });
       const feed = this.family === 'siglip' ? { input_ids: inputs['input_ids'] } : inputs;

@@ -45,10 +45,15 @@ export const config = {
   modelCacheDir: resolveFromRoot(envString('MODEL_CACHE_DIR', '.models')),
   webDistDir: resolveFromRoot(envString('WEB_DIST_DIR', 'apps/web/dist')),
   /** Hugging Face model id (ONNX export) of a CLIP- or SigLIP-style dual encoder. */
-  modelId: envString('MODEL_ID', 'Xenova/siglip-base-patch16-224'),
+  modelId: envString('MODEL_ID', 'Xenova/mobileclip_s2'),
   modelDtype: parseDtype(envString('MODEL_DTYPE', 'fp32')),
   /** When true the model must already be in the local cache; no network access at all. */
   offline: envBool('SPY_EYE_OFFLINE', false),
+  /**
+   * onnxruntime execution provider: cpu, dml (DirectML, any DirectX 12 GPU on Windows),
+   * cuda (Linux, NVIDIA) or auto (try the GPU provider of this platform, fall back to cpu).
+   */
+  device: envString('ML_DEVICE', 'cpu').toLowerCase(),
   threads: envNumber('ML_THREADS', os.availableParallelism(), 1, 256),
   /** Number of image tiles per inference batch. */
   batchSize: envNumber('ML_BATCH_SIZE', 8, 1, 64),

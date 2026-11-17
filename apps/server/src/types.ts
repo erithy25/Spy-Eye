@@ -47,6 +47,11 @@ export interface VideoInfo {
   processingMs: number;
   /** Whether the browser can likely play the source file directly. */
   playable: boolean;
+  /**
+   * True while only the quick first-pass index exists (a few whole-frame keyframes).
+   * The video is already searchable; the dense analysis replaces this index when it finishes.
+   */
+  coarse: boolean;
 }
 
 export interface SceneInfo {
@@ -67,7 +72,9 @@ export type ModelPhase = 'loading' | 'ready' | 'error';
 export interface ModelState {
   phase: ModelPhase;
   modelId: string;
-  family: 'siglip' | 'clip' | null;
+  family: 'siglip' | 'clip' | 'mobileclip' | null;
+  /** Execution provider actually in use (cpu, dml, cuda, ...). */
+  device: string;
   dim: number | null;
   imageSize: number | null;
   dtype: string;

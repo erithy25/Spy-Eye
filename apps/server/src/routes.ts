@@ -112,6 +112,8 @@ export async function registerRoutes(app: FastifyInstance, deps: RouteDeps): Pro
     }
 
     const response: UploadResponse = { accepted: [], rejected: [] };
+    pipeline.uploadStarted();
+    try {
     for await (const part of request.files()) {
       const name = cleanDisplayName(part.filename);
       const ext = path.extname(name).toLowerCase();
@@ -139,6 +141,9 @@ export async function registerRoutes(app: FastifyInstance, deps: RouteDeps): Pro
         await fs.rm(store.videoDir(id), RM_OPTIONS);
         response.rejected.push({ name, reason: err instanceof Error ? err.message : String(err) });
       }
+    }
+    } finally {
+      pipeline.uploadFinished();
     }
     if (response.accepted.length === 0 && response.rejected.length === 0) {
       return sendError(reply, 400, 'Keine Datei übermittelt.');

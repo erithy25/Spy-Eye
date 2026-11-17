@@ -23,6 +23,7 @@ const DETAIL_OPTIONS: { value: DetailLevel; label: string; hint: string }[] = [
 ];
 
 const FPS_OPTIONS: readonly number[] = [0.5, 1, 2, 4];
+const PARALLEL_UPLOADS = 4;
 
 /** Recursively collects files from dropped directories. */
 async function filesFromEntry(entry: FileSystemEntry): Promise<File[]> {
@@ -59,7 +60,8 @@ async function filesFromDrop(event: DragEvent): Promise<File[]> {
 function statusText(video: VideoInfo): string {
   switch (video.status) {
     case 'queued':
-      return 'wartet';
+      // "grob": already searchable through the quick first pass, dense analysis pending.
+      return video.coarse ? 'grob' : 'wartet';
     case 'processing':
       return `${Math.round(video.progress * 100)} %`;
     case 'error':
@@ -78,35 +80,33 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect }: DatasetPanel
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const queue = useRef<{ item: UploadItem; file: File; options: { sampleFps: number; detail: DetailLevel } }[]>([]);
-  const busy = useRef(false);
+  const active = useRef(0);
 
   const patchUpload = useCallback((key: string, patch: Partial<UploadItem>) => {
     setUploads((list) => list.map((u) => (u.key === key ? { ...u, ...patch } : u)));
   }, []);
 
-  const pump = useCallback(async () => {
-    if (busy.current) return;
-    busy.current = true;
-    try {
-      for (;;) {
-        const next = queue.current.shift();
-        if (!next) break;
-        const { item, file, options } = next;
-        patchUpload(item.key, { status: 'uploading' });
-        try {
-          const result = await uploadVideo(file, options, (fraction) => patchUpload(item.key, { progress: fraction })).promise;
+  // Several uploads run at once; analysis on the server does not wait for the last file.
+  const pump = useCallback(() => {
+    while (active.current < PARALLEL_UPLOADS) {
+      const next = queue.current.shift();
+      if (!next) return;
+      const { item, file, options } = next;
+      active.current++;
+      patchUpload(item.key, { status: 'uploading' });
+      uploadVideo(file, options, (fraction) => patchUpload(item.key, { progress: fraction }))
+        .promise.then((result) => {
           const rejected = result.rejected[0];
-          if (rejected) {
-            patchUpload(item.key, { status: 'failed', error: rejected.reason });
-          } else {
-            setUploads((list) => list.filter((u) => u.key !== item.key));
-          }
-        } catch (err: unknown) {
+          if (rejected) patchUpload(item.key, { status: 'failed', error: rejected.reason });
+          else setUploads((list) => list.filter((u) => u.key !== item.key));
+        })
+        .catch((err: unknown) => {
           patchUpload(item.key, { status: 'failed', error: err instanceof Error ? err.message : String(err) });
-        }
-      }
-    } finally {
-      busy.current = false;
+        })
+        .finally(() => {
+          active.current--;
+          pump();
+        });
     }
   }, [patchUpload]);
 
@@ -135,7 +135,7 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect }: DatasetPanel
         return item;
       });
       setUploads((list) => [...list, ...items]);
-      void pump();
+      pump();
     },
     [detail, sampleFps, pump],
   );

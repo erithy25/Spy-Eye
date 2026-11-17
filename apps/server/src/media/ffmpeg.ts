@@ -182,3 +182,42 @@ export function extractFrames(options: ExtractOptions): FrameExtraction {
     },
   };
 }
+
+export interface KeyframeRequest {
+  /** Timestamp in seconds. */
+  time: number;
+  outputPath: string;
+}
+
+/**
+ * Grabs one keyframe near each of the given timestamps with a single ffmpeg process. The cost is
+ * independent of the video length. A request without a keyframe after its timestamp produces no
+ * file; callers must check which outputs exist.
+ */
+export async function extractKeyframes(inputPath: string, requests: KeyframeRequest[], maxWidth: number): Promise<void> {
+  if (requests.length === 0) return;
+  const args = ['-hide_banner', '-nostdin', '-loglevel', 'error', '-y'];
+  // -skip_frame nokey: the decoder only touches keyframes, so each request yields the first
+  // keyframe at or after its timestamp without decoding the frames in between. For a preview any
+  // nearby picture will do, and it cuts the decode time by a factor of three or more.
+  for (const request of requests) {
+    args.push('-threads', '1', '-skip_frame', 'nokey', '-ss', Math.max(0, request.time).toFixed(3), '-i', inputPath);
+  }
+  requests.forEach((request, i) => {
+    args.push(
+      '-map', `${i}:v:0`,
+      '-frames:v', '1',
+      '-an',
+      '-sn',
+      '-vf', `scale=w='min(${maxWidth},iw)':h=-2:flags=bicubic`,
+      '-pix_fmt', 'yuvj420p',
+      '-q:v', '3',
+      request.outputPath,
+    );
+  });
+  const { code, stderr } = await runCapture(args, 120_000);
+  if (code !== 0) {
+    const lines = stderr.trim().split('\n').filter((l) => l.trim() !== '');
+    throw new FfmpegError(`Video konnte nicht dekodiert werden: ${lines.slice(-2).join(' | ') || `Exit-Code ${code}`}`);
+  }
+}

@@ -191,6 +191,7 @@ export class Store {
         progress: 0,
         processingMs: 0,
         playable: PLAYABLE_EXTENSIONS.has(ext),
+        coarse: false,
       },
       sourceFile: params.sourceFile,
       frames: [],
@@ -213,6 +214,7 @@ export class Store {
     entry.info.progress = 0;
     entry.info.processingMs = 0;
     entry.info.error = null;
+    entry.info.coarse = false;
     this.version++;
   }
 
@@ -294,7 +296,8 @@ export class Store {
       }
 
       const entry: VideoEntry = {
-        info: meta.info,
+        // `coarse` is absent in metadata written by earlier versions.
+        info: { ...meta.info, coarse: false },
         sourceFile: meta.sourceFile,
         frames: meta.frames,
         scenes: meta.scenes,

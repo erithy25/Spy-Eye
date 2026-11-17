@@ -1,9 +1,11 @@
 import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { config } from './config.js';
 import type { EventHub } from './events.js';
-import { extractFrames, probeVideo, type FrameExtraction } from './media/ffmpeg.js';
+import { extractFrames, extractKeyframes, probeVideo, type FrameExtraction } from './media/ffmpeg.js';
 import { GrowableMatrix, dotAt, sigmoid } from './ml/math.js';
-import type { EmbeddingModel } from './ml/model.js';
+import type { EmbeddingModel, ModelFamily } from './ml/model.js';
 import {
   decodeFrame,
   frameSignature,
@@ -16,20 +18,22 @@ import {
   type PixelRect,
 } from './ml/preprocess.js';
 import type { VocabularyIndex } from './ml/vocab.js';
-import { RM_OPTIONS, frameUrl, type SceneRecord, type Store, type VideoEntry } from './store.js';
+import { RM_OPTIONS, frameUrl, type FrameRecord, type SceneRecord, type Store, type VideoEntry } from './store.js';
 import type { FrameEvent, NormRect, Tag } from './types.js';
 
 /** Scene segmentation thresholds on cosine distance between whole-frame embeddings. */
-const SCENE_THRESHOLDS = {
+const SCENE_THRESHOLDS: Readonly<Record<ModelFamily, { cut: number; drift: number }>> = {
   siglip: { cut: 0.28, drift: 0.36 },
   clip: { cut: 0.22, drift: 0.28 },
-} as const;
+  mobileclip: { cut: 0.3, drift: 0.38 },
+};
 
 /** Operating point for turning a label similarity into a display confidence. */
-const TAG_CALIBRATION = {
+const TAG_CALIBRATION: Readonly<Record<ModelFamily, { center: number; slope: number }>> = {
   siglip: { center: 0.07, slope: 80 },
   clip: { center: 0.255, slope: 80 },
-} as const;
+  mobileclip: { center: 0.235, slope: 60 },
+};
 
 /**
  * Continuous footage (CCTV, dashcams) has no hard cuts. Two extra rules split it into useful
@@ -41,6 +45,19 @@ const MAX_SCENE_SEC = 30;
 const FINGERPRINT_SIZE = 64;
 const MAX_TAGS_PER_FRAME = 5;
 const MAX_TAGS_PER_SCENE = 6;
+
+/**
+ * First pass: a few whole-frame keyframes per video, so a new dataset is searchable within
+ * seconds. Preview frames use file numbers from this offset upwards to stay clear of the
+ * sequentially numbered frames of the dense pass.
+ */
+const PREVIEW_FRAME_OFFSET = 9_000_000;
+const PREVIEW_MAX_FRAMES = 3;
+const PREVIEW_SECONDS_PER_FRAME = 30;
+/** Videos handled per first-pass round; bounds memory and makes results appear progressively. */
+const PREVIEW_CHUNK = 32;
+/** Dense analysis waits until no upload has arrived for this long. */
+const INGEST_SETTLE_MS = 1200;
 
 interface Logger {
   info(msg: string): void;
@@ -60,15 +77,51 @@ interface PendingFrame {
   time: number;
 }
 
+interface PreparedPreview {
+  entry: VideoEntry;
+  durationSec: number | null;
+  width: number;
+  height: number;
+  frames: { n: number; time: number; pixels: Float32Array }[];
+}
+
 class CancelledError extends Error {}
 
-/** Sequential background worker that turns uploaded videos into searchable scenes. */
+/** Runs `worker` over `items` with at most `limit` running at once; preserves order. */
+async function mapLimit<T, R>(items: readonly T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const run = async (): Promise<void> => {
+    for (;;) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index] as T);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, run));
+  return results;
+}
+
+/**
+ * Background worker that turns uploaded videos into searchable scenes in two passes:
+ *
+ * 1. Preview pass, for every new video before anything else: a few keyframes, one whole-frame
+ *    embedding each, batched across videos. Makes the whole dataset searchable quickly.
+ * 2. Dense pass, one video at a time: sampled frames with tiles, scene segmentation and tags.
+ *    Its result atomically replaces the preview index of that video.
+ *
+ * Inference is the bottleneck and already uses every core, so dense passes run sequentially;
+ * decoding for the preview pass runs in parallel.
+ */
 export class Pipeline {
-  private readonly queue: string[] = [];
+  private readonly previewQueue: string[] = [];
+  private readonly fullQueue: string[] = [];
   private running = false;
   private current: { id: string; extraction: FrameExtraction | null } | null = null;
   private vocabulary: VocabularyIndex | null = null;
   private readyGate: Promise<void> | null = null;
+  private uploadsInFlight = 0;
+  private lastArrival = 0;
 
   constructor(
     private readonly store: Store,
@@ -87,25 +140,54 @@ export class Pipeline {
     gate.catch(() => undefined);
   }
 
+  /** Called by the upload route so dense work can step aside while files are still arriving. */
+  uploadStarted(): void {
+    this.uploadsInFlight++;
+  }
+
+  uploadFinished(): void {
+    this.uploadsInFlight = Math.max(0, this.uploadsInFlight - 1);
+    this.lastArrival = Date.now();
+  }
+
+  /**
+   * While a dataset is being uploaded, every bit of inference time goes to the preview pass.
+   * Dense analysis resumes once no file has arrived for a moment.
+   */
+  private async yieldToIngest(isCancelled: () => boolean): Promise<void> {
+    for (;;) {
+      if (this.previewQueue.length > 0) await this.runPreviews();
+      const settling = this.uploadsInFlight > 0 || Date.now() - this.lastArrival < INGEST_SETTLE_MS;
+      if (!settling || isCancelled()) return;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  /** Videos whose dense analysis is still outstanding. */
   get queueLength(): number {
-    return this.queue.length + (this.current ? 1 : 0);
+    return this.fullQueue.length + (this.current ? 1 : 0);
   }
 
   enqueue(id: string): void {
-    if (this.queue.includes(id) || this.current?.id === id) return;
-    this.queue.push(id);
+    if (this.fullQueue.includes(id) || this.current?.id === id) return;
+    this.previewQueue.push(id);
+    this.fullQueue.push(id);
+    this.lastArrival = Date.now();
     void this.drain();
   }
 
   /** Stops work on a video that is being deleted. */
   cancel(id: string): void {
-    const idx = this.queue.indexOf(id);
-    if (idx >= 0) this.queue.splice(idx, 1);
+    for (const queue of [this.previewQueue, this.fullQueue]) {
+      const idx = queue.indexOf(id);
+      if (idx >= 0) queue.splice(idx, 1);
+    }
     if (this.current?.id === id) this.current.extraction?.kill();
   }
 
   shutdown(): void {
-    this.queue.length = 0;
+    this.previewQueue.length = 0;
+    this.fullQueue.length = 0;
     this.current?.extraction?.kill();
   }
 
@@ -118,19 +200,34 @@ export class Pipeline {
     });
   }
 
+  private async fail(entry: VideoEntry, err: unknown): Promise<void> {
+    const id = entry.info.id;
+    const message = err instanceof Error ? err.message : String(err);
+    this.log.error(`Processing "${entry.info.name}" failed: ${message}`);
+    this.cancel(id);
+    this.store.resetAnalysis(entry);
+    entry.info.status = 'error';
+    entry.info.error = message;
+    await fs.rm(this.store.framesDir(id), RM_OPTIONS).catch(() => undefined);
+    await this.store.persistMeta(entry).catch(() => undefined);
+    this.broadcastVideo(entry);
+  }
+
   private async drain(): Promise<void> {
     if (this.running) return;
     this.running = true;
     try {
+      await (this.readyGate ?? this.model.load());
       for (;;) {
-        const id = this.queue.shift();
+        await this.yieldToIngest(() => false);
+        if (this.previewQueue.length > 0) continue;
+        const id = this.fullQueue.shift();
         if (id === undefined) break;
         const entry = this.store.get(id);
         if (!entry || entry.cancelled) continue;
         this.current = { id, extraction: null };
         const started = Date.now();
         try {
-          await (this.readyGate ?? this.model.load());
           await this.process(entry, started);
           entry.info.status = 'ready';
           entry.info.progress = 1;
@@ -139,28 +236,158 @@ export class Pipeline {
           this.log.info(
             `Indexed "${entry.info.name}": ${entry.info.framesIndexed} frames, ${entry.info.sceneCount} scenes in ${(entry.info.processingMs / 1000).toFixed(1)} s`,
           );
+          this.current = null;
+          this.store.version++;
+          this.broadcastVideo(entry);
         } catch (err: unknown) {
-          if (entry.cancelled || err instanceof CancelledError) {
-            this.current = null;
-            continue;
-          }
-          const message = err instanceof Error ? err.message : String(err);
-          this.log.error(`Processing "${entry.info.name}" failed: ${message}`);
-          this.store.resetAnalysis(entry);
-          entry.info.status = 'error';
-          entry.info.error = message;
-          await fs.rm(this.store.framesDir(id), RM_OPTIONS).catch(() => undefined);
-          await this.store.persistMeta(entry).catch(() => undefined);
+          this.current = null;
+          if (entry.cancelled || err instanceof CancelledError) continue;
+          await this.fail(entry, err);
         }
-        this.current = null;
-        this.store.version++;
-        if (!entry.cancelled) this.broadcastVideo(entry);
       }
+    } catch (err: unknown) {
+      this.log.error(`Pipeline stopped: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       this.running = false;
       this.current = null;
     }
   }
+
+  // ------------------------------------------------------------------ preview pass
+
+  /** Embeds a handful of keyframes for every waiting video. */
+  private async runPreviews(): Promise<void> {
+    const { model, store } = this;
+    const size = model.imageSize;
+    const plane = 3 * size * size;
+    const dim = model.dim;
+    const decodeConcurrency = Math.max(2, os.availableParallelism());
+
+    while (this.previewQueue.length > 0) {
+      const ids = this.previewQueue.splice(0, PREVIEW_CHUNK);
+      const chunkStart = Date.now();
+      const prepared = (await mapLimit(ids, decodeConcurrency, (id) => this.preparePreview(id, size, plane))).filter(
+        (p): p is PreparedPreview => p !== null,
+      );
+
+      const preparedAt = Date.now();
+      // One flat list of frames so batches are filled across video boundaries.
+      const flat = prepared.flatMap((p) => p.frames);
+      const embeddings = new Float32Array(flat.length * dim);
+      for (let start = 0; start < flat.length; start += config.batchSize) {
+        const batch = flat.slice(start, start + config.batchSize);
+        const pixels = new Float32Array(batch.length * plane);
+        batch.forEach((frame, i) => pixels.set(frame.pixels, i * plane));
+        embeddings.set(await model.embedPixels(pixels, batch.length), start * dim);
+      }
+
+      this.log.info(
+        `Preview pass: ${prepared.length} videos, ${flat.length} frames; decode ${preparedAt - chunkStart} ms, embed ${Date.now() - preparedAt} ms`,
+      );
+
+      let offset = 0;
+      for (const item of prepared) {
+        const { entry } = item;
+        const count = item.frames.length;
+        const vectors = embeddings.slice(offset * dim, (offset + count) * dim);
+        offset += count;
+        // The video may have been deleted, or its dense pass may have finished, in the meantime.
+        if (entry.cancelled || entry.info.status !== 'queued' || !store.get(entry.info.id)) continue;
+
+        const segment = item.durationSec !== null ? item.durationSec / count : 1;
+        entry.frames = item.frames.map((f, i): FrameRecord => ({ n: f.n, t: f.time, s: i }));
+        entry.scenes = item.frames.map((f, i): SceneRecord => {
+          const tags = this.vocabulary
+            ? this.topTags(this.scoreLabels(vectors, i * dim, 1, this.vocabulary), this.vocabulary, MAX_TAGS_PER_SCENE)
+            : [];
+          return {
+            index: i,
+            start: item.durationSec !== null ? i * segment : f.time,
+            end: item.durationSec !== null ? (i + 1) * segment : f.time + 1,
+            firstFrame: i,
+            lastFrame: i,
+            keyframe: i,
+            tags,
+          };
+        });
+        entry.embeddings = GrowableMatrix.fromData(vectors, dim);
+        entry.info.durationSec = item.durationSec;
+        entry.info.frameWidth = item.width;
+        entry.info.frameHeight = item.height;
+        entry.info.tilesPerFrame = 1;
+        entry.info.framesIndexed = count;
+        entry.info.sceneCount = count;
+        entry.info.coarse = true;
+        store.version++;
+        this.broadcastVideo(entry);
+      }
+    }
+  }
+
+  /** Probes one video, grabs its keyframes and preprocesses them for the model. */
+  private async preparePreview(id: string, size: number, plane: number): Promise<PreparedPreview | null> {
+    const { store, model } = this;
+    const entry = store.get(id);
+    if (!entry || entry.cancelled) return null;
+    try {
+      const framesDir = store.framesDir(id);
+      await fs.mkdir(framesDir, { recursive: true });
+      const probe = await probeVideo(store.sourcePath(entry));
+      if (!probe.hasVideo) throw new Error('Die Datei enthält keine Videospur.');
+      const duration = probe.durationSec;
+      const count =
+        duration === null ? 1 : Math.max(1, Math.min(PREVIEW_MAX_FRAMES, Math.round(duration / PREVIEW_SECONDS_PER_FRAME)));
+      const requests = Array.from({ length: count }, (_, i) => ({
+        n: PREVIEW_FRAME_OFFSET + i + 1,
+        time: duration === null ? 0 : (duration * (i + 0.5)) / count,
+      }));
+
+      const grab = (list: typeof requests): Promise<void> =>
+        extractKeyframes(
+          store.sourcePath(entry),
+          list.map((r) => ({ time: r.time, outputPath: store.framePath(id, r.n) })),
+          config.frameWidth,
+        );
+      await grab(requests);
+
+      const frames: PreparedPreview['frames'] = [];
+      let width = 0;
+      let height = 0;
+      const load = async (request: (typeof requests)[number]): Promise<void> => {
+        let decoded: DecodedFrame;
+        try {
+          decoded = await decodeFrame(store.framePath(id, request.n));
+        } catch {
+          return; // No keyframe after this timestamp, so ffmpeg wrote no picture for it.
+        }
+        if (width === 0) {
+          width = decoded.width;
+          height = decoded.height;
+        } else if (decoded.width !== width || decoded.height !== height) {
+          return;
+        }
+        const pixels = new Float32Array(plane);
+        const full: PixelRect = { left: 0, top: 0, width: decoded.width, height: decoded.height };
+        await writeTile(decoded, full, size, model.imageMean, model.imageStd, pixels, 0);
+        frames.push({ n: request.n, time: request.time, pixels });
+      };
+      for (const request of requests) await load(request);
+
+      if (frames.length === 0) {
+        // Short clips often have their only keyframe at the start; that one is always reachable.
+        const first = { n: PREVIEW_FRAME_OFFSET + 1, time: 0 };
+        await grab([first]);
+        await load(first);
+      }
+      if (frames.length === 0) throw new Error('Aus dem Video konnten keine Bilder extrahiert werden.');
+      return { entry, durationSec: duration, width, height, frames };
+    } catch (err: unknown) {
+      if (!entry.cancelled) await this.fail(entry, err);
+      return null;
+    }
+  }
+
+  // ------------------------------------------------------------------ dense pass
 
   private async process(entry: VideoEntry, started: number): Promise<void> {
     const { store, model } = this;
@@ -169,16 +396,33 @@ export class Pipeline {
     const fps = entry.info.sampleFps;
     const framesDir = store.framesDir(id);
 
-    store.resetAnalysis(entry);
     entry.info.status = 'processing';
+    entry.info.error = null;
+    entry.info.progress = 0;
+    entry.info.framesSeen = 0;
     this.broadcastVideo(entry);
 
-    await fs.rm(framesDir, RM_OPTIONS);
+    // Results are built in a draft and swapped in at the end, so the preview index of this
+    // video stays searchable while the dense pass is running.
+    const draft: VideoEntry = {
+      info: { ...entry.info },
+      sourceFile: entry.sourceFile,
+      frames: [],
+      scenes: [],
+      embeddings: null,
+      cancelled: false,
+    };
+
     await fs.mkdir(framesDir, { recursive: true });
+    const isPreviewFile = (name: string): boolean => Number.parseInt(name, 10) > PREVIEW_FRAME_OFFSET;
+    for (const name of await fs.readdir(framesDir)) {
+      // Left-overs of an interrupted earlier run; the preview frames are still referenced.
+      if (!isPreviewFile(name)) await fs.rm(path.join(framesDir, name), RM_OPTIONS);
+    }
 
     const probe = await probeVideo(store.sourcePath(entry));
     if (!probe.hasVideo) throw new Error('Die Datei enthält keine Videospur.');
-    entry.info.durationSec = probe.durationSec;
+    draft.info.durationSec = probe.durationSec;
     const expectedFrames = probe.durationSec !== null ? Math.max(1, Math.ceil(probe.durationSec * fps)) : null;
 
     const extraction = extractFrames({
@@ -212,7 +456,7 @@ export class Pipeline {
       // Keyframe: the frame closest to the scene centroid.
       let best = scene.firstFrame;
       let bestDot = -Infinity;
-      const emb = entry.embeddings;
+      const emb = draft.embeddings;
       if (emb) {
         for (let f = scene.firstFrame; f <= scene.lastFrame; f++) {
           const d = dotAt(emb.data, f * tilesPerFrame * dim, open.sum, 0, dim);
@@ -224,13 +468,16 @@ export class Pipeline {
       }
       scene.keyframe = best;
       if (vocabulary) scene.tags = this.topTags(open.labelMax, vocabulary, MAX_TAGS_PER_SCENE);
-      this.hub.broadcast({ type: 'scene', scene: store.sceneInfo(entry, scene) });
+      this.hub.broadcast({ type: 'scene', scene: store.sceneInfo(draft, scene) });
       state.open = null;
     };
 
     try {
       for (;;) {
         if (entry.cancelled) throw new CancelledError();
+        // Newly uploaded videos get their preview before this dense pass continues.
+        await this.yieldToIngest(() => entry.cancelled);
+
         const available = extraction.available();
         if (next > available) {
           if (extraction.finished()) break;
@@ -250,11 +497,11 @@ export class Pipeline {
             layout = tileLayout(decoded.width, decoded.height, entry.info.detail);
             tilesPerFrame = layout.length;
             normTiles = layout.map((r) => toNormRect(r, decoded.width, decoded.height));
-            entry.info.frameWidth = decoded.width;
-            entry.info.frameHeight = decoded.height;
-            entry.info.tilesPerFrame = tilesPerFrame;
-            entry.embeddings = new GrowableMatrix(dim, Math.max(64, (expectedFrames ?? 256) * tilesPerFrame));
-          } else if (decoded.width !== entry.info.frameWidth || decoded.height !== entry.info.frameHeight) {
+            draft.info.frameWidth = decoded.width;
+            draft.info.frameHeight = decoded.height;
+            draft.info.tilesPerFrame = tilesPerFrame;
+            draft.embeddings = new GrowableMatrix(dim, Math.max(64, (expectedFrames ?? 256) * tilesPerFrame));
+          } else if (decoded.width !== draft.info.frameWidth || decoded.height !== draft.info.frameHeight) {
             throw new Error('Die Bildgröße ändert sich innerhalb des Videos; das wird nicht unterstützt.');
           }
           const signature = await frameSignature(decoded);
@@ -264,7 +511,7 @@ export class Pipeline {
           if (isDuplicate) {
             // Nothing changed since the last indexed frame: skip the embedding. The scene is
             // extended over short pauses only; a long pause ends it (see IDLE_GAP_SEC).
-            const lastKept = entry.frames[entry.frames.length - 1];
+            const lastKept = draft.frames[draft.frames.length - 1];
             if (state.open && lastKept && time - lastKept.t <= idleLimit) state.open.record.end = time + 1 / fps;
             events.push({
               videoId: id,
@@ -289,7 +536,7 @@ export class Pipeline {
         }
         next = batchEnd + 1;
 
-        if (kept.length > 0 && layout && entry.embeddings) {
+        if (kept.length > 0 && layout && draft.embeddings) {
           const tiles: PixelRect[] = layout;
           const pixels = new Float32Array(kept.length * tilesPerFrame * plane);
           await Promise.all(
@@ -318,7 +565,7 @@ export class Pipeline {
               for (let i = 0; i < dim; i++) norm += (currentScene.sum[i] as number) ** 2;
               drift = 1 - dotAt(full, 0, currentScene.sum, 0, dim) / Math.sqrt(norm || 1);
             }
-            const previousFrame = entry.frames[entry.frames.length - 1];
+            const previousFrame = draft.frames[draft.frames.length - 1];
             const idleGap = previousFrame !== undefined && frame.time - previousFrame.t > idleLimit;
             const tooLong = currentScene !== null && frame.time - currentScene.record.start >= MAX_SCENE_SEC;
             const cut =
@@ -327,15 +574,15 @@ export class Pipeline {
             if (cut || currentScene === null) {
               closeScene();
               const record: SceneRecord = {
-                index: entry.scenes.length,
+                index: draft.scenes.length,
                 start: frame.time,
                 end: frame.time + 1 / fps,
-                firstFrame: entry.frames.length,
-                lastFrame: entry.frames.length,
-                keyframe: entry.frames.length,
+                firstFrame: draft.frames.length,
+                lastFrame: draft.frames.length,
+                keyframe: draft.frames.length,
                 tags: [],
               };
-              entry.scenes.push(record);
+              draft.scenes.push(record);
               scene = {
                 record,
                 sum: new Float32Array(dim),
@@ -345,12 +592,12 @@ export class Pipeline {
             } else {
               scene = currentScene;
             }
-            scene.record.lastFrame = entry.frames.length;
+            scene.record.lastFrame = draft.frames.length;
             scene.record.end = frame.time + 1 / fps;
             for (let i = 0; i < dim; i++) scene.sum[i] = (scene.sum[i] as number) + (full[i] as number);
 
-            entry.frames.push({ n: frame.n, t: frame.time, s: scene.record.index });
-            entry.embeddings.append(embedded, rowOffset, tilesPerFrame);
+            draft.frames.push({ n: frame.n, t: frame.time, s: scene.record.index });
+            draft.embeddings.append(embedded, rowOffset, tilesPerFrame);
 
             let tags: Tag[] = [];
             if (vocabulary) {
@@ -385,9 +632,6 @@ export class Pipeline {
             });
             previousFull = new Float32Array(full);
           }
-          entry.info.framesIndexed = entry.frames.length;
-          entry.info.sceneCount = entry.scenes.length;
-          store.version++;
         }
 
         events.sort((a, b) => a.frameNumber - b.frameNumber);
@@ -405,10 +649,27 @@ export class Pipeline {
 
       await extraction.done;
       closeScene();
-      if (entry.frames.length === 0) throw new Error('Aus dem Video konnten keine Bilder extrahiert werden.');
+      if (draft.frames.length === 0) throw new Error('Aus dem Video konnten keine Bilder extrahiert werden.');
     } catch (err: unknown) {
       extraction.kill();
       throw err;
+    }
+    if (entry.cancelled) throw new CancelledError();
+
+    // Swap the dense index in for the preview index.
+    entry.frames = draft.frames;
+    entry.scenes = draft.scenes;
+    entry.embeddings = draft.embeddings;
+    entry.info.durationSec = draft.info.durationSec;
+    entry.info.frameWidth = draft.info.frameWidth;
+    entry.info.frameHeight = draft.info.frameHeight;
+    entry.info.tilesPerFrame = draft.info.tilesPerFrame;
+    entry.info.framesIndexed = draft.frames.length;
+    entry.info.sceneCount = draft.scenes.length;
+    entry.info.coarse = false;
+    store.version++;
+    for (const name of await fs.readdir(framesDir)) {
+      if (isPreviewFile(name)) await fs.rm(path.join(framesDir, name), RM_OPTIONS).catch(() => undefined);
     }
   }
 

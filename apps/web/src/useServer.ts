@@ -37,6 +37,7 @@ export function useServer(): ServerConnection {
   const [indexVersion, setIndexVersion] = useState(0);
   const listeners = useRef(new Set<LiveListener>());
   const statuses = useRef(new Map<string, VideoStatus>());
+  const coarse = useRef(new Set<string>());
   const live = useRef<LiveFeed>({
     subscribe(listener) {
       listeners.current.add(listener);
@@ -48,6 +49,16 @@ export function useServer(): ServerConnection {
     let lastStreamMessage = 0;
     let disposed = false;
 
+    // Many videos change state at once (a whole first-pass batch); coalesce the refreshes.
+    let bumpTimer: number | null = null;
+    const bump = (): void => {
+      if (bumpTimer !== null) return;
+      bumpTimer = window.setTimeout(() => {
+        bumpTimer = null;
+        if (!disposed) setIndexVersion((v) => v + 1);
+      }, 250);
+    };
+
     /** Replaces the whole state and reports index changes (used for snapshots and polling). */
     const applySnapshot = (next: AppState): void => {
       const previous = statuses.current;
@@ -56,9 +67,12 @@ export function useServer(): ServerConnection {
       for (const [id, status] of current) {
         if (previous.get(id) !== status && (status === 'ready' || status === 'error' || !previous.has(id))) changed = true;
       }
+      const coarseNow = new Set(next.videos.filter((v) => v.coarse).map((v) => v.id));
+      for (const id of coarseNow) if (!coarse.current.has(id)) changed = true;
+      coarse.current = coarseNow;
       statuses.current = current;
       setState(next);
-      if (changed) setIndexVersion((v) => v + 1);
+      if (changed) bump();
     };
 
     const poll = (): void => {
@@ -102,8 +116,11 @@ export function useServer(): ServerConnection {
           const { video, stats, queueLength } = event;
           const previousStatus = statuses.current.get(video.id);
           statuses.current.set(video.id, video.status);
-          if (previousStatus !== video.status && (video.status === 'ready' || video.status === 'error')) {
-            setIndexVersion((v) => v + 1);
+          const becameSearchable = video.coarse && !coarse.current.has(video.id);
+          if (video.coarse) coarse.current.add(video.id);
+          else coarse.current.delete(video.id);
+          if (becameSearchable || (previousStatus !== video.status && (video.status === 'ready' || video.status === 'error'))) {
+            bump();
           }
           setState((current) => {
             if (!current) return current;
@@ -118,10 +135,11 @@ export function useServer(): ServerConnection {
         case 'video-removed': {
           const { videoId, stats } = event;
           statuses.current.delete(videoId);
+          coarse.current.delete(videoId);
           setState((current) =>
             current ? { ...current, videos: current.videos.filter((v) => v.id !== videoId), stats } : current,
           );
-          setIndexVersion((v) => v + 1);
+          bump();
           break;
         }
         case 'frames':
@@ -134,6 +152,7 @@ export function useServer(): ServerConnection {
     };
     return () => {
       disposed = true;
+      if (bumpTimer !== null) window.clearTimeout(bumpTimer);
       window.clearInterval(pollTimer);
       source.close();
     };
