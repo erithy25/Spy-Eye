@@ -145,7 +145,7 @@ export function Wirkung({ node }: ViewProps) {
             <dl className="kv">
               <div>
                 <dt>{t('Auswertung')}</dt>
-                <dd>{m.analysisSpeed !== null ? t('{x}-fache Echtzeit auf diesem Rechner', { x: formatDecimal(m.analysisSpeed, 1) }) : '–'}</dd>
+                <dd>{m.analysisSpeed !== null ? t('{x}-fache Echtzeit, reine Auswertezeit je Aufzeichnung', { x: formatDecimal(m.analysisSpeed, 1) }) : '–'}</dd>
               </div>
               <div>
                 <dt>{t('Suchdauer')}</dt>

@@ -327,11 +327,13 @@ Abbruchkriterien:
 4. **Personenbeschreibungen.** Umgesetzt: Beschreibungen nach Geschlecht, Alter oder Kleidung
    verlangen ein Mandat, das sie zulässt, und stehen als Suche gekennzeichnet im Protokoll;
    Anfragen nach Gesichtern, Kennzeichen, Wiederfinden oder Verfolgen werden abgelehnt;
-   `docs/BRAND.md` nennt das eine Regel mit Protokoll, keine technische Unmöglichkeit. Offen:
-   Die beiden mitgelieferten Mandate (Erprobung, Übung) lassen Personenbeschreibungen zu; im
-   Verbund prüft der antwortende Knoten ohne Kenntnis dieser Einstellung; der Suchraum eines
-   Mandats ist nicht begrenzt. Empfehlung: die mitgelieferten Mandate sperren und den Suchraum je
-   Mandat begrenzen.
+   `docs/BRAND.md` nennt das eine Regel mit Protokoll, keine technische Unmöglichkeit. Das
+   Übungsmandat lässt Personenbeschreibungen nicht zu; im Verbund beantwortet ein Knoten sie nur,
+   wenn das Mandat der anfragenden Seite sie zulässt; die selbsttätigen Schlagworte beschreiben
+   keine Personen. Offen: Das Mandat „Erprobung“ für eigenes Testmaterial lässt sie zu; der
+   antwortende Knoten verlässt sich im Verbund auf die signierte Angabe des Partners; der
+   Suchraum eines Mandats ist nicht begrenzt. Empfehlung: vor einer Erprobung bei einer Behörde
+   auch das Mandat „Erprobung“ sperren und den Suchraum je Mandat begrenzen.
 5. **Polizei als Kunde.** Empfehlung: für mindestens 24 Monate vertraglich ausschließen und das
    öffentlich sagen.
 6. **Erstes Land.** Rheinland-Pfalz bietet den Anlass, eine ausdrückliche Regel für

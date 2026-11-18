@@ -358,7 +358,7 @@ export const EN: Record<string, string> = {
   'Keine laufende oder abgeschlossene Übung. Die Übung wird im Bereich Lage gestartet.': 'No running or finished exercise. The exercise is started in the Situation section.',
   'Die Ereignisse und ihre Zeitpunkte stehen im Drehbuch der Übung. Eine Meldung zählt, wenn die dafür vorgesehene Wache sie an der betroffenen Quelle auslöst. Die Wachen der Übung wurden am Übungsmaterial formuliert; der Wert beschreibt das Betriebsverhalten, nicht die Übertragbarkeit auf fremdes Material.':
     'The events and their times are in the exercise script. An alert counts when the watch assigned to the event raises it at the affected source. The exercise watches were worded on the exercise footage; the figure describes operating behaviour, not transfer to unseen footage.',
-  '{x}-fache Echtzeit auf diesem Rechner': '{x} times real time on this machine',
+  '{x}-fache Echtzeit, reine Auswertezeit je Aufzeichnung': '{x} times real time, analysis time per recording only',
   Suchdauer: 'Search time',
   'im Median': 'median',
   Verbundfragen: 'Federated questions',

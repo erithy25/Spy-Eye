@@ -75,6 +75,12 @@ die Schnittstelle des laufenden Knotens.
 | Bildkodierer allein | 34 ms je Bild | `pnpm selftest` |
 | Textkodierer | 50 ms je Anfrage | halbe Genauigkeit (fp16), `pnpm selftest` |
 
+Die Konsole und der Messbericht einer Übung nennen eine zweite Zahl: die reine Auswertezeit je
+Aufzeichnung, ohne den ersten Durchgang, das Speichern und die Wartezeit zwischen den
+Aufzeichnungen. Sie liegt höher als der Wert in der Tabelle, der von Anfang bis Ende gemessen
+ist: 4,8-fache Echtzeit im vorbereiteten Stand der Vorführung, in dem das Übungsmaterial für
+sich allein ausgewertet wird.
+
 Zum Vergleich auf demselben Rechner: MobileCLIP-S2 62 ms je Bild, CLIP ViT-B/32 26 ms je Bild.
 MobileCLIP ist nur für Forschungszwecke lizenziert und deshalb nicht mehr voreingestellt.
 

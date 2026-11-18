@@ -514,6 +514,19 @@ export class EmbeddingModel {
   }
 
   /**
+   * Rows of text embeddings reduced by what search queries are reduced by; the rows themselves
+   * when no centre is set. Used for the scene tags, which are judged like a search.
+   */
+  centreTexts(rows: Float32Array): Float32Array {
+    const centre = this.searchCentre;
+    if (!centre) return rows;
+    const dim = centre.length;
+    const out = new Float32Array(rows.length);
+    for (let i = 0; i < rows.length; i++) out[i] = (rows[i] as number) - (centre[i % dim] as number);
+    return out;
+  }
+
+  /**
    * The vector the search compares footage with: the query embedding minus the configured share
    * of the mean text embedding. Not re-normalised, so that the cut-offs keep their meaning.
    */

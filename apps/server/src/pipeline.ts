@@ -33,12 +33,23 @@ const SCENE_THRESHOLDS: Readonly<Record<ModelFamily, { cut: number; drift: numbe
   mobileclip: { cut: 0.3, drift: 0.38 },
 };
 
-/** Operating point for turning a label similarity into a display confidence. */
-const TAG_CALIBRATION: Readonly<Record<ModelFamily, { center: number; slope: number }>> = {
-  siglip: { center: 0.07, slope: 80 },
-  siglip2: { center: 0.105, slope: 80 },
-  clip: { center: 0.255, slope: 80 },
-  mobileclip: { center: 0.235, slope: 60 },
+/**
+ * Operating point for turning the agreement of a picture with a label into a display confidence.
+ *
+ * `best`: one cut-off for the best of all views. `views`: the label vectors are centred like
+ * search queries, and the whole picture and its tiles are held against separate cut-offs, a
+ * little stricter than those of the search, because a tag is a claim nobody asked for. Fitted
+ * on two sets of footage, with the scores of a scene pooled over its frames as below: on 47
+ * everyday scenes 2.6 tags above one half per scene instead of 4.1, and 6 hazard tags on
+ * harmless footage instead of 10; 29 of 33 scenes of the exercise carry a hazard tag, as before.
+ */
+type TagCalibration = { kind: 'best'; center: number; slope: number } | { kind: 'views'; wholeFloor: number; tileFloor: number; width: number };
+
+const TAG_CALIBRATION: Readonly<Record<ModelFamily, TagCalibration>> = {
+  siglip: { kind: 'best', center: 0.07, slope: 80 },
+  siglip2: { kind: 'views', wholeFloor: 0.09, tileFloor: 0.125, width: 0.01 },
+  clip: { kind: 'best', center: 0.255, slope: 80 },
+  mobileclip: { kind: 'best', center: 0.235, slope: 60 },
 };
 
 /**
@@ -139,6 +150,8 @@ export class Pipeline {
   private running = false;
   private current: { id: string; extraction: FrameExtraction | null } | null = null;
   private vocabulary: VocabularyIndex | null = null;
+  /** The label vectors the tags are scored with: the vocabulary's, centred where the calibration says so. */
+  private labelVectors: Float32Array | null = null;
   private readyGate: Promise<void> | null = null;
   private uploadsInFlight = 0;
   private lastArrival = 0;
@@ -179,6 +192,8 @@ export class Pipeline {
 
   setVocabulary(vocabulary: VocabularyIndex): void {
     this.vocabulary = vocabulary;
+    // Where tags are judged per view, the labels are centred like search queries.
+    this.labelVectors = TAG_CALIBRATION[this.model.family].kind === 'views' ? this.model.centreTexts(vocabulary.embeddings) : vocabulary.embeddings;
   }
 
   /** Processing waits for this promise (model and vocabulary initialisation) before it starts. */
@@ -654,7 +669,7 @@ export class Pipeline {
               scene = {
                 record,
                 sum: new Float32Array(dim),
-                labelMax: new Float32Array(vocabulary ? vocabulary.labels.length : 0).fill(-1),
+                labelMax: new Float32Array(vocabulary ? vocabulary.labels.length : 0).fill(Number.NEGATIVE_INFINITY),
               };
               state.open = scene;
             } else {
@@ -748,32 +763,40 @@ export class Pipeline {
     }
   }
 
-  /** Best similarity per vocabulary label over all tiles of one frame. */
+  /**
+   * Agreement of one frame with every vocabulary label as a logit: zero is the cut-off, the
+   * sigmoid of the value is the confidence shown.
+   */
   private scoreLabels(
     embedded: Float32Array,
     rowOffset: number,
     tilesPerFrame: number,
     vocabulary: VocabularyIndex,
   ): Float32Array {
-    const { embeddings, dim, labels } = vocabulary;
+    const { dim, labels } = vocabulary;
+    const vectors = this.labelVectors ?? vocabulary.embeddings;
+    const calibration = TAG_CALIBRATION[this.model.family];
     const scores = new Float32Array(labels.length);
     for (let l = 0; l < labels.length; l++) {
-      let best = -1;
-      for (let t = 0; t < tilesPerFrame; t++) {
-        const s = dotAt(embedded, rowOffset + t * dim, embeddings, l * dim, dim);
-        if (s > best) best = s;
+      const whole = dotAt(embedded, rowOffset, vectors, l * dim, dim);
+      let tile = Number.NEGATIVE_INFINITY;
+      for (let t = 1; t < tilesPerFrame; t++) {
+        const s = dotAt(embedded, rowOffset + t * dim, vectors, l * dim, dim);
+        if (s > tile) tile = s;
       }
-      scores[l] = best;
+      scores[l] =
+        calibration.kind === 'views'
+          ? Math.max(whole - calibration.wholeFloor, tile - calibration.tileFloor) / calibration.width
+          : (Math.max(whole, tile) - calibration.center) * calibration.slope;
     }
     return scores;
   }
 
   private topTags(scores: Float32Array, vocabulary: VocabularyIndex, limit: number): Tag[] {
-    const calibration = TAG_CALIBRATION[this.model.family];
     const order = Array.from(scores.keys()).sort((a, b) => (scores[b] as number) - (scores[a] as number));
     const tags: Tag[] = [];
     for (const idx of order.slice(0, limit)) {
-      const p = sigmoid(((scores[idx] as number) - calibration.center) * calibration.slope);
+      const p = sigmoid(scores[idx] as number);
       if (p < 0.15 && tags.length >= 2) break;
       tags.push({ label: vocabulary.labels[idx] as string, p: Math.round(p * 1000) / 1000 });
     }

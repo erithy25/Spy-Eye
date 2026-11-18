@@ -116,9 +116,12 @@ Quelle ─► Bilder (ffmpeg) ─► Gesichter maskieren ─► Bildmerkmale (Si
 
 - **Einspielen.** Ein Bild je Sekunde (einstellbar), dazu Ausschnitte, damit kleine Dinge erkennbar
   bleiben. Unveränderte Folgebilder werden übersprungen, Szenen an Schnitten und nach Ruhephasen
-  getrennt. Gesichter werden vor dem Speichern verpixelt; das Original bleibt verschlossen.
+  getrennt. Gesichter werden vor dem Speichern verpixelt; das Original bleibt verschlossen. Jede
+  Szene erhält Schlagworte aus einem festen Verzeichnis (Orte, Gegenstände, Fahrzeuge,
+  Tätigkeiten, Schadenslagen); keines beschreibt Personen nach Geschlecht, Alter oder Kleidung.
 - **Suche.** Die Anfrage wird in denselben Merkmalsraum übersetzt wie die Bilder und mit jedem
-  Vektor verglichen. Der Trennwert wird je Anfrage aus dem eigenen Bestand abgeleitet. Vor dem
+  Vektor verglichen. Ganzes Bild und Bildausschnitte werden an getrennten Schwellen gemessen, die
+  sich je Anfrage am eigenen Bestand ausrichten. Vor dem
   Modell steht die Anfrageprüfung: Namen, Gesichter, Kennzeichen, Herkunft, Religion, körperliche
   Merkmale, Wiederfinden und Verfolgen werden abgelehnt und protokolliert.
 - **Wachen.** Eine Wache ist eine gespeicherte Anfrage mit Ausschlüssen, Mindestsicherheit und
