@@ -79,6 +79,12 @@
   white-space: nowrap;
 }
 
+/* The radius keeps its line; a long place name gives way. */
+.dt-row-mid > .low {
+  flex: none;
+  white-space: nowrap;
+}
+
 .dt-row-truth {
   font-size: 10px;
   color: var(--low);

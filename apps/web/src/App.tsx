@@ -394,6 +394,18 @@ function Shell({ node }: { node: NodeConnection }) {
     window.history.replaceState(null, '', `#${tab}${selected ? `/${selected}` : ''}`);
   }, [tab, selected]);
 
+  // A link to another tab or recording (#raum/<id>) followed within the page. replaceState above
+  // does not fire this event, so the two do not chase each other.
+  useEffect(() => {
+    const onHash = (): void => {
+      const [name, part] = window.location.hash.replace('#', '').split('/');
+      if (name && allowed.includes(name as TabId)) setTab(name as TabId);
+      setSelected(part && /^[a-f0-9]{16}$/.test(part) ? part : null);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [allowed]);
+
   const openFrame = useCallback((target: FrameTarget, list?: FrameTarget[]) => {
     const all = list && list.length > 0 ? list : [target];
     const index = Math.max(0, all.findIndex((x) => x.videoId === target.videoId && x.frameNumber === target.frameNumber));
