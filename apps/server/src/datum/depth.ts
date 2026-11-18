@@ -22,7 +22,6 @@ import sharp from 'sharp';
 import { config } from '../config.js';
 import type { DepthDtype, DepthOps, DepthOptions, DisparityMap } from '../ml/depthService.js';
 import { InferenceThread } from '../ml/workerHost.js';
-import { movable } from '../ml/workerProtocol.js';
 
 export const depthModelId = 'onnx-community/depth-anything-v2-small';
 
@@ -112,7 +111,7 @@ export function depthInputDims(width: number, height: number, size = depthInputS
  * The picture resized to the network input, RGB bytes. sharp works on its own threads; the
  * normalisation to the network's value range happens in the inference thread.
  */
-async function preprocess(jpegPath: string): Promise<{ rgb: Uint8Array & { buffer: ArrayBuffer }; w: number; h: number }> {
+async function preprocess(jpegPath: string): Promise<{ rgb: Uint8Array<ArrayBuffer>; w: number; h: number }> {
   const meta = await sharp(jpegPath).metadata();
   const srcW = meta.autoOrient?.width ?? meta.width ?? 0;
   const srcH = meta.autoOrient?.height ?? meta.height ?? 0;
@@ -125,7 +124,9 @@ async function preprocess(jpegPath: string): Promise<{ rgb: Uint8Array & { buffe
     .resize(w, h, { fit: 'fill', kernel: 'cubic' })
     .raw()
     .toBuffer();
-  return { rgb: movable(new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength)), w, h };
+  // A copy (a few hundred kB): sharp's output lives in memory its native code owns, which cannot
+  // be moved to another thread.
+  return { rgb: new Uint8Array(raw), w, h };
 }
 
 /**

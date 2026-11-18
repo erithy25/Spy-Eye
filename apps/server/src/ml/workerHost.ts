@@ -198,9 +198,16 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
         const id = this.nextId++;
         this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
         worker.ref();
+        const message: HostMessage = { type: 'call', id, op, args };
         try {
-          const message: HostMessage = { type: 'call', id, op, args };
-          worker.postMessage(message, options.transfer ?? []);
+          try {
+            worker.postMessage(message, options.transfer ?? []);
+          } catch (err: unknown) {
+            // Memory that native code owns (a Buffer from sharp, for one) cannot be moved; the
+            // refusal leaves everything attached, and a copy does the same job.
+            if (!(err instanceof Error && err.name === 'DataCloneError') || (options.transfer ?? []).length === 0) throw err;
+            worker.postMessage(message);
+          }
         } catch (err: unknown) {
           this.pending.delete(id);
           this.idle();
@@ -379,6 +386,8 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
 /** Asks the service to release its sessions, and stops the worker if it does not end by itself. */
 async function stopWorker(worker: Worker): Promise<void> {
   const exited = new Promise<void>((resolve) => worker.once('exit', () => resolve()));
+  // An idle worker is unreferenced; while it winds down it must keep a waiting caller alive.
+  worker.ref();
   try {
     const message: HostMessage = { type: 'close' };
     worker.postMessage(message);

@@ -15,15 +15,10 @@ export interface CheckInfo {
   threadId: number;
 }
 
-/** Wall-clock milliseconds that compare across threads (performance.now() is per thread). */
-function wallMs(): number {
-  return performance.timeOrigin + performance.now();
-}
-
 export type CheckOps = {
   /** Doubles every value and moves the result back. */
   double: { args: { values: Float32Array }; result: Float32Array };
-  /** Keeps the thread busy for `ms`, as a synchronous onnxruntime run does. */
+  /** Keeps the thread busy for `ms`, as a synchronous onnxruntime run does; times in epoch ms. */
   block: { args: { ms: number; tag: string }; result: { tag: string; start: number; end: number } };
   /** Rejects with `message`. */
   fail: { args: { message: string }; result: never };
@@ -47,11 +42,14 @@ export function createCheckService(): InferenceService {
         }
         case 'block': {
           const { ms, tag } = args as CheckOps['block']['args'];
-          const start = wallMs();
-          while (wallMs() - start < ms) {
+          // Date.now() for the reported times: it is the one clock all threads read alike
+          // (performance.now() counts from each thread's own start).
+          const start = Date.now();
+          const began = performance.now();
+          while (performance.now() - began < ms) {
             // Busy on purpose: this is what a session run does to its thread.
           }
-          return { value: { tag, start, end: wallMs() }, transfer: [] };
+          return { value: { tag, start, end: Date.now() }, transfer: [] };
         }
         case 'fail':
           throw new Error((args as CheckOps['fail']['args']).message);
