@@ -197,8 +197,9 @@ Nach zehn Gesprächen, spätestens Ende März 2027 (Vorschlag für die Schwellen
 | Annahme 4 überall widerlegt | Einstieg über das Land oder über eine Förderung statt über den Kreis |
 | Annahme 6 nirgends bestätigt | Den Verbund aus der ersten Erzählung nehmen; er bleibt ein Argument für das Land |
 
-Die ersten drei Zeilen entsprechen den Abbruchkriterien der Strategie. Wer nach zehn Gesprächen
-keine der Zeilen klar zuordnen kann, hat zu viel gezeigt und zu wenig gefragt.
+Die Zeilen zwei bis vier führen die ersten beiden Abbruchkriterien der Strategie aus; das dritte,
+die Fehlmeldungsrate, zeigt sich erst in einer Erprobung. Wer nach zehn Gesprächen keine der
+Zeilen klar zuordnen kann, hat zu viel gezeigt und zu wenig gefragt.
 
 ## 8. Mitnehmen
 
