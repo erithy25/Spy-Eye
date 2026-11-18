@@ -5,7 +5,8 @@
 DATUM bestimmt aus einem Video, wo und wann es aufgenommen wurde: Ort mit Unsicherheitskreis,
 Uhrzeit als Zeitfenster in Ortszeit, Sonnenstand und Schattenrichtung, Blickrichtung, wo der
 Geländehorizont sie verrät. Aus einem einzelnen Bild baut es einen begehbaren 3D-Raum, und es
-zeigt das Gelände um den Fundort mit der Sonne zur geschätzten Zeit. Alles läuft auf einem
+zeigt das Gelände um den Fundort mit der Sonne zur geschätzten Zeit, in 3D und als Höhenlinien
+auf der Karte. Alles läuft auf einem
 Rechner ohne Grafikkarte; zur Laufzeit wird kein Dienst im Netz gefragt. Beschreibung, Verfahren,
 Messung und Grenzen: [`docs/DATUM.md`](docs/DATUM.md).
 
@@ -57,6 +58,7 @@ Eigene Videos im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung 
 | `pnpm datum:check` | prüft, ob alles da ist; jede Zeile endet mit OK oder FEHLT |
 | `pnpm datum` | startet den Knoten auf Anschluss 8787 |
 | `pnpm datum:evaluate` | misst die Ortung gegen die Grundwahrheit (`docs/measurements/datum-geolocation.json`) |
+| `pnpm --filter @sicht/server datum:ship-gallery` | schreibt nach einer Änderung der Galerie die mitgelieferten Galerie-Vektoren (`datasets/datum/gallery-vectors-*`), damit ein frischer Rechner nichts einrechnen muss |
 | `DATUM_HOLDOUT=1` | Referenzbild desselben Bauwerks aus der Galerie nehmen, wie bei einem unbekannten Ort (voreingestellt: die Galerie enthält Referenzbilder der Orte, wie bei einem Einsatz mit vorbereitetem Gebiet) |
 
 ---

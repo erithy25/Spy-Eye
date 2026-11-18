@@ -42,7 +42,7 @@ cd "$(dirname "$0")"
 #   mark|turn                                                    ab hier hellt das Tonbett auf
 #   end|<sekunden>
 #   set|<NAME>|<wert>        nur in einer Ablaufdatei: Einstellung des Schnitts. Erlaubt sind
-#                            OUT, FORMAT (quer|hochkant), SHOT_LABEL, END_LINE, END_NOTE, MUSIC,
+#                            OUT, FORMAT (quer|hochkant), SHOT_LABEL, END_WORD, END_LINE, END_NOTE, MUSIC,
 #                            MUSIC_TURN. Eine gleichnamige Umgebungsvariable hat Vorrang.
 #
 # Tafeln: rund 18 Zeichen je Sekunde Lesezeit plus eine halbe Sekunde. Text in Versalien.
@@ -83,7 +83,7 @@ if [[ -n ${SEQ:-} ]]; then
     if [[ $line == set\|* ]]; then
       IFS='|' read -r _ set_name set_value <<< "$line"
       case $set_name in
-        OUT|FORMAT|SHOT_LABEL|END_LINE|END_NOTE|MUSIC|MUSIC_TURN)
+        OUT|FORMAT|SHOT_LABEL|END_WORD|END_LINE|END_NOTE|MUSIC|MUSIC_TURN)
           # Was in der Umgebung gesetzt ist, gilt; sonst der Wert aus der Datei.
           if [[ -z ${!set_name+x} ]]; then printf -v "$set_name" '%s' "$set_value"; fi
           ;;
@@ -100,7 +100,7 @@ BED=${BED:-auto}
 MUSIC=${MUSIC:-audio/bed-elevenlabs.mp3}
 MUSIC_TURN=${MUSIC_TURN:-21.2}   # Sekunde, in der im Musikstück der helle Klang einsetzt; wird auf "mark|turn" gelegt
 SHOT_LABEL=${SHOT_LABEL:-'SYMBOLBILD · KI-GENERIERT'}
-END_WORD='SICHT'
+END_WORD=${END_WORD:-'SICHT'}
 END_LINE=${END_LINE:-'KEINE SICHT OHNE AUFSICHT.'}
 END_NOTE=${END_NOTE:-'SYMBOLBILDER, KI-GENERIERT · ERPROBUNGSSTAND'}
 FORMAT=${FORMAT:-quer}            # quer: 1920x1080 · hochkant: 1080x1920 für Hochkant-Teaser
