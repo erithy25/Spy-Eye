@@ -1,0 +1,5863 @@
+{
+ "measuredAt": "2026-11-18T18:00:29.752Z",
+ "script": "apps/server/src/scripts/datum/evaluateStreetlevel.ts",
+ "model": "onnx-community/siglip2-base-patch32-256-ONNX",
+ "threads": 2,
+ "setup": {
+  "frames": "12 frames per video, whole frame plus square crops (pipeline tiling 'standard'), as sampleAndEmbedFrames in locate.ts",
+  "frameSources": {
+   "al-skanderbeg-square": "cache",
+   "cl-palacio-de-la-moneda": "cache",
+   "de-bahnhof-berlin-lichterfelde": "cache",
+   "de-berliner-fernsehturm": "cache",
+   "de-bhf-eschborn": "cache",
+   "de-elstertalbruecke": "cache",
+   "de-hof-hauptbahnhof": "cache",
+   "de-kammergutweg": "cache",
+   "de-molenfeuer-warnemuende": "cache",
+   "de-palmengartenwehr": "cache",
+   "de-quellbrunnen": "cache",
+   "de-rheinbruecke-leverkusen": "cache",
+   "de-st-lambertus": "cache",
+   "de-zoobruecke": "cache",
+   "ee-tartu-railway-station": "cache",
+   "fr-arc-de-triomphe": "cache",
+   "fr-eiffel-tower": "cache",
+   "fr-new-gatteville-lighthouse": "cache",
+   "gb-glenfinnan-viaduct": "cache",
+   "ie-church-of-st-anne": "cache",
+   "ie-the-elysian": "cache",
+   "it-alghero-railway-station": "cache",
+   "jp-tokyo-station": "cache",
+   "mx-mexico-city-metropolitan": "cache",
+   "pe-cusco-cathedral": "cache",
+   "ru-cathedral-of-christ-the": "cache",
+   "tr-istiklal-avenue": "cache",
+   "us-vessel": "cache",
+   "ve-estadio-olimpico": "cache"
+  },
+  "candidateRadiusKm": 3,
+  "trueCentreOffsetKm": 1.5,
+  "wrongPlaceKm": 50,
+  "wrongPlacesPerVideo": 0,
+  "wrongBearing": "index × 137.508° (golden angle) plus 180° for the second place, fixed per video",
+  "providers": [
+   "panoramax"
+  ],
+  "mapillary": "not measured: no MAPILLARY_TOKEN on the measuring machine",
+  "pictureCrops": false,
+  "options": {
+   "budgetMs": 20000,
+   "requestTimeoutMs": 8000,
+   "concurrency": 4,
+   "maxTilesPerCandidate": 25,
+   "perTileLimit": 25,
+   "maxPicturesPerCandidate": 40,
+   "refine": true,
+   "refineRounds": [
+    {
+     "places": 3,
+     "perPlace": 5,
+     "radiusKm": 0.7
+    },
+    {
+     "places": 2,
+     "perPlace": 5,
+     "radiusKm": 0.3
+    }
+   ]
+  },
+  "decision": {
+   "minPictures": 8,
+   "minSimilarity": 0.7,
+   "minGap": 0.1,
+   "minZ": 3,
+   "minAgreement": 0
+  },
+  "truth": "Wikidata coordinate of the filmed object, not the camera position: distances under about 1 km are not meaningful",
+  "split": "videos sorted by id; even index = tuning half (train), odd = test half, as scripts/datum/evaluate.ts"
+ },
+ "summary": {
+  "all": {
+   "videos": 29,
+   "trueWithPictures": 27,
+   "wrongWithPictures": 0,
+   "bestWithin200m": 0,
+   "bestWithin1km": 0.333,
+   "nearestComparedWithin200m": 0.222,
+   "nearestComparedWithin1km": 0.815,
+   "matchedAtTrue": 0.111,
+   "matchedAtTrueBestWithin1km": 0.333,
+   "matchedAtTrueBestWithin200m": 0,
+   "matchedAtTrueRefinedWithin1km": 0.333,
+   "matchedAtTrueTruthInRadius": 0.333,
+   "matchedPointKm": [
+    0.523,
+    1.424,
+    2.08
+   ],
+   "pointWithin200m": 0,
+   "pointWithin1km": 0.333,
+   "pointKmMedian": 1.781,
+   "falseMatchAtWrong": null,
+   "falseMatchAtWrongAllCalls": null,
+   "gapTrueMedian": 0.09563575427246174,
+   "gapWrongMedian": null,
+   "gapWrongP90": null,
+   "gapWrongMax": null,
+   "secondsMedian": 9.582512168000045,
+   "secondsP90": 18.616076982,
+   "secondsMedianWithPictures": 9.723139082000008,
+   "firstCalls": 2,
+   "secondsFirstCallMedian": 13.737265959,
+   "secondsFirstCallP90": 13.737265959,
+   "secondsFirstCallMax": 13.737265959,
+   "secondsNoCoverageMedian": null,
+   "picturesComparedMedian": 62,
+   "embedMsPerPictureMedian": 100,
+   "budgetExhausted": 3
+  },
+  "train": {
+   "videos": 14,
+   "trueWithPictures": 13,
+   "wrongWithPictures": 0,
+   "bestWithin200m": 0,
+   "bestWithin1km": 0.385,
+   "nearestComparedWithin200m": 0.077,
+   "nearestComparedWithin1km": 0.846,
+   "matchedAtTrue": 0.077,
+   "matchedAtTrueBestWithin1km": 1,
+   "matchedAtTrueBestWithin200m": 0,
+   "matchedAtTrueRefinedWithin1km": 1,
+   "matchedAtTrueTruthInRadius": 1,
+   "matchedPointKm": [
+    0.523
+   ],
+   "pointWithin200m": 0,
+   "pointWithin1km": 0.385,
+   "pointKmMedian": 1.718,
+   "falseMatchAtWrong": null,
+   "falseMatchAtWrongAllCalls": null,
+   "gapTrueMedian": 0.09563575427246174,
+   "gapWrongMedian": null,
+   "gapWrongP90": null,
+   "gapWrongMax": null,
+   "secondsMedian": 9.582512168000045,
+   "secondsP90": 18.669690666999987,
+   "secondsMedianWithPictures": 9.582512168000045,
+   "firstCalls": 2,
+   "secondsFirstCallMedian": 13.737265959,
+   "secondsFirstCallP90": 13.737265959,
+   "secondsFirstCallMax": 13.737265959,
+   "secondsNoCoverageMedian": null,
+   "picturesComparedMedian": 62,
+   "embedMsPerPictureMedian": 97,
+   "budgetExhausted": 2
+  },
+  "test": {
+   "videos": 15,
+   "trueWithPictures": 14,
+   "wrongWithPictures": 0,
+   "bestWithin200m": 0,
+   "bestWithin1km": 0.286,
+   "nearestComparedWithin200m": 0.357,
+   "nearestComparedWithin1km": 0.786,
+   "matchedAtTrue": 0.143,
+   "matchedAtTrueBestWithin1km": 0,
+   "matchedAtTrueBestWithin200m": 0,
+   "matchedAtTrueRefinedWithin1km": 0,
+   "matchedAtTrueTruthInRadius": 0,
+   "matchedPointKm": [
+    1.424,
+    2.08
+   ],
+   "pointWithin200m": 0,
+   "pointWithin1km": 0.286,
+   "pointKmMedian": 2.069,
+   "falseMatchAtWrong": null,
+   "falseMatchAtWrongAllCalls": null,
+   "gapTrueMedian": 0.09586395433602346,
+   "gapWrongMedian": null,
+   "gapWrongP90": null,
+   "gapWrongMax": null,
+   "secondsMedian": 9.723139082000008,
+   "secondsP90": 16.059727130000006,
+   "secondsMedianWithPictures": 11.256687005,
+   "firstCalls": 0,
+   "secondsFirstCallMedian": null,
+   "secondsFirstCallP90": null,
+   "secondsFirstCallMax": null,
+   "secondsNoCoverageMedian": null,
+   "picturesComparedMedian": 64,
+   "embedMsPerPictureMedian": 103,
+   "budgetExhausted": 1
+  }
+ },
+ "chosenRule": {
+  "minGap": 0.16,
+  "minZ": 2,
+  "minSimilarity": 0.7,
+  "train": {
+   "correct": 1,
+   "wrongPin": 0,
+   "truePlaces": 13,
+   "falseMatch": 0,
+   "wrongPlaces": 0
+  },
+  "test": {
+   "correct": 0,
+   "wrongPin": 0,
+   "truePlaces": 14,
+   "falseMatch": 0,
+   "wrongPlaces": 0
+  }
+ },
+ "sweep": [
+  {
+   "minGap": 0.04,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 5,
+    "wrongPin": 7,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 4,
+    "wrongPin": 10,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 5,
+    "wrongPin": 7,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 4,
+    "wrongPin": 10,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 4,
+    "wrongPin": 6,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 4,
+    "wrongPin": 5,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 8,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 4,
+    "wrongPin": 5,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 8,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 4,
+    "wrongPin": 4,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 2,
+    "wrongPin": 6,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 2,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 5,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 2,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 5,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.04,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 5,
+    "wrongPin": 7,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 4,
+    "wrongPin": 8,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 5,
+    "wrongPin": 7,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 4,
+    "wrongPin": 8,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 4,
+    "wrongPin": 6,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 4,
+    "wrongPin": 5,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 4,
+    "wrongPin": 5,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 4,
+    "wrongPin": 4,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 2,
+    "wrongPin": 6,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 2,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 2,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.06,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 4,
+    "wrongPin": 4,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 4,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 4,
+    "wrongPin": 4,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 4,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 4,
+    "wrongPin": 3,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 6,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 4,
+    "wrongPin": 4,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 4,
+    "wrongPin": 4,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 3,
+    "wrongPin": 7,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 4,
+    "wrongPin": 3,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 2,
+    "wrongPin": 6,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.08,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 3,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 1,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 3,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 1,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 3,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 3,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 1,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 3,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 1,
+    "wrongPin": 4,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 3,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 3,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 2,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.1,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 1,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.12,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 1,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.14,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 1,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.16,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 0,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 0,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 0,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 2,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 2,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 2,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 3,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 3,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 3,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 4,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 4,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 4,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 5,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 5,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 5,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 6,
+   "minSimilarity": 0,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 6,
+   "minSimilarity": 0.6,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  },
+  {
+   "minGap": 0.2,
+   "minZ": 6,
+   "minSimilarity": 0.7,
+   "train": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 13,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   },
+   "test": {
+    "correct": 0,
+    "wrongPin": 0,
+    "truePlaces": 14,
+    "falseMatch": 0,
+    "wrongPlaces": 0
+   }
+  }
+ ],
+ "repeats": [],
+ "calls": [
+  {
+   "id": "al-skanderbeg-square",
+   "label": "Skanderbeg Square",
+   "country": "AL",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 41.341396,
+    "lon": 19.818458,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,79, typisch 0,69 (Abstand 0,10, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7890014882613205,
+    "typical": 0.6933657339888588,
+    "spread": 0.04344342183434578,
+    "gap": 0.09563575427246174,
+    "z": 2.2013863142993353,
+    "agreement": 1
+   },
+   "listed": 450,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 13737.265959,
+    "searchMs": 2315.1863570000005,
+    "picturesMs": 11389.717496,
+    "embedMs": 7015.2497440000025,
+    "requests": 104,
+    "downloaded": 65,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 875,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "125d3d81-dca4-4699-adb4-78d7501233bb",
+     "lat": 41.341222,
+     "lon": 19.83156,
+     "similarity": 0.789,
+     "pass": 1,
+     "truthKm": 1.841,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=125d3d81-dca4-4699-adb4-78d7501233bb&map=18/41.341222/19.831560",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "655f2657-f985-43f0-bec3-ceacb2f7bca4",
+     "lat": 41.341698,
+     "lon": 19.832449,
+     "similarity": 0.7888,
+     "pass": 2,
+     "truthKm": 1.928,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=655f2657-f985-43f0-bec3-ceacb2f7bca4&map=18/41.341698/19.832449",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "08c13f10-7f3b-43aa-84d6-9b4b81f11e4f",
+     "lat": 41.342305,
+     "lon": 19.833645,
+     "similarity": 0.7794,
+     "pass": 1,
+     "truthKm": 2.042,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=08c13f10-7f3b-43aa-84d6-9b4b81f11e4f&map=18/41.342305/19.833645",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.841,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.902,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.279,
+   "nearestRank": 62,
+   "within1km": 3
+  },
+  {
+   "id": "cl-palacio-de-la-moneda",
+   "label": "Palacio de La Moneda",
+   "country": "CL",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": -33.432519,
+    "lon": -70.664021,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,60, typisch 0,54 (Abstand 0,06, nötig 0,10); 56 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 56,
+    "spreadPictures": 40,
+    "best": 0.600959417557893,
+    "typical": 0.5429848680128957,
+    "spread": 0.03324107028146791,
+    "gap": 0.057974549544997256,
+    "z": 1.7440638659976724,
+    "agreement": 0.5
+   },
+   "listed": 196,
+   "sampled": 40,
+   "compared": 56,
+   "timing": {
+    "totalMs": 8212.436024000002,
+    "searchMs": 1693.1168040000011,
+    "picturesMs": 6500.798177000004,
+    "embedMs": 3442.2823470000003,
+    "requests": 70,
+    "downloaded": 31,
+    "fromCache": 25,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 359,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "a43745e4-617b-4d97-8125-7e2d7f285c2a",
+     "lat": -33.445243,
+     "lon": -70.676331,
+     "similarity": 0.601,
+     "pass": 1,
+     "truthKm": 2.099,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a43745e4-617b-4d97-8125-7e2d7f285c2a&map=18/-33.445243/-70.676331",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "d1acd060-5f31-4a9f-8547-a77953e96eab",
+     "lat": -33.445181,
+     "lon": -70.676329,
+     "similarity": 0.6007,
+     "pass": 2,
+     "truthKm": 2.098,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=d1acd060-5f31-4a9f-8547-a77953e96eab&map=18/-33.445181/-70.676329",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "247af92a-15dd-44b7-b130-c47f09e7f777",
+     "lat": -33.444085,
+     "lon": -70.651402,
+     "similarity": 0.599,
+     "pass": 1,
+     "truthKm": 0.258,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=247af92a-15dd-44b7-b130-c47f09e7f777&map=18/-33.444085/-70.651402",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.099,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.069,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.258,
+   "nearestRank": 3,
+   "within1km": 17
+  },
+  {
+   "id": "de-bahnhof-berlin-lichterfelde",
+   "label": "Bahnhof Berlin-Lichterfelde Ost",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 52.417705,
+    "lon": 13.338002,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "matched",
+   "reason": "Straßenbild passt: 0,71 gegen typisch 0,60 (Abstand 0,11, 3,6 Streuungen); 33 Bilder von Panoramax verglichen.",
+   "matched": true,
+   "stats": {
+    "pictures": 33,
+    "spreadPictures": 23,
+    "best": 0.7084282567481553,
+    "typical": 0.6015426829211215,
+    "spread": 0.02979153212788293,
+    "gap": 0.1068855738270339,
+    "z": 3.587783715460407,
+    "agreement": 0
+   },
+   "listed": 23,
+   "sampled": 23,
+   "compared": 33,
+   "timing": {
+    "totalMs": 6563.842524,
+    "searchMs": 1560.5945610000017,
+    "picturesMs": 4995.707616000003,
+    "embedMs": 2547.4476329999998,
+    "requests": 59,
+    "downloaded": 20,
+    "fromCache": 13,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 173,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "a8f45197-160e-4a18-a5e8-8362e713771a",
+     "lat": 52.441663,
+     "lon": 13.337566,
+     "similarity": 0.7084,
+     "pass": 1,
+     "truthKm": 1.424,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a8f45197-160e-4a18-a5e8-8362e713771a&map=18/52.441663/13.337566",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "97bcf884-5a3c-4929-aaee-f05a6ce53ef3",
+     "lat": 52.44638,
+     "lon": 13.343668,
+     "similarity": 0.6837,
+     "pass": 2,
+     "truthKm": 2.078,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=97bcf884-5a3c-4929-aaee-f05a6ce53ef3&map=18/52.446380/13.343668",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2a48d732-70bb-4d48-881b-9bb3f6c0f9d7",
+     "lat": 52.446373,
+     "lon": 13.343682,
+     "similarity": 0.6818,
+     "pass": 2,
+     "truthKm": 2.078,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2a48d732-70bb-4d48-881b-9bb3f6c0f9d7&map=18/52.446373/13.343682",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.424,
+   "refinedKm": 1.424,
+   "refinedRadiusKm": 1,
+   "confidence": 0.614,
+   "pointKm": 1.424,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.714,
+   "nearestRank": 4,
+   "within1km": 2
+  },
+  {
+   "id": "de-berliner-fernsehturm",
+   "label": "Berliner Fernsehturm",
+   "country": "DE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 52.516887,
+    "lon": 13.388245,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,77, typisch 0,60 (Abstand 0,18, nötig 0,10); 63 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist. Zeitbudget von 20 s erschöpft; 63 von 40 gewählten Bildern verglichen.",
+   "matched": false,
+   "stats": {
+    "pictures": 63,
+    "spreadPictures": 40,
+    "best": 0.773045942885133,
+    "typical": 0.5971886263203745,
+    "spread": 0.07231902386510645,
+    "gap": 0.17585731656475845,
+    "z": 2.4316881944200115,
+    "agreement": 0.5
+   },
+   "listed": 292,
+   "sampled": 40,
+   "compared": 63,
+   "timing": {
+    "totalMs": 18732.840602000004,
+    "searchMs": 1764.6711149999974,
+    "picturesMs": 16945.240584,
+    "embedMs": 6150.1747259999975,
+    "requests": 95,
+    "downloaded": 56,
+    "fromCache": 7,
+    "failed": 0,
+    "budgetExhausted": true
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 459,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "8d75d236-6a66-478b-9fb3-12e86dbef350",
+     "lat": 52.517591,
+     "lon": 13.399382,
+     "similarity": 0.773,
+     "pass": 2,
+     "truthKm": 0.77,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=8d75d236-6a66-478b-9fb3-12e86dbef350&map=18/52.517591/13.399382",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "d7221c37-aacb-44ab-ac08-d06f710260c0",
+     "lat": 52.518092,
+     "lon": 13.399575,
+     "similarity": 0.7605,
+     "pass": 2,
+     "truthKm": 0.734,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=d7221c37-aacb-44ab-ac08-d06f710260c0&map=18/52.518092/13.399575",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "97e78580-609d-4bf3-a80d-f14a0afd17a1",
+     "lat": 52.516667,
+     "lon": 13.377778,
+     "similarity": 0.7263,
+     "pass": 1,
+     "truthKm": 2.192,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=97e78580-609d-4bf3-a80d-f14a0afd17a1&map=18/52.516667/13.377778",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.77,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.762,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.362,
+   "nearestRank": 12,
+   "within1km": 11
+  },
+  {
+   "id": "de-bhf-eschborn",
+   "label": "Bhf. Eschborn",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 50.157017,
+    "lon": 8.557192,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,67, typisch 0,56 (Abstand 0,11, nötig 0,10); 14 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 14,
+    "spreadPictures": 14,
+    "best": 0.6718039596416637,
+    "typical": 0.5592883797430768,
+    "spread": 0.03247047400922024,
+    "gap": 0.11251557989858696,
+    "z": 3.465165918632333,
+    "agreement": 0.5
+   },
+   "listed": 14,
+   "sampled": 14,
+   "compared": 14,
+   "timing": {
+    "totalMs": 3581.592144999995,
+    "searchMs": 1312.3832850000108,
+    "picturesMs": 2266.621300999999,
+    "embedMs": 942.131905000002,
+    "requests": 40,
+    "downloaded": 5,
+    "fromCache": 9,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 35,
+     "errors": 0,
+     "listed": 194,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "94c5f157-306c-41ae-89ea-0746fca03b61",
+     "lat": 50.1637,
+     "lon": 8.543202,
+     "similarity": 0.6718,
+     "pass": 1,
+     "truthKm": 2.549,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=94c5f157-306c-41ae-89ea-0746fca03b61&map=18/50.163700/8.543202",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "63fce925-caef-4177-83cc-002f27216a83",
+     "lat": 50.158841,
+     "lon": 8.548216,
+     "similarity": 0.6214,
+     "pass": 1,
+     "truthKm": 1.904,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=63fce925-caef-4177-83cc-002f27216a83&map=18/50.158841/8.548216",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "fc20842b-ba70-4553-ae37-0f7099c4da66",
+     "lat": 50.161402,
+     "lon": 8.546403,
+     "similarity": 0.6152,
+     "pass": 1,
+     "truthKm": 2.216,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=fc20842b-ba70-4553-ae37-0f7099c4da66&map=18/50.161402/8.546403",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.549,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.549,
+   "pointRadiusKm": 1,
+   "nearestKm": 1.766,
+   "nearestRank": 13,
+   "within1km": 0
+  },
+  {
+   "id": "de-elstertalbruecke",
+   "label": "Elstertalbrücke",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 50.539722,
+    "lon": 12.165819,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,81, typisch 0,71 (Abstand 0,09, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.8053578363365641,
+    "typical": 0.7130475136562481,
+    "spread": 0.03737131207393325,
+    "gap": 0.09231032268031603,
+    "z": 2.4700851417176524,
+    "agreement": 0.5
+   },
+   "listed": 200,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 16059.727130000007,
+    "searchMs": 1686.7497670000012,
+    "picturesMs": 14364.792396999997,
+    "embedMs": 9713.67145300001,
+    "requests": 102,
+    "downloaded": 63,
+    "fromCache": 2,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 464,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "b672b162-aeba-4e56-aec5-0cc6df8604b3",
+     "lat": 50.558745,
+     "lon": 12.166115,
+     "similarity": 0.8054,
+     "pass": 1,
+     "truthKm": 0.63,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=b672b162-aeba-4e56-aec5-0cc6df8604b3&map=18/50.558745/12.166115",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "9021a07a-115c-485b-9fb8-54e07544c502",
+     "lat": 50.560765,
+     "lon": 12.171471,
+     "similarity": 0.7975,
+     "pass": 2,
+     "truthKm": 0.888,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=9021a07a-115c-485b-9fb8-54e07544c502&map=18/50.560765/12.171471",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "6865ba52-57a2-46b5-ae15-2abe982dd37d",
+     "lat": 50.527913,
+     "lon": 12.133859,
+     "similarity": 0.7832,
+     "pass": 1,
+     "truthKm": 3.685,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6865ba52-57a2-46b5-ae15-2abe982dd37d&map=18/50.527913/12.133859",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.63,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.691,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.361,
+   "nearestRank": 13,
+   "within1km": 27
+  },
+  {
+   "id": "de-hof-hauptbahnhof",
+   "label": "Hof Hauptbahnhof",
+   "country": "DE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 50.310905,
+    "lon": 11.902687,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,80, typisch 0,74 (Abstand 0,06, nötig 0,10); 64 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 64,
+    "spreadPictures": 39,
+    "best": 0.8013438685318163,
+    "typical": 0.7398976872363494,
+    "spread": 0.032939207375791923,
+    "gap": 0.06144618129546686,
+    "z": 1.865442012445801,
+    "agreement": 1
+   },
+   "listed": 103,
+   "sampled": 40,
+   "compared": 64,
+   "timing": {
+    "totalMs": 6776.010236000002,
+    "searchMs": 1624.1404550000152,
+    "picturesMs": 5097.257700000002,
+    "embedMs": 3444.2062089999963,
+    "requests": 64,
+    "downloaded": 24,
+    "fromCache": 40,
+    "failed": 1,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 311,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "c3f537d1-b19f-423a-af6d-2db6aa114e64",
+     "lat": 50.319438,
+     "lon": 11.898479,
+     "similarity": 0.8013,
+     "pass": 2,
+     "truthKm": 2.172,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=c3f537d1-b19f-423a-af6d-2db6aa114e64&map=18/50.319438/11.898479",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "155aa644-bc44-4363-b71b-d47c0dee9818",
+     "lat": 50.319568,
+     "lon": 11.898315,
+     "similarity": 0.7988,
+     "pass": 1,
+     "truthKm": 2.19,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=155aa644-bc44-4363-b71b-d47c0dee9818&map=18/50.319568/11.898315",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "f893106b-0802-4d53-9af3-135c54ddfec2",
+     "lat": 50.319738,
+     "lon": 11.898112,
+     "similarity": 0.7972,
+     "pass": 2,
+     "truthKm": 2.212,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=f893106b-0802-4d53-9af3-135c54ddfec2&map=18/50.319738/11.898112",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.172,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.18,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.191,
+   "nearestRank": 54,
+   "within1km": 5
+  },
+  {
+   "id": "de-kammergutweg",
+   "label": "Kammergutweg",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 50.308544,
+    "lon": 11.907248,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,83, typisch 0,75 (Abstand 0,08, nötig 0,10); 64 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 64,
+    "spreadPictures": 39,
+    "best": 0.8281592541066753,
+    "typical": 0.7479333634950195,
+    "spread": 0.027053393118123128,
+    "gap": 0.08022589061165586,
+    "z": 2.96546500697217,
+    "agreement": 0
+   },
+   "listed": 115,
+   "sampled": 40,
+   "compared": 64,
+   "timing": {
+    "totalMs": 3931.9302000000025,
+    "searchMs": 1515.3172880000056,
+    "picturesMs": 2407.0750360000093,
+    "embedMs": 1353.6445040000108,
+    "requests": 56,
+    "downloaded": 17,
+    "fromCache": 47,
+    "failed": 1,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 38,
+     "errors": 0,
+     "listed": 316,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "c26218e6-1fae-4a7c-bea3-2d62eb813ec4",
+     "lat": 50.312972,
+     "lon": 11.880799,
+     "similarity": 0.8282,
+     "pass": 2,
+     "truthKm": 2.352,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=c26218e6-1fae-4a7c-bea3-2d62eb813ec4&map=18/50.312972/11.880799",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "41d9380d-51cb-4ae3-beb8-f1228546e9d7",
+     "lat": 50.316266,
+     "lon": 11.89426,
+     "similarity": 0.8173,
+     "pass": 1,
+     "truthKm": 2.311,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=41d9380d-51cb-4ae3-beb8-f1228546e9d7&map=18/50.316266/11.894260",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "65c401c8-5290-4cca-a4f6-f0a2a9aef1f3",
+     "lat": 50.318452,
+     "lon": 11.899548,
+     "similarity": 0.8071,
+     "pass": 1,
+     "truthKm": 2.516,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=65c401c8-5290-4cca-a4f6-f0a2a9aef1f3&map=18/50.318452/11.899548",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.352,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.352,
+   "pointRadiusKm": 1,
+   "nearestKm": 1.916,
+   "nearestRank": 61,
+   "within1km": 0
+  },
+  {
+   "id": "de-molenfeuer-warnemuende",
+   "label": "Molenfeuer Warnemünde",
+   "country": "DE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 54.19592,
+    "lon": 12.071703,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,70, typisch 0,66 (Abstand 0,04, nötig 0,10); 55 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 55,
+    "spreadPictures": 40,
+    "best": 0.6960910758891472,
+    "typical": 0.6593494796356383,
+    "spread": 0.032182377263187734,
+    "gap": 0.036741596253508924,
+    "z": 1.1416681854493178,
+    "agreement": 1
+   },
+   "listed": 51,
+   "sampled": 40,
+   "compared": 55,
+   "timing": {
+    "totalMs": 9311.838690999997,
+    "searchMs": 1535.8349469999812,
+    "picturesMs": 7770.257482999994,
+    "embedMs": 4794.467154999977,
+    "requests": 75,
+    "downloaded": 40,
+    "fromCache": 15,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 35,
+     "errors": 0,
+     "listed": 159,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "01296088-6363-44fb-97ef-ff993d91979d",
+     "lat": 54.170563,
+     "lon": 12.082657,
+     "similarity": 0.6961,
+     "pass": 1,
+     "truthKm": 1.874,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=01296088-6363-44fb-97ef-ff993d91979d&map=18/54.170563/12.082657",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2407d381-12f5-428c-b525-7e60b31e0f6a",
+     "lat": 54.170378,
+     "lon": 12.082527,
+     "similarity": 0.6921,
+     "pass": 1,
+     "truthKm": 1.896,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2407d381-12f5-428c-b525-7e60b31e0f6a&map=18/54.170378/12.082527",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "ed22dd42-31da-445d-b579-a1c7dc5642cb",
+     "lat": 54.170621,
+     "lon": 12.08266,
+     "similarity": 0.6918,
+     "pass": 1,
+     "truthKm": 1.867,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=ed22dd42-31da-445d-b579-a1c7dc5642cb&map=18/54.170621/12.082660",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.874,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.937,
+   "pointRadiusKm": 1,
+   "nearestKm": 1.43,
+   "nearestRank": 47,
+   "within1km": 0
+  },
+  {
+   "id": "de-palmengartenwehr",
+   "label": "Palmengartenwehr",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.344142,
+    "lon": 12.365784,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,68, typisch 0,57 (Abstand 0,11, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.6835725907507035,
+    "typical": 0.5739147712947252,
+    "spread": 0.05336654057277048,
+    "gap": 0.1096578194559783,
+    "z": 2.054804719943373,
+    "agreement": 0.5
+   },
+   "listed": 283,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 15515.435312000001,
+    "searchMs": 1609.463563000012,
+    "picturesMs": 13886.896578999993,
+    "embedMs": 8936.996498999986,
+    "requests": 97,
+    "downloaded": 58,
+    "fromCache": 7,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 564,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "468ed5aa-5d97-4d60-ab35-fb70d417dd1b",
+     "lat": 51.329736,
+     "lon": 12.355132,
+     "similarity": 0.6836,
+     "pass": 2,
+     "truthKm": 0.724,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=468ed5aa-5d97-4d60-ab35-fb70d417dd1b&map=18/51.329736/12.355132",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "46196b44-917e-4987-b3e7-e7bd16bf51ed",
+     "lat": 51.32971,
+     "lon": 12.355143,
+     "similarity": 0.6796,
+     "pass": 2,
+     "truthKm": 0.727,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=46196b44-917e-4987-b3e7-e7bd16bf51ed&map=18/51.329710/12.355143",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "09ec5be1-7d78-4970-b791-236f0ab3ae97",
+     "lat": 51.347085,
+     "lon": 12.344379,
+     "similarity": 0.6743,
+     "pass": 2,
+     "truthKm": 1.365,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=09ec5be1-7d78-4970-b791-236f0ab3ae97&map=18/51.347085/12.344379",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.724,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.731,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.147,
+   "nearestRank": 25,
+   "within1km": 17
+  },
+  {
+   "id": "de-quellbrunnen",
+   "label": "Quellbrunnen",
+   "country": "DE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 52.667308,
+    "lon": 13.603915,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,71, typisch 0,63 (Abstand 0,08, nötig 0,10); 59 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 59,
+    "spreadPictures": 40,
+    "best": 0.7069377481938571,
+    "typical": 0.6274985606548893,
+    "spread": 0.02180308645330013,
+    "gap": 0.07943918753896784,
+    "z": 3.6434835824330674,
+    "agreement": 1
+   },
+   "listed": 52,
+   "sampled": 40,
+   "compared": 59,
+   "timing": {
+    "totalMs": 8273.946828,
+    "searchMs": 1665.8568919999962,
+    "picturesMs": 6592.828294999985,
+    "embedMs": 3279.980425000016,
+    "requests": 63,
+    "downloaded": 24,
+    "fromCache": 35,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 197,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "a2866a09-70d8-40db-a792-6eb18b861427",
+     "lat": 52.6725,
+     "lon": 13.566944,
+     "similarity": 0.7069,
+     "pass": 1,
+     "truthKm": 1.783,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a2866a09-70d8-40db-a792-6eb18b861427&map=18/52.672500/13.566944",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "6018bb46-3755-4f0c-81ad-981c1ca4bee2",
+     "lat": 52.673333,
+     "lon": 13.566667,
+     "similarity": 0.6933,
+     "pass": 2,
+     "truthKm": 1.768,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6018bb46-3755-4f0c-81ad-981c1ca4bee2&map=18/52.673333/13.566667",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "c217f85b-cfdd-4209-9c45-1441fdee5850",
+     "lat": 52.671667,
+     "lon": 13.567222,
+     "similarity": 0.6849,
+     "pass": 1,
+     "truthKm": 1.803,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=c217f85b-cfdd-4209-9c45-1441fdee5850&map=18/52.671667/13.567222",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 1.783,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.781,
+   "pointRadiusKm": 1,
+   "nearestKm": 1.758,
+   "nearestRank": 25,
+   "within1km": 0
+  },
+  {
+   "id": "de-rheinbruecke-leverkusen",
+   "label": "Rheinbrücke Leverkusen",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.028326,
+    "lon": 6.942144,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,78, typisch 0,71 (Abstand 0,08, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7820020027250338,
+    "typical": 0.7054107450207805,
+    "spread": 0.05371616762069959,
+    "gap": 0.07659125770425335,
+    "z": 1.425851118886203,
+    "agreement": 0.5
+   },
+   "listed": 326,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 12907.393360000002,
+    "searchMs": 1680.8862729999964,
+    "picturesMs": 11218.199293999991,
+    "embedMs": 6922.375315999991,
+    "requests": 96,
+    "downloaded": 57,
+    "fromCache": 8,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 633,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "95f460eb-1991-4eb4-b075-f6f4dcc3047e",
+     "lat": 51.030091,
+     "lon": 6.918831,
+     "similarity": 0.782,
+     "pass": 2,
+     "truthKm": 3.008,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=95f460eb-1991-4eb4-b075-f6f4dcc3047e&map=18/51.030091/6.918831",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "99afe7df-2584-4567-b78c-0d6725d9843f",
+     "lat": 51.029731,
+     "lon": 6.919303,
+     "similarity": 0.7782,
+     "pass": 2,
+     "truthKm": 2.983,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=99afe7df-2584-4567-b78c-0d6725d9843f&map=18/51.029731/6.919303",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "8c886155-4d13-403d-8d91-38483ce1eaa4",
+     "lat": 51.002193,
+     "lon": 6.947273,
+     "similarity": 0.772,
+     "pass": 2,
+     "truthKm": 3.712,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=8c886155-4d13-403d-8d91-38483ce1eaa4&map=18/51.002193/6.947273",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 3.008,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 3.002,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.05,
+   "nearestRank": 18,
+   "within1km": 10
+  },
+  {
+   "id": "de-st-lambertus",
+   "label": "St. Lambertus",
+   "country": "DE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.053937,
+    "lon": 6.458206,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,71, typisch 0,63 (Abstand 0,08, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7114020965559515,
+    "typical": 0.6300547005202801,
+    "spread": 0.016698407708074736,
+    "gap": 0.08134739603567143,
+    "z": 4.871566047362397,
+    "agreement": 1
+   },
+   "listed": 244,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 11256.687005,
+    "searchMs": 1656.022563999999,
+    "picturesMs": 9576.892185999997,
+    "embedMs": 6077.903961999968,
+    "requests": 98,
+    "downloaded": 59,
+    "fromCache": 6,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 503,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "0365e81c-b096-477d-a770-3d17497f501f",
+     "lat": 51.039974,
+     "lon": 6.448894,
+     "similarity": 0.7114,
+     "pass": 2,
+     "truthKm": 1.483,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=0365e81c-b096-477d-a770-3d17497f501f&map=18/51.039974/6.448894",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "c2586354-4bab-4e74-bcd9-4b7f8b6299f1",
+     "lat": 51.040744,
+     "lon": 6.452328,
+     "similarity": 0.6963,
+     "pass": 2,
+     "truthKm": 1.563,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=c2586354-4bab-4e74-bcd9-4b7f8b6299f1&map=18/51.040744/6.452328",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "49e51e73-d867-4023-b4d9-ebe4e73f1023",
+     "lat": 51.040057,
+     "lon": 6.450768,
+     "similarity": 0.6879,
+     "pass": 2,
+     "truthKm": 1.552,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=49e51e73-d867-4023-b4d9-ebe4e73f1023&map=18/51.040057/6.450768",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.483,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.499,
+   "pointRadiusKm": 1,
+   "nearestKm": 1.44,
+   "nearestRank": 19,
+   "within1km": 0
+  },
+  {
+   "id": "de-zoobruecke",
+   "label": "Zoobrücke",
+   "country": "DE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 50.941113,
+    "lon": 6.97718,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,77, typisch 0,68 (Abstand 0,09, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7692235314644632,
+    "typical": 0.6763522810419289,
+    "spread": 0.0336998907456775,
+    "gap": 0.0928712504225343,
+    "z": 2.7558323889951004,
+    "agreement": 0
+   },
+   "listed": 500,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 11354.470335999998,
+    "searchMs": 1592.0359279999975,
+    "picturesMs": 9753.629912999982,
+    "embedMs": 5512.2425790000125,
+    "requests": 101,
+    "downloaded": 62,
+    "fromCache": 3,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 941,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "acf0c50f-ff62-47fa-b405-a2fe8937165a",
+     "lat": 50.920231,
+     "lon": 6.976897,
+     "similarity": 0.7692,
+     "pass": 1,
+     "truthKm": 3.818,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=acf0c50f-ff62-47fa-b405-a2fe8937165a&map=18/50.920231/6.976897",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "edcc0700-0632-46b8-ac38-08b0718b5463",
+     "lat": 50.924612,
+     "lon": 6.973954,
+     "similarity": 0.7645,
+     "pass": 2,
+     "truthKm": 3.331,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=edcc0700-0632-46b8-ac38-08b0718b5463&map=18/50.924612/6.973954",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "467a4ad1-adcd-4f39-937a-2b1d58583a40",
+     "lat": 50.92515,
+     "lon": 6.973651,
+     "similarity": 0.7619,
+     "pass": 2,
+     "truthKm": 3.272,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=467a4ad1-adcd-4f39-937a-2b1d58583a40&map=18/50.925150/6.973651",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 3.818,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 3.823,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.236,
+   "nearestRank": 11,
+   "within1km": 5
+  },
+  {
+   "id": "ee-tartu-railway-station",
+   "label": "Tartu railway station",
+   "country": "EE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 58.387115,
+    "lon": 26.711216,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,63, typisch 0,53 (Abstand 0,10, nötig 0,10); 38 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 38,
+    "spreadPictures": 37,
+    "best": 0.6286762347089031,
+    "typical": 0.5291259090982736,
+    "spread": 0.02285650198215609,
+    "gap": 0.09955032561062949,
+    "z": 4.355448864762758,
+    "agreement": 1
+   },
+   "listed": 45,
+   "sampled": 40,
+   "compared": 38,
+   "timing": {
+    "totalMs": 1704.5340800000122,
+    "searchMs": 1472.50836300003,
+    "picturesMs": 225.7451669999573,
+    "embedMs": 0,
+    "requests": 39,
+    "downloaded": 0,
+    "fromCache": 38,
+    "failed": 4,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 35,
+     "errors": 0,
+     "listed": 154,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "d6e3ae0f-1581-4f35-8f26-a8314a9915bd",
+     "lat": 58.378228,
+     "lon": 26.726312,
+     "similarity": 0.6287,
+     "pass": 1,
+     "truthKm": 1.237,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=d6e3ae0f-1581-4f35-8f26-a8314a9915bd&map=18/58.378228/26.726312",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "349ef41e-0e9c-4da7-b1b9-59bcdf99c705",
+     "lat": 58.378135,
+     "lon": 26.725965,
+     "similarity": 0.6102,
+     "pass": 1,
+     "truthKm": 1.214,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=349ef41e-0e9c-4da7-b1b9-59bcdf99c705&map=18/58.378135/26.725965",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "bc38635c-ba65-46ab-a394-3de18687c4f8",
+     "lat": 58.379182,
+     "lon": 26.724332,
+     "similarity": 0.609,
+     "pass": 1,
+     "truthKm": 1.181,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=bc38635c-ba65-46ab-a394-3de18687c4f8&map=18/58.379182/26.724332",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.237,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.22,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.881,
+   "nearestRank": 35,
+   "within1km": 10
+  },
+  {
+   "id": "fr-arc-de-triomphe",
+   "label": "Arc de Triomphe",
+   "country": "FR",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 48.861495,
+    "lon": 2.286569,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,78, typisch 0,65 (Abstand 0,13, nötig 0,10); 62 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 62,
+    "spreadPictures": 37,
+    "best": 0.7792382155841309,
+    "typical": 0.6538705692584617,
+    "spread": 0.05841032925082713,
+    "gap": 0.1253676463256692,
+    "z": 2.1463266503311815,
+    "agreement": 0.5
+   },
+   "listed": 525,
+   "sampled": 40,
+   "compared": 62,
+   "timing": {
+    "totalMs": 12500.343063000008,
+    "searchMs": 1694.9509430000035,
+    "picturesMs": 10797.08043100001,
+    "embedMs": 5989.872296000016,
+    "requests": 104,
+    "downloaded": 62,
+    "fromCache": 0,
+    "failed": 3,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 975,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "915ae6c9-3b46-45c4-82ca-2d52ea05ea9b",
+     "lat": 48.858378,
+     "lon": 2.298204,
+     "similarity": 0.7792,
+     "pass": 2,
+     "truthKm": 1.728,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=915ae6c9-3b46-45c4-82ca-2d52ea05ea9b&map=18/48.858378/2.298204",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "87cbddef-96d6-4158-bf76-a19504fd841a",
+     "lat": 48.863797,
+     "lon": 2.298607,
+     "similarity": 0.7742,
+     "pass": 2,
+     "truthKm": 1.14,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=87cbddef-96d6-4158-bf76-a19504fd841a&map=18/48.863797/2.298607",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "e215404a-ad5d-4002-b3d1-dcc3a06257e3",
+     "lat": 48.858728,
+     "lon": 2.298394,
+     "similarity": 0.7708,
+     "pass": 2,
+     "truthKm": 1.692,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=e215404a-ad5d-4002-b3d1-dcc3a06257e3&map=18/48.858728/2.298394",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 1.728,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.718,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.511,
+   "nearestRank": 46,
+   "within1km": 5
+  },
+  {
+   "id": "fr-eiffel-tower",
+   "label": "Eiffel Tower",
+   "country": "FR",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 48.865383,
+    "lon": 2.277032,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,74, typisch 0,63 (Abstand 0,12, nötig 0,10); 61 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 61,
+    "spreadPictures": 37,
+    "best": 0.7436356975155421,
+    "typical": 0.6279277670520359,
+    "spread": 0.047828297755988625,
+    "gap": 0.11570793046350625,
+    "z": 2.419235805836689,
+    "agreement": 0
+   },
+   "listed": 525,
+   "sampled": 40,
+   "compared": 61,
+   "timing": {
+    "totalMs": 11396.846059999982,
+    "searchMs": 1837.042066999973,
+    "picturesMs": 9552.308045999962,
+    "embedMs": 5502.137336999993,
+    "requests": 103,
+    "downloaded": 60,
+    "fromCache": 1,
+    "failed": 4,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 975,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "5a186ee9-a6b6-4783-bfd5-853ae2af662e",
+     "lat": 48.879498,
+     "lon": 2.299253,
+     "similarity": 0.7436,
+     "pass": 2,
+     "truthKm": 2.383,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=5a186ee9-a6b6-4783-bfd5-853ae2af662e&map=18/48.879498/2.299253",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "60015ef3-987d-47d6-a661-ff1f34ebdd41",
+     "lat": 48.858767,
+     "lon": 2.298896,
+     "similarity": 0.7286,
+     "pass": 2,
+     "truthKm": 0.327,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=60015ef3-987d-47d6-a661-ff1f34ebdd41&map=18/48.858767/2.298896",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "81f7f030-e523-49c5-b783-0b6e85526147",
+     "lat": 48.858755,
+     "lon": 2.298832,
+     "similarity": 0.7241,
+     "pass": 2,
+     "truthKm": 0.323,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=81f7f030-e523-49c5-b783-0b6e85526147&map=18/48.858755/2.298832",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 2.383,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.383,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.306,
+   "nearestRank": 21,
+   "within1km": 14
+  },
+  {
+   "id": "fr-new-gatteville-lighthouse",
+   "label": "new Gatteville Lighthouse",
+   "country": "FR",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 49.706905,
+    "lon": -1.252787,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,70, typisch 0,63 (Abstand 0,07, nötig 0,10); 55 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 55,
+    "spreadPictures": 40,
+    "best": 0.6971774883722268,
+    "typical": 0.6277275724564457,
+    "spread": 0.039836039771140266,
+    "gap": 0.06944991591578109,
+    "z": 1.7433940802041015,
+    "agreement": 1
+   },
+   "listed": 75,
+   "sampled": 40,
+   "compared": 55,
+   "timing": {
+    "totalMs": 15851.265963000013,
+    "searchMs": 4105.501561000012,
+    "picturesMs": 11740.154168999987,
+    "embedMs": 3719.717900000018,
+    "requests": 83,
+    "downloaded": 46,
+    "fromCache": 9,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 37,
+     "errors": 0,
+     "listed": 363,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "565a9c1e-d990-49a5-a9be-9b0bdd553df8",
+     "lat": 49.695044,
+     "lon": -1.269543,
+     "similarity": 0.6972,
+     "pass": 1,
+     "truthKm": 0.303,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=565a9c1e-d990-49a5-a9be-9b0bdd553df8&map=18/49.695044/-1.269543",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "9c5fde70-15d0-4c44-b558-2f0c3e8a750a",
+     "lat": 49.695044,
+     "lon": -1.269403,
+     "similarity": 0.6899,
+     "pass": 1,
+     "truthKm": 0.294,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=9c5fde70-15d0-4c44-b558-2f0c3e8a750a&map=18/49.695044/-1.269403",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "6d5bdaf6-feaa-429a-ab1e-b5efe137cd4c",
+     "lat": 49.695053,
+     "lon": -1.270318,
+     "similarity": 0.6885,
+     "pass": 2,
+     "truthKm": 0.351,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6d5bdaf6-feaa-429a-ab1e-b5efe137cd4c&map=18/49.695053/-1.270318",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 0.303,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.31,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.241,
+   "nearestRank": 10,
+   "within1km": 23
+  },
+  {
+   "id": "gb-glenfinnan-viaduct",
+   "label": "Glenfinnan Viaduct",
+   "country": "GB",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 56.866549,
+    "lon": -5.414605,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,65, typisch 0,59 (Abstand 0,06, nötig 0,10); 53 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist. Zeitbudget von 20 s erschöpft; 53 von 40 gewählten Bildern verglichen.",
+   "matched": false,
+   "stats": {
+    "pictures": 53,
+    "spreadPictures": 40,
+    "best": 0.6450070108542524,
+    "typical": 0.5851459021859035,
+    "spread": 0.01899066238429464,
+    "gap": 0.05986110866834893,
+    "z": 3.1521337938088103,
+    "agreement": 1
+   },
+   "listed": 175,
+   "sampled": 40,
+   "compared": 53,
+   "timing": {
+    "totalMs": 18616.076982,
+    "searchMs": 6084.492421000032,
+    "picturesMs": 12517.528583000007,
+    "embedMs": 4735.1347620000015,
+    "requests": 89,
+    "downloaded": 50,
+    "fromCache": 3,
+    "failed": 0,
+    "budgetExhausted": true
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 37,
+     "errors": 0,
+     "listed": 343,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "f4cb301d-7d13-47de-ba4f-90d58f9181f4",
+     "lat": 56.859746,
+     "lon": -5.406536,
+     "similarity": 0.645,
+     "pass": 1,
+     "truthKm": 2.392,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=f4cb301d-7d13-47de-ba4f-90d58f9181f4&map=18/56.859746/-5.406536",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "8f180837-cc4b-4e52-9c88-e7f4fe4d9a62",
+     "lat": 56.860566,
+     "lon": -5.409115,
+     "similarity": 0.6408,
+     "pass": 1,
+     "truthKm": 2.222,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=8f180837-cc4b-4e52-9c88-e7f4fe4d9a62&map=18/56.860566/-5.409115",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "cba80927-8284-4360-b681-33cfa554b3ba",
+     "lat": 56.860191,
+     "lon": -5.408366,
+     "similarity": 0.6366,
+     "pass": 1,
+     "truthKm": 2.283,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=cba80927-8284-4360-b681-33cfa554b3ba&map=18/56.860191/-5.408366",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.392,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.334,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.723,
+   "nearestRank": 47,
+   "within1km": 9
+  },
+  {
+   "id": "ie-church-of-st-anne",
+   "label": "Church of St Anne",
+   "country": "IE",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.916823,
+    "lon": -8.476073,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,76, typisch 0,66 (Abstand 0,10, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7577835140909491,
+    "typical": 0.6619195597549257,
+    "spread": 0.038514441086856754,
+    "gap": 0.09586395433602346,
+    "z": 2.4890392182982377,
+    "agreement": 0.5
+   },
+   "listed": 250,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 9723.139082000009,
+    "searchMs": 1609.898309000011,
+    "picturesMs": 8104.969432000013,
+    "embedMs": 4984.582083000016,
+    "requests": 90,
+    "downloaded": 51,
+    "fromCache": 14,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 515,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "b00d98d0-fcfb-446a-8e66-85973014cd64",
+     "lat": 51.902876,
+     "lon": -8.447278,
+     "similarity": 0.7578,
+     "pass": 2,
+     "truthKm": 1.979,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=b00d98d0-fcfb-446a-8e66-85973014cd64&map=18/51.902876/-8.447278",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "4b90c5f6-8e5c-4a20-b50d-2c97f7eb055d",
+     "lat": 51.902831,
+     "lon": -8.448153,
+     "similarity": 0.7512,
+     "pass": 2,
+     "truthKm": 1.919,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=4b90c5f6-8e5c-4a20-b50d-2c97f7eb055d&map=18/51.902831/-8.448153",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "ec983b36-455f-4ebb-88a0-73ec1852a26a",
+     "lat": 51.906273,
+     "lon": -8.473526,
+     "similarity": 0.7505,
+     "pass": 1,
+     "truthKm": 0.372,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=ec983b36-455f-4ebb-88a0-73ec1852a26a&map=18/51.906273/-8.473526",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.979,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.954,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.176,
+   "nearestRank": 37,
+   "within1km": 17
+  },
+  {
+   "id": "ie-the-elysian",
+   "label": "The Elysian",
+   "country": "IE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.894961,
+    "lon": -8.441692,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "matched",
+   "reason": "Straßenbild passt: 0,79 gegen typisch 0,68 (Abstand 0,10, 4,3 Streuungen); 65 Bilder von Panoramax verglichen.",
+   "matched": true,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7868015839751249,
+    "typical": 0.6848055613546282,
+    "spread": 0.023527037519121073,
+    "gap": 0.10199602262049667,
+    "z": 4.335268413526424,
+    "agreement": 1
+   },
+   "listed": 265,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 8976.76901399999,
+    "searchMs": 1773.4868389999901,
+    "picturesMs": 7176.960040000005,
+    "embedMs": 4459.9850059999735,
+    "requests": 86,
+    "downloaded": 47,
+    "fromCache": 18,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 494,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "80750896-60c4-4831-8fdd-40ae4fe110d9",
+     "lat": 51.900418,
+     "lon": -8.45825,
+     "similarity": 0.7868,
+     "pass": 2,
+     "truthKm": 0.543,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=80750896-60c4-4831-8fdd-40ae4fe110d9&map=18/51.900418/-8.458250",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "3c8ac82e-66ab-4b08-90a2-3ee29a22cdcb",
+     "lat": 51.900213,
+     "lon": -8.459418,
+     "similarity": 0.7781,
+     "pass": 2,
+     "truthKm": 0.476,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=3c8ac82e-66ab-4b08-90a2-3ee29a22cdcb&map=18/51.900213/-8.459418",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "770c18b8-09be-4cbe-a635-b90d406d7922",
+     "lat": 51.900388,
+     "lon": -8.458425,
+     "similarity": 0.7698,
+     "pass": 1,
+     "truthKm": 0.532,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=770c18b8-09be-4cbe-a635-b90d406d7922&map=18/51.900388/-8.458425",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.543,
+   "refinedKm": 0.523,
+   "refinedRadiusKm": 1,
+   "confidence": 0.604,
+   "pointKm": 0.523,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.389,
+   "nearestRank": 8,
+   "within1km": 14
+  },
+  {
+   "id": "it-alghero-railway-station",
+   "label": "Alghero railway station",
+   "country": "IT",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 40.561952,
+    "lon": 8.317714,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,83, typisch 0,73 (Abstand 0,09, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.8288137149535307,
+    "typical": 0.7339219011929138,
+    "spread": 0.0400560605153039,
+    "gap": 0.09489181376061695,
+    "z": 2.3689751947614117,
+    "agreement": 0
+   },
+   "listed": 163,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 11793.024543999985,
+    "searchMs": 1704.2169789999898,
+    "picturesMs": 10081.124724000023,
+    "embedMs": 5808.882699000038,
+    "requests": 97,
+    "downloaded": 58,
+    "fromCache": 7,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 488,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "415d778a-47d5-4e34-98e5-4768d0bd4f74",
+     "lat": 40.582564,
+     "lon": 8.317962,
+     "similarity": 0.8288,
+     "pass": 2,
+     "truthKm": 0.915,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=415d778a-47d5-4e34-98e5-4768d0bd4f74&map=18/40.582564/8.317962",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "dd59b93f-e616-467a-8a87-11ace207c097",
+     "lat": 40.572303,
+     "lon": 8.323303,
+     "similarity": 0.8205,
+     "pass": 2,
+     "truthKm": 0.314,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=dd59b93f-e616-467a-8a87-11ace207c097&map=18/40.572303/8.323303",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "c193dd54-376f-47f3-8d02-af6fdf9fb0a7",
+     "lat": 40.571944,
+     "lon": 8.323709,
+     "similarity": 0.8189,
+     "pass": 2,
+     "truthKm": 0.362,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=c193dd54-376f-47f3-8d02-af6fdf9fb0a7&map=18/40.571944/8.323709",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.915,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.922,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.153,
+   "nearestRank": 8,
+   "within1km": 28
+  },
+  {
+   "id": "jp-tokyo-station",
+   "label": "Tokyo Station",
+   "country": "JP",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 35.685885,
+    "lon": 139.751545,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,78, typisch 0,71 (Abstand 0,07, nötig 0,10); 54 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist. Zeitbudget von 20 s erschöpft; 54 von 40 gewählten Bildern verglichen.",
+   "matched": false,
+   "stats": {
+    "pictures": 54,
+    "spreadPictures": 40,
+    "best": 0.776139307983557,
+    "typical": 0.7056859451122839,
+    "spread": 0.04128304279495989,
+    "gap": 0.07045336287127313,
+    "z": 1.7065932669060564,
+    "agreement": 0.5
+   },
+   "listed": 420,
+   "sampled": 40,
+   "compared": 54,
+   "timing": {
+    "totalMs": 18669.690666999988,
+    "searchMs": 1619.1759270000039,
+    "picturesMs": 17044.951019,
+    "embedMs": 2587.3242250000185,
+    "requests": 84,
+    "downloaded": 46,
+    "fromCache": 8,
+    "failed": 0,
+    "budgetExhausted": true
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 37,
+     "errors": 0,
+     "listed": 721,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "4a662d05-8f21-4cf7-92c1-9c3f7b679dfd",
+     "lat": 35.679925,
+     "lon": 139.719589,
+     "similarity": 0.7761,
+     "pass": 2,
+     "truthKm": 4.278,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=4a662d05-8f21-4cf7-92c1-9c3f7b679dfd&map=18/35.679925/139.719589",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "32bf06c2-512a-4059-bc8a-72c366777e93",
+     "lat": 35.680349,
+     "lon": 139.724215,
+     "similarity": 0.7719,
+     "pass": 1,
+     "truthKm": 3.86,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=32bf06c2-512a-4059-bc8a-72c366777e93&map=18/35.680349/139.724215",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "ee564337-1549-4476-8f08-22e833ad997a",
+     "lat": 35.678664,
+     "lon": 139.739385,
+     "similarity": 0.77,
+     "pass": 1,
+     "truthKm": 2.501,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=ee564337-1549-4476-8f08-22e833ad997a&map=18/35.678664/139.739385",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 4.278,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 4.18,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.394,
+   "nearestRank": 42,
+   "within1km": 10
+  },
+  {
+   "id": "mx-mexico-city-metropolitan",
+   "label": "Mexico City Metropolitan Cathedral",
+   "country": "MX",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 19.44468,
+    "lon": -99.14202,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,71, typisch 0,60 (Abstand 0,11, nötig 0,10); 59 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 59,
+    "spreadPictures": 40,
+    "best": 0.7134432821065523,
+    "typical": 0.6008768898973361,
+    "spread": 0.04216912322308296,
+    "gap": 0.11256639220921616,
+    "z": 2.669403193747183,
+    "agreement": 0.5
+   },
+   "listed": 45,
+   "sampled": 40,
+   "compared": 59,
+   "timing": {
+    "totalMs": 7153.335132999986,
+    "searchMs": 1721.5987160000077,
+    "picturesMs": 5423.165918999963,
+    "embedMs": 2332.9900320000015,
+    "requests": 68,
+    "downloaded": 29,
+    "fromCache": 30,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 189,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "4c2e591d-54bf-40db-9432-5487fb7eaa2c",
+     "lat": 19.437003,
+     "lon": -99.13162,
+     "similarity": 0.7134,
+     "pass": 1,
+     "truthKm": 0.349,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=4c2e591d-54bf-40db-9432-5487fb7eaa2c&map=18/19.437003/-99.131620",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "541cafb5-6403-423e-bd48-1344e1707515",
+     "lat": 19.437003,
+     "lon": -99.13162,
+     "similarity": 0.7134,
+     "pass": 2,
+     "truthKm": 0.349,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=541cafb5-6403-423e-bd48-1344e1707515&map=18/19.437003/-99.131620",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "3b58ef68-0a8a-4dbb-9c4f-863da42af5f0",
+     "lat": 19.435407,
+     "lon": -99.142128,
+     "similarity": 0.6834,
+     "pass": 1,
+     "truthKm": 0.961,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=3b58ef68-0a8a-4dbb-9c4f-863da42af5f0&map=18/19.435407/-99.142128",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.349,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.349,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.349,
+   "nearestRank": 1,
+   "within1km": 24
+  },
+  {
+   "id": "pe-cusco-cathedral",
+   "label": "Cusco Cathedral",
+   "country": "PE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": -13.528604,
+    "lon": -71.972412,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,73, typisch 0,63 (Abstand 0,10, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7335579904351763,
+    "typical": 0.6337722491568852,
+    "spread": 0.0351853906383632,
+    "gap": 0.0997857412782911,
+    "z": 2.83599924479716,
+    "agreement": 1
+   },
+   "listed": 114,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 9582.512168000045,
+    "searchMs": 1540.6484730000375,
+    "picturesMs": 8035.55051000003,
+    "embedMs": 4501.42817899998,
+    "requests": 90,
+    "downloaded": 51,
+    "fromCache": 14,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 423,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "5dc761e5-4016-492c-859e-6ab0b09fb58d",
+     "lat": -13.519415,
+     "lon": -71.974765,
+     "similarity": 0.7336,
+     "pass": 1,
+     "truthKm": 0.5,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=5dc761e5-4016-492c-859e-6ab0b09fb58d&map=18/-13.519415/-71.974765",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2da577a2-2e93-4c04-91f4-d2d55bfb6d74",
+     "lat": -13.518585,
+     "lon": -71.975252,
+     "similarity": 0.7191,
+     "pass": 1,
+     "truthKm": 0.399,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2da577a2-2e93-4c04-91f4-d2d55bfb6d74&map=18/-13.518585/-71.975252",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "17320032-2141-4b3e-9994-aa61a4d0ac7b",
+     "lat": -13.519697,
+     "lon": -71.974775,
+     "similarity": 0.7088,
+     "pass": 2,
+     "truthKm": 0.521,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=17320032-2141-4b3e-9994-aa61a4d0ac7b&map=18/-13.519697/-71.974775",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.5,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.483,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.245,
+   "nearestRank": 7,
+   "within1km": 27
+  },
+  {
+   "id": "ru-cathedral-of-christ-the",
+   "label": "Cathedral of Christ the Saviour",
+   "country": "RU",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 55.74052,
+    "lon": 37.582628,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "too-few",
+   "reason": "Nur 6 Straßenbilder auswertbar (6 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 6,
+    "spreadPictures": 6,
+    "best": 0.6528096966633103,
+    "typical": 0.6265798020194838,
+    "spread": 0.018691696217076868,
+    "gap": 0.026229894643826523,
+    "z": 1.4032912978685532,
+    "agreement": 1
+   },
+   "listed": 6,
+   "sampled": 6,
+   "compared": 6,
+   "timing": {
+    "totalMs": 1837.2862890000106,
+    "searchMs": 729.1556069999933,
+    "picturesMs": 1107.3801799999783,
+    "embedMs": 123.45098900003359,
+    "requests": 26,
+    "downloaded": 1,
+    "fromCache": 5,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 14,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "23a3a750-8b44-48d1-84a9-a5014f712633",
+     "lat": 55.750409,
+     "lon": 37.627025,
+     "similarity": 0.6528,
+     "pass": 1,
+     "truthKm": 1.498,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=23a3a750-8b44-48d1-84a9-a5014f712633&map=18/55.750409/37.627025",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "d45df449-551f-4cff-af60-9f91ff5cbbd8",
+     "lat": 55.750658,
+     "lon": 37.626865,
+     "similarity": 0.644,
+     "pass": 1,
+     "truthKm": 1.502,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=d45df449-551f-4cff-af60-9f91ff5cbbd8&map=18/55.750658/37.626865",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "277de8b8-80d8-491a-a4a2-fb1acc808083",
+     "lat": 55.750703,
+     "lon": 37.626963,
+     "similarity": 0.6392,
+     "pass": 1,
+     "truthKm": 1.51,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=277de8b8-80d8-491a-a4a2-fb1acc808083&map=18/55.750703/37.626963",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.498,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.501,
+   "pointRadiusKm": 1,
+   "nearestKm": 1.498,
+   "nearestRank": 1,
+   "within1km": 0
+  },
+  {
+   "id": "tr-istiklal-avenue",
+   "label": "İstiklal Avenue",
+   "country": "TR",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 41.037039,
+    "lon": 28.961415,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "matched",
+   "reason": "Straßenbild passt: 0,75 gegen typisch 0,61 (Abstand 0,14, 3,6 Streuungen); 56 Bilder von Panoramax verglichen.",
+   "matched": true,
+   "stats": {
+    "pictures": 56,
+    "spreadPictures": 40,
+    "best": 0.7516118305445958,
+    "typical": 0.6086995686289697,
+    "spread": 0.04007142991283328,
+    "gap": 0.14291226191562612,
+    "z": 3.5664377893801342,
+    "agreement": 0
+   },
+   "listed": 229,
+   "sampled": 40,
+   "compared": 56,
+   "timing": {
+    "totalMs": 9048.071918000001,
+    "searchMs": 1708.5623730000225,
+    "picturesMs": 7333.373505999974,
+    "embedMs": 3216.769903999986,
+    "requests": 82,
+    "downloaded": 43,
+    "fromCache": 13,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 498,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "5c0d8c3d-27a2-42ff-8360-e1ac6c8e43c9",
+     "lat": 41.052277,
+     "lon": 28.985111,
+     "similarity": 0.7516,
+     "pass": 1,
+     "truthKm": 2.08,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=5c0d8c3d-27a2-42ff-8360-e1ac6c8e43c9&map=18/41.052277/28.985111",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "4a3adf5b-5fe5-423e-8fc1-e67cd3dbe2e8",
+     "lat": 41.014744,
+     "lon": 28.975579,
+     "similarity": 0.7402,
+     "pass": 2,
+     "truthKm": 2.178,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=4a3adf5b-5fe5-423e-8fc1-e67cd3dbe2e8&map=18/41.014744/28.975579",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "1f84d718-6711-4191-ad8c-296f84e47219",
+     "lat": 41.014978,
+     "lon": 28.975642,
+     "similarity": 0.7199,
+     "pass": 1,
+     "truthKm": 2.151,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=1f84d718-6711-4191-ad8c-296f84e47219&map=18/41.014978/28.975642",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.08,
+   "refinedKm": 2.08,
+   "refinedRadiusKm": 1,
+   "confidence": 0.686,
+   "pointKm": 2.08,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.406,
+   "nearestRank": 33,
+   "within1km": 2
+  },
+  {
+   "id": "us-vessel",
+   "label": "Vessel",
+   "country": "US",
+   "split": "test",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 40.742609,
+    "lon": -73.992236,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,75, typisch 0,66 (Abstand 0,10, nötig 0,10); 55 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 55,
+    "spreadPictures": 40,
+    "best": 0.7536302995907214,
+    "typical": 0.6570295426625973,
+    "spread": 0.057642518352820346,
+    "gap": 0.09660075692812409,
+    "z": 1.6758594122631283,
+    "agreement": 0
+   },
+   "listed": 111,
+   "sampled": 40,
+   "compared": 55,
+   "timing": {
+    "totalMs": 5594.123994999973,
+    "searchMs": 1450.1595460000099,
+    "picturesMs": 4137.186151000031,
+    "embedMs": 1611.443370999943,
+    "requests": 64,
+    "downloaded": 25,
+    "fromCache": 30,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 253,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "a4957ae9-f866-4dbd-95f2-ba41bd53b1c5",
+     "lat": 40.748333,
+     "lon": -73.998889,
+     "similarity": 0.7536,
+     "pass": 2,
+     "truthKm": 0.668,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a4957ae9-f866-4dbd-95f2-ba41bd53b1c5&map=18/40.748333/-73.998889",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "baa1b8b8-1579-41cf-97f3-86bb3a1e29eb",
+     "lat": 40.749396,
+     "lon": -73.969523,
+     "similarity": 0.7474,
+     "pass": 2,
+     "truthKm": 2.793,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=baa1b8b8-1579-41cf-97f3-86bb3a1e29eb&map=18/40.749396/-73.969523",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "df596ce6-627d-4b54-ac9f-6660c1a85999",
+     "lat": 40.747976,
+     "lon": -73.970693,
+     "similarity": 0.7457,
+     "pass": 1,
+     "truthKm": 2.729,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=df596ce6-627d-4b54-ac9f-6660c1a85999&map=18/40.747976/-73.970693",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.668,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.668,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.085,
+   "nearestRank": 10,
+   "within1km": 8
+  },
+  {
+   "id": "ve-estadio-olimpico",
+   "label": "Estadio Olímpico",
+   "country": "VE",
+   "split": "train",
+   "kind": "true",
+   "variant": 0,
+   "candidate": {
+    "lat": 10.485238,
+    "lon": -66.897759,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.5,
+   "reasonCode": "too-few",
+   "reason": "Nur 1 Straßenbild auswertbar (1 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 1,
+    "spreadPictures": 1,
+    "best": 0.6358381866334332,
+    "typical": 0.6358381866334332,
+    "spread": 0.005,
+    "gap": 0,
+    "z": 0,
+    "agreement": 0
+   },
+   "listed": 1,
+   "sampled": 1,
+   "compared": 1,
+   "timing": {
+    "totalMs": 767.0006080000312,
+    "searchMs": 766.1319089999888,
+    "picturesMs": 0.4949650000198744,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 1,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 1,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "a300f26d-421d-4f8f-8edd-8bf6b9ac3d15",
+     "lat": 10.493539,
+     "lon": -66.888412,
+     "similarity": 0.6358,
+     "pass": 1,
+     "truthKm": 0.406,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a300f26d-421d-4f8f-8edd-8bf6b9ac3d15&map=18/10.493539/-66.888412",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.406,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.406,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.406,
+   "nearestRank": 1,
+   "within1km": 1
+  }
+ ]
+}
