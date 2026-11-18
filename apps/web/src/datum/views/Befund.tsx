@@ -25,7 +25,7 @@ export function Befund({ node, byId, selected, go }: DatumViewProps) {
     setCandidate(0);
   }, [selected]);
 
-  const shapes = useMemo(() => (fix ? fixShapes(fix, fix, countries, false) : []), [fix, countries]);
+  const shapes = useMemo(() => (fix ? fixShapes(fix, fix, countries, false, t) : []), [fix, countries, t]);
   const markers = useMemo<MapMarker[]>(() => {
     if (!fix?.location) return [];
     const out: MapMarker[] = [{ id: fix.videoId, lat: fix.location.lat, lon: fix.location.lon, shape: 'fix', label: fix.location.label, selected: true }];

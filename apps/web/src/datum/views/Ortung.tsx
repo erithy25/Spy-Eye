@@ -19,7 +19,7 @@ export interface DatumViewProps {
 const WORLD = { lat: 24, lon: 12, zoom: 2.25 };
 
 /** Map geometry for one fix: uncertainty, candidates, sun and shadow, view cone, ground truth. */
-export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[], withCountries: boolean): MapShape[] {
+export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[], withCountries: boolean, tr: (s: string) => string = (s) => s): MapShape[] {
   const shapes: MapShape[] = [];
   const loc = fix.location;
   if (withCountries && loc && loc.radiusKm > 150) {
@@ -40,7 +40,7 @@ export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[],
     const sun = (full ?? fix).sun?.at ?? null;
     if (sun && sun.elevationDeg > -6) {
       shapes.push({ kind: 'ray', lat: loc.lat, lon: loc.lon, azimuthDeg: sun.azimuthDeg, lengthKm: len, style: 'strong', label: `☉ ${Math.round(sun.azimuthDeg)}°`, arrow: false });
-      shapes.push({ kind: 'ray', lat: loc.lat, lon: loc.lon, azimuthDeg: sun.shadowAzimuthDeg, lengthKm: len * 0.6, style: 'dotted', label: 'Schatten', arrow: true });
+      shapes.push({ kind: 'ray', lat: loc.lat, lon: loc.lon, azimuthDeg: sun.shadowAzimuthDeg, lengthKm: len * 0.6, style: 'dotted', label: tr('Schatten'), arrow: true });
     }
     const heading = (full ?? fix).heading;
     if (heading) {
@@ -109,7 +109,7 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
     return out;
   }, [rows, selected, showTruth, t]);
 
-  const shapes = useMemo<MapShape[]>(() => (current ? fixShapes(current, full, countries, true) : []), [current, full, countries]);
+  const shapes = useMemo<MapShape[]>(() => (current ? fixShapes(current, full, countries, true, t) : []), [current, full, countries, t]);
 
   const view = current?.location
     ? { lat: current.location.lat, lon: current.location.lon, zoom: zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }

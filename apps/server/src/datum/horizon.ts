@@ -148,6 +148,26 @@ function profileAt(profile: number[], azDeg: number): number {
   return a + (b - a) * t;
 }
 
+/** Below this rise and fall of the terrain horizon inside the view, a match says nothing (degrees). */
+const MIN_RELIEF_DEG = 1;
+/** Relief at which a match counts fully (degrees). */
+const FULL_RELIEF_DEG = 4;
+/** Floor for the typical error a heading is compared against (degrees). */
+const MIN_TYPICAL_ERROR_DEG = 0.5;
+
+/** Range (max − min) of the horizon profile across a view of `fovDeg` centred on `headingDeg`. */
+export function profileRelief(profile: number[], headingDeg: number, fovDeg: number): number {
+  let lo = Infinity;
+  let hi = -Infinity;
+  const half = fovDeg / 2;
+  for (let a = -half; a <= half + 1e-9; a += 0.5) {
+    const v = profileAt(profile, headingDeg + a);
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  return hi > lo ? hi - lo : 0;
+}
+
 function median(values: Float64Array, count: number): number {
   const a = values.subarray(0, count).slice().sort();
   if (count === 0) return Number.NaN;
@@ -315,13 +335,19 @@ export function matchSkyline(
   }
   if (!best || !bestCurve) return none;
 
-  // Distinctiveness: the best heading must stand out against the typical heading.
+  // Distinctiveness: the best heading must stand out against the typical heading. Over flat
+  // ground every heading fits about equally well; tiny typical errors carry no information, so
+  // the comparison never goes below a floor.
   const sorted = Float64Array.from(bestCurve.errors).sort();
   const typical = sorted[180] as number;
-  const distinct = typical > 1e-6 ? Math.max(0, 1 - best.error / typical) : 0;
+  const distinct = Math.max(0, (typical - best.error) / Math.max(typical, MIN_TYPICAL_ERROR_DEG));
   const fit = 1 / (1 + (best.error / 0.75) ** 2);
   const coverage = Math.min(1, m / (n * 0.5));
-  const score = Math.round(distinct * fit * coverage * 1000) / 1000;
+  // Relief: the terrain horizon inside the matched view must rise and fall noticeably, otherwise
+  // a flat skyline (roofs, a plain, the sea) fits any heading and says nothing about direction.
+  const relief = profileRelief(profile, best.heading, best.fov);
+  const reliefFactor = relief < MIN_RELIEF_DEG ? 0 : Math.min(1, relief / FULL_RELIEF_DEG);
+  const score = Math.round(distinct * fit * coverage * reliefFactor * 1000) / 1000;
   return {
     headingDeg: Math.round(best.heading * 100) / 100,
     fovDeg: Math.round(best.fov * 100) / 100,

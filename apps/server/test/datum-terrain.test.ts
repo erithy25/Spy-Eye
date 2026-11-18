@@ -189,6 +189,20 @@ test('matchSkyline ignores building edges and reports no information for a flat 
   assert.equal(none.score, 0);
 });
 
+test('matchSkyline gives no heading over nearly flat ground (city roofs, plains)', () => {
+  const aspect = 16 / 9;
+  // Flat land with a few tenths of a degree of undulation, as the elevation data of a city gives.
+  const gentle = Array.from({ length: 360 }, (_, a) => 0.15 * Math.sin((a * DEG) * 3) + 0.08 * Math.sin((a * DEG) * 11));
+  // A roof line slightly tilted and wavy, the way a street of houses looks against the sky.
+  const roofs = Array.from({ length: 192 }, (_, c) => 0.42 + 0.01 * Math.sin(c / 9) + c * 0.00005);
+  const match = matchSkyline(roofs, aspect, gentle);
+  assert.equal(match.score, 0, `score ${match.score} at error ${match.errorDeg}`);
+  // The same roof line against mountains is judged on its fit, not dismissed for lack of relief.
+  const mountains = syntheticProfile();
+  const real = matchSkyline(renderSkyline(mountains, 175, 70, -2, aspect, 192), aspect, mountains);
+  assert.ok(real.score > 0.3, `score ${real.score}`);
+});
+
 test('refinePosition finds the place and heading of a skyline seen at Deutsches Eck', async () => {
   const profile = await horizonProfile(DEUTSCHES_ECK.lat, DEUTSCHES_ECK.lon);
   assert.ok(profile);
