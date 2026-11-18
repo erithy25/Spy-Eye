@@ -9,7 +9,7 @@ Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` ne
 | `sicht-markenfilm-v1.mp4` | Markenfilm, erster Schnitt, 40,2 s, 1920×1080, 25 B/s, H.264/AAC, 29 MB |
 | `sicht-brandfilm-en.mp4` | Derselbe Schnitt mit englischen Tafeln, 40,2 s, 29 MB |
 | `sicht-markenfilm-lang.mp4` | Langfassung mit drei Ausschnitten aus der Konsole, 66,8 s, 37 MB |
-| `sicht-produktfilm.mp4` | Produktfilm aus dem Mitschnitt der Konsole, 142,6 s, 28 MB |
+| `sicht-produktfilm.mp4` | Produktfilm aus dem Mitschnitt der Konsole, 136,6 s, 28 MB |
 | `sicht-teaser-hochkant.mp4` | Teaser im Hochformat, 19,5 s, 1080×1920, 7,2 MB |
 | `sicht-teaser-vertical-en.mp4` | Derselbe Teaser mit englischen Tafeln, 19,5 s, 7,2 MB |
 | `*-web.mp4` | Zu jeder Fassung eine leichte Datei zum Einbetten (1280×720, im Hochformat 720×1280): 2,8 · 2,8 · 4,2 · 6,8 · 0,8 · 0,8 MB |
@@ -338,7 +338,7 @@ Zum Wortlaut:
 ## Mitschnitt der Konsole: Produktfilm und Langfassung
 
 Beide Filme zeigen Ausschnitte aus einem durchgehenden Mitschnitt der Konsole,
-`media/product/take.mp4` (129,88 s, 1920×1080, 25 B/s, H.264, 37 MB; nicht im Repository). Er
+`media/product/take.mp4` (124,56 s, 1920×1080, 25 B/s, H.264, 41 MB; nicht im Repository). Er
 entsteht mit einem Playwright-Skript gegen die laufende Vorführung (Übung RHEIN-MOSEL, Uhr
 achtfach) als WebM und wird so umgewandelt:
 
@@ -347,46 +347,55 @@ ffmpeg -i take.webm -an -vf "fps=25,scale=1920:1080:flags=lanczos,format=yuv420p
 ```
 
 Das Skript schreibt Schnittmarken mit (Sekunden ab Beginn des Mitschnitts). Im jetzigen
-Mitschnitt: Anmeldung 5,7 · Mandat 9,6 · Lage 13,1 · Start der Übung 17,9 · erste Meldung 28,9 ·
-Karte 36,4 · Fehlmeldung 51,9 · Wachen 61,4 · Suche 69,9 · Treffer 77,3 · Vorgang 84,7 ·
-Ablehnung 96,0 · Verbund 105,3 · Protokoll 111,3 · Wirkung 120,1 · Schluss 125,5 · Ende 129,9.
+Mitschnitt (vom 18. November 2026, nach der Korrektur der rechten Spalte der Lage): Anmeldung
+2,9 · Mandat 6,4 · Lage 10,2 · Start der Übung 15,1 · erste Meldung 26,1 · Karte 33,5 ·
+Fehlmeldung 49,1 · Wachen 58,6 · Suche 66,5 · Treffer 73,3 · Vorgang 80,4 · Ablehnung 90,7 ·
+Verbund 99,9 · Protokoll 106,1 · Wirkung 114,9 · Schluss 120,4 · Ende 124,6. Die Seiten wechseln
+bei 67,2 (Suche), 100,6 (Verbund), 107,0 (Protokoll) und 115,8 (Wirkung).
 
 Ausschnitte des Produktfilms (`ablauf-produktfilm.txt`), Start und Dauer in Sekunden des
 Mitschnitts:
 
 | Beschriftung | Start | Dauer |
 | --- | --- | --- |
-| ANMELDUNG · MANDAT: OHNE ZWECK KEINE AUSWERTUNG | 5,2 | 9,1 |
-| LAGE · DIE ERSTE MELDUNG STEHT NACH ZWEI BILDERN | 16,6 | 20,2 |
-| LAGE · MELDUNGEN GLEICHER ART WERDEN ZU LAGEN | 39,2 | 12,4 |
-| WACHE · VERSION 2, AUSDRÜCKLICH UND IM PROTOKOLL | 51,8 | 17,8 |
-| SUCHE · ANTWORTEN DER NACHBARKNOTEN MIT BELEG | 70,0 | 14,6 |
-| VORGANG · BILD MIT PRÜFSUMME GESICHERT | 84,6 | 10,7 |
-| ANFRAGEPRÜFUNG · GESICHTER UND KENNZEICHEN | 96,2 | 9,2 |
-| VERBUND · DREI KNOTEN, KEIN GEMEINSAMER DATENBESTAND | 105,4 | 5,9 |
-| PROTOKOLL · KETTE GEPRÜFT | 111,4 | 8,5 |
-| WIRKUNG · 13 VON 13 EREIGNISSEN, EINE FEHLMELDUNG | 120,2 | 9,3 |
+| ANMELDUNG · MANDAT: OHNE ZWECK KEINE AUSWERTUNG | 2,4 | 9,0 |
+| LAGE · ERSTE MELDUNG: ÜBERFLUTUNG AM MOSELBOGEN | 13,8 | 20,0 |
+| LAGE · MELDUNGEN GLEICHER ART WERDEN ZU LAGEN | 36,4 | 12,4 |
+| WACHE · VERSION 2, AUSDRÜCKLICH UND IM PROTOKOLL | 49,0 | 17,2 |
+| SUCHE · ANTWORTEN DER NACHBARKNOTEN MIT BELEG | 67,4 | 12,8 |
+| VORGANG · BILD MIT PRÜFSUMME GESICHERT | 80,2 | 9,6 |
+| ANFRAGEPRÜFUNG · GESICHTER UND KENNZEICHEN | 90,8 | 9,2 |
+| VERBUND · DREI KNOTEN, KEIN GEMEINSAMER DATENBESTAND | 100,0 | 6,0 |
+| PROTOKOLL · KETTE GEPRÜFT | 107,2 | 7,4 |
+| WIRKUNG · 13 VON 13 EREIGNISSEN, EINE FEHLMELDUNG | 116,0 | 8,2 |
 
 Ausschnitte der Langfassung (`ablauf-lang.txt`):
 
 | Beschriftung | Start | Dauer |
 | --- | --- | --- |
-| KONSOLE · SUCHE IN WORTEN · ÜBUNGSDATEN | 72,0 | 8,0 |
-| KONSOLE · LAGE · ÜBUNGSDATEN | 40,2 | 7,0 |
-| KONSOLE · ANFRAGE ABGELEHNT · ÜBUNGSDATEN | 98,6 | 6,0 |
+| KONSOLE · SUCHE IN WORTEN · ÜBUNGSDATEN | 68,4 | 8,0 |
+| KONSOLE · LAGE · ÜBUNGSDATEN | 37,2 | 7,0 |
+| KONSOLE · ANFRAGE ABGELEHNT · ÜBUNGSDATEN | 93,2 | 6,0 |
 
-Nach einem neuen Mitschnitt verschiebt sich jeder Ausschnitt um den Versatz der Marke davor;
-danach wird jeder an seinem ersten, mittleren und letzten Bild geprüft. Die Regeln dafür:
+Nach einem neuen Mitschnitt verschiebt sich der Anfang jedes Ausschnitts um den Versatz der
+Marke davor und sein Ende um den Versatz der Marke danach: Die Abschnitte dauern nicht in jedem
+Mitschnitt gleich lang. Danach wird jeder Ausschnitt an seinem ersten, mittleren und letzten
+Bild geprüft. Die Regeln dafür:
 
 - Kein Ausschnitt beginnt oder endet in einem Seitenwechsel, in einem halb getippten Wort oder
   während sich ein Dialog öffnet. Der Ausschnitt zur Ablehnung in der Langfassung beginnt
-  deshalb erst, wenn die Anfrage ausgeschrieben ist und die Ablehnung steht (98,6).
+  deshalb erst, wenn die Anfrage ausgeschrieben ist und die Ablehnung steht (93,2).
+- Ein Ausschnitt, der auf eine Tafel folgt, beginnt erst, nachdem die Seite gewechselt hat, die
+  seine Beschriftung nennt (Suche 67,4; Protokoll 107,2; Wirkung 116,0). Sonst steht die
+  Beschriftung eine Dreiviertelsekunde über der falschen Seite.
 - Was die Beschriftung sagt, ist im Ausschnitt zu sehen. Weicht der Bildschirm ab, wird die
-  Beschriftung geändert, nie umgekehrt. Geprüft am jetzigen Mitschnitt: Die erste Meldung
-  erscheint mit „2 Bilder“; der Reiter Wirkung zeigt „13 von 13 Ereignissen der Übung
-  erkannt. Fehlmeldungen: 1.“
+  Beschriftung geändert, nie umgekehrt. Geprüft am jetzigen Mitschnitt: Die erste Meldung ist
+  „Überflutung“ an UAS 1 · Moselbogen; sie erscheint im ersten sichtbaren Bild schon mit
+  „3 Bilder“, deshalb nennt die Beschriftung die Meldung und nicht mehr die Bildzahl. Der Reiter
+  Wirkung zeigt „13 von 13 Ereignissen der Übung erkannt. Fehlmeldungen: 1.“ und bei achtfacher
+  Uhr und laufender Aufnahme einen Verzug von 3,7 s im Median.
 - Folgen zwei Ausschnitte ohne Tafel aufeinander und schließen sie im Mitschnitt aneinander an,
-  dann endet der erste genau dort, wo der zweite beginnt (84,6 und 105,4); nur die
+  dann endet der erste genau dort, wo der zweite beginnt (80,2 und 100,0); nur die
   Beschriftung wechselt.
 - Starts liegen auf geraden Zehnteln, damit sie bei 25 Bildern je Sekunde auf ein ganzes Bild
   fallen.
@@ -394,8 +403,8 @@ danach wird jeder an seinem ersten, mittleren und letzten Bild geprüft. Die Reg
   bevor es sich schließt.
 
 Im Produktfilm liegt `mark|turn` vor der Tafel „Eine Fehlmeldung. Verworfen. Nachgeschärft.“
-bei 47,5 s. Weil der helle Klang des Stücks bei Sekunde 21,2 einsetzt, beginnt die Musik dort
-erst bei 26,3 s; bis dahin sind nur die Ticks der Tafeln zu hören.
+bei 47,2 s. Weil der helle Klang des Stücks bei Sekunde 21,2 einsetzt, beginnt die Musik dort
+erst bei 26,0 s; bis dahin sind nur die Ticks der Tafeln zu hören.
 
 ## Hochkant-Teaser
 
@@ -498,11 +507,12 @@ python3 tools/track_font.py fonts/JetBrainsMono-Regular.ttf fonts/SichtCard-Regu
   1080p; das Korn im Schnitt überdeckt es weitgehend. Ein Hochrechnen über Higgsfield (Topaz)
   ist möglich, sein Preis ließ sich nicht vorab abfragen.
 - Der Ton wurde nur gemessen, nicht abgehört. Das gilt für alle sechs Filme.
-- Im Produktfilm beginnt die Musik erst bei 26,3 s (siehe oben). Wer sie von Anfang an will,
+- Im Produktfilm beginnt die Musik erst bei 26,0 s (siehe oben). Wer sie von Anfang an will,
   setzt `MUSIC_TURN` auf einen späteren Anschlag des hellen Klangs; das ist nicht ausprobiert.
-- Die Tafel des Produktfilms nennt elf Quellen, so wie alle Unterlagen zur Übung und wie die
-  Bildleiste der Lage. Der Reiter Wirkung zeigt im selben Film unter „Betrieb“ die Zahl 12
-  (Quellen des Knotens).
+- Der Mitschnitt läuft mit achtfacher Uhr, während der Rechner zugleich das Bild aufzeichnet.
+  Die Tabelle im Reiter Wirkung zeigt deshalb für zwei Ereignisse einen Verzug von rund 20 s
+  Übungszeit (2,5 s am Rechner); die Messung in Echtzeit ohne Aufzeichnung steht in
+  `docs/EVALUATION.md`.
 - Der Teaser wurde an Standbildern geprüft, nicht auf einem Telefon und nicht in den Netzen
   selbst. Die Freiräume oben und unten sind Erfahrungswerte, keine nachgeschlagenen Vorgaben
   der Plattformen.

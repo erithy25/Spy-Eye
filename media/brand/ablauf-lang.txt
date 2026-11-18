@@ -19,12 +19,12 @@ card|05-material|3.0||DROHNEN, HUBSCHRAUBER, KAMERAS:|DAS MATERIAL IST DA.
 shot|05-drohne-morgen.mp4|0.8|2.6
 card|06-durchsuchbar|3.2||SICHT MACHT EINSATZBILDER|IN SEKUNDEN DURCHSUCHBAR.
 shot|04-tastatur.mp4|1.0|1.8
-clip|../product/take.mp4|72.0|8.0|KONSOLE · SUCHE IN WORTEN · ÜBUNGSDATEN
+clip|../product/take.mp4|68.4|8.0|KONSOLE · SUCHE IN WORTEN · ÜBUNGSDATEN
 shot|02-bruecke-treibgut.mp4|1.4|2.2
-clip|../product/take.mp4|40.2|7.0|KONSOLE · LAGE · ÜBUNGSDATEN
+clip|../product/take.mp4|37.2|7.0|KONSOLE · LAGE · ÜBUNGSDATEN
 shot|03-lagezentrum.mp4|1.0|2.6
 
 card|07-ohne-identifizierung|2.3||OHNE PERSONEN ZU IDENTIFIZIEREN.
-clip|../product/take.mp4|98.6|6.0|KONSOLE · ANFRAGE ABGELEHNT · ÜBUNGSDATEN
+clip|../product/take.mp4|93.2|6.0|KONSOLE · ANFRAGE ABGELEHNT · ÜBUNGSDATEN
 shot|06-tal-morgen.mp4|0.8|2.8
 end|4.2
