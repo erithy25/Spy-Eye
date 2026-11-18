@@ -1,6 +1,7 @@
 # Vorführung: Ablauf, Vorbereitung, Rückfallebenen
 
-Dauer der Vorführung am System: 12 bis 15 Minuten. Alles läuft auf einem Rechner, ohne
+Dauer der Vorführung am System: 12 bis 15 Minuten. Die Klickfolge mit den Sätzen dazu steht auf
+einer Seite in `deliverables/Sicht-Spickkarte.pdf`. Alles läuft auf einem Rechner, ohne
 Netzverbindung. Drei Knoten (Koblenz, Trier, Mainz) laufen in einem Prozess und sprechen nur über
 das Verbundprotokoll miteinander, so wie Knoten auf drei Rechnern es täten.
 

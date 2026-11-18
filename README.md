@@ -305,7 +305,8 @@ media/brand/    Filme: Drehbuch und Schnittwerkzeug
 - [`docs/FAQ.md`](docs/FAQ.md) – harte Fragen, kurze Antworten
 - [`docs/EVALUATION.md`](docs/EVALUATION.md) – Messbericht
 - [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung; zum Ausdrucken
-  [`deliverables/Sicht-Vorfuehrung-Ablauf.pdf`](deliverables/Sicht-Vorfuehrung-Ablauf.pdf)
+  [`deliverables/Sicht-Vorfuehrung-Ablauf.pdf`](deliverables/Sicht-Vorfuehrung-Ablauf.pdf), als eine Seite
+  für das Pult [`deliverables/Sicht-Spickkarte.pdf`](deliverables/Sicht-Spickkarte.pdf)
 - [`deliverables/`](deliverables) – Präsentation und Einseiter (deutsch und englisch), Finanzmodell,
   Unterlagenmappe als PDF
 - [`docs/vertrieb/`](docs/vertrieb) – Kurzvorstellung in drei Längen, Anschreiben, Angebot zur Erprobung

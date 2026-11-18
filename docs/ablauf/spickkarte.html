@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Sicht — Spickkarte zur Vorführung</title>
+<style>
+  @font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url("../onepager/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 500; src: url("../onepager/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url("../onepager/fonts/JetBrainsMono-Bold.woff2") format("woff2"); }
+
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body {
+    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 7.3pt;
+    line-height: 1.42;
+    color: #050505;
+    font-variant-ligatures: none;
+  }
+  .page { width: 210mm; height: 297mm; padding: 10mm 12mm 8mm; display: flex; flex-direction: column; overflow: hidden; }
+
+  .label { font-size: 6.2pt; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: #555; }
+  .rule { border-top: 0.5pt solid #050505; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 2.4mm; }
+  .wordmark { font-size: 12pt; font-weight: 700; letter-spacing: 0.42em; }
+
+  h1 { margin-top: 3.4mm; font-size: 15pt; font-weight: 700; line-height: 1.15; }
+  .lead { margin-top: 1.6mm; }
+
+  section { margin-top: 3.2mm; }
+  h2 { padding: 1.6mm 0 1.7mm; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8mm; }
+  .cols3 { display: grid; grid-template-columns: 1.15fr 1fr 1fr; column-gap: 6mm; }
+
+  code { font-family: inherit; font-weight: 700; }
+  b { font-weight: 700; }
+
+  ul { list-style: none; }
+  ul li { padding-left: 4mm; text-indent: -4mm; }
+  ul li::before { content: "—"; display: inline-block; width: 4mm; text-indent: 0; }
+  ul li + li { margin-top: 0.7mm; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 0.78mm 0; vertical-align: top; border-top: 0.35pt solid #9a9a9a; }
+  tr:first-child td { border-top: 0; }
+  td.t { width: 10mm; font-weight: 700; white-space: nowrap; }
+  td.a { width: 78mm; padding-right: 4mm; }
+  td.s { color: #050505; }
+  .key { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 6.6pt; }
+
+  .spacer { flex: 1; }
+  footer { display: flex; justify-content: space-between; align-items: end; padding-top: 2.4mm; }
+  .fine { font-size: 6.4pt; color: #555; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="wordmark">SICHT</div>
+    <div class="label">Spickkarte zur Vorführung · 13 Minuten</div>
+  </header>
+  <div class="rule"></div>
+
+  <h1>Was zu tun ist, was zu sagen ist.</h1>
+  <p class="lead">Eine Seite für das Pult. Der ausführliche Ablauf mit Vorbereitung steht in <code>docs/DEMO.md</code>.</p>
+
+  <section>
+    <div class="rule"></div>
+    <h2 class="label">Vorher</h2>
+    <div class="cols">
+      <ul>
+        <li>Am Vorabend, mit Netz: <code>.\vorfuehrung.cmd -NurPruefen</code>. Der Befehl endet mit „Bereit“.</li>
+        <li>Am Tag: Fenster früherer Läufe schließen, dann <code>.\vorfuehrung.cmd</code>. Der Browser öffnet sich von selbst.</li>
+        <li>Chrome oder Edge, Vollbild (F11), Zoom 100&nbsp;%.</li>
+      </ul>
+      <ul>
+        <li>Anmelden: <code>leitung</code>, Passwort <code>lagebild</code>, Mandat „Übung RHEIN-MOSEL“. Unten steht „31 Aufnahmen bereit“.</li>
+        <li>Zweites Fenster: <code>127.0.0.1:8788</code> (Trier), ebenfalls <code>leitung</code>, Reiter PROTOKOLL.</li>
+        <li>Uhr auf 4×: zehn Minuten Übung in zweieinhalb. PAUSE hält Uhr und Quellen an.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="rule"></div>
+    <h2 class="label">Ablauf</h2>
+    <table>
+      <tr><td class="t">0:00</td><td class="a">Anmelden als <code>leitung</code>.</td><td class="s">„Jede Anmeldung steht im Protokoll.“</td></tr>
+      <tr><td class="t">0:30</td><td class="a">Mandat „Übung RHEIN-MOSEL“ wählen.</td><td class="s">„Ohne Zweck keine Auswertung.“</td></tr>
+      <tr><td class="t">1:00</td><td class="a"><span class="key">Lage</span>: mit dem Zeiger über die Karte fahren.</td><td class="s">„Selbst gezeichnet aus OpenStreetMap-Daten, ohne Kartendienst.“</td></tr>
+      <tr><td class="t">1:30</td><td class="a">4× wählen, <span class="key">Übung starten</span>.</td><td class="s">„Elf Quellen. Frei lizenziertes Archivmaterial; es zeigt nicht Koblenz.“</td></tr>
+      <tr><td class="t">2:00</td><td class="a">T+01:22: „Überflutung“ an UAS 1. Bild öffnen, <span class="key">Bestätigen</span>.</td><td class="s">„Niemand hat dieses Bild angesehen. Die Wache ist ein Satz in Worten.“</td></tr>
+      <tr><td class="t">3:00</td><td class="a">Zurück zur Karte. Meldungen laufen ein, rechts unten bilden sich Lagen.</td><td class="s">„Gleiche Art am selben Ort wird eine Lage. Zwei Quellen stehen da als ‚2 Quellen‘.“</td></tr>
+      <tr><td class="t">4:00</td><td class="a">T+04:24: „Umgestürzter Lastkraftwagen“ an Erkunder 1. Bild öffnen, <span class="key">Verwerfen</span>.</td><td class="s">„Eine Fehlmeldung. Wir zeigen sie, statt sie zu verstecken.“</td></tr>
+      <tr><td class="t">4:30</td><td class="a">T+05:22: dieselbe Wache an Erkunder 2, <span class="key">Bestätigen</span>. Dann <span class="key">Wachen</span>, diese Wache wählen, <span class="key">Nachschärfen</span>.</td><td class="s">„Version 2: ausdrücklich, im Protokoll, rücknehmbar. Kein stilles Weiterlernen.“</td></tr>
+      <tr><td class="t">5:30</td><td class="a"><span class="key">Suche</span>: Haken „im Verbund fragen“, dann <code>überflutete Wiese</code>.</td><td class="s">„Freitext auf Deutsch. Der Nachbar antwortet mit maskiertem Vorschaubild und Beleg.“</td></tr>
+      <tr><td class="t">6:30</td><td class="a">Zweites Fenster, Trier: der Eintrag „Fremdanfrage“.</td><td class="s">„Nur die Frage ist gereist.“</td></tr>
+      <tr><td class="t">7:00</td><td class="a"><code>Gesicht von Herrn Müller</code>, dann <code>Kennzeichen KO AB 123</code>.</td><td class="s">„Abgelehnt, mit Regel, im Protokoll. Das System sucht Lagen, keine Menschen.“</td></tr>
+      <tr><td class="t">8:00</td><td class="a">Ersten Treffer von <code>überflutete Wiese</code> öffnen, <span class="key">Zum Vorgang</span>, Titel und Vermerk, <span class="key">Sichern</span>.</td><td class="s">„Gesichert mit der Prüfsumme des Originals, von der Löschfrist ausgenommen.“</td></tr>
+      <tr><td class="t">9:00</td><td class="a"><span class="key">Vorgänge</span>: <span class="key">Versiegeln</span>, dann <span class="key">Bericht</span>.</td><td class="s">„Versiegelt ist unveränderlich. Der Bericht ist druckbar.“</td></tr>
+      <tr><td class="t">10:00</td><td class="a"><span class="key">Lage</span>, Erkunder 1: Bild öffnen, <span class="key">Original anfordern</span>, den Dialog zeigen.</td><td class="s">„Gesichter sind maskiert. Das Original gibt es nur mit Grund und zweiter Person, für 15 Minuten.“</td></tr>
+      <tr><td class="t">11:00</td><td class="a"><span class="key">Protokoll</span>: <span class="key">Kette prüfen</span>, dann <span class="key">Stichprobe ziehen</span>.</td><td class="s">„Die Aufsicht prüft, ohne selbst Bilder zu sehen.“</td></tr>
+      <tr><td class="t">12:00</td><td class="a"><span class="key">Wirkung</span>, dann <span class="key">Messbericht</span>.</td><td class="s">„13 Ereignisse, 13 erkannt, eine Fehlmeldung. In Echtzeit 1,1 Sekunden im Median.“</td></tr>
+      <tr><td class="t">13:00</td><td class="a"><span class="key">Lage</span>: <span class="key">Lagebericht</span>.</td><td class="s">„Druckbar, und als GeoJSON oder CAP an bestehende Systeme.“</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="rule"></div>
+    <div class="cols3">
+      <div>
+        <h2 class="label">Zahlen zum Nennen</h2>
+        <ul>
+          <li>Übung in Echtzeit: 13 von 13 Ereignissen, 15 Meldungen, eine Fehlmeldung, Verzug 1,1&nbsp;s im Median.</li>
+          <li>Suche auf allgemeinem Material: 54 von 66 Anfragen beantwortet.</li>
+          <li>44 Aufnahmen durchsuchbar 8&nbsp;s nach Beginn des Hochladens.</li>
+          <li>Auswertung in 3,3-facher Echtzeit, vier Kerne, keine Grafikkarte.</li>
+          <li>88 automatische Prüfungen; der ganze Weg läuft auch auf einem Windows-Rechner durch.</li>
+          <li>Durchsicht des Quelltexts: 21 Befunde, die schweren behoben. Kein Penetrationstest.</li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="label">Wenn etwas hängt</h2>
+        <ul>
+          <li>„Anschlüsse belegt“: das andere Fenster mit Strg+C beenden, Befehl wiederholen.</li>
+          <li>Keine Fehlmeldung beim Lastkraftwagen: Die Probe wurde nicht zurückgesetzt. Strg+C, <code>.\vorfuehrung.cmd</code>.</li>
+          <li>Verbund „nicht erreichbar“: einige Sekunden warten.</li>
+          <li>Unsicher: zweites Terminal, <code>pnpm demo:check</code>.</li>
+          <li>Geht nichts mehr: den Produktfilm zeigen (137&nbsp;s).</li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="label">Nicht behaupten</h2>
+        <ul>
+          <li>Kunden, Pilotierung, Zertifizierung: gibt es nicht.</li>
+          <li>Die Zahlen stammen aus einer Übung mit Archivmaterial; die Wachen wurden daran formuliert.</li>
+          <li>Direktbilder sind gebaut, aber nur gegen eine simulierte Kamera geprüft.</li>
+          <li>„Kein Personen-Tracking“ ist eine Regel mit Protokoll, keine Unmöglichkeit.</li>
+          <li>Der Name ist nicht markenrechtlich geprüft.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="spacer"></div>
+  <div class="rule"></div>
+  <footer>
+    <div class="fine">Stand: 18. November 2026 · Erprobungsstand · verdichtet aus docs/DEMO.md</div>
+    <div class="fine">Keine Sicht ohne Aufsicht.</div>
+  </footer>
+
+</div>
+</body>
+</html>
