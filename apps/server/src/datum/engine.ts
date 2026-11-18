@@ -759,6 +759,11 @@ export class DatumEngine {
         this.forget(id);
         return;
       }
+      // Stopped in the middle (EngineStopped, or a model closed under it): no error either.
+      if (this.stopped) {
+        this.dropped(entry, 'Ortung');
+        return;
+      }
       const message = err instanceof Error ? err.message : String(err);
       this.opts.log(`Ortung "${entry.info.name}" fehlgeschlagen: ${message}`);
       // A quick fix is a result of its own and stays; without one the failure is shown.
@@ -1308,11 +1313,15 @@ export class DatumEngine {
       const key: Keyframe = { frame: frame.n, time: frame.t, imageUrl: `media/${id}/frames/${path.basename(jpeg)}`, spaceUrl: null, skyline: null };
       // Deleted meanwhile: stop before anything is written into its folder.
       if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
+      // Stopped meanwhile: the fix will be dropped (see persist), so nothing of it is written.
+      if (this.stopped) throw new EngineStopped();
       await breathe();
       try {
         const disparity = await estimateDisparity(jpeg);
         const grid = await buildSpaceGrid(jpeg, disparity);
         await this.ensureDir(id);
+        // Right before the write: the depth model took a while, and stop() may have come.
+        if (this.stopped) throw new EngineStopped();
         await fs.writeFile(this.spacePath(id, frame.n), grid.buffer);
         key.spaceUrl = `api/datum/space/${id}/${frame.n}`;
         key.skyline = grid.skyline;
