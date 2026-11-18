@@ -27,8 +27,8 @@ import { DatumEngine } from './datum/engine.js';
 import { sharedGallery } from './datum/shared.js';
 import { TruthBook } from './datum/truth.js';
 import { SearchEngine } from './search.js';
-import { Store, type VideoEntry } from './store.js';
-import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, SourceKind, UserInfo } from './types.js';
+import { Store, isValidVideoId, type VideoEntry } from './store.js';
+import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, SourceKind, UserInfo, VideoInfo } from './types.js';
 
 export const VERSION = '0.5.0';
 
@@ -149,6 +149,9 @@ export interface RequestContext {
   mandate: Mandate | null;
   lang: Lang;
 }
+
+/** Why `PlatformNode.deleteRecording` left a recording alone. */
+export type RecordingDeleteRefusal = { refused: 'not-found' } | { refused: 'exercise' } | { refused: 'held-by-case'; caseTitle: string };
 
 export interface UnmaskGrant {
   id: string;
@@ -668,6 +671,28 @@ export class PlatformNode {
       ...ledgerSummary(summary),
       data,
     });
+  }
+
+  /**
+   * Deletes one recording on behalf of a person: DELETE /api/videos/:id and the deletion of a
+   * whole DATUM dataset go this one way. Exercise footage is refused (it goes with the exercise),
+   * and a recording a case holds a frame from stays for as long as the case exists. The ledger
+   * entry comes first, since a deletion that is not on record must not happen; then the analysis
+   * is cancelled, the files are removed and the DATUM fix is dropped (a computation still running
+   * for it is discarded by the engine). `data` is added to the ledger entry.
+   */
+  async deleteRecording(ctx: RequestContext, id: string, data: Record<string, unknown> = {}): Promise<{ deleted: VideoInfo } | RecordingDeleteRefusal> {
+    const entry = isValidVideoId(id) ? this.store.get(id) : undefined;
+    if (!entry) return { refused: 'not-found' };
+    if (entry.info.scenario !== null) return { refused: 'exercise' };
+    const held = this.cases.list().find((file) => file.items.some((item) => item.videoId === id));
+    if (held) return { refused: 'held-by-case', caseTitle: held.title };
+    await this.record(ctx, 'recording.delete', { de: `Aufzeichnung „${entry.info.name}“ gelöscht`, en: `Recording "${entry.info.name}" deleted` }, { videoId: id, ...data });
+    this.pipeline.cancel(id);
+    await this.store.remove(id);
+    this.datum.forget(id);
+    this.hub.broadcast({ type: 'video-removed', videoId: id, stats: this.store.stats() });
+    return { deleted: entry.info };
   }
 
   hasGrant(ctx: RequestContext, videoId: string): boolean {

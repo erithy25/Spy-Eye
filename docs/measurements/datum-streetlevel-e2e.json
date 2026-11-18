@@ -1,0 +1,452 @@
+{
+ "measuredAt": "2026-11-18T19:58:22.520Z",
+ "what": "Street-level stage in the full analysis, end to end: a DATUM node of its own (port 8791, own data dir, the node of nodes.datum.json without the seeded reference set), built with tsc into a separate directory and run with node; street-level comparison on (default), Panoramax only (no Mapillary key), cold street-level vector cache (DATUM_STREETLEVEL_CACHE pointed at an empty directory). Two 20-minute videos uploaded one after the other through POST /api/videos?fps=1&detail=standard&source=eingang as the console does; GET /api/public/info every 200 ms from the first upload to the last full fix.",
+ "machine": {
+  "cores": 4,
+  "note": "shared machine, load average 4.8-6.2 on 4 cores during the run (other agents at work): every time is an upper bound"
+ },
+ "videos": {
+  "aufnahme-paris-20min.mp4": "datasets/datum/clips/fr-arc-de-triomphe.mp4 (12 s) looped to 1200 s, re-encoded (x264)",
+  "aufnahme-berlin-20min.mp4": "datasets/datum/clips/de-berliner-fernsehturm.mp4 (12 s) looped to 1200 s, re-encoded (x264)"
+ },
+ "nodeReadyMs": 4014,
+ "settings": {
+  "streetLevel": {
+   "enabled": true,
+   "forcedOff": false,
+   "providers": [
+    "panoramax"
+   ],
+   "mapillaryKey": false,
+   "mapillaryKeySource": "none"
+  },
+  "worldModel": {
+   "available": true,
+   "precision": "int8"
+  }
+ },
+ "runs": [
+  {
+   "video": "aufnahme-paris-20min.mp4",
+   "videoSeconds": 1200,
+   "uploadMs": 577,
+   "quickFixAfterUploadMs": 10771,
+   "quickElapsedMs": 10689,
+   "fullFixAfterUploadMs": 280509,
+   "fullElapsedMs": 10848,
+   "quickLocation": {
+    "lat": 48.86647403338145,
+    "lon": 2.3186748144781864,
+    "radiusKm": 3,
+    "confidence": 0.9237884237199314,
+    "method": "landmark",
+    "label": "Arc de Triomphe, Paris",
+    "labelEn": "Arc de Triomphe, Paris",
+    "country": "FR",
+    "countryName": "Frankreich"
+   },
+   "fullLocation": {
+    "lat": 48.86647403338145,
+    "lon": 2.3186748144781864,
+    "radiusKm": 3,
+    "confidence": 0.9237884237199314,
+    "method": "landmark",
+    "label": "Arc de Triomphe, Paris",
+    "labelEn": "Arc de Triomphe, Paris",
+    "country": "FR",
+    "countryName": "Frankreich"
+   },
+   "fullTrace": [
+    {
+     "label": "Bildmerkmale übernommen",
+     "ms": 1,
+     "detail": "12 Bilder aus der Auswertung, 768 Dimensionen",
+     "detailEn": "12 frames from the analysis, 768 dimensions"
+    },
+    {
+     "label": "Metadaten gelesen",
+     "ms": 184,
+     "detail": "kein Ort, keine Zeit in der Datei",
+     "detailEn": "no place and no time in the file"
+    },
+    {
+     "label": "Bilder für die Ortung gezogen",
+     "ms": 0,
+     "detail": "12 Bilder, 48 Ausschnitte, aus der Schnellortung übernommen",
+     "detailEn": "12 frames, 48 crops, taken over from the quick localisation"
+    },
+    {
+     "label": "Mit der Referenzgalerie verglichen",
+     "ms": 463,
+     "detail": "6.393 Referenzbilder · Arc de Triomphe, Paris, ± 3 km",
+     "detailEn": "6,393 reference pictures · Arc de Triomphe, Paris, ± 3 km"
+    },
+    {
+     "label": "Weltmodell befragt",
+     "ms": 0,
+     "detail": "aus der Schnellortung übernommen · GeoCLIP bestätigt das Ergebnis der Referenzgalerie (99 % im Umkreis) · 5,6 s",
+     "detailEn": "taken over from the quick localisation · GeoCLIP confirms the reference gallery's result (99% around it) · 5.6 s"
+    },
+    {
+     "label": "Raum aus Bild 1 aufgebaut",
+     "ms": 922,
+     "detail": "Tiefe in 320 ms, Himmel 38 %, Neigung -1°",
+     "detailEn": "depth in 320 ms, sky 38%, pitch -1°"
+    },
+    {
+     "label": "Raum aus Bild 2 aufgebaut",
+     "ms": 395,
+     "detail": "Tiefe in 241 ms, Himmel 36 %, Neigung -1°",
+     "detailEn": "depth in 241 ms, sky 36%, pitch -1°"
+    },
+    {
+     "label": "Raum aus Bild 3 aufgebaut",
+     "ms": 441,
+     "detail": "Tiefe in 281 ms, Himmel 35 %, Neigung 0°",
+     "detailEn": "depth in 281 ms, sky 35%, pitch 0°"
+    },
+    {
+     "label": "Mit Straßenbildern verglichen",
+     "ms": 6060,
+     "detail": "kein Straßenbild passt (65 verglichen), 7,8 s",
+     "detailEn": "no street-level picture matches (65 compared), 7.8 s"
+    },
+    {
+     "label": "Gelände geprüft",
+     "ms": 2271,
+     "detail": "Horizont berechnet, keine eindeutige Übereinstimmung",
+     "detailEn": "horizon computed, no clear match"
+    },
+    {
+     "label": "Licht und Sonnenstand bestimmt",
+     "ms": 111,
+     "detail": "Morgen, Europe/Paris",
+     "detailEn": "early morning, Europe/Paris"
+    }
+   ],
+   "streetStep": {
+    "label": "Mit Straßenbildern verglichen",
+    "ms": 6060,
+    "detail": "kein Straßenbild passt (65 verglichen), 7,8 s",
+    "detailEn": "no street-level picture matches (65 compared), 7.8 s"
+   },
+   "streetEvidence": [
+    {
+     "label": "Straßenbilder: kein Treffer",
+     "labelEn": "Street-level pictures: no match",
+     "detail": "Kein Straßenbild hebt sich ab: bestes 0,78, typisch 0,68 (Abstand 0,09, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+     "detailEn": "No street-level picture stands out: best 0.78, typical 0.68 (gap 0.09, needed 0.10); 65 pictures from Panoramax compared. The place stays as it was.",
+     "weight": 0
+    }
+   ],
+   "pictures": [],
+   "latency": {
+    "upload": {
+     "n": 1,
+     "median": 2.5,
+     "p95": 2.5,
+     "p99": 2.5,
+     "max": 2.5
+    },
+    "uploadToQuick": {
+     "n": 47,
+     "median": 1.7,
+     "p95": 97.1,
+     "p99": 871.8,
+     "max": 871.8
+    },
+    "quickToFull": {
+     "n": 1328,
+     "median": 1.4,
+     "p95": 6.5,
+     "p99": 22.3,
+     "max": 261.7
+    },
+    "uploadToFull": {
+     "n": 1375,
+     "median": 1.4,
+     "p95": 6.6,
+     "p99": 33,
+     "max": 871.8
+    }
+   },
+   "loadAverage": [
+    {
+     "afterUploadS": 0,
+     "load1": 5.96
+    },
+    {
+     "afterUploadS": 20,
+     "load1": 5.68
+    },
+    {
+     "afterUploadS": 40,
+     "load1": 5.97
+    },
+    {
+     "afterUploadS": 60,
+     "load1": 6.22
+    },
+    {
+     "afterUploadS": 80,
+     "load1": 5.96
+    },
+    {
+     "afterUploadS": 100,
+     "load1": 5.99
+    },
+    {
+     "afterUploadS": 121,
+     "load1": 5.88
+    },
+    {
+     "afterUploadS": 141,
+     "load1": 5.5
+    },
+    {
+     "afterUploadS": 161,
+     "load1": 5.39
+    },
+    {
+     "afterUploadS": 181,
+     "load1": 5.08
+    },
+    {
+     "afterUploadS": 201,
+     "load1": 5.03
+    },
+    {
+     "afterUploadS": 222,
+     "load1": 5.08
+    },
+    {
+     "afterUploadS": 242,
+     "load1": 5.12
+    },
+    {
+     "afterUploadS": 262,
+     "load1": 4.8
+    }
+   ]
+  },
+  {
+   "video": "aufnahme-berlin-20min.mp4",
+   "videoSeconds": 1200,
+   "uploadMs": 277,
+   "quickFixAfterUploadMs": 7000,
+   "quickElapsedMs": 6864,
+   "fullFixAfterUploadMs": 287278,
+   "fullElapsedMs": 2127,
+   "quickLocation": {
+    "lat": 52.516876870557205,
+    "lon": 13.395522271972771,
+    "radiusKm": 7500,
+    "confidence": 0.9308464208368008,
+    "method": "landmark",
+    "label": "Bode-Museum, Berlin",
+    "labelEn": "Bode-Museum, Berlin",
+    "country": "DE",
+    "countryName": "Deutschland"
+   },
+   "fullLocation": {
+    "lat": 52.516876870557205,
+    "lon": 13.395522271972771,
+    "radiusKm": 7500,
+    "confidence": 0.9308464208368008,
+    "method": "landmark",
+    "label": "Bode-Museum, Berlin",
+    "labelEn": "Bode-Museum, Berlin",
+    "country": "DE",
+    "countryName": "Deutschland"
+   },
+   "fullTrace": [
+    {
+     "label": "Bildmerkmale übernommen",
+     "ms": 0,
+     "detail": "12 Bilder aus der Auswertung, 768 Dimensionen",
+     "detailEn": "12 frames from the analysis, 768 dimensions"
+    },
+    {
+     "label": "Metadaten gelesen",
+     "ms": 221,
+     "detail": "kein Ort, keine Zeit in der Datei",
+     "detailEn": "no place and no time in the file"
+    },
+    {
+     "label": "Bilder für die Ortung gezogen",
+     "ms": 0,
+     "detail": "12 Bilder, 48 Ausschnitte, aus der Schnellortung übernommen",
+     "detailEn": "12 frames, 48 crops, taken over from the quick localisation"
+    },
+    {
+     "label": "Mit der Referenzgalerie verglichen",
+     "ms": 488,
+     "detail": "6.393 Referenzbilder · Bode-Museum, Berlin, ± 7.500 km",
+     "detailEn": "6,393 reference pictures · Bode-Museum, Berlin, ± 7,500 km"
+    },
+    {
+     "label": "Weltmodell befragt",
+     "ms": 1,
+     "detail": "aus der Schnellortung übernommen · GeoCLIP bestätigt das Ergebnis der Referenzgalerie (99 % im Umkreis) · 5,7 s",
+     "detailEn": "taken over from the quick localisation · GeoCLIP confirms the reference gallery's result (99% around it) · 5.7 s"
+    },
+    {
+     "label": "Raum aus Bild 1 aufgebaut",
+     "ms": 439,
+     "detail": "Tiefe in 253 ms, Himmel 52 %, Neigung 10°",
+     "detailEn": "depth in 253 ms, sky 52%, pitch 10°"
+    },
+    {
+     "label": "Raum aus Bild 2 aufgebaut",
+     "ms": 374,
+     "detail": "Tiefe in 262 ms, Himmel 48 %, Neigung 8°",
+     "detailEn": "depth in 262 ms, sky 48%, pitch 8°"
+    },
+    {
+     "label": "Raum aus Bild 3 aufgebaut",
+     "ms": 394,
+     "detail": "Tiefe in 250 ms, Himmel 46 %, Neigung 7°",
+     "detailEn": "depth in 250 ms, sky 46%, pitch 7°"
+    },
+    {
+     "label": "Gelände geprüft",
+     "ms": 75,
+     "detail": "Horizont berechnet, keine eindeutige Übereinstimmung",
+     "detailEn": "horizon computed, no clear match"
+    },
+    {
+     "label": "Licht und Sonnenstand bestimmt",
+     "ms": 135,
+     "detail": "Vormittag, Europe/Berlin",
+     "detailEn": "late morning, Europe/Berlin"
+    }
+   ],
+   "streetStep": null,
+   "streetEvidence": [],
+   "pictures": [],
+   "latency": {
+    "upload": {
+     "n": 1,
+     "median": 1.2,
+     "p95": 1.2,
+     "p99": 1.2,
+     "max": 1.2
+    },
+    "uploadToQuick": {
+     "n": 33,
+     "median": 1.2,
+     "p95": 5.3,
+     "p99": 363,
+     "max": 363
+    },
+    "quickToFull": {
+     "n": 1379,
+     "median": 1.1,
+     "p95": 7.4,
+     "p99": 35.6,
+     "max": 332.1
+    },
+    "uploadToFull": {
+     "n": 1412,
+     "median": 1.1,
+     "p95": 7.4,
+     "p99": 35.6,
+     "max": 363
+    }
+   },
+   "loadAverage": [
+    {
+     "afterUploadS": 0,
+     "load1": 4.55
+    },
+    {
+     "afterUploadS": 20,
+     "load1": 5.33
+    },
+    {
+     "afterUploadS": 40,
+     "load1": 6.51
+    },
+    {
+     "afterUploadS": 60,
+     "load1": 6.37
+    },
+    {
+     "afterUploadS": 80,
+     "load1": 5.97
+    },
+    {
+     "afterUploadS": 101,
+     "load1": 5.94
+    },
+    {
+     "afterUploadS": 121,
+     "load1": 5.39
+    },
+    {
+     "afterUploadS": 141,
+     "load1": 5.74
+    },
+    {
+     "afterUploadS": 161,
+     "load1": 5.31
+    },
+    {
+     "afterUploadS": 181,
+     "load1": 5.15
+    },
+    {
+     "afterUploadS": 201,
+     "load1": 5.66
+    },
+    {
+     "afterUploadS": 222,
+     "load1": 5.53
+    },
+    {
+     "afterUploadS": 242,
+     "load1": 5.09
+    },
+    {
+     "afterUploadS": 262,
+     "load1": 5.05
+    },
+    {
+     "afterUploadS": 282,
+     "load1": 4.9
+    }
+   ]
+  }
+ ],
+ "latencyAllMs": {
+  "n": 2790,
+  "median": 1.3,
+  "p95": 7,
+  "p99": 35.6,
+  "max": 871.8
+ },
+ "latencyFailures": 0,
+ "nodeLog": [
+  "[datum] Schnellortung \"aufnahme-paris-20min.mp4\": 48.8665, 2.3187 ±3.0 km in 10.7 s",
+  "[datum] Straßenbilder \"aufnahme-paris-20min.mp4\": Kein Straßenbild hebt sich ab: bestes 0,78, typisch 0,68 (Abstand 0,09, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist. (7.8 s)",
+  "[datum] Ortung \"aufnahme-paris-20min.mp4\": 48.8665, 2.3187 ±3.0 km in 10.8 s",
+  "[datum] Schnellortung \"aufnahme-berlin-20min.mp4\": 52.5169, 13.3955 ±7500.0 km in 6.9 s",
+  "[datum] Ortung \"aufnahme-berlin-20min.mp4\": 52.5169, 13.3955 ±7500.0 km in 2.1 s"
+ ],
+ "earlierRun": {
+  "note": "a first run of the same measurement was stopped from outside after the Paris video (its Berlin video, looped without re-encoding, had failed in the analysis: identical vectors for different frames); only its node log survived",
+  "paris": {
+   "quickFixAfterUploadS": 16.1,
+   "fullFixAfterUploadS": 368.1,
+   "analysisS": 333.6,
+   "fullStageS": 17.4,
+   "streetLevelStageS": 13.8,
+   "streetLevel": "no match, 61 Panoramax pictures compared, one Panoramax answer HTTP 503 counted and passed over"
+  }
+ },
+ "reading": [
+  "Paris (strong tier, 3 km around the Arc de Triomphe): quick fix 10.8 s after the upload, full fix 280.5 s after it (video 1200 s). The full stage took 10.8 s, of which the street-level stage 7.8 s (65 Panoramax pictures, no match: gap 0.09 < 0.10); it ran beside the three spaces, so the fix waited 6.1 s for it beyond them.",
+  "Berlin (looped clip: its 12 sampled frames show 3 moments, the answer was tier recognised, radius 7500 km): not searched by the rule (strong only); full stage 2.1 s.",
+  "HTTP latency over 2790 probes: median 1.3 ms, p95 7.0 ms, p99 35.6 ms, max 871.8 ms; the maximum fell into the quick stage of the first upload (gallery search and frame decoding on the main thread, before any street-level work); from quick to full fix of Paris (analysis, then the full stage with the street-level stage) max 261.7 ms, p99 22.3 ms."
+ ]
+}

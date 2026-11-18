@@ -169,11 +169,26 @@ export class TruthBook {
     }
     const at = Date.now();
     for (const e of entries) this.byKey.set(truthKey(e.name), { ...e, at });
+    await this.write();
+    return { stored: entries.length };
+  }
+
+  /**
+   * Removes the truths given for these file names (matched like `lookup`) and writes the file.
+   * Returns how many were removed; nothing is written when none was there.
+   */
+  async remove(names: readonly string[]): Promise<number> {
+    let removed = 0;
+    for (const name of names) if (this.byKey.delete(truthKey(name))) removed++;
+    if (removed > 0) await this.write();
+    return removed;
+  }
+
+  private async write(): Promise<void> {
     const data: TruthFile = { version: 1, entries: [...this.byKey.values()] };
     // Writes are chained, so two quick requests cannot leave the older list on disk.
     const write = this.writing.then(() => writeFileAtomic(this.file, `${JSON.stringify(data)}\n`));
     this.writing = write.catch(() => undefined);
     await write;
-    return { stored: entries.length };
   }
 }

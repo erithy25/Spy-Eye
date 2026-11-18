@@ -16,6 +16,7 @@ import { isValidVideoId } from '../store.js';
 import type { DatumSettings, Fix } from './contract.js';
 import { summarise } from './engine.js';
 import { DATASET_DIR, caseName, loadManifest } from './dataset.js';
+import { datasetIdOf } from './datasets.js';
 import { terrainGrid } from './terrain.js';
 import { horizonProfile } from './horizon.js';
 import { parseTruthBody, truthKey, type TruthRefusal } from './truth.js';
@@ -187,13 +188,17 @@ export function registerDatumRoutes(app: FastifyInstance, node: PlatformNode, ne
 
   /**
    * The fixes of every recording, as summaries (sun path and horizon profile left out), or slimmed
-   * further with ?slim=1 (see `slimFix`). A weak ETag lets the console ask again cheaply: 304
-   * when nothing changed.
+   * further with ?slim=1 (see `slimFix`), each with the dataset of its recording (`datasetId`). A
+   * weak ETag lets the console ask again cheaply: 304 when nothing changed.
    */
   app.get<{ Querystring: { slim?: string } }>('/api/datum/fixes', async (request, reply) => {
     if (!need(request, reply, 'media')) return reply;
     const slim = request.query.slim === '1' || request.query.slim === 'true';
-    const body = JSON.stringify(datum.list().map(slim ? slimFix : summarise));
+    const withDataset = (fix: Fix): Fix => {
+      const sourceId = store.get(fix.videoId)?.info?.sourceId;
+      return sourceId === undefined ? fix : { ...fix, datasetId: datasetIdOf(node.sources, sourceId) };
+    };
+    const body = JSON.stringify(datum.list().map((fix) => withDataset(slim ? slimFix(fix) : summarise(fix))));
     const etag = weakEtag(body);
     void reply.header('ETag', etag).header('Cache-Control', 'private, no-cache').header('Vary', 'Cookie');
     if (etagMatches(request.headers['if-none-match'], etag)) return reply.code(304).send();

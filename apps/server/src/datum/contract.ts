@@ -304,6 +304,13 @@ export interface Fix {
    */
   slim?: boolean;
   /**
+   * The dataset the recording belongs to (GET /api/datum/datasets): the id of its source, or the
+   * inbox ('eingang') when that source no longer exists. Set on the entries of the list (GET
+   * /api/datum/fixes, slim or not), so that the console can group without a request per
+   * recording; absent elsewhere and on nodes before datasets.
+   */
+  datasetId?: string;
+  /**
    * Ground truth, present for videos of the reference dataset (source 'referenz') and for uploaded
    * videos whose true place was given with the upload (source 'eigene', POST /api/datum/truth).
    * `url` names where a reference truth comes from (Wikimedia Commons or Wikidata); own truths

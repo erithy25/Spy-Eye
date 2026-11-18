@@ -44,3 +44,4 @@ datasets/datum/terrain/
 # secret wherever the data directory lives; never version it.
 **/mapillary-key
 **/mapillary-key.*.tmp
+apps/server/dist-tidy

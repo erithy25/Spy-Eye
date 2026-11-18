@@ -20,6 +20,7 @@ import { caseReport, measurementReport, situationReport } from './intel/report.j
 import type { PlatformNode, RequestContext } from './node.js';
 import { SearchError } from './search.js';
 import { registerDatumRoutes } from './datum/routes.js';
+import { registerDatasetRoutes } from './datum/datasets.js';
 import { DEFAULT_SOURCE_ID, RM_OPTIONS, frameUrl, isValidVideoId, originalFrameFileName } from './store.js';
 import {
   DETAIL_LEVELS,
@@ -246,6 +247,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   // ================================================================ session
 
   registerDatumRoutes(app, node, need, sendError);
+  registerDatasetRoutes(app, node, need, sendError);
 
   app.get('/api/public/info', async () => {
     const body: PublicInfo = {
@@ -477,32 +479,23 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   app.delete<{ Params: { id: string } }>('/api/videos/:id', async (request, reply) => {
     const ctx = need(request, reply, 'source.write');
     if (!ctx) return reply;
-    const { id } = request.params;
-    const entry = isValidVideoId(id) ? store.get(id) : undefined;
-    if (!entry) return sendError(reply, 404, 'Video nicht gefunden.');
-    if (entry.info.scenario !== null) return sendError(reply, 409, say(ctx, 'Übungsmaterial wird über die Übung entfernt.', 'Exercise footage is removed with the exercise.'));
+    // The same path as deleting a whole DATUM dataset: ledger first, analysis cancelled, files and
+    // fix removed (see PlatformNode.deleteRecording).
+    const result = await node.deleteRecording(ctx, request.params.id);
+    if ('deleted' in result) return reply.code(204).send();
+    if (result.refused === 'not-found') return sendError(reply, 404, say(ctx, 'Video nicht gefunden.', 'Video not found.'));
+    if (result.refused === 'exercise') return sendError(reply, 409, say(ctx, 'Übungsmaterial wird über die Übung entfernt.', 'Exercise footage is removed with the exercise.'));
     // A recording that a case holds a picture from stays, as it does past the retention period.
-    const held = cases.list().filter((file) => file.items.some((item) => item.videoId === id));
-    if (held.length > 0) {
-      return sendError(
-        reply,
-        409,
-        say(
-          ctx,
-          `Aus dieser Aufzeichnung ist ein Bild in einem Vorgang gesichert („${held[0]?.title ?? ''}“). Sie bleibt erhalten, solange der Vorgang besteht.`,
-          `A case holds a frame from this recording ("${held[0]?.title ?? ''}"). It is kept for as long as the case exists.`,
-        ),
-        { code: 'held-by-case' },
-      );
-    }
-    // The entry first: a deletion that is not on record must not happen.
-    await node.record(ctx, 'recording.delete', { de: `Aufzeichnung „${entry.info.name}“ gelöscht`, en: `Recording "${entry.info.name}" deleted` }, { videoId: id });
-    pipeline.cancel(id);
-    await store.remove(id);
-    // Its fix goes too (a compute still running for it is discarded by the engine).
-    node.datum.forget(id);
-    hub.broadcast({ type: 'video-removed', videoId: id, stats: store.stats() });
-    return reply.code(204).send();
+    return sendError(
+      reply,
+      409,
+      say(
+        ctx,
+        `Aus dieser Aufzeichnung ist ein Bild in einem Vorgang gesichert („${result.caseTitle}“). Sie bleibt erhalten, solange der Vorgang besteht.`,
+        `A case holds a frame from this recording ("${result.caseTitle}"). It is kept for as long as the case exists.`,
+      ),
+      { code: 'held-by-case' },
+    );
   });
 
   app.post<{ Params: { id: string } }>('/api/videos/:id/retry', async (request, reply) => {

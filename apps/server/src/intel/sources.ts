@@ -113,6 +113,16 @@ export class Sources {
     return source;
   }
 
+  /** Gives a source a new name; an English name given with the old one no longer fits and goes. */
+  rename(id: string, name: string): SourceInfo | null {
+    const source = this.items.get(id);
+    if (!source) return null;
+    source.name = name;
+    delete source.nameEn;
+    this.items.touch();
+    return source;
+  }
+
   remove(id: string): boolean {
     if (id === DEFAULT_SOURCE_ID) return false;
     return this.items.delete(id);
