@@ -151,7 +151,7 @@ liegt dasselbe Programm in Python.
 | „Übungsmaterial fehlt“ | `pnpm exercise:fetch`, danach `pnpm demo:prepare`. |
 | Übung steht auf „Material wird ausgewertet“ | abwarten; der Balken zeigt den Stand. Ohne Vorbereitung dauert es rund zehn Minuten. |
 | Verbund zeigt „nicht erreichbar“ | Die Knoten melden sich alle paar Sekunden; kurz warten. Wurde mit `pnpm start` statt `pnpm demo` gestartet, gibt es keine Nachbarn. |
-| „Anschluss … ist bereits belegt“ | Die Knoten laufen schon in einem anderen Fenster: dort weiterarbeiten oder es mit Strg+C beenden und `pnpm demo` neu starten. |
+| „Anschluss … ist bereits belegt“ | Die Knoten laufen schon in einem anderen Fenster: dort weiterarbeiten oder es mit Strg+C beenden und neu starten. Nennt die Meldung eine frühere Fassung (Spy-Eye) oder ein anderes Programm, dessen Fenster mit Strg+C beenden und neu starten. |
 | Keine Fehlmeldung beim Lastkraftwagen | Die Wache ist von einer Probe schon nachgeschärft: Knoten beenden, `pnpm demo:reset`, `pnpm demo`. |
 | Eine weitere Fehlmeldung | Kommt je nach Rechner vor, weil Videodekoder Bilder geringfügig verschieden liefern: öffnen, VERWERFEN, weiter. Der Messbericht weist sie aus. |
 | Unsicher, ob alles bereit ist | `pnpm demo:check` in einem zweiten Terminal; jede Zeile endet mit OK oder FEHLT. |

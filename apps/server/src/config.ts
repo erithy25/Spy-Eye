@@ -65,6 +65,20 @@ export const config = {
    */
   retentionDays: envNumber('SICHT_RETENTION_DAYS', 60, 0, 3650),
   /**
+   * Free space in MB that must remain on the volume of the data directory for an upload to be
+   * accepted. 0 disables the check. A node that fills its disk stops writing its ledger too.
+   */
+  minFreeMb: envNumber('SICHT_MIN_FREE_MB', 1024, 0, 10_000_000),
+  /**
+   * Hosts a live stream may come from, comma separated: host names, a leading dot for a domain
+   * with its subdomains, single addresses, IPv4 ranges such as 10.20.0.0/16. Empty allows every
+   * host. Names are not resolved: a range matches only an address written as numbers.
+   */
+  streamHosts: envString('SICHT_STREAM_HOSTS', '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== ''),
+  /**
    * Certificate and key (PEM files). With both set the node speaks HTTPS itself: sessions, imagery
    * and federation requests to it are encrypted in transit, and its session cookie is marked
    * `Secure`. The operator supplies the certificate; peers must trust its issuer.

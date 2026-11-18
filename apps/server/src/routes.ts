@@ -9,11 +9,12 @@ import { pipeline as streamPipeline } from 'node:stream/promises';
 import sharp from 'sharp';
 import { VIDEO_EXTENSIONS, config } from './config.js';
 import type { Permission } from './core/auth.js';
+import { freeBytes } from './core/disk.js';
 import { newId } from './core/json.js';
 import { foreignRequest } from './core/origin.js';
 import { PEER_BUDGET, PEER_BUDGET_WINDOW_MS, type FederationHello, type FederationResponse } from './intel/federation.js';
 import { screenPrompt } from './intel/guard.js';
-import { parseStreamAddress, redactStreamAddress } from './intel/live.js';
+import { parseStreamAddress, redactStreamAddress, streamHostAllowed } from './intel/live.js';
 import { collectMetrics } from './intel/metrics.js';
 import { caseReport, measurementReport, situationReport } from './intel/report.js';
 import type { PlatformNode, RequestContext } from './node.js';
@@ -409,6 +410,22 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const source = sources.get(sourceId);
     if (!source || source.mode === 'exercise') return sendError(reply, 400, say(ctx, 'Unbekannte Quelle.', 'Unknown source.'));
 
+    // A full disk stops more than the upload: the ledger could no longer be written either.
+    if (config.minFreeMb > 0) {
+      const free = await freeBytes(config.dataDir);
+      if (free !== null && free < config.minFreeMb * 1024 * 1024) {
+        return sendError(
+          reply,
+          507,
+          say(
+            ctx,
+            `Auf dem Datenträger des Knotens sind nur noch ${Math.floor(free / 1024 / 1024)} MB frei; unter ${config.minFreeMb} MB nimmt er keine Aufzeichnungen an.`,
+            `Only ${Math.floor(free / 1024 / 1024)} MB are free on the node's volume; below ${config.minFreeMb} MB it accepts no recordings.`,
+          ),
+        );
+      }
+    }
+
     const response: UploadResponse = { accepted: [], rejected: [] };
     pipeline.uploadStarted();
     try {
@@ -632,7 +649,19 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       if (!node.allowed(ctx, 'source.live')) {
         return sendError(reply, 403, say(ctx, 'Direktbilder darf nur die Leitung anschließen.', 'Only a supervisor may connect live streams.'));
       }
-      if (!parseStreamAddress(streamUrl)) {
+      const streamAddress = parseStreamAddress(streamUrl);
+      if (streamAddress && !streamHostAllowed(streamAddress.hostname, config.streamHosts)) {
+        return sendError(
+          reply,
+          403,
+          say(
+            ctx,
+            'Der Betreiber dieses Knotens lässt Direktbilder nur von benannten Adressen zu; diese gehört nicht dazu.',
+            'The operator of this node accepts live streams from named addresses only; this one is not among them.',
+          ),
+        );
+      }
+      if (!streamAddress) {
         return sendError(
           reply,
           400,

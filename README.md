@@ -266,6 +266,8 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `SICHT_ALLOW_UNMASKED` | — | `1` gibt Bilder auch ohne Gesichtserkenner frei; nur für Material ohne Personen. Ohne diese Angabe wird ohne Erkenner nichts eingespielt |
 | `SICHT_OFFLINE` | — | `1` unterbindet das Nachladen von Modellen aus dem Netz; Verbund und Direktbilder sind Verbindungen, die der Betreiber selbst einrichtet |
 | `SICHT_LIVE_SEGMENT_SEC` | `20` | Länge der Abschnitte, in die ein Direktbild geschnitten wird (5 bis 120) |
+| `SICHT_STREAM_HOSTS` | — | Adressen, von denen Direktbilder kommen dürfen, durch Komma getrennt: Namen, `.domäne` mit Unterdomänen, einzelne Adressen, IPv4-Bereiche wie `10.20.0.0/16`. Leer lässt jede Adresse zu. Namen werden nicht aufgelöst |
+| `SICHT_MIN_FREE_MB` | `1024` | So viel Platz muss auf dem Datenträger frei bleiben, damit der Knoten eine Aufzeichnung annimmt; `0` schaltet die Prüfung ab |
 | `MODEL_ID`, `MODEL_DTYPE`, `MODEL_TEXT_DTYPE` | SigLIP 2, `fp32`, `fp16` | Kodierer und Genauigkeit |
 | `ML_DEVICE` | `cpu` | `auto`, `dml` oder `cuda` versuchen eine Grafikkarte; sie wird nur verwendet, wenn sie das Ergebnis des Prozessors reproduziert |
 

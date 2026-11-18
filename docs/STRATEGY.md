@@ -89,7 +89,7 @@ Drei Einschränkungen gelten für alle Messwerte:
    angeschlossenen Direktbild außerdem der Nachlauf eines Abschnitts (Abschnitt 3.2). AIDERv2
    enthält ähnliche Bilder in Trainings- und Testmenge.
 3. „Durchlauf im Browser“ heißt: in den drei Rollen von Hand durchgespielt, nicht durch einen
-   automatischen Test abgesichert. Automatisch geprüft sind 83 Fälle (Prüfregeln, Protokoll und
+   automatischen Test abgesichert. Automatisch geprüft sind 88 Fälle (Prüfregeln, Protokoll und
    seine unabhängigen Prüfprogramme, Geodäsie, Lagenbildung, Verbundsignatur, Herkunft von
    Anfragen, Schwellen der Suche, Schlagwortverzeichnis, Berichte und weitere; `pnpm test`).
    Eine unabhängige Durchsicht des Quelltexts mit 21 Befunden und ihrem Stand steht in

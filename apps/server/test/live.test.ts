@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseStreamAddress, redactStreamAddress, redactStreamText } from '../src/intel/live.js';
+import { parseStreamAddress, redactStreamAddress, redactStreamText, streamHostAllowed } from '../src/intel/live.js';
 
 test('only network streams are accepted as stream addresses', () => {
   for (const ok of ['rtsp://cam.example/stream1', 'rtsps://10.0.0.5:322/live', 'https://host.example/hls/index.m3u8', 'srt://host.example:9000', 'tcp://127.0.0.1:9151', 'udp://239.0.0.1:1234']) {
@@ -46,4 +46,30 @@ test('what ffmpeg reports about a failed stream is shown without credentials', (
   assert.equal(redactStreamText('file:///etc/passwd: No such file'), '[Adresse]: No such file');
   assert.equal(redactStreamText('x'.repeat(1000)).length, 240);
   assert.equal(redactStreamText('Connection timed out'), 'Connection timed out');
+});
+
+test('an empty list of stream hosts allows every host', () => {
+  for (const host of ['cam.example', '10.0.0.5', '127.0.0.1', 'fe80::1']) {
+    assert.equal(streamHostAllowed(host, []), true, host);
+  }
+});
+
+test('the operator\'s list of stream hosts admits names, domains, addresses and ranges, and nothing else', () => {
+  const list = ['kamera-1.leitstelle.example', '.drohnen.example', '192.168.40.7', '10.20.0.0/16'];
+  for (const ok of ['kamera-1.leitstelle.example', 'KAMERA-1.Leitstelle.Example', 'drohnen.example', 'uas4.drohnen.example', '192.168.40.7', '10.20.0.1', '10.20.255.254']) {
+    assert.equal(streamHostAllowed(ok, list), true, ok);
+  }
+  for (const bad of ['kamera-2.leitstelle.example', 'leitstelle.example', 'drohnen.example.evil.test', 'evildrohnen.example', '192.168.40.8', '10.21.0.1', '127.0.0.1', '169.254.169.254', 'localhost', '[::1]', '']) {
+    assert.equal(streamHostAllowed(bad, list), false, bad);
+  }
+});
+
+test('a range matches only an address written as numbers, and malformed entries admit nothing', () => {
+  assert.equal(streamHostAllowed('cam.example', ['10.0.0.0/8']), false);
+  assert.equal(streamHostAllowed('10.1.2.3', ['10.0.0.0/8']), true);
+  assert.equal(streamHostAllowed('10.1.2.3', ['10.0.0.0/33']), false);
+  assert.equal(streamHostAllowed('10.1.2.3', ['10.0.0.0/']), false);
+  assert.equal(streamHostAllowed('10.1.2.3', ['999.0.0.0/8']), false);
+  assert.equal(streamHostAllowed('10.1.2.3', ['0.0.0.0/0']), true);
+  assert.equal(streamHostAllowed('10.1.2.3', ['', ' ']), false);
 });

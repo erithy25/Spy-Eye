@@ -67,6 +67,43 @@ export function parseStreamAddress(raw: string): URL | null {
   }
 }
 
+function ipv4(text: string): number | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(text);
+  if (!m) return null;
+  const parts = m.slice(1).map(Number);
+  if (parts.some((part) => part > 255)) return null;
+  return (((parts[0] ?? 0) << 24) | ((parts[1] ?? 0) << 16) | ((parts[2] ?? 0) << 8) | (parts[3] ?? 0)) >>> 0;
+}
+
+/**
+ * Whether a stream may come from this host. `allowed` is the operator's list: host names, a
+ * leading dot for a domain with its subdomains, single addresses, IPv4 ranges in CIDR form. An
+ * empty list allows every host. Names are not resolved here, so a range matches only an address
+ * written as numbers; a camera known by name has to be listed by name.
+ */
+export function streamHostAllowed(hostname: string, allowed: readonly string[]): boolean {
+  if (allowed.length === 0) return true;
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  for (const entry of allowed) {
+    const rule = entry.trim().toLowerCase();
+    if (rule === '') continue;
+    if (rule.includes('/')) {
+      const [base = '', bitsText = ''] = rule.split('/');
+      const bits = Number(bitsText);
+      const address = ipv4(host);
+      const network = ipv4(base);
+      if (address === null || network === null || bitsText === '' || !Number.isInteger(bits) || bits < 0 || bits > 32) continue;
+      const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
+      if (((address & mask) >>> 0) === ((network & mask) >>> 0)) return true;
+    } else if (rule.startsWith('.')) {
+      if (host === rule.slice(1) || host.endsWith(rule)) return true;
+    } else if (host === rule) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * The address without anything that grants access, for display and for the ledger: no user name,
  * no password, no query string, and for RTMP no stream key (everything after the application
@@ -179,6 +216,14 @@ export class LiveIngest {
     if (!url) {
       stream.state = 'offline';
       stream.lastError = 'Keine gültige Adresse hinterlegt.';
+      return;
+    }
+    // A source saved before the operator narrowed the list stays in the list of sources but is
+    // not connected again.
+    if (!streamHostAllowed(url.hostname, config.streamHosts)) {
+      stream.state = 'offline';
+      stream.lastError = 'Der Betreiber lässt Direktbilder von dieser Adresse nicht zu.';
+      this.deps.onChange();
       return;
     }
     const dir = this.dirOf(stream.sourceId);
