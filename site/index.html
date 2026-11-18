@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sicht — Keine Sicht ohne Aufsicht.</title>
+<meta name="description" content="Sicht macht das Videomaterial, das Behörden im Einsatz ohnehin erzeugen, in Sekunden durchsuchbar und beobachtet es selbständig auf Gefahrenlagen. Ohne Personen zu identifizieren, ohne Daten zusammenzuführen, mit einem Protokoll, das jede Abfrage nachweist.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050505">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050505'/%3E%3Cpath d='M5 12V5h7M20 5h7v7M27 20v7h-7M12 27H5v-7' fill='none' stroke='%23ededed' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<noscript><style>.shot img{opacity:1}.shot-empty{display:none}</style></noscript>
+<script src="assets/map/hero.js" defer></script>
+<script src="i18n.js" defer></script>
+<script src="main.js" defer></script>
+</head>
+<body data-contact="">
+
+<a class="skip" href="#inhalt" data-i18n="skip">Zum Inhalt</a>
+
+<header class="bar">
+  <span class="bar-progress" aria-hidden="true"></span>
+  <a class="wordmark" href="#start" aria-label="Sicht – zum Seitenanfang" data-i18n-aria-label="bar.home">SICHT</a>
+  <nav class="bar-nav" aria-label="Abschnitte" data-i18n-aria-label="bar.sections">
+    <a href="#problem"><span>01</span> <span data-i18n="nav.problem">Problem</span></a>
+    <a href="#produkt"><span>02</span> <span data-i18n="nav.produkt">Produkt</span></a>
+    <a href="#arbeitsweise"><span>03</span> <span data-i18n="nav.arbeitsweise">Arbeitsweise</span></a>
+    <a href="#verbund"><span>04</span> <span data-i18n="nav.verbund">Verbund</span></a>
+    <a href="#grenzen"><span>05</span> <span data-i18n="nav.grenzen">Grenzen</span></a>
+    <a href="#gemessen"><span>06</span> <span data-i18n="nav.gemessen">Gemessen</span></a>
+    <a href="#betrieb"><span>07</span> <span data-i18n="nav.betrieb">Betrieb</span></a>
+    <a href="#stand"><span>08</span> <span data-i18n="nav.stand">Stand</span></a>
+  </nav>
+  <details class="bar-menu">
+    <summary data-i18n="bar.contents">Inhalt</summary>
+    <nav aria-label="Abschnitte" data-i18n-aria-label="bar.sections">
+      <a href="#problem"><span>01</span> <span data-i18n="nav.problem">Problem</span></a>
+      <a href="#produkt"><span>02</span> <span data-i18n="nav.produkt">Produkt</span></a>
+      <a href="#arbeitsweise"><span>03</span> <span data-i18n="nav.arbeitsweise">Arbeitsweise</span></a>
+      <a href="#verbund"><span>04</span> <span data-i18n="nav.verbund">Verbund</span></a>
+      <a href="#grenzen"><span>05</span> <span data-i18n="nav.grenzen">Grenzen</span></a>
+      <a href="#gemessen"><span>06</span> <span data-i18n="nav.gemessen">Gemessen</span></a>
+      <a href="#betrieb"><span>07</span> <span data-i18n="nav.betrieb">Betrieb</span></a>
+      <a href="#stand"><span>08</span> <span data-i18n="nav.stand">Stand</span></a>
+    </nav>
+  </details>
+  <div class="lang" role="group" aria-label="Sprache" data-i18n-aria-label="bar.language">
+    <button type="button" data-lang="de" aria-pressed="true" lang="de" title="Deutsch">DE</button>
+    <button type="button" data-lang="en" aria-pressed="false" lang="en" title="English">EN</button>
+  </div>
+</header>
+
+<main id="inhalt">
+
+<!-- ================================================================ hero -->
+<section class="hero" id="start" aria-labelledby="leitsatz">
+  <canvas class="hero-map" aria-hidden="true"></canvas>
+  <div class="hero-body wrap">
+    <p class="label hero-kicker"><b>Sicht</b> <span data-i18n="hero.kicker">Die Bildschicht für das zivile Lagebild</span></p>
+    <h1 id="leitsatz" data-i18n="hero.h1">Keine Sicht <br>ohne Aufsicht.</h1>
+    <p class="hero-lede" data-i18n="hero.lede">Sicht macht das Videomaterial, das Behörden im Einsatz ohnehin erzeugen – von Drohnen, Hubschraubern, Pegel- und Verkehrskameras, Fahrzeugen –, in Sekunden durchsuchbar und beobachtet es selbständig auf Gefahrenlagen. Ohne Personen zu identifizieren, ohne Daten zusammenzuführen und mit einem Protokoll, das jede Abfrage nachweist.</p>
+    <p class="hero-actions">
+      <a class="go" href="#produkt" data-i18n="hero.go1">Produkt ansehen</a>
+      <a class="go" href="#grenzen" data-i18n="hero.go2">Was Sicht nicht kann</a>
+      <a class="go go-contact" data-contact-link hidden data-i18n="cta">Vorführung anfragen</a>
+    </p>
+  </div>
+  <dl class="hero-readout wrap">
+    <div>
+      <dt data-i18n="hero.r1k">Ausschnitt</dt>
+      <dd data-i18n="hero.r1v">Rhein / Mosel · Koblenz</dd>
+    </div>
+    <div>
+      <dt data-i18n="hero.r2k">UTMREF</dt>
+      <dd data-mgrs>32U MA 0087 8009</dd>
+    </div>
+    <div>
+      <dt data-i18n="hero.r3k">Material</dt>
+      <dd data-i18n="hero.r3v">Übung · keine Echtdaten</dd>
+    </div>
+    <div class="hero-attrib">
+      <dt data-i18n="hero.r4k">Karte</dt>
+      <dd data-i18n="map.attrib">© OpenStreetMap-Mitwirkende (ODbL) · OpenMapTiles · Höhendaten: Mapzen</dd>
+    </div>
+  </dl>
+</section>
+
+<!-- ================================================================ 01 problem -->
+<section class="section" id="problem" aria-labelledby="h-problem">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">01</span><span class="label head-name" data-i18n="nav.problem">Problem</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-problem" data-i18n="problem.h2">Die Bilder gab es.<br>Ein Lagebild nicht.</h2>
+      <p class="head-intro" data-i18n="problem.intro">Drei Belege dafür, dass nicht die Aufnahme fehlt, sondern der Weg vom Bild zur Lagekenntnis.</p>
+    </header>
+
+    <div class="facts">
+      <article class="fact reveal">
+        <p class="label" data-i18n="fact1.where">Ahrtal · 14. Juli 2021</p>
+        <h3 class="fact-mark" data-i18n="fact1.mark">22:14 Uhr</h3>
+        <p data-i18n="fact1.text">Zwischen 22:14 und 22:43 Uhr filmt ein Polizeihubschrauber die Ahr-Orte von Mayschoß bis Schuld:<sup><a href="#q1" id="r1">1</a></sup> Häuser, die bis zum Dachgeschoss überflutet sind, und Menschen, die mit Lampen von Dächern oder Fenstern auf sich aufmerksam machen. Die Videos werden nach Angaben der Polizei „nicht ordnungsgemäß verbucht“. Bis September 2022 gehen Untersuchungsausschuss und Staatsanwaltschaft davon aus, dass es keine Aufnahmen aus der Flutnacht gibt.<sup><a href="#q2" id="r2">2</a></sup></p>
+      </article>
+      <article class="fact reveal">
+        <p class="label" data-i18n="fact2.where">Los Angeles · Januar 2025</p>
+        <h3 class="fact-mark" data-i18n="fact2.mark">„<span lang="en">unconnected platforms</span>“</h3>
+        <p data-i18n="fact2.text">Der Untersuchungsbericht des County zu den Bränden von Eaton und Palisades hält fest: Einsatzkräfte und Einsatzleitungen konnten Echtzeitinformationen nicht verlässlich teilen – wegen unzuverlässigen Mobilfunks, uneinheitlicher Meldewege und <span lang="en">„the use of various unconnected platforms“</span>.<sup><a href="#q3" id="r3">3</a></sup></p>
+      </article>
+      <article class="fact reveal">
+        <p class="label" data-i18n="fact3.where">Deutschland · Juli 2026</p>
+        <h3 class="fact-mark" data-i18n="fact3.mark">„erprobt und konsolidiert“</h3>
+        <p data-i18n="fact3.text">Der Bund entwickelt mit den Ländern ein gemeinsames digitales Lagebild Inland, „damit alle Verantwortlichen eine einheitliche Informationsgrundlage für ihre Einsätze haben, digital und in Echtzeit“.<sup><a href="#q4" id="r4">4</a></sup> Zum Stand teilt die Bundesregierung im Juli 2026 mit: „Das Verfahren wird derzeit erprobt und konsolidiert.“<sup><a href="#q5" id="r5">5</a></sup></p>
+      </article>
+    </div>
+
+    <div class="purpose reveal">
+      <p class="label" data-i18n="purpose.label">Der messbare Zweck</p>
+      <p class="purpose-claim" data-i18n="purpose.claim">Zeit von der Aufnahme bis zur Lagekenntnis.</p>
+      <div class="span" aria-hidden="true">
+        <span class="span-a" data-i18n="purpose.t0">erstes Bild des Ereignisses</span>
+        <span class="span-line"><i data-i18n="purpose.gap">Erkennungsverzug</i></span>
+        <span class="span-b" data-i18n="purpose.t1">Meldung auf der Lagekarte</span>
+      </div>
+      <p class="purpose-text" data-i18n="purpose.text">Sicht misst genau diese Strecke: die Sekunden zwischen dem ersten Bild eines Ereignisses und der Meldung auf der Lagekarte – in jeder Übung, je Ereignis, nachprüfbar.</p>
+      <dl class="rows">
+        <div><dt data-i18n="kpi1.k">Erkennungsverzug</dt><dd data-i18n="kpi1.v">Sekunden vom Auftreten eines Ereignisses im Bild bis zur Meldung.</dd></div>
+        <div><dt data-i18n="kpi2.k">Sichtungsquote</dt><dd data-i18n="kpi2.v">Anteil des eingegangenen Materials, der ausgewertet wurde.</dd></div>
+        <div><dt data-i18n="kpi3.k">Protokollabdeckung</dt><dd data-i18n="kpi3.v">Anteil der Abfragen mit Zweck, Person und Protokolleintrag. Ziel: 100&nbsp;%.</dd></div>
+      </dl>
+    </div>
+
+    <aside class="sources reveal" aria-labelledby="h-quellen">
+      <p class="label" id="h-quellen" data-i18n="sources.label">Quellen</p>
+      <ol>
+        <li id="q1"><span data-i18n="src1">dpa, in: Volksstimme, 5. Oktober 2022.</span> <a href="https://www.volksstimme.de/deutschland-und-welt/politik/flut-videos-druck-auf-mainzer-innenminister-erhoht-sich-3457893" rel="noopener noreferrer" target="_blank">volksstimme.de</a> <a class="back" href="#r1" aria-label="Zurück zur Textstelle 1" data-i18n-aria-label="sources.back">↑</a></li>
+        <li id="q2"><span data-i18n="src2">epd, in: evangelisch.de, 4. Oktober 2022.</span> <a href="https://www.evangelisch.de/inhalte/206543/04-10-2022/polizeipraesidenten-raeumen-pannen-bei-weitergabe-von-ahr-flutvideo-ein" rel="noopener noreferrer" target="_blank">evangelisch.de</a> <a class="back" href="#r2" aria-label="Zurück zur Textstelle 2" data-i18n-aria-label="sources.back">↑</a></li>
+        <li id="q3"><span data-i18n="src3">County of Los Angeles: McChrystal After-Action Report. Alerts, Warnings and Evacuations – Highlights of Findings and Recommendations, September 2025.</span> <a href="https://file.lacounty.gov/SDSInter/lac/1192778_AAR_HighlightsandRecommendations.pdf" rel="noopener noreferrer" target="_blank">lacounty.gov</a> <a class="back" href="#r3" aria-label="Zurück zur Textstelle 3" data-i18n-aria-label="sources.back">↑</a></li>
+        <li id="q4"><span data-i18n="src4">Bundesministerium des Innern: Eckpunkte Pakt für den Bevölkerungsschutz, 20. Mai 2026, S.&nbsp;5.</span> <a href="https://augengeradeaus.net/wp-content/uploads/2026/05/20260520_BMI-pakt-bevoelkerungsschutz.pdf" rel="noopener noreferrer" target="_blank" data-i18n="src4.link">Abdruck bei augengeradeaus.net</a> <a class="back" href="#r4" aria-label="Zurück zur Textstelle 4" data-i18n-aria-label="sources.back">↑</a></li>
+        <li id="q5"><span data-i18n="src5">Deutscher Bundestag, Drucksache 21/7126 vom 9. Juli 2026, Antwort der Bundesregierung auf Frage 28, S.&nbsp;10.</span> <a href="https://dserver.bundestag.de/btd/21/071/2107126.pdf" rel="noopener noreferrer" target="_blank">bundestag.de</a> <a class="back" href="#r5" aria-label="Zurück zur Textstelle 5" data-i18n-aria-label="sources.back">↑</a></li>
+      </ol>
+    </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 02 produkt -->
+<section class="section" id="produkt" aria-labelledby="h-produkt">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">02</span><span class="label head-name" data-i18n="nav.produkt">Produkt</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-produkt" data-i18n="produkt.h2">Wissen, was auf den eigenen Bildern zu sehen ist.</h2>
+      <p class="head-intro" data-i18n="produkt.intro">Sicht ersetzt kein Führungsinformationssystem. Es liefert ihm, was heute fehlt – in sieben Teilen, die auf demselben Grundsatz stehen.</p>
+    </header>
+    </div>
+  </div>
+  <div class="wrap">
+
+    <div class="modules">
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">1/7</p>
+        <div class="module-text">
+          <h3>Übersicht <span class="gloss" data-i18n="mod1.gloss"></span></h3>
+          <p class="label" data-i18n="mod1.tab">Reiter LAGE</p>
+          <p data-i18n="mod1.text">Die Lagekarte zeigt Quellen, Meldungen und Lagen dort, wo sie aufgenommen wurden, mit ihrer Koordinate im UTM-Referenzsystem. Sie ist aus OpenStreetMap-Vektordaten und Höhenlinien selbst gezeichnet und braucht keinen Kacheldienst.</p>
+        </div>
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/screens/lage.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Lage: Lagekarte mit Quellen, Meldungen und Lagen" data-i18n-alt="mod1.alt">
+            <div class="shot-empty" aria-hidden="true"><span>LAGE</span><span>16 : 10</span></div>
+          </div>
+          <figcaption><span data-i18n="shot.console">Konsole</span> · LAGE · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">2/7</p>
+        <div class="module-text">
+          <h3>Einsicht <span class="gloss" data-i18n="mod2.gloss"></span></h3>
+          <p class="label" data-i18n="mod2.tab">Reiter SUCHE</p>
+          <p data-i18n="mod2.text">Eine Beschreibung in freien Worten durchsucht alles eingegangene Bildmaterial und liefert je Szene ein Bild mit markiertem Ausschnitt. Jede Suche braucht ein Mandat; Anfragen nach identifizierenden oder geschützten Merkmalen von Personen lehnt das System ab und protokolliert die Ablehnung.</p>
+        </div>
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/screens/suche.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Suche: Treffer einer Freitextsuche, je Szene ein Bild" data-i18n-alt="mod2.alt">
+            <div class="shot-empty" aria-hidden="true"><span>SUCHE</span><span>16 : 10</span></div>
+          </div>
+          <figcaption><span data-i18n="shot.console">Konsole</span> · SUCHE · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">3/7</p>
+        <div class="module-text">
+          <h3>Vorsicht <span class="gloss" data-i18n="mod3.gloss"></span></h3>
+          <p class="label" data-i18n="mod3.tab">Reiter WACHEN</p>
+          <p data-i18n="mod3.text">Eine Wache ist ein stehender Suchauftrag: Sie prüft neues Material selbständig und meldet, sobald eine Beschreibung über mehrere Bilder hinweg zutrifft. Rückmeldungen der Auswertenden wirken erst, wenn jemand die Wache ausdrücklich nachschärft; jede Fassung ist nummeriert.</p>
+        </div>
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/screens/wachen.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Wachen: stehende Suchaufträge mit ihren Meldungen" data-i18n-alt="mod3.alt">
+            <div class="shot-empty" aria-hidden="true"><span>WACHEN</span><span>16 : 10</span></div>
+          </div>
+          <figcaption><span data-i18n="shot.console">Konsole</span> · WACHEN · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">4/7</p>
+        <div class="module-text">
+          <h3>Durchsicht <span class="gloss" data-i18n="mod4.gloss"></span></h3>
+          <p class="label" data-i18n="mod4.tab">Reiter VORGÄNGE</p>
+          <p data-i18n="mod4.text">Bilder werden mit ihrer SHA-256-Prüfsumme in einem Vorgang gesichert und sind von der Löschfrist ausgenommen, solange er besteht. Ein versiegelter Vorgang lässt sich als druckbarer Bericht ausgeben, dessen Inhalt gegen das Protokoll prüfbar ist.</p>
+        </div>
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/screens/vorgaenge.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Vorgänge: Akte mit gesicherten Bildern und Prüfsummen" data-i18n-alt="mod4.alt">
+            <div class="shot-empty" aria-hidden="true"><span>VORGÄNGE</span><span>16 : 10</span></div>
+          </div>
+          <figcaption><span data-i18n="shot.console">Konsole</span> · VORGÄNGE · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">5/7</p>
+        <div class="module-text">
+          <h3>Weitsicht <span class="gloss" data-i18n="mod5.gloss"></span></h3>
+          <p class="label" data-i18n="mod5.tab">Reiter VERBUND</p>
+          <p data-i18n="mod5.text">Knoten verschiedener Behörden beantworten einander Suchanfragen, ohne Aufzeichnungen herauszugeben: Es reist die signierte Frage mit Mandat und anfragender Person. Zurück kommen maskierte Vorschaubilder und die Nummer des Protokolleintrags, unter dem der antwortende Knoten die Anfrage verbucht hat.</p>
+        </div>
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/screens/verbund.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Verbund: Nachbarknoten und die Antworten auf eine Verbundabfrage" data-i18n-alt="mod5.alt">
+            <div class="shot-empty" aria-hidden="true"><span>VERBUND</span><span>16 : 10</span></div>
+          </div>
+          <figcaption><span data-i18n="shot.console">Konsole</span> · VERBUND · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">6/7</p>
+        <div class="module-text">
+          <h3>Aufsicht <span class="gloss" data-i18n="mod6.gloss"></span></h3>
+          <p class="label" data-i18n="mod6.tab">Reiter PROTOKOLL</p>
+          <p data-i18n="mod6.text">Jede Anmeldung, Suche, Ablehnung, Freigabe und Ausgabe steht in einem Protokoll, dessen Einträge über SHA-256 verkettet sind. Die Aufsicht prüft die Kette in einem Schritt, zieht Stichproben aus den Abfragen und exportiert das Protokoll vollständig.</p>
+        </div>
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/screens/protokoll.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Protokoll: verkettete Einträge und das Ergebnis der Prüfung" data-i18n-alt="mod6.alt">
+            <div class="shot-empty" aria-hidden="true"><span>PROTOKOLL</span><span>16 : 10</span></div>
+          </div>
+          <figcaption><span data-i18n="shot.console">Konsole</span> · PROTOKOLL · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="module reveal">
+        <p class="module-no" aria-hidden="true">7/7</p>
+        <div class="module-text">
+          <h3>Rücksicht <span class="gloss" data-i18n="mod7.gloss"></span></h3>
+          <p class="label" data-i18n="mod7.tab">Durchgehend, in jedem Reiter</p>
+          <p data-i18n="mod7.text">Gesichter werden beim Einspielen unkenntlich gemacht; das unmaskierte Bild gibt es nur mit Begründung und der Freigabe einer zweiten Person, befristet auf 15 Minuten. Ohne Mandat mit Zweck und Rechtsgrundlage ist keine Auswertung möglich.</p>
+        </div>
+        <figure class="shot shot-diagram">
+          <div class="shot-frame">
+            <svg class="mask mask-wide" viewBox="0 0 640 400" role="img" aria-labelledby="mask-title">
+              <title id="mask-title" data-i18n="mask.title">Schema: Ein Gesicht im Bild wird beim Einspielen durch ein grobes Raster ersetzt; das Original liegt unter Verschluss.</title>
+              <g class="mask-frame">
+                <rect x="60" y="56" width="300" height="288"/>
+                <path d="M96 344 C96 282 140 246 210 246 C280 246 324 282 324 344"/>
+                <path d="M194 202 V248 M226 202 V248"/>
+              </g>
+              <g class="mask-cells">
+                <rect x="170" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
+                <rect x="186" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
+                <rect x="202" y="110.0" width="16" height="15.5" fill="#333"/>
+                <rect x="218" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
+                <rect x="234" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
+                <rect x="170" y="125.3" width="16" height="15.5" fill="#333"/>
+                <rect x="186" y="125.3" width="16" height="15.5" fill="#555"/>
+                <rect x="202" y="125.3" width="16" height="15.5" fill="#555"/>
+                <rect x="218" y="125.3" width="16" height="15.5" fill="#555"/>
+                <rect x="234" y="125.3" width="16" height="15.5" fill="#333"/>
+                <rect x="170" y="140.7" width="16" height="15.5" fill="#555"/>
+                <rect x="186" y="140.7" width="16" height="15.5" fill="#333"/>
+                <rect x="202" y="140.7" width="16" height="15.5" fill="#8a8a8a"/>
+                <rect x="218" y="140.7" width="16" height="15.5" fill="#333"/>
+                <rect x="234" y="140.7" width="16" height="15.5" fill="#555"/>
+                <rect x="170" y="156.0" width="16" height="15.5" fill="#555"/>
+                <rect x="186" y="156.0" width="16" height="15.5" fill="#8a8a8a"/>
+                <rect x="202" y="156.0" width="16" height="15.5" fill="#8a8a8a"/>
+                <rect x="218" y="156.0" width="16" height="15.5" fill="#8a8a8a"/>
+                <rect x="234" y="156.0" width="16" height="15.5" fill="#555"/>
+                <rect x="170" y="171.3" width="16" height="15.5" fill="#333"/>
+                <rect x="186" y="171.3" width="16" height="15.5" fill="#8a8a8a"/>
+                <rect x="202" y="171.3" width="16" height="15.5" fill="#333"/>
+                <rect x="218" y="171.3" width="16" height="15.5" fill="#8a8a8a"/>
+                <rect x="234" y="171.3" width="16" height="15.5" fill="#333"/>
+                <rect x="170" y="186.7" width="16" height="15.5" fill="#1f1f1f"/>
+                <rect x="186" y="186.7" width="16" height="15.5" fill="#555"/>
+                <rect x="202" y="186.7" width="16" height="15.5" fill="#555"/>
+                <rect x="218" y="186.7" width="16" height="15.5" fill="#555"/>
+                <rect x="234" y="186.7" width="16" height="15.5" fill="#1f1f1f"/>
+              </g>
+              <path class="mask-reticle" d="M162 114v-12h12M246 102h12v12M258 198v12h-12M174 210h-12v-12"/>
+              <path class="mask-leader" d="M258 156 H420"/>
+              <g class="mask-notes">
+                <text x="432" y="150" class="t-strong" data-i18n="mask.a">MASKIERT BEIM EINSPIELEN</text>
+                <text x="432" y="172" data-i18n="mask.b">Original unter Verschluss</text>
+                <text x="432" y="230" class="t-strong" data-i18n="mask.c">FREIGABE</text>
+                <text x="432" y="252" data-i18n="mask.d">Begründung · zweite Person</text>
+                <text x="432" y="272" data-i18n="mask.e">befristet auf 15 Minuten</text>
+                <text x="432" y="294" data-i18n="mask.f">Eintrag im Protokoll</text>
+              </g>
+              <path class="mask-rule" d="M432 196 H596"/>
+            </svg>
+            <svg class="mask mask-narrow" viewBox="0 0 340 322" role="img" aria-labelledby="mask-title-n">
+              <title id="mask-title-n" data-i18n="mask.title">Schema: Ein Gesicht im Bild wird beim Einspielen durch ein grobes Raster ersetzt; das Original liegt unter Verschluss.</title>
+              <g class="mask-frame">
+                <rect x="95" y="16" width="150" height="150"/>
+                <path d="M113 166 C113 134 136 116 170 116 C204 116 227 134 227 166"/>
+                <path d="M162 92 V117 M178 92 V117"/>
+              </g>
+              <g class="mask-cells">
+                <rect x="150" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
+                <rect x="158" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
+                <rect x="166" y="46.0" width="8" height="7.9" fill="#333"/>
+                <rect x="174" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
+                <rect x="182" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
+                <rect x="150" y="53.7" width="8" height="7.9" fill="#333"/>
+                <rect x="158" y="53.7" width="8" height="7.9" fill="#555"/>
+                <rect x="166" y="53.7" width="8" height="7.9" fill="#555"/>
+                <rect x="174" y="53.7" width="8" height="7.9" fill="#555"/>
+                <rect x="182" y="53.7" width="8" height="7.9" fill="#333"/>
+                <rect x="150" y="61.3" width="8" height="7.9" fill="#555"/>
+                <rect x="158" y="61.3" width="8" height="7.9" fill="#333"/>
+                <rect x="166" y="61.3" width="8" height="7.9" fill="#8a8a8a"/>
+                <rect x="174" y="61.3" width="8" height="7.9" fill="#333"/>
+                <rect x="182" y="61.3" width="8" height="7.9" fill="#555"/>
+                <rect x="150" y="69.0" width="8" height="7.9" fill="#555"/>
+                <rect x="158" y="69.0" width="8" height="7.9" fill="#8a8a8a"/>
+                <rect x="166" y="69.0" width="8" height="7.9" fill="#8a8a8a"/>
+                <rect x="174" y="69.0" width="8" height="7.9" fill="#8a8a8a"/>
+                <rect x="182" y="69.0" width="8" height="7.9" fill="#555"/>
+                <rect x="150" y="76.7" width="8" height="7.9" fill="#333"/>
+                <rect x="158" y="76.7" width="8" height="7.9" fill="#8a8a8a"/>
+                <rect x="166" y="76.7" width="8" height="7.9" fill="#333"/>
+                <rect x="174" y="76.7" width="8" height="7.9" fill="#8a8a8a"/>
+                <rect x="182" y="76.7" width="8" height="7.9" fill="#333"/>
+                <rect x="150" y="84.3" width="8" height="7.9" fill="#1f1f1f"/>
+                <rect x="158" y="84.3" width="8" height="7.9" fill="#555"/>
+                <rect x="166" y="84.3" width="8" height="7.9" fill="#555"/>
+                <rect x="174" y="84.3" width="8" height="7.9" fill="#555"/>
+                <rect x="182" y="84.3" width="8" height="7.9" fill="#1f1f1f"/>
+              </g>
+              <path class="mask-reticle" d="M145 48v-7h7M188 41h7v7M195 90v7h-7M152 97h-7v-7"/>
+              <g class="mask-notes">
+                <text x="20" y="204" class="t-strong" data-i18n="mask.a">MASKIERT BEIM EINSPIELEN</text>
+                <text x="20" y="223" data-i18n="mask.b">Original unter Verschluss</text>
+                <text x="20" y="262" class="t-strong" data-i18n="mask.c">FREIGABE</text>
+                <text x="20" y="281" data-i18n="mask.d">Begründung · zweite Person</text>
+                <text x="20" y="298" data-i18n="mask.e">befristet auf 15 Minuten</text>
+                <text x="20" y="315" data-i18n="mask.f">Eintrag im Protokoll</text>
+              </g>
+              <path class="mask-rule" d="M20 240 H320"/>
+            </svg>
+          </div>
+          <figcaption data-i18n="mask.caption">Schema · Maskierung und Freigabe</figcaption>
+        </figure>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 03 arbeitsweise -->
+<section class="section" id="arbeitsweise" aria-labelledby="h-arbeitsweise">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">03</span><span class="label head-name" data-i18n="nav.arbeitsweise">Arbeitsweise</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-arbeitsweise" data-i18n="flow.h2">Vom Bild zur Meldung.</h2>
+      <p class="head-intro" data-i18n="flow.intro">Acht Schritte, ein Protokoll. Jeder Schritt läuft auf dem Rechner der Behörde.</p>
+    </header>
+    </div>
+  </div>
+  <div class="wrap">
+
+    <div class="flow reveal">
+      <ol class="flow-steps">
+        <li><span class="flow-no">1</span><b data-i18n="flow1.k">Quelle</b><span data-i18n="flow1.v">Drohne, Hubschrauber, Pegelkamera, Fahrzeug</span></li>
+        <li><span class="flow-no">2</span><b data-i18n="flow2.k">Maskierung</b><span data-i18n="flow2.v">Gesichter unkenntlich, Original unter Verschluss</span></li>
+        <li><span class="flow-no">3</span><b data-i18n="flow3.k">Einbettung</b><span data-i18n="flow3.v">Bild und Ausschnitte als Vektoren mit 512 Dimensionen</span></li>
+        <li><span class="flow-no">4</span><b data-i18n="flow4.k">Verzeichnis</b><span data-i18n="flow4.v">Vektoren je Aufnahme, auf dem eigenen Rechner</span></li>
+        <li><span class="flow-no">5</span><b data-i18n="flow5.k">Suche · Wachen</b><span data-i18n="flow5.v">freie Beschreibung oder stehender Auftrag</span></li>
+        <li><span class="flow-no">6</span><b data-i18n="flow6.k">Meldung</b><span data-i18n="flow6.v">Treffer über mehrere Bilder hinweg</span></li>
+        <li><span class="flow-no">7</span><b data-i18n="flow7.k">Lage</b><span data-i18n="flow7.v">Meldungen an einem Ort, aus mehreren Quellen</span></li>
+        <li><span class="flow-no">8</span><b data-i18n="flow8.k">Vorgang</b><span data-i18n="flow8.v">gesicherte Bilder mit Prüfsumme</span></li>
+      </ol>
+      <div class="flow-ties" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="flow-ledger"><b data-i18n="flow9.k">Protokoll</b><span data-i18n="flow9.v">Jeder Schritt mit Person, Mandat und Zeit – verkettet über SHA-256, prüfbar in einem Zug.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 04 verbund -->
+<section class="section" id="verbund" aria-labelledby="h-verbund">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">04</span><span class="label head-name" data-i18n="nav.verbund">Verbund</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-verbund" data-i18n="fed.h2">Nur die Frage reist.</h2>
+      <p class="head-intro" data-i18n="fed.intro">Eine Lage endet nicht an der Kreisgrenze. Wer Material einer anderen Behörde braucht, lässt es sich heute schicken oder führt es an einer Stelle zusammen. Im Verbund bleibt es, wo es aufgenommen wurde.</p>
+    </header>
+
+    <div class="fed reveal">
+      <ol class="fed-steps">
+        <li data-i18n="fed.s1">Die Frage geht signiert hinaus – mit Mandat, Rechtsgrundlage und der Person, die fragt.</li>
+        <li data-i18n="fed.s2">Jeder Knoten prüft sie nach seinen eigenen Regeln und kann ablehnen.</li>
+        <li data-i18n="fed.s3">Zurück kommen maskierte Vorschaubilder und eine Belegnummer: der Protokolleintrag des antwortenden Knotens.</li>
+        <li data-i18n="fed.s4">Die Knoten bezeugen gegenseitig den Stand ihrer Protokolle. Eine nachträgliche Änderung fiele beim Nachbarn auf.</li>
+      </ol>
+
+      <figure class="fed-figure">
+        <svg class="fed-svg fed-wide" viewBox="0 0 760 460" role="img" aria-labelledby="fed-title-w">
+          <title id="fed-title-w" data-i18n="fed.title">Schema: Knoten A sendet eine signierte Frage an die Knoten B und C. Zurück kommen maskierte Vorschaubilder und je eine Belegnummer. Die Aufzeichnungen bleiben in jedem Knoten.</title>
+          <g class="fed-links">
+            <path d="M250 230 L510 110"/>
+            <path d="M250 230 L510 350"/>
+          </g>
+          <g class="fed-node">
+            <rect x="30" y="150" width="220" height="160"/>
+            <text x="46" y="178" class="t-strong" data-i18n="fed.a">KNOTEN A</text>
+            <text x="46" y="198" data-i18n="fed.a2">fragende Behörde</text>
+            <g class="fed-stock" transform="translate(46 226)"><rect width="34" height="24"/><rect x="6" y="6" width="34" height="24"/><rect x="12" y="12" width="34" height="24"/></g>
+            <text x="108" y="254" data-i18n="fed.stays">Material bleibt</text>
+            <text x="46" y="294" class="fed-receipt" data-i18n="fed.receipts">2 Belege im Protokoll</text>
+          </g>
+          <g class="fed-node fed-peer">
+            <rect x="510" y="30" width="220" height="160"/>
+            <text x="526" y="58" class="t-strong" data-i18n="fed.b">KNOTEN B</text>
+            <text x="526" y="78" data-i18n="fed.b2">prüft nach eigenen Regeln</text>
+            <g class="fed-stock" transform="translate(526 106)"><rect width="34" height="24"/><rect x="6" y="6" width="34" height="24"/><rect x="12" y="12" width="34" height="24"/></g>
+            <text x="588" y="134" data-i18n="fed.stays">Material bleibt</text>
+          </g>
+          <g class="fed-node fed-peer">
+            <rect x="510" y="270" width="220" height="160"/>
+            <text x="526" y="298" class="t-strong" data-i18n="fed.c">KNOTEN C</text>
+            <text x="526" y="318" data-i18n="fed.b2">prüft nach eigenen Regeln</text>
+            <g class="fed-stock" transform="translate(526 346)"><rect width="34" height="24"/><rect x="6" y="6" width="34" height="24"/><rect x="12" y="12" width="34" height="24"/></g>
+            <text x="588" y="374" data-i18n="fed.stays">Material bleibt</text>
+          </g>
+          <g class="fed-captions">
+            <text x="268" y="136" data-i18n="fed.out">FRAGE · SIGNIERT →</text>
+            <text x="268" y="340" data-i18n="fed.back">← VORSCHAU · MASKIERT</text>
+            <text x="268" y="360" data-i18n="fed.back2">← BELEGNUMMER</text>
+          </g>
+          <rect class="fed-q fed-q-b" x="246" y="226" width="8" height="8"/>
+          <rect class="fed-q fed-q-c" x="246" y="226" width="8" height="8"/>
+          <g class="fed-r fed-r-b" transform="translate(510 110)"><rect x="-13" y="-5" width="10" height="10"/><rect x="1" y="-5" width="10" height="10"/></g>
+          <g class="fed-r fed-r-c" transform="translate(510 350)"><rect x="-13" y="-5" width="10" height="10"/><rect x="1" y="-5" width="10" height="10"/></g>
+        </svg>
+
+        <svg class="fed-svg fed-narrow" viewBox="0 0 340 470" role="img" aria-labelledby="fed-title-n">
+          <title id="fed-title-n" data-i18n="fed.title">Schema: Knoten A sendet eine signierte Frage an die Knoten B und C. Zurück kommen maskierte Vorschaubilder und je eine Belegnummer. Die Aufzeichnungen bleiben in jedem Knoten.</title>
+          <g class="fed-links">
+            <path d="M170 130 L82 330"/>
+            <path d="M170 130 L258 330"/>
+          </g>
+          <g class="fed-node">
+            <rect x="50" y="10" width="240" height="120"/>
+            <text x="64" y="36" class="t-strong" data-i18n="fed.a">KNOTEN A</text>
+            <text x="64" y="55" data-i18n="fed.a2">fragende Behörde</text>
+            <g class="fed-stock" transform="translate(64 72)"><rect width="30" height="20"/><rect x="5" y="5" width="30" height="20"/><rect x="10" y="10" width="30" height="20"/></g>
+            <text x="118" y="96" data-i18n="fed.stays">Material bleibt</text>
+          </g>
+          <g class="fed-node fed-peer">
+            <rect x="4" y="330" width="156" height="130"/>
+            <text x="16" y="356" class="t-strong" data-i18n="fed.b">KNOTEN B</text>
+            <g class="fed-stock" transform="translate(16 376)"><rect width="30" height="20"/><rect x="5" y="5" width="30" height="20"/><rect x="10" y="10" width="30" height="20"/></g>
+            <text x="16" y="438" data-i18n="fed.stays">Material bleibt</text>
+          </g>
+          <g class="fed-node fed-peer">
+            <rect x="180" y="330" width="156" height="130"/>
+            <text x="192" y="356" class="t-strong" data-i18n="fed.c">KNOTEN C</text>
+            <g class="fed-stock" transform="translate(192 376)"><rect width="30" height="20"/><rect x="5" y="5" width="30" height="20"/><rect x="10" y="10" width="30" height="20"/></g>
+            <text x="192" y="438" data-i18n="fed.stays">Material bleibt</text>
+          </g>
+          <g class="fed-captions">
+            <text x="170" y="222" text-anchor="middle" data-i18n="fed.out.n">↓ FRAGE · SIGNIERT</text>
+            <text x="170" y="242" text-anchor="middle" data-i18n="fed.back.n">↑ VORSCHAU · BELEG</text>
+          </g>
+          <rect class="fed-q fed-qn-b" x="166" y="126" width="8" height="8"/>
+          <rect class="fed-q fed-qn-c" x="166" y="126" width="8" height="8"/>
+          <g class="fed-r fed-rn-b" transform="translate(82 330)"><rect x="-13" y="-5" width="10" height="10"/><rect x="1" y="-5" width="10" height="10"/></g>
+          <g class="fed-r fed-rn-c" transform="translate(258 330)"><rect x="-13" y="-5" width="10" height="10"/><rect x="1" y="-5" width="10" height="10"/></g>
+        </svg>
+        <figcaption data-i18n="fed.caption">Schema · Verbundabfrage zwischen drei Knoten</figcaption>
+      </figure>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 05 grenzen -->
+<section class="section section-limits" id="grenzen" aria-labelledby="h-grenzen">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">05</span><span class="label head-name" data-i18n="nav.grenzen">Grenzen</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-grenzen" data-i18n="limits.h2">Was Sicht nicht kann –<br>und nicht können soll.</h2>
+      <p class="head-intro" data-i18n="limits.intro">Diese Grenzen sind keine Einstellung, sondern Bauart. Was sich nicht beaufsichtigen lässt, baut Sicht nicht.</p>
+    </header>
+
+    <ol class="limits">
+      <li class="reveal">
+        <p class="limit" data-i18n="limit1.k">Keine Gesichtserkennung, kein Abgleich mit Personenbildern.</p>
+        <p class="limit-how" data-i18n="limit1.v">Dafür gibt es im System kein Modell. Gesichter werden beim Einspielen maskiert.</p>
+      </li>
+      <li class="reveal">
+        <p class="limit" data-i18n="limit2.k">Keine Kennzeichenerkennung.</p>
+        <p class="limit-how" data-i18n="limit2.v">Keine Zeichenerkennung an Fahrzeugen, kein Abgleich mit Registern.</p>
+      </li>
+      <li class="reveal">
+        <p class="limit" data-i18n="limit3.k">Keine Verfolgung einzelner Personen über Kameras hinweg.</p>
+        <p class="limit-how" data-i18n="limit3.v">Sicht kennt Szenen, keine Identitäten: keine Wiedererkennung, keine Suche nach identifizierenden Merkmalen.</p>
+      </li>
+      <li class="reveal">
+        <p class="limit" data-i18n="limit4.k">Keine Suche nach Herkunft, Religion, Gesundheit oder anderen geschützten Merkmalen.</p>
+        <p class="limit-how" data-i18n="limit4.v">Solche Anfragen lehnt das System ab. Die Ablehnung steht im Protokoll.</p>
+      </li>
+      <li class="reveal">
+        <p class="limit" data-i18n="limit5.k">Kein zentraler Datenbestand: Bilder bleiben bei der Behörde, die sie aufgenommen hat.</p>
+        <p class="limit-how" data-i18n="limit5.v">Im Verbund reist die Frage, nicht das Material.</p>
+      </li>
+      <li class="reveal">
+        <p class="limit" data-i18n="limit6.k">Kein stilles Weiterlernen im Betrieb: Nachschärfen ist ein eigener, protokollierter Schritt.</p>
+        <p class="limit-how" data-i18n="limit6.v">Jede Fassung einer Wache ist nummeriert und lässt sich zurücksetzen.</p>
+      </li>
+    </ol>
+
+    <div class="refusal reveal">
+      <p class="label" data-i18n="refusal.label">So sieht eine Grenze in der Konsole aus</p>
+      <div class="term">
+        <p class="term-q"><span class="term-p" aria-hidden="true">&gt;</span> <span data-i18n="refusal.q1">wasser auf fahrbahn</span></p>
+        <p class="term-a"><b data-i18n="refusal.ok">Zulässig.</b> <span data-i18n="refusal.a1">Die Suche läuft unter dem gewählten Mandat und steht im Protokoll.</span></p>
+        <p class="term-q"><span class="term-p" aria-hidden="true">&gt;</span> <span data-i18n="refusal.q2">mann mit tattoo am hals</span></p>
+        <p class="term-a"><b data-i18n="refusal.no">Abgelehnt.</b> <span data-i18n="refusal.a2">Die Anfrage beschreibt eine Person über ein körperliches Merkmal („tattoo“). Solche Merkmale gelten als biometrische Kategorien (KI-Verordnung, Erwägungsgrund 16) und sind hier ausgeschlossen. Kleidung, Ausrüstung, Haltung und Situation sind zulässig.</span></p>
+      </div>
+      <p class="refusal-note" data-i18n="refusal.note">Wortlaut der Konsole. Maßstab für diese Grenzen: <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj" rel="noopener noreferrer" target="_blank">Verordnung (EU) 2024/1689, Art.&nbsp;5</a> · <a href="https://www.bundesverfassungsgericht.de/e/rs20230216_1bvr154719.html" rel="noopener noreferrer" target="_blank">BVerfG, Urteil vom 16. Februar 2023 – 1 BvR 1547/19, 1 BvR 2634/20</a>.</p>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 06 gemessen -->
+<section class="section" id="gemessen" aria-labelledby="h-gemessen">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">06</span><span class="label head-name" data-i18n="nav.gemessen">Gemessen</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-gemessen" data-i18n="measured.h2">Gemessen, nicht versprochen.</h2>
+      <p class="head-intro" data-i18n="measured.intro">Fünf Werte aus dem Erprobungsstand, jeder mit seiner Grundlage. Was hier nicht steht, ist nicht gemessen.</p>
+    </header>
+
+    <table class="measures reveal">
+      <thead>
+        <tr><th scope="col" data-i18n="m.h1">Wert</th><th scope="col" data-i18n="m.h2">Aussage</th><th scope="col" data-i18n="m.h3">Grundlage</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="m-fig" data-i18n="m1.fig">99,1&nbsp;%</td>
+          <th scope="row" data-i18n="m1.k">Trefferquote des Gefahrenmodells</th>
+          <td data-i18n="m1.v">Makro-F1 0,990 auf der AIDERv2-Testmenge mit 1&#8239;654 Bildern (Einsturz, Feuer, Überflutung, Normalzustand). Dasselbe Bildmodell ohne Training: 92,2&nbsp;%.</td>
+        </tr>
+        <tr>
+          <td class="m-fig" data-i18n="m2.fig">≈ 3×</td>
+          <th scope="row" data-i18n="m2.k">Auswertung gegenüber Echtzeit</th>
+          <td data-i18n="m2.v">Bei einem Bild je Sekunde, auf vier Prozessorkernen, ohne Grafikkarte.</td>
+        </tr>
+        <tr>
+          <td class="m-fig" data-i18n="m3.fig">5,9&nbsp;s</td>
+          <th scope="row" data-i18n="m3.k">bis 44 Aufnahmen durchsuchbar sind</th>
+          <td data-i18n="m3.v">Vorschaudurchgang auf demselben Rechner; die dichte Auswertung läuft danach weiter.</td>
+        </tr>
+        <tr>
+          <td class="m-fig" data-i18n="m4.fig">20–40&nbsp;ms</td>
+          <th scope="row" data-i18n="m4.k">Gesichtsmaskierung je Bild</th>
+          <td data-i18n="m4.v">Gesichtsdetektor YuNet auf dem Prozessor.</td>
+        </tr>
+        <tr>
+          <td class="m-fig" data-i18n="m5.fig">ms</td>
+          <th scope="row" data-i18n="m5.k">Protokollprüfung</th>
+          <td data-i18n="m5.v">Millisekunden je tausend Einträge; SHA-256-Kette.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="caveat reveal" data-i18n="measured.caveat"><b>Einschränkung.</b> AIDERv2 enthält ähnliche Bilder in Trainings- und Testmenge. Der Wert gilt für diese Datenlage, nicht für beliebiges Einsatzmaterial.</p>
+
+    <figure class="shot shot-wide reveal">
+      <div class="shot-frame">
+        <img src="assets/screens/wirkung.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Wirkung: Messwerte einer Übung je Ereignis" data-i18n-alt="measured.alt">
+        <div class="shot-empty" aria-hidden="true"><span>WIRKUNG</span><span>16 : 10</span></div>
+      </div>
+      <figcaption><span data-i18n="shot.console">Konsole</span> · WIRKUNG · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+    </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 07 betrieb -->
+<section class="section" id="betrieb" aria-labelledby="h-betrieb">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">07</span><span class="label head-name" data-i18n="nav.betrieb">Betrieb</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-betrieb" data-i18n="ops.h2">Läuft bei der Behörde.<br>Bleibt bei der Behörde.</h2>
+    </header>
+
+    <dl class="ops reveal">
+      <div><dt data-i18n="ops1.k">Eigene Hardware</dt><dd data-i18n="ops1.v">Sicht läuft auf einem Rechner der Behörde. Für die Auswertung genügt ein Prozessor; eine Grafikkarte beschleunigt, ist aber keine Voraussetzung.</dd></div>
+      <div><dt data-i18n="ops2.k">Ohne Netz</dt><dd data-i18n="ops2.v">Nach einmaligem Laden der Modellgewichte arbeitet der Knoten ohne Internetverbindung. Karte, Schrift und Oberfläche liegen lokal.</dd></div>
+      <div><dt data-i18n="ops3.k">Offene Gewichte</dt><dd data-i18n="ops3.v">Die Bildmodelle sind öffentlich verfügbare Gewichte und austauschbar. Es gibt keinen entfernten Dienst, der abgeschaltet werden könnte.</dd></div>
+      <div><dt data-i18n="ops4.k">Keine Cloud</dt><dd data-i18n="ops4.v">Aufzeichnungen und Verzeichnis verlassen den Knoten nicht. Im Verbund geht nur die Frage hinaus; zurück kommen maskierte Vorschaubilder.</dd></div>
+      <div><dt data-i18n="ops5.k">Schnittstellen</dt><dd data-i18n="ops5.v">Lagen als GeoJSON und als CAP-1.2-Meldung, Berichte als druckbares Dokument. Sicht speist bestehende Lagebild- und Warnsysteme, statt sie zu ersetzen.</dd></div>
+      <div><dt data-i18n="ops6.k">Rollen</dt><dd data-i18n="ops6.v">Auswertung, Leitung und Aufsicht haben getrennte Rechte. Die Aufsicht sieht das Protokoll, aber kein Bildmaterial.</dd></div>
+      <div><dt data-i18n="ops8.k">Selbstprüfung</dt><dd data-i18n="ops8.v">Beim Start vergleicht der Knoten die Ergebnisse einer Grafikkarte mit denen des Prozessors. Weichen sie ab, rechnet er auf dem Prozessor weiter.</dd></div>
+      <div><dt data-i18n="ops7.k">Löschfrist</dt><dd data-i18n="ops7.v">Aufzeichnungen werden nach einer einstellbaren Frist gelöscht, voreingestellt nach 60 Tagen. Ausgenommen ist, was in einem Vorgang als Beweis gesichert wurde.</dd></div>
+    </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 08 stand -->
+<section class="section" id="stand" aria-labelledby="h-stand">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">08</span><span class="label head-name" data-i18n="nav.stand">Stand</span></p>
+    </div>
+    <div class="main">
+    <header class="head reveal">
+      <h2 id="h-stand" data-i18n="status.h2">Erprobungsstand.</h2>
+      <p class="head-intro head-intro-strong" data-i18n="status.intro">Sicht ist Software im Erprobungsstand. Alles, was diese Seite zeigt, läuft mit Übungsmaterial. Es gibt keine Behördenkunden, keine Zertifizierung und keinen Echtbetrieb.</p>
+    </header>
+
+    <div class="trial reveal">
+      <p class="label" data-i18n="trial.label">Eine Erprobung in drei Schritten</p>
+      <ol class="trial-steps">
+        <li><h3 data-i18n="trial1.k">Einrichten</h3><span data-i18n="trial1.v">Ein Knoten wird auf einem Rechner der Behörde aufgesetzt, ohne Anbindung an bestehende Systeme.</span></li>
+        <li><h3 data-i18n="trial2.k">Üben</h3><span data-i18n="trial2.v">Eigenes Material aus einer vergangenen Übung oder einem abgeschlossenen Einsatz wird eingespielt. Die Wachen formulieren die Auswertenden selbst.</span></li>
+        <li><h3 data-i18n="trial3.k">Messen</h3><span data-i18n="trial3.v">Erkennungsverzug, Sichtungsquote und Protokollabdeckung werden je Ereignis ausgewiesen. Die Behörde entscheidet anhand ihrer eigenen Zahlen.</span></li>
+      </ol>
+      <p class="trial-note" data-i18n="trial.note">Vor einer Erprobung mit echtem Material steht eine Datenschutz-Folgenabschätzung. Sicht liefert dafür die technische Beschreibung.</p>
+      <p class="trial-cta"><a class="go go-contact" data-contact-link hidden data-i18n="cta">Vorführung anfragen</a></p>
+    </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-top">
+      <p class="wordmark foot-mark">SICHT</p>
+      <p class="foot-motto" data-i18n="foot.motto">Keine Sicht ohne Aufsicht.</p>
+    </div>
+    <dl class="foot-notes">
+      <div><dt data-i18n="foot.k0">Wort</dt><dd data-i18n="foot.v0">Sicht, die – Möglichkeit, etwas zu sehen; Überblick über eine Lage.</dd></div>
+      <div><dt data-i18n="foot.k1">Stand</dt><dd data-i18n="foot.v1">Erprobungsstand · Übungsmaterial · keine Echtdaten</dd></div>
+      <div><dt data-i18n="foot.k2">Karte</dt><dd data-i18n="map.attrib">© OpenStreetMap-Mitwirkende (ODbL) · OpenMapTiles · Höhendaten: Mapzen</dd></div>
+      <div><dt data-i18n="foot.k3">Schrift</dt><dd data-i18n="foot.v3">JetBrains Mono, lokal eingebunden · <a href="assets/fonts/OFL.txt">SIL Open Font License 1.1</a></dd></div>
+    </dl>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "federationSecret": "nur-fuer-die-vorfuehrung-auf-einem-rechner",
+  "nodes": [
+    {
+      "id": "koblenz",
+      "name": "Lagezentrum Koblenz",
+      "operator": "Untere Katastrophenschutzbehörde (Übung)",
+      "region": "Koblenz",
+      "lat": 50.3569,
+      "lon": 7.589,
+      "port": 8787,
+      "dataDir": "data-koblenz",
+      "peers": [
+        "trier",
+        "mainz"
+      ]
+    },
+    {
+      "id": "trier",
+      "name": "Lagezentrum Trier",
+      "operator": "Untere Katastrophenschutzbehörde (Übung)",
+      "region": "Trier",
+      "lat": 49.7596,
+      "lon": 6.6442,
+      "port": 8788,
+      "dataDir": "data-trier",
+      "peers": [
+        "koblenz",
+        "mainz"
+      ],
+      "seed": "seeds/trier"
+    },
+    {
+      "id": "mainz",
+      "name": "Lagezentrum Mainz",
+      "operator": "Obere Katastrophenschutzbehörde (Übung)",
+      "region": "Mainz",
+      "lat": 49.9929,
+      "lon": 8.2473,
+      "port": 8789,
+      "dataDir": "data-mainz",
+      "peers": [
+        "koblenz",
+        "trier"
+      ],
+      "seed": "seeds/mainz"
+    }
+  ]
+}

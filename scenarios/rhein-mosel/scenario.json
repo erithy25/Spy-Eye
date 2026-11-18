@@ -1,0 +1,721 @@
+{
+  "id": "rhein-mosel",
+  "title": "Übung RHEIN-MOSEL",
+  "titleEn": "Exercise RHEIN-MOSEL",
+  "description": "Stabsrahmenübung: Starkregen und Hochwasser an Rhein und Mosel im Raum Koblenz, mit Folgeereignissen. Sämtliche Aufnahmen sind frei lizenziertes Archivmaterial und zeigen nicht die genannten Orte.",
+  "descriptionEn": "Command post exercise: heavy rain and flooding on the Rhine and Moselle around Koblenz, with follow-on events. All footage is freely licensed stock material and does not show the places named.",
+  "durationSec": 600,
+  "center": {
+    "lat": 50.366,
+    "lon": 7.585,
+    "zoom": 13
+  },
+  "sampleFps": 1,
+  "detail": "standard",
+  "mandate": {
+    "title": "Übung RHEIN-MOSEL",
+    "titleEn": "Exercise RHEIN-MOSEL",
+    "legalBasis": "Übungsanordnung der Übungsleitung · kein Echtbetrieb, keine Echtdaten",
+    "purpose": "Erprobung der Bildauswertung für das Lagebild in einer Stabsrahmenübung. Ausgewertet wird ausschließlich frei lizenziertes Archivmaterial.",
+    "issuedBy": "Übungsleitung"
+  },
+  "sources": [
+    {
+      "id": "uas-1",
+      "name": "UAS 1 · Moselbogen",
+      "nameEn": "UAS 1 · Moselle bend",
+      "kind": "drone",
+      "owner": "Feuerwehr · Drohneneinheit",
+      "description": "Erkundungsflug entlang der Mosel zwischen Güls und Moselweiß.",
+      "lat": 50.3497,
+      "lon": 7.5612,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "fluss-a"
+        },
+        {
+          "at": 80,
+          "clip": "flut-wiese"
+        },
+        {
+          "at": 210,
+          "clip": "flut-wege"
+        }
+      ]
+    },
+    {
+      "id": "uas-2",
+      "name": "UAS 2 · Rheinvorland",
+      "nameEn": "UAS 2 · Rhine foreland",
+      "kind": "drone",
+      "owner": "Feuerwehr · Drohneneinheit",
+      "description": "Erkundungsflug über dem Rheinvorland bei Neuendorf und Wallersheim.",
+      "lat": 50.3806,
+      "lon": 7.6108,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "fluss-b"
+        },
+        {
+          "at": 150,
+          "clip": "flut-baeume"
+        },
+        {
+          "at": 330,
+          "clip": "flut-aue"
+        }
+      ]
+    },
+    {
+      "id": "uas-3",
+      "name": "UAS 3 · B 9 Nord",
+      "nameEn": "UAS 3 · B 9 north",
+      "kind": "drone",
+      "owner": "Technisches Hilfswerk · Trupp UL",
+      "description": "Verkehrsbeobachtung an der B 9 zwischen Lützel und Bubenheim.",
+      "lat": 50.3792,
+      "lon": 7.5778,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "kreisel"
+        },
+        {
+          "at": 240,
+          "clip": "unfall-wrack"
+        },
+        {
+          "at": 345,
+          "clip": "unfall-luft"
+        }
+      ]
+    },
+    {
+      "id": "uas-4",
+      "name": "UAS 4 · Rheinhafen",
+      "nameEn": "UAS 4 · Rhine port",
+      "kind": "drone",
+      "owner": "Feuerwehr · Drohneneinheit",
+      "description": "Beobachtung des Gewerbegebiets am Rheinhafen.",
+      "lat": 50.3918,
+      "lon": 7.5996,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "kreuzung"
+        },
+        {
+          "at": 400,
+          "clip": "brand-luft"
+        }
+      ]
+    },
+    {
+      "id": "kam-b9",
+      "name": "Verkehrskamera · B 9 Süd",
+      "nameEn": "Traffic camera · B 9 south",
+      "kind": "fixed",
+      "owner": "Straßenverkehrsbehörde",
+      "description": "Festkamera an der B 9 in Höhe Oberwerth.",
+      "lat": 50.3448,
+      "lon": 7.5935,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "regen-a"
+        },
+        {
+          "at": 120,
+          "clip": "regen-b"
+        }
+      ]
+    },
+    {
+      "id": "kam-tunnel",
+      "name": "Tunnelkamera · Ostportal",
+      "nameEn": "Tunnel camera · east portal",
+      "kind": "fixed",
+      "owner": "Straßenverkehrsbehörde",
+      "description": "Festkamera im Straßentunnel auf der rechten Rheinseite.",
+      "lat": 50.3562,
+      "lon": 7.6128,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "tunnel-normal"
+        },
+        {
+          "at": 280,
+          "clip": "tunnel-unfall"
+        },
+        {
+          "at": 390,
+          "clip": "tunnel-lf"
+        }
+      ]
+    },
+    {
+      "id": "wetter",
+      "name": "Wetterkamera · Festungsplateau",
+      "nameEn": "Weather camera · fortress plateau",
+      "kind": "fixed",
+      "owner": "Stadt · Umweltamt",
+      "description": "Blick talaufwärts über das Stadtgebiet.",
+      "lat": 50.3652,
+      "lon": 7.6156,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "wetter"
+        }
+      ]
+    },
+    {
+      "id": "erk-1",
+      "name": "Erkunder 1 · Güls",
+      "nameEn": "Scout 1 · Güls",
+      "kind": "bodycam",
+      "owner": "Freiwillige Feuerwehr",
+      "description": "Erkundungstrupp mit Handkamera im Stadtteil Güls.",
+      "lat": 50.3412,
+      "lon": 7.5529,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "einsatz-a"
+        },
+        {
+          "at": 100,
+          "clip": "sturzflut"
+        },
+        {
+          "at": 260,
+          "clip": "hang"
+        },
+        {
+          "at": 350,
+          "clip": "fachberater"
+        }
+      ]
+    },
+    {
+      "id": "erk-2",
+      "name": "Erkunder 2 · Lützel",
+      "nameEn": "Scout 2 · Lützel",
+      "kind": "bodycam",
+      "owner": "Freiwillige Feuerwehr",
+      "description": "Erkundungstrupp mit Handkamera im Stadtteil Lützel.",
+      "lat": 50.3711,
+      "lon": 7.5918,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "lf-anfahrt"
+        },
+        {
+          "at": 160,
+          "clip": "baum-auto"
+        },
+        {
+          "at": 320,
+          "clip": "lkw"
+        },
+        {
+          "at": 440,
+          "clip": "baum-strasse"
+        }
+      ]
+    },
+    {
+      "id": "erk-3",
+      "name": "Erkunder 3 · Wallersheim",
+      "nameEn": "Scout 3 · Wallersheim",
+      "kind": "bodycam",
+      "owner": "Berufsfeuerwehr",
+      "description": "Erkundungstrupp mit Handkamera am Rheinhafen.",
+      "lat": 50.3871,
+      "lon": 7.6042,
+      "playlist": [
+        {
+          "at": 0,
+          "clip": "einsatz-b"
+        },
+        {
+          "at": 420,
+          "clip": "brand-gebaeude"
+        },
+        {
+          "at": 520,
+          "clip": "brand-strahlrohr"
+        }
+      ]
+    },
+    {
+      "id": "buerger",
+      "name": "Bürgerhinweise · Eingang",
+      "nameEn": "Citizen reports · inbox",
+      "kind": "citizen",
+      "owner": "Stadt · Hinweisportal",
+      "description": "Von Bürgerinnen und Bürgern eingesandte Aufnahmen; Standort laut Einsender.",
+      "lat": 50.3601,
+      "lon": 7.5971,
+      "playlist": [
+        {
+          "at": 130,
+          "clip": "baugrube"
+        },
+        {
+          "at": 360,
+          "clip": "baum-haus"
+        },
+        {
+          "at": 480,
+          "clip": "truemmer"
+        }
+      ]
+    }
+  ],
+  "clips": {
+    "fluss-a": {
+      "file": "mixkit-43605.mp4",
+      "credit": "Mixkit · aerial-view-of-a-large-river · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/43605/43605-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/aerial-view-of-a-large-river-43605/"
+    },
+    "flut-wiese": {
+      "file": "mixkit-9964.mp4",
+      "credit": "Mixkit · flood-in-the-agricultural-field · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9964/9964-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/flood-in-the-agricultural-field-9964/"
+    },
+    "flut-wege": {
+      "file": "mixkit-9953.mp4",
+      "credit": "Mixkit · aerial-view-of-flood-and-disrupted-roads · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9953/9953-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/aerial-view-of-flood-and-disrupted-roads-9953/"
+    },
+    "fluss-b": {
+      "file": "mixkit-43604.mp4",
+      "credit": "Mixkit · aerial-shot-of-a-river-near-a-large-metropolis · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/43604/43604-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/aerial-shot-of-a-river-near-a-large-metropolis-43604/"
+    },
+    "flut-baeume": {
+      "file": "mixkit-9979.mp4",
+      "credit": "Mixkit · trees-in-a-flood · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9979/9979-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/trees-in-a-flood-9979/"
+    },
+    "flut-aue": {
+      "file": "mixkit-9630.mp4",
+      "credit": "Mixkit · dead-trees-in-a-flood · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9630/9630-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/dead-trees-in-a-flood-9630/"
+    },
+    "kreisel": {
+      "file": "mixkit-1615.mp4",
+      "credit": "Mixkit · city-traffic-going-around-a-roundabout-from-above · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/1615/1615-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/city-traffic-going-around-a-roundabout-from-above-1615/"
+    },
+    "unfall-luft": {
+      "file": "mixkit-49233.mp4",
+      "credit": "Mixkit · aerial-view-of-a-car-accident-on-a-busy-highway · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49233/49233-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/aerial-view-of-a-car-accident-on-a-busy-highway-49233/"
+    },
+    "unfall-wrack": {
+      "file": "mixkit-49234.mp4",
+      "credit": "Mixkit · aerial-view-of-a-wreaked-car-on-the-highway · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49234/49234-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/aerial-view-of-a-wreaked-car-on-the-highway-49234/"
+    },
+    "kreuzung": {
+      "file": "mixkit-14089.mp4",
+      "credit": "Mixkit · ambulance-crossing-the-roads · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/14089/14089-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/ambulance-crossing-the-roads-14089/"
+    },
+    "brand-luft": {
+      "file": "mixkit-5280.mp4",
+      "credit": "Mixkit · firefighters-putting-out-a-big-fire · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/5280/5280-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/firefighters-putting-out-a-big-fire-5280/"
+    },
+    "regen-a": {
+      "file": "mixkit-27704.mp4",
+      "credit": "Mixkit · cars-heading-through-heavy-rain · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/27704/27704-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/cars-heading-through-heavy-rain-27704/"
+    },
+    "regen-b": {
+      "file": "mixkit-9405.mp4",
+      "credit": "Mixkit · heavy-rain-in-traffic · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9405/9405-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/heavy-rain-in-traffic-9405/"
+    },
+    "tunnel-normal": {
+      "file": "mixkit-1604.mp4",
+      "credit": "Mixkit · cars-in-a-tunnel · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/1604/1604-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/cars-in-a-tunnel-1604/"
+    },
+    "tunnel-unfall": {
+      "file": "mixkit-47109.mp4",
+      "credit": "Mixkit · car-accident-inside-a-tunnel-with-rescue-team-in-action · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/47109/47109-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/car-accident-inside-a-tunnel-with-rescue-team-in-action-47109/"
+    },
+    "tunnel-lf": {
+      "file": "mixkit-46936.mp4",
+      "credit": "Mixkit · fire-truck-arriving-at-the-tunnel-to-conduct-the-rescue · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/46936/46936-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/fire-truck-arriving-at-the-tunnel-to-conduct-the-rescue-46936/"
+    },
+    "wetter": {
+      "file": "mixkit-9810.mp4",
+      "credit": "Mixkit · storm-clouds-approaching-the-valley · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9810/9810-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/storm-clouds-approaching-the-valley-9810/"
+    },
+    "einsatz-a": {
+      "file": "mixkit-49157.mp4",
+      "credit": "Mixkit · firefighters-assisting-in-an-emergency-in-a-residential-area · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49157/49157-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/firefighters-assisting-in-an-emergency-in-a-residential-area-49157/"
+    },
+    "sturzflut": {
+      "file": "mixkit-9956.mp4",
+      "credit": "Mixkit · muddy-river-rapids-and-rocks · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9956/9956-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/muddy-river-rapids-and-rocks-9956/"
+    },
+    "hang": {
+      "file": "mixkit-49152.mp4",
+      "credit": "Mixkit · highway-closed-due-to-earthquake-landslide · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49152/49152-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/highway-closed-due-to-earthquake-landslide-49152/"
+    },
+    "fachberater": {
+      "file": "mixkit-49153.mp4",
+      "credit": "Mixkit · engineer-checks-highway-closed-due-to-earthquake-landslide · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49153/49153-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/engineer-checks-highway-closed-due-to-earthquake-landslide-49153/"
+    },
+    "lf-anfahrt": {
+      "file": "mixkit-49156.mp4",
+      "credit": "Mixkit · fire-truck-on-its-way-to-attend-to-an-emergency · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49156/49156-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/fire-truck-on-its-way-to-attend-to-an-emergency-49156/"
+    },
+    "baum-auto": {
+      "file": "mixkit-9269.mp4",
+      "credit": "Mixkit · tree-fallen-on-a-car-on-the-street · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9269/9269-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/tree-fallen-on-a-car-on-the-street-9269/"
+    },
+    "lkw": {
+      "file": "mixkit-49147.mp4",
+      "credit": "Mixkit · trailer-crash-on-a-highway · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49147/49147-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/trailer-crash-on-a-highway-49147/"
+    },
+    "baum-strasse": {
+      "file": "mixkit-9321.mp4",
+      "credit": "Mixkit · tree-fallen-on-the-street-by-a-hurricane · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9321/9321-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/tree-fallen-on-the-street-by-a-hurricane-9321/"
+    },
+    "einsatz-b": {
+      "file": "mixkit-49158.mp4",
+      "credit": "Mixkit · firefighters-attending-an-emergency-and-the-fire-truck-in-the · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49158/49158-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/firefighters-attending-an-emergency-and-the-fire-truck-in-the-49158/"
+    },
+    "brand-gebaeude": {
+      "file": "mixkit-22587.mp4",
+      "credit": "Mixkit · building-burning-down · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/22587/22587-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/building-burning-down-22587/"
+    },
+    "brand-strahlrohr": {
+      "file": "mixkit-5296.mp4",
+      "credit": "Mixkit · firefighters-on-the-street-shooting-water-with-their-hoses · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/5296/5296-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/firefighters-on-the-street-shooting-water-with-their-hoses-5296/"
+    },
+    "baugrube": {
+      "file": "mixkit-28089.mp4",
+      "credit": "Mixkit · flooded-construction-site · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/28089/28089-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/flooded-construction-site-28089/"
+    },
+    "baum-haus": {
+      "file": "mixkit-9283.mp4",
+      "credit": "Mixkit · urban-disaster-after-the-hurricane · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/9283/9283-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/urban-disaster-after-the-hurricane-9283/"
+    },
+    "truemmer": {
+      "file": "mixkit-49159.mp4",
+      "credit": "Mixkit · rescue-team-searching-for-survivors-in-the-rubble · Mixkit Stock Video Free License",
+      "url": "https://assets.mixkit.co/videos/49159/49159-720.mp4",
+      "page": "https://mixkit.co/free-stock-video/rescue-team-searching-for-survivors-in-the-rubble-49159/"
+    }
+  },
+  "events": [
+    {
+      "at": 80,
+      "source": "uas-1",
+      "label": "Mosel tritt über die Ufer, Wiesen überflutet",
+      "labelEn": "Moselle overflows, meadows flooded",
+      "watch": "flut"
+    },
+    {
+      "at": 100,
+      "source": "erk-1",
+      "label": "Bachlauf führt Sturzflut",
+      "labelEn": "Stream in flash flood",
+      "watch": "flut"
+    },
+    {
+      "at": 150,
+      "source": "uas-2",
+      "label": "Rheinvorland überflutet",
+      "labelEn": "Rhine foreland flooded",
+      "watch": "flut"
+    },
+    {
+      "at": 160,
+      "source": "erk-2",
+      "label": "Baum auf Fahrzeug gestürzt",
+      "labelEn": "Tree fallen on a vehicle",
+      "watch": "sturm"
+    },
+    {
+      "at": 240,
+      "source": "uas-3",
+      "label": "Verkehrsunfall auf der B 9",
+      "labelEn": "Traffic accident on the B 9",
+      "watch": "unfall"
+    },
+    {
+      "at": 260,
+      "source": "erk-1",
+      "label": "Fahrbahn abgerutscht, Straße gesperrt",
+      "labelEn": "Road subsided, closed",
+      "watch": "strasse"
+    },
+    {
+      "at": 280,
+      "source": "kam-tunnel",
+      "label": "Unfall im Tunnel, Einsatzkräfte am Fahrzeug",
+      "labelEn": "Accident in the tunnel, crews at the vehicle",
+      "watch": "rettung",
+      "accept": [
+        "unfall"
+      ]
+    },
+    {
+      "at": 320,
+      "source": "erk-2",
+      "label": "Lastkraftwagen umgestürzt",
+      "labelEn": "Lorry overturned",
+      "watch": "lkw",
+      "accept": [
+        "unfall"
+      ]
+    },
+    {
+      "at": 360,
+      "source": "buerger",
+      "label": "Baum auf Wohnhaus gestürzt",
+      "labelEn": "Tree fallen on a house",
+      "watch": "sturm"
+    },
+    {
+      "at": 400,
+      "source": "uas-4",
+      "label": "Gebäudebrand im Gewerbegebiet, starke Rauchentwicklung",
+      "labelEn": "Building fire in the industrial area, heavy smoke",
+      "watch": "brand",
+      "accept": [
+        "rauch"
+      ]
+    },
+    {
+      "at": 420,
+      "source": "erk-3",
+      "label": "Gebäude in Vollbrand",
+      "labelEn": "Building fully ablaze",
+      "watch": "brand",
+      "accept": [
+        "rauch"
+      ]
+    },
+    {
+      "at": 440,
+      "source": "erk-2",
+      "label": "Straße durch umgestürzten Baum blockiert",
+      "labelEn": "Road blocked by a fallen tree",
+      "watch": "sturm"
+    },
+    {
+      "at": 480,
+      "source": "buerger",
+      "label": "Teileinsturz, Suche in Trümmern",
+      "labelEn": "Partial collapse, search in the rubble",
+      "watch": "einsturz"
+    }
+  ],
+  "watches": [
+    {
+      "key": "flut",
+      "name": "Überflutung",
+      "nameEn": "Flooding",
+      "kind": "text",
+      "prompt": "a river that has burst its banks",
+      "exclude": [],
+      "hazardClass": null,
+      "severity": 3,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": []
+    },
+    {
+      "key": "brand",
+      "name": "Brand",
+      "nameEn": "Fire",
+      "kind": "text",
+      "prompt": "flames and smoke from a burning building",
+      "exclude": [],
+      "hazardClass": null,
+      "severity": 3,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": []
+    },
+    {
+      "key": "einsturz",
+      "name": "Einsturz und Trümmer",
+      "nameEn": "Collapse and rubble",
+      "kind": "text",
+      "prompt": "rescue workers searching through rubble",
+      "exclude": [],
+      "hazardClass": null,
+      "severity": 3,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": []
+    },
+    {
+      "key": "rauch",
+      "name": "Starke Rauchentwicklung",
+      "nameEn": "Heavy smoke",
+      "kind": "text",
+      "prompt": "thick dark smoke rising over buildings",
+      "exclude": [
+        "fog and rain",
+        "clouds in the sky"
+      ],
+      "hazardClass": null,
+      "severity": 2,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": [],
+      "group": "brand"
+    },
+    {
+      "key": "unfall",
+      "name": "Verkehrsunfall",
+      "nameEn": "Traffic accident",
+      "kind": "text",
+      "prompt": "a car crash",
+      "exclude": [
+        "a collapsed road with broken asphalt",
+        "a construction worker inspecting a damaged road"
+      ],
+      "hazardClass": null,
+      "severity": 2,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": []
+    },
+    {
+      "key": "lkw",
+      "name": "Umgestürzter Lastkraftwagen",
+      "nameEn": "Overturned lorry",
+      "kind": "text",
+      "prompt": "an overturned truck",
+      "exclude": [
+        "a collapsed road with broken asphalt",
+        "a construction worker inspecting a damaged road"
+      ],
+      "hazardClass": null,
+      "severity": 2,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": [],
+      "group": "unfall"
+    },
+    {
+      "key": "rettung",
+      "name": "Einsatzkräfte am Unfallfahrzeug",
+      "nameEn": "Crews at a crashed vehicle",
+      "kind": "text",
+      "prompt": "firefighters at a crashed car",
+      "exclude": [
+        "a fire truck driving on a street"
+      ],
+      "hazardClass": null,
+      "severity": 2,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": [
+        "fixed"
+      ],
+      "group": "unfall"
+    },
+    {
+      "key": "sturm",
+      "name": "Sturmschaden: umgestürzter Baum",
+      "nameEn": "Storm damage: fallen tree",
+      "kind": "text",
+      "prompt": "a fallen tree lying on a car, a house or across a street",
+      "exclude": [
+        "trees standing in a park"
+      ],
+      "hazardClass": null,
+      "severity": 2,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": []
+    },
+    {
+      "key": "strasse",
+      "name": "Fahrbahn zerstört",
+      "nameEn": "Road destroyed",
+      "kind": "text",
+      "prompt": "a collapsed road with broken asphalt",
+      "exclude": [
+        "an intact road"
+      ],
+      "hazardClass": null,
+      "severity": 2,
+      "threshold": 0.55,
+      "persistence": 2,
+      "cooldownSec": 30,
+      "sourceKinds": []
+    }
+  ]
+}

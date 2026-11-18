@@ -39,7 +39,11 @@ export interface WatchInput {
   persistence: number;
   cooldownSec: number;
   sourceKinds: SourceKind[];
+  /** Watches of one group describe the same kind of event; defaults to the watch itself. */
+  group?: string;
 }
+
+const AERIAL_KINDS: readonly SourceKind[] = ['drone', 'helicopter', 'satellite'];
 
 interface Vectors {
   positive: Float32Array;
@@ -183,8 +187,10 @@ export class WatchEngine {
   }
 
   async create(input: WatchInput, user: UserInfo | null, mandateId: string, id?: string): Promise<Watch> {
+    const watchId = id ?? newId('wa');
     const watch: Watch = {
-      id: id ?? newId('wa'),
+      id: watchId,
+      group: input.group ?? watchId,
       name: input.name,
       prompt: input.prompt,
       exclude: input.exclude,
@@ -304,7 +310,9 @@ export class WatchEngine {
     }
     let confidence = sigmoid((score - cutoff) / width);
     if (head) {
-      const weight = Math.min(0.7, head.examples / (head.examples + 6));
+      // Retraining is an explicit decision of an analyst, so its result counts from the first
+      // verdict on, and more with every further one. The prompt always keeps a share.
+      const weight = Math.min(0.8, 0.5 + 0.05 * head.examples);
       confidence = (1 - weight) * confidence + weight * head.predict(emb.data, offset);
     }
     return { confidence, score, tile };
@@ -316,16 +324,9 @@ export class WatchEngine {
       const emb = entry.embeddings;
       const cls = hazard && watch.hazardClass ? hazard.classIndex(watch.hazardClass) : -1;
       if (!hazard || !emb || cls < 0 || emb.dim !== hazard.dim) return null;
-      let best = 0;
-      let bestTile = 0;
-      for (let t = 0; t < entry.info.tilesPerFrame; t++) {
-        const p = hazard.classify(emb.data, tileOffset(entry, frameIdx, t))[cls] as number;
-        if (p > best) {
-          best = p;
-          bestTile = t;
-        }
-      }
-      return { confidence: best, score: best, tile: bestTile };
+      // The model was trained on whole aerial images; crops are outside what it has seen.
+      const p = hazard.classify(emb.data, tileOffset(entry, frameIdx, 0))[cls] as number;
+      return { confidence: p, score: p, tile: 0 };
     }
     const vectors = this.vectors.get(watch.id);
     if (!vectors) return null;
@@ -433,6 +434,8 @@ export class WatchEngine {
       reviewedBy: null,
       incidentId: null,
       exercise: observation.exerciseSec !== null,
+      group: watch.group ?? watch.id,
+      secondOpinion: null,
     };
     this.setEvidence(alert, observation, evaluation);
     this.alerts.put(alert);
@@ -463,6 +466,18 @@ export class WatchEngine {
     alert.box = tile ? toNormRect(tile, entry.info.frameWidth, entry.info.frameHeight) : null;
     alert.confidence = Math.round(evaluation.confidence * 1000) / 1000;
     alert.score = Math.round(evaluation.score * 10000) / 10000;
+    alert.secondOpinion = this.secondOpinion(alert.sourceKind, entry, observation.frameIdx);
+  }
+
+  /** The hazard model's reading of a whole aerial frame; it has not been trained on anything else. */
+  private secondOpinion(kind: SourceKind, entry: VideoEntry, frameIdx: number): Alert['secondOpinion'] {
+    const hazard = this.deps.hazard;
+    const emb = entry.embeddings;
+    if (!hazard || !emb || emb.dim !== hazard.dim || !AERIAL_KINDS.includes(kind)) return null;
+    const p = hazard.classify(emb.data, tileOffset(entry, frameIdx, 0));
+    let best = 0;
+    for (let c = 1; c < p.length; c++) if ((p[c] as number) > (p[best] as number)) best = c;
+    return { label: hazard.classes[best] as string, p: Math.round((p[best] as number) * 1000) / 1000 };
   }
 
   /** Ends alerts whose condition has not been seen for the watch's cool-down. */

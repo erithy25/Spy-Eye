@@ -45,7 +45,16 @@ export interface ScenarioDefinition {
   /** Clip key -> file name inside the scenario's clips/ directory, with provenance. */
   clips: Record<string, { file: string; credit: string; url: string }>;
   /** Events the exercise control injects; the ground truth for the evaluation. */
-  events: { at: number; source: string; label: string; labelEn: string; watch: string }[];
+  events: {
+    at: number;
+    source: string;
+    label: string;
+    labelEn: string;
+    /** Watch that is expected to report the event. */
+    watch: string;
+    /** Further watches for which a report on this event is correct (e.g. smoke at a fire). */
+    accept?: string[];
+  }[];
   watches: {
     key: string;
     name: string;
@@ -59,6 +68,8 @@ export interface ScenarioDefinition {
     persistence: number;
     cooldownSec: number;
     sourceKinds: SourceKind[];
+    /** Watches with the same group describe the same kind of event and share incidents. */
+    group?: string;
   }[];
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchVideoScenes, type SceneInfo, type VideoInfo } from '../api';
 import { formatTime } from '../format';
+import { useLang } from '../i18n';
 
 interface SceneBrowserProps {
   video: VideoInfo;
@@ -11,6 +12,7 @@ interface SceneBrowserProps {
 }
 
 export function SceneBrowser({ video, refreshKey, onOpen, onClose }: SceneBrowserProps) {
+  const { t } = useLang();
   const [scenes, setScenes] = useState<SceneInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +32,12 @@ export function SceneBrowser({ video, refreshKey, onOpen, onClose }: SceneBrowse
     <section className="section">
       <header className="section-head">
         <h2 className="label">
-          Szenen <span className="count">{scenes ? scenes.length : ''}</span>
+          {t('Szenen')} <span className="count">{scenes ? scenes.length : ''}</span>
         </h2>
         <span className="meta">
           {video.name}&nbsp;&nbsp;
           <button type="button" className="text-btn" onClick={onClose}>
-            schließen
+            {t('schließen')}
           </button>
         </span>
       </header>

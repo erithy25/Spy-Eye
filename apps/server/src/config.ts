@@ -38,6 +38,13 @@ function parseDtype(raw: string): ModelDtype {
   throw new Error(`Invalid MODEL_DTYPE="${raw}": expected fp32, fp16 or q8.`);
 }
 
+/**
+ * SigLIP 2 (Google, Apache-2.0): free for commercial use, multilingual text encoder (German
+ * queries work), and with 32-pixel patches fast enough for processors without a graphics card.
+ * MobileCLIP remains selectable but its weights are licensed for research only.
+ */
+const DEFAULT_MODEL_ID = 'onnx-community/siglip2-base-patch32-256-ONNX';
+
 export const config = {
   host: envString('HOST', '127.0.0.1'),
   port: envNumber('PORT', 8787, 1, 65535),
@@ -57,8 +64,16 @@ export const config = {
   /** Password of the seeded demonstration accounts (first start only). */
   demoPassword: envString('SICHT_DEMO_PASSWORD', 'lagebild'),
   /** Hugging Face model id (ONNX export) of a CLIP- or SigLIP-style dual encoder. */
-  modelId: envString('MODEL_ID', 'Xenova/mobileclip_s2'),
+  modelId: envString('MODEL_ID', DEFAULT_MODEL_ID),
   modelDtype: parseDtype(envString('MODEL_DTYPE', 'fp32')),
+  /**
+   * Precision of the text encoder; defaults to the image encoder's. Multilingual text encoders
+   * carry a large vocabulary table, so half precision roughly halves the download and the memory
+   * while the query embeddings stay practically unchanged.
+   */
+  modelTextDtype: parseDtype(
+    envString('MODEL_TEXT_DTYPE', /siglip2/i.test(envString('MODEL_ID', DEFAULT_MODEL_ID)) ? 'fp16' : envString('MODEL_DTYPE', 'fp32')),
+  ),
   /** When true the model must already be in the local cache; no network access at all. */
   offline: envBool('SICHT_OFFLINE', envBool('SPY_EYE_OFFLINE', false)),
   /**

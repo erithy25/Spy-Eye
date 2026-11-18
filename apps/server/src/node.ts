@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from './config.js';
 import { Auth, can, PERMISSIONS, type Permission, type Session } from './core/auth.js';
+import { readJson, writeFileAtomic } from './core/json.js';
 import { Ledger } from './core/ledger.js';
 import { Mandates } from './core/mandates.js';
 import { EventHub } from './events.js';
@@ -23,9 +24,12 @@ import { Pipeline } from './pipeline.js';
 import { registerRoutes } from './routes.js';
 import { SearchEngine } from './search.js';
 import { Store, type VideoEntry } from './store.js';
-import type { AppState, Mandate, NodeInfo, SessionInfo, UserInfo } from './types.js';
+import type { AppState, Mandate, NodeInfo, SessionInfo, SourceKind, UserInfo } from './types.js';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.5.0';
+
+/** How often the witnessed ledger head of one peer is written to this node's own ledger. */
+const WITNESS_INTERVAL_MS = 15 * 60 * 1000;
 
 export interface NodeConfig {
   id: string;
@@ -38,6 +42,23 @@ export interface NodeConfig {
   port: number;
   dataDir: string;
   peers: PeerRecord[];
+  /** Directory with a seed.json and clips/ that fill the archive of a fresh demonstration node. */
+  seedDir?: string;
+}
+
+interface SeedFile {
+  sources: {
+    id: string;
+    name: string;
+    nameEn?: string;
+    kind: SourceKind;
+    owner: string;
+    description: string;
+    lat: number;
+    lon: number;
+    shared: boolean;
+    clips: { file: string; daysAgo?: number }[];
+  }[];
 }
 
 /** Things every node in this process shares: the models are loaded once. */
@@ -85,6 +106,12 @@ export class PlatformNode {
   readonly pipeline: Pipeline;
   readonly search: SearchEngine;
   readonly grants = new Map<string, UnmaskGrant>();
+  private readonly witnessRecorded = new Map<string, number>();
+  /**
+   * Resolves when the node has finished what it does once the model is loaded: watches prepared
+   * and brought in line with the exercise script, pending recordings queued, seed footage read.
+   */
+  settled: Promise<void> = Promise.resolve();
   private app: FastifyInstance | null = null;
   private retentionTimer: NodeJS.Timeout | null = null;
   private readonly cookieName: string;
@@ -117,6 +144,12 @@ export class PlatformNode {
       () => this.info,
       () => this.ledger.headHash,
       (peer, head) => {
+        // Every recorded witness changes this node's own head, which the peer then witnesses in
+        // turn. Recording each exchange would let two idle nodes fill each other's ledgers, so a
+        // witnessed head is written down at most once per interval and peer.
+        const last = this.witnessRecorded.get(peer.id) ?? 0;
+        if (Date.now() - last < WITNESS_INTERVAL_MS) return;
+        this.witnessRecorded.set(peer.id, Date.now());
         void this.ledger.append({
           actor: 'system',
           role: 'system',
@@ -242,9 +275,38 @@ export class PlatformNode {
         data: { legalBasis: definition.mandate.legalBasis },
       });
     }
+    const wanted = new Set(definition.watches.map((w) => scenarioWatchId(w.key)));
+    for (const existing of this.watches.listWatches()) {
+      // Watches of an earlier version of the script that the current one no longer contains.
+      if (existing.id.startsWith('wa_exercise_') && !wanted.has(existing.id)) this.watches.remove(existing.id);
+    }
     for (const w of definition.watches) {
       const id = scenarioWatchId(w.key);
-      if (this.watches.getWatch(id)) continue;
+      const existing = this.watches.getWatch(id);
+      if (existing) {
+        // The script is the reference for its own watches, unless an analyst has trained one.
+        const same =
+          existing.prompt === w.prompt &&
+          existing.kind === w.kind &&
+          existing.hazardClass === w.hazardClass &&
+          existing.name === w.name &&
+          existing.group === `exercise:${w.group ?? w.key}` &&
+          JSON.stringify(existing.exclude) === JSON.stringify(w.exclude) &&
+          JSON.stringify(existing.sourceKinds) === JSON.stringify(w.sourceKinds);
+        if (same || existing.learned) {
+          // Operating values follow the script without discarding the watch.
+          if (
+            existing.threshold !== w.threshold ||
+            existing.persistence !== w.persistence ||
+            existing.cooldownSec !== w.cooldownSec ||
+            existing.severity !== w.severity
+          ) {
+            this.watches.update(id, { threshold: w.threshold, persistence: w.persistence, cooldownSec: w.cooldownSec, severity: w.severity });
+          }
+          continue;
+        }
+        this.watches.remove(id);
+      }
       if (w.kind === 'hazard' && !this.shared.hazard) continue;
       await this.watches.create(
         {
@@ -259,12 +321,85 @@ export class PlatformNode {
           persistence: w.persistence,
           cooldownSec: w.cooldownSec,
           sourceKinds: w.sourceKinds,
+          group: `exercise:${w.group ?? w.key}`,
         },
         null,
         mandateId,
         id,
       );
     }
+  }
+
+  /**
+   * Fills the archive of a fresh demonstration node from its seed directory (once). Peers in a
+   * demonstration need footage of their own so that federated questions have something to find.
+   */
+  private async seedArchive(): Promise<void> {
+    const dir = this.cfg.seedDir;
+    if (!dir) return;
+    const marker = path.join(this.cfg.dataDir, 'seeded.json');
+    if ((await readJson<{ at: number } | null>(marker, null)) !== null) return;
+    const seed = await readJson<SeedFile | null>(path.join(dir, 'seed.json'), null);
+    if (!seed) return;
+    let count = 0;
+    let missing = 0;
+    for (const source of seed.sources) {
+      if (!this.sources.get(source.id)) {
+        this.sources.create({
+          id: source.id,
+          name: source.name,
+          ...(source.nameEn !== undefined ? { nameEn: source.nameEn } : {}),
+          kind: source.kind,
+          owner: source.owner,
+          description: source.description,
+          lat: source.lat,
+          lon: source.lon,
+          mode: 'archive',
+          shared: source.shared,
+        });
+      }
+      for (const clip of source.clips) {
+        const from = path.join(dir, 'clips', clip.file);
+        try {
+          await fs.access(from);
+        } catch {
+          missing++;
+          continue;
+        }
+        const id = await this.store.allocate();
+        const sourceFile = `source${path.extname(clip.file).toLowerCase() || '.mp4'}`;
+        const target = path.join(this.store.videoDir(id), sourceFile);
+        await fs.copyFile(from, target);
+        const { size } = await fs.stat(target);
+        const entry = this.store.register({
+          id,
+          name: clip.file,
+          sourceFile,
+          sizeBytes: size,
+          sampleFps: 1,
+          detail: 'standard',
+          sourceId: source.id,
+          capturedAt: Date.now() - Math.round((clip.daysAgo ?? 1) * 86_400_000),
+        });
+        await this.store.persistMeta(entry);
+        this.pipeline.enqueue(id);
+        count++;
+      }
+    }
+    if (missing > 0) {
+      this.log(`Seed footage incomplete (${missing} file(s) missing); run "pnpm exercise:fetch" and restart.`);
+      if (count === 0) return;
+    }
+    await writeFileAtomic(marker, JSON.stringify({ at: Date.now(), recordings: count }));
+    await this.ledger.append({
+      actor: 'system',
+      role: 'system',
+      mandateId: null,
+      action: 'archive.seed',
+      summary: `Vorführbestand eingespielt: ${count} Aufzeichnungen`,
+      data: { recordings: count, sources: seed.sources.map((s) => s.id) },
+    });
+    this.log(`Seeded archive with ${count} recordings`);
   }
 
   // ---------------------------------------------------------------- request helpers
@@ -422,6 +557,9 @@ export class PlatformNode {
       if (!pending.includes(id)) pending.push(id);
     }
     await this.scenario.open();
+    // An exercise does not survive a restart; what its last run left behind is discarded with it.
+    this.watches.clearExercise();
+    this.incidents.clearExercise();
 
     const app = Fastify({
       logger: { level: process.env['LOG_LEVEL'] ?? 'warn' },
@@ -438,11 +576,15 @@ export class PlatformNode {
         this.pipeline.setVocabulary(vocabulary);
       }),
     );
-    this.shared.ready
+    this.settled = this.shared.ready
       .then(async () => {
         await this.watches.prepareAll();
+        if (this.scenario.definition && this.scenario.info().status !== 'absent') {
+          await this.installExerciseDefaults(this.scenario.definition);
+        }
         this.watches.recalibrateAll();
         for (const id of pending) this.pipeline.enqueue(id);
+        await this.seedArchive();
       })
       .catch((err: unknown) => this.log(`Model initialisation failed: ${err instanceof Error ? err.message : String(err)}`, true));
 

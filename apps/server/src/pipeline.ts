@@ -26,6 +26,7 @@ import type { FrameEvent, NormRect, Tag } from './types.js';
 /** Scene segmentation thresholds on cosine distance between whole-frame embeddings. */
 const SCENE_THRESHOLDS: Readonly<Record<ModelFamily, { cut: number; drift: number }>> = {
   siglip: { cut: 0.28, drift: 0.36 },
+  siglip2: { cut: 0.28, drift: 0.36 },
   clip: { cut: 0.22, drift: 0.28 },
   mobileclip: { cut: 0.3, drift: 0.38 },
 };
@@ -33,6 +34,7 @@ const SCENE_THRESHOLDS: Readonly<Record<ModelFamily, { cut: number; drift: numbe
 /** Operating point for turning a label similarity into a display confidence. */
 const TAG_CALIBRATION: Readonly<Record<ModelFamily, { center: number; slope: number }>> = {
   siglip: { center: 0.07, slope: 80 },
+  siglip2: { center: 0.105, slope: 80 },
   clip: { center: 0.255, slope: 80 },
   mobileclip: { center: 0.235, slope: 60 },
 };

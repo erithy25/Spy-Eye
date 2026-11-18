@@ -51,7 +51,7 @@ export class Incidents {
     for (const place of this.places) {
       if (Math.abs(place.lat - lat) > 0.12 || Math.abs(place.lon - lon) > 0.18) continue;
       const distanceKm = haversineKm(lat, lon, place.lat, place.lon);
-      const cost = distanceKm + place.rank * 0.25;
+      const cost = distanceKm + place.rank * 0.1;
       if (!best || cost < best.cost) best = { name: place.name, distanceKm, cost };
     }
     return best ? { name: best.name, distanceKm: best.distanceKm } : null;
@@ -64,6 +64,8 @@ export class Incidents {
     let incident: Incident | undefined;
     for (const candidate of this.items.all()) {
       if (candidate.status === 'closed' || candidate.exercise !== alert.exercise) continue;
+      // Different kinds of events at one place are different incidents.
+      if ((candidate.group ?? '') !== alert.group) continue;
       if (alert.firstSeen - candidate.lastSeen > MERGE_WINDOW_MS) continue;
       if (haversineKm(lat, lon, candidate.lat, candidate.lon) > MERGE_RADIUS_KM) continue;
       incident = candidate;
@@ -90,6 +92,7 @@ export class Incidents {
         lastSeen: alert.lastSeen,
         corroboration: 0,
         exercise: alert.exercise,
+        group: alert.group,
       };
       this.items.put(incident);
     }

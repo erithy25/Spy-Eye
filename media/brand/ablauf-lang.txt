@@ -1,0 +1,31 @@
+# Sicht — Markenfilm, Langfassung mit Bildschirmaufnahmen der Konsole.
+#
+#   SEQ=ablauf-lang.txt OUT=sicht-markenfilm-lang.mp4 ./build.sh
+#
+# Die "clip"-Zeilen sind auskommentiert, bis die Aufnahmen vorliegen: Pfad eintragen (gilt ab
+# diesem Ordner), Start und Dauer in Sekunden setzen, Raute entfernen. Ohne sie baut die Datei
+# trotzdem. "mark|turn" bleibt vor der Tafel 05: dort setzt im Musikstück der helle Klang ein
+# (Sekunde 21,2 der Datei). Das Stück trägt bis etwa 89 Sekunden Filmlänge.
+
+card|01-datum|2.4||AHRTAL · 14. JULI 2021 · 22:14 UHR
+shot|01-tal-daemmerung.mp4|0.6|3.0
+card|02-hubschrauber|3.2|QUELLEN: DPA, EPD · OKTOBER 2022|EIN POLIZEIHUBSCHRAUBER FILMT|MENSCHEN AUF DÄCHERN.
+shot|07-hubschrauber-nacht.mp4|0.8|3.2
+card|03-nicht-weitergegeben|2.8|QUELLEN: DPA, EPD · OKTOBER 2022|DIE AUFNAHMEN WERDEN NICHT WEITERGEGEBEN.
+shot|08-leerer-leitstand.mp4|0.6|3.0
+card|04-keiner-sieht|2.9||BILDER, DIE KEINER SIEHT,|HELFEN NIEMANDEM.
+
+mark|turn
+card|05-material|3.0||DROHNEN, HUBSCHRAUBER, KAMERAS:|DAS MATERIAL IST DA.
+shot|05-drohne-morgen.mp4|0.8|2.6
+card|06-durchsuchbar|3.2||SICHT MACHT EINSATZBILDER|IN SEKUNDEN DURCHSUCHBAR.
+shot|04-tastatur.mp4|1.0|1.8
+# clip|../../deliverables/film/suche.mp4|0|7.0|KONSOLE · ÜBUNGSDATEN
+shot|02-bruecke-treibgut.mp4|1.4|2.2
+# clip|../../deliverables/film/lage.mp4|0|7.0|KONSOLE · ÜBUNGSDATEN
+shot|03-lagezentrum.mp4|1.0|2.6
+
+card|07-ohne-identifizierung|2.3||OHNE PERSONEN ZU IDENTIFIZIEREN.
+# clip|../../deliverables/film/protokoll.mp4|0|6.0|KONSOLE · ÜBUNGSDATEN
+shot|06-tal-morgen.mp4|0.8|2.8
+end|4.2

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { fetchMap, type MapPoint, type MapResponse, type VideoInfo } from '../api';
+import { fetchEmbeddingMap, type MapPoint, type MapResponse, type VideoInfo } from '../api';
 import { formatScore, formatTime } from '../format';
+import { useLang } from '../i18n';
 
 interface EmbeddingMapProps {
   videos: VideoInfo[];
@@ -27,6 +28,7 @@ function grey(level: number): string {
 }
 
 export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOpen }: EmbeddingMapProps) {
+  const { t } = useLang();
   const [data, setData] = useState<MapResponse | null>(null);
   const [hover, setHover] = useState<Projected | null>(null);
   const [width, setWidth] = useState(0);
@@ -42,7 +44,7 @@ export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOp
       return;
     }
     const controller = new AbortController();
-    fetchMap(controller.signal)
+    fetchEmbeddingMap(controller.signal)
       .then(setData)
       .catch(() => undefined);
     return () => controller.abort();
@@ -145,12 +147,12 @@ export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOp
     <section className="section">
       <header className="section-head">
         <h2 className="label">
-          Raum <span className="count">{data.points.length}</span>
+          {t('Merkmalsraum')} <span className="count">{data.points.length}</span>
         </h2>
         <span className="meta">
           {hover
             ? `x ${hover.point.x.toFixed(3)}  y ${hover.point.y.toFixed(3)}`
-            : `pca · ${Math.round(data.explainedVariance * 100)} % varianz`}
+            : `${t('Hauptachsen')} · ${Math.round(data.explainedVariance * 100)} % ${t('der Streuung')}`}
         </span>
       </header>
       <div className="map" ref={wrapper}>

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { SearchResponse, SearchResult } from '../api';
-import { formatCount, formatScore, formatTime } from '../format';
+import { formatClock, formatCount, formatScore } from '../format';
+import { useLang } from '../i18n';
+import { Glyph } from '../ui';
 
 interface ResultsProps {
   response: SearchResponse;
@@ -10,10 +12,11 @@ interface ResultsProps {
 }
 
 function Hit({ result, weak, onOpen }: { result: SearchResult; weak: boolean; onOpen: (r: SearchResult) => void }) {
+  const { locale } = useLang();
   return (
     <button type="button" className={weak ? 'hit hit-weak' : 'hit'} onClick={() => onOpen(result)}>
       <span className="hit-frame">
-        <img src={result.frameUrl} alt={`Szene ${result.sceneIndex + 1} aus ${result.videoName}`} loading="lazy" />
+        <img src={result.frameUrl} alt="" loading="lazy" />
         {result.box && (
           <span
             className="reticle"
@@ -28,10 +31,10 @@ function Hit({ result, weak, onOpen }: { result: SearchResult; weak: boolean; on
       </span>
       <span className="hit-line">
         <span className="hit-score">{formatScore(result.confidence)}</span>
-        <span className="hit-name" title={result.videoName}>
-          {result.videoName}
+        <span className="hit-name" title={result.sourceName}>
+          <Glyph kind={result.sourceKind} /> {result.sourceName}
         </span>
-        <span className="hit-time">{formatTime(result.time)}</span>
+        <span className="hit-time">{formatClock(result.at, locale)}</span>
       </span>
     </button>
   );
@@ -40,7 +43,7 @@ function Hit({ result, weak, onOpen }: { result: SearchResult; weak: boolean; on
 function Distribution({ bins, threshold }: { bins: number[]; threshold: number }) {
   const max = Math.max(1, ...bins);
   return (
-    <span className="histogram" title="Verteilung der Relevanz über alle Szenen">
+    <span className="histogram">
       {bins.map((count, i) => {
         const above = (i + 0.5) / bins.length >= threshold;
         const height = count === 0 ? 0 : Math.max(6, (Math.log1p(count) / Math.log1p(max)) * 100);
@@ -51,6 +54,7 @@ function Distribution({ bins, threshold }: { bins: number[]; threshold: number }
 }
 
 export function Results({ response, threshold, onThresholdChange, onOpen }: ResultsProps) {
+  const { t } = useLang();
   const [showWeak, setShowWeak] = useState(false);
   const { hits, weak } = useMemo(() => {
     const strong: SearchResult[] = [];
@@ -69,10 +73,10 @@ export function Results({ response, threshold, onThresholdChange, onOpen }: Resu
     <section className="section">
       <header className="section-head">
         <h2 className="label">
-          Treffer <span className="count">{formatCount(totalAbove)}</span>
+          {t('Treffer')} <span className="count">{formatCount(totalAbove)}</span>
           <span className="count-of">/ {formatCount(response.scenesSearched)}</span>
         </h2>
-        <label className="threshold">
+        <label className="threshold" title={t('Verteilung der Sicherheit über alle Szenen')}>
           <Distribution bins={response.distribution} threshold={threshold} />
           <input
             type="range"
@@ -80,15 +84,15 @@ export function Results({ response, threshold, onThresholdChange, onOpen }: Resu
             max={0.95}
             step={0.05}
             value={threshold}
-            aria-label="Mindest-Relevanz"
+            aria-label={t('Mindestsicherheit')}
             onChange={(e) => onThresholdChange(Number(e.target.value))}
           />
           <span className="threshold-value">≥ {formatScore(threshold)}</span>
         </label>
       </header>
       <p className="meta">
-        {formatCount(response.vectorsSearched)} vektoren · {response.tookMs} ms · cos ≥ {formatScore(response.threshold)}
-        {totalAbove > hits.length ? ` · beste ${hits.length} angezeigt` : ''}
+        {formatCount(response.vectorsSearched)} {t('Vektoren')} · {response.tookMs} ms · cos ≥ {formatScore(response.threshold)}
+        {totalAbove > hits.length ? ` · ${t('beste {n} gezeigt', { n: hits.length })}` : ''}
       </p>
 
       {hits.length > 0 ? (
@@ -98,14 +102,14 @@ export function Results({ response, threshold, onThresholdChange, onOpen }: Resu
           ))}
         </div>
       ) : (
-        <p className="empty">Keine Szene über der Schwelle.</p>
+        <p className="empty">{t('Keine Szene über der Schwelle.')}</p>
       )}
 
       {weak.length > 0 && (
         <>
           {hits.length > 0 && (
             <button type="button" className="text-btn more" onClick={() => setShowWeak((v) => !v)}>
-              {showWeak ? '− kandidaten unter der schwelle' : `+ ${weak.length} kandidaten unter der schwelle`}
+              {showWeak ? `− ${t('Kandidaten unter der Schwelle')}` : `+ ${weak.length} ${t('Kandidaten unter der Schwelle')}`}
             </button>
           )}
           {weakVisible && (

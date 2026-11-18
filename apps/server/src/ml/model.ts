@@ -12,7 +12,7 @@ import { config } from '../config.js';
 import type { ModelState } from '../types.js';
 import { l2normalizeRows } from './math.js';
 
-export type ModelFamily = 'siglip' | 'clip' | 'mobileclip';
+export type ModelFamily = 'siglip' | 'siglip2' | 'clip' | 'mobileclip';
 
 interface Towers {
   device: string;
@@ -124,6 +124,7 @@ interface CallableTokenizer {
 }
 
 function detectFamily(modelId: string): ModelFamily {
+  if (/siglip2/i.test(modelId)) return 'siglip2';
   if (/siglip/i.test(modelId)) return 'siglip';
   if (/mobileclip/i.test(modelId)) return 'mobileclip';
   return 'clip';
@@ -134,6 +135,7 @@ const DEFAULT_NORMALIZATION: Readonly<
   Record<ModelFamily, { mean: [number, number, number]; std: [number, number, number] }>
 > = {
   siglip: { mean: [0.5, 0.5, 0.5], std: [0.5, 0.5, 0.5] },
+  siglip2: { mean: [0.5, 0.5, 0.5], std: [0.5, 0.5, 0.5] },
   clip: { mean: [0.48145466, 0.4578275, 0.40821073], std: [0.26862954, 0.26130258, 0.27577711] },
   // MobileCLIP only rescales pixels to 0..1.
   mobileclip: { mean: [0, 0, 0], std: [1, 1, 1] },
@@ -190,6 +192,11 @@ class Mutex {
  */
 export class EmbeddingModel {
   readonly family: ModelFamily;
+
+  /** SigLIP and SigLIP 2 share their model classes, pooled outputs and fixed text length. */
+  private get sigmoidFamily(): boolean {
+    return this.family === 'siglip' || this.family === 'siglip2';
+  }
   private tokenizer: CallableTokenizer | null = null;
   private towers: Towers | null = null;
   private readonly visionLock = new Mutex();
@@ -290,8 +297,8 @@ export class EmbeddingModel {
     this.imageMean = asNumberTriple(ipc['image_mean'], normalization.mean);
     this.imageStd = asNumberTriple(ipc['image_std'], normalization.std);
 
-    const TextModel = this.family === 'siglip' ? SiglipTextModel : CLIPTextModelWithProjection;
-    const VisionModel = this.family === 'siglip' ? SiglipVisionModel : CLIPVisionModelWithProjection;
+    const TextModel = this.sigmoidFamily ? SiglipTextModel : CLIPTextModelWithProjection;
+    const VisionModel = this.sigmoidFamily ? SiglipVisionModel : CLIPVisionModelWithProjection;
 
     // Try the requested execution provider first. A GPU provider is only accepted if it loads AND
     // reproduces the CPU result on a set of probe inputs: providers have been seen to return
@@ -304,7 +311,7 @@ export class EmbeddingModel {
         session_options: { intraOpNumThreads: config.threads, interOpNumThreads: 1 },
       };
       this.updateState({ message: `Lade Text-Encoder (${device}) …` });
-      const text = (await TextModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
+      const text = (await TextModel.from_pretrained(config.modelId, { ...modelOptions, dtype: config.modelTextDtype })) as unknown as CallableModel;
       this.updateState({ message: `Lade Bild-Encoder (${device}) …` });
       const vision = (await VisionModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
       return { device, text, vision };
@@ -364,7 +371,7 @@ export class EmbeddingModel {
 
   private pickEmbedding(output: Record<string, Tensor | undefined>, kind: 'image' | 'text'): Tensor {
     const tensor =
-      this.family === 'siglip' ? output['pooler_output'] : output[kind === 'image' ? 'image_embeds' : 'text_embeds'];
+      this.sigmoidFamily ? output['pooler_output'] : output[kind === 'image' ? 'image_embeds' : 'text_embeds'];
     if (!tensor) {
       throw new Error(`Model output is missing the ${kind} embedding (keys: ${Object.keys(output).join(', ')}).`);
     }
@@ -410,8 +417,10 @@ export class EmbeddingModel {
     const inputs = tokenizer(texts, {
       padding: this.family === 'clip' ? true : 'max_length',
       truncation: true,
+      // SigLIP was trained with 64 text tokens; some of its tokenizers declare no limit at all.
+      ...(this.sigmoidFamily ? { max_length: 64 } : {}),
     });
-    const feed = this.family === 'siglip' ? { input_ids: inputs['input_ids'] } : inputs;
+    const feed = this.sigmoidFamily ? { input_ids: inputs['input_ids'] } : inputs;
     const output = await towers.text(feed);
     const out = new Float32Array(this.pickEmbedding(output, 'text').data as Float32Array);
     assertUsable(out, texts.length, 'Text-Encoder');

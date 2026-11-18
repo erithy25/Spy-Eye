@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FrameEvent, SceneInfo, VideoInfo } from '../api';
 import { formatTime, pad } from '../format';
-import type { LiveFeed } from '../useServer';
+import { useLang } from '../i18n';
+import type { LiveFeed } from '../useNode';
 
 interface LiveAnalysisProps {
   live: LiveFeed;
@@ -81,6 +82,7 @@ function drawFingerprint(canvas: HTMLCanvasElement, values: number[]): void {
 }
 
 export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
+  const { t } = useLang();
   const [current, setCurrent] = useState<FrameEvent | null>(null);
   const [scenes, setScenes] = useState<SceneInfo[]>([]);
   const [tick, setTick] = useState(0);
@@ -143,12 +145,12 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
     <section className="section">
       <header className="section-head">
         <h2 className="label">
-          Analyse
+          {t('Auswertung')}
           {active && <i className="blink" aria-hidden="true" />}
         </h2>
         <span className="meta">
           {video?.name}
-          {active && processing ? `  ${pad(Math.round(processing.progress * 100), 2)} %` : '  abgeschlossen'}
+          {active && processing ? `  ${pad(Math.round(processing.progress * 100), 2)} %` : `  ${t('abgeschlossen')}`}
         </span>
       </header>
 
@@ -156,7 +158,7 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
         <div className="stage">
           {current ? (
             <>
-              <img src={current.url} alt="Aktuell analysierter Frame" />
+              <img src={current.url} alt="" />
               <div className="stage-layer" key={current.frameNumber} aria-hidden="true">
                 {current.tiles.slice(1).map((tile, i) => (
                   <div
@@ -184,7 +186,7 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
               )}
             </>
           ) : (
-            <div className="stage-wait">warte auf frames</div>
+            <div className="stage-wait">{t('warte auf Bilder')}</div>
           )}
         </div>
 

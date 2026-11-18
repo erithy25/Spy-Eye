@@ -12,3 +12,18 @@ dataset/
 *.zip
 .goal-start
 .cache/
+
+# Exercise and seed footage is downloaded by "pnpm exercise:fetch"
+scenarios/*/clips/
+seeds/*/clips/
+data-*/
+deliverables/*.zip
+
+# Generated film material: the cut is rebuilt with media/brand/build.sh
+media/brand/raw/
+media/brand/shots/
+media/brand/work/
+media/brand/audio/
+media/brand/cards/
+media/brand/*.mp4
+media/product/

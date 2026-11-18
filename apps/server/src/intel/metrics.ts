@@ -62,10 +62,14 @@ export function evaluateExercise(scenario: ScenarioEngine, sources: Sources, ale
 
   const scenarioWatchIds = new Set(def.watches.map((w) => scenarioWatchId(w.key)));
   const scored = exerciseAlerts.filter((a) => scenarioWatchIds.has(a.watchId));
-  // An alert that continues or repeats a detected event (same source and watch) is not a false alarm.
+  // An alert that continues or repeats a scripted event is not a false alarm; neither is an alert
+  // of a watch the script accepts for that event (smoke at a fire, a second detector for a flood).
   const explained = (alert: Alert): boolean =>
     def.events.some(
-      (e) => e.source === alert.sourceId && scenarioWatchId(e.watch) === alert.watchId && (alert.exerciseSec as number) >= e.at - TOLERANCE,
+      (e) =>
+        e.source === alert.sourceId &&
+        [e.watch, ...(e.accept ?? [])].some((key) => scenarioWatchId(key) === alert.watchId) &&
+        (alert.exerciseSec as number) >= e.at - TOLERANCE,
     );
   latencies.sort((a, b) => a - b);
   return {

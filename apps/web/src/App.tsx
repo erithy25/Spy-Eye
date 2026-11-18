@@ -1,235 +1,469 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { searchScenes, type MapPoint, type SceneInfo, type SearchResponse, type SearchResult } from './api';
-import { DatasetPanel } from './components/DatasetPanel';
-import { EmbeddingMap } from './components/EmbeddingMap';
-import { LiveAnalysis } from './components/LiveAnalysis';
-import { Results } from './components/Results';
-import { SceneBrowser } from './components/SceneBrowser';
-import { SceneModal, type ModalTarget } from './components/SceneModal';
-import { useServer } from './useServer';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { createMandate, errorText, fetchMandates, selectMandate, type Mandate, type Role } from './api';
+import { FrameSheet, type FrameTarget } from './components/FrameSheet';
+import { formatExercise, shortHash } from './format';
+import { LangProvider, useLang } from './i18n';
+import { MapCanvas, type MapMarker } from './map/MapCanvas';
+import { Dialog, Field, useAction } from './ui';
+import { useNode, type NodeConnection } from './useNode';
+import { Lage } from './views/Lage';
+import { Protokoll } from './views/Protokoll';
+import { Quellen } from './views/Quellen';
+import { Suche } from './views/Suche';
+import { Verbund } from './views/Verbund';
+import { Vorgaenge } from './views/Vorgaenge';
+import { Wachen } from './views/Wachen';
+import { Wirkung } from './views/Wirkung';
 
-const EXAMPLES = ['man with a cup', 'black car', 'green bus', 'person riding a bicycle'];
-const RESULT_LIMIT = 120;
+type TabId = 'lage' | 'suche' | 'wachen' | 'vorgaenge' | 'verbund' | 'protokoll' | 'quellen' | 'wirkung';
+
+const TABS: { id: TabId; label: string; permission: string | null }[] = [
+  { id: 'lage', label: 'Lage', permission: 'media' },
+  { id: 'suche', label: 'Suche', permission: 'search' },
+  { id: 'wachen', label: 'Wachen', permission: 'watch.read' },
+  { id: 'vorgaenge', label: 'Vorgänge', permission: 'case.read' },
+  { id: 'verbund', label: 'Verbund', permission: 'federation.read' },
+  { id: 'protokoll', label: 'Protokoll', permission: null },
+  { id: 'quellen', label: 'Quellen', permission: 'source.read' },
+  { id: 'wirkung', label: 'Wirkung', permission: 'metrics.read' },
+];
+
+const ROLE_LABEL: Record<Role, string> = { operator: 'Auswertung', supervisor: 'Leitung', auditor: 'Aufsicht' };
+
+export interface ViewProps {
+  node: NodeConnection;
+  openFrame: (target: FrameTarget, list?: FrameTarget[]) => void;
+}
 
 export function App() {
-  const { state, connected, indexVersion, live } = useServer();
-  const [input, setInput] = useState('');
-  const [query, setQuery] = useState('');
-  const [response, setResponse] = useState<SearchResponse | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [threshold, setThreshold] = useState(0.5);
-  const [modal, setModal] = useState<ModalTarget | null>(null);
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
-
-  const videos = state?.videos ?? [];
-  const modelReady = state?.model.phase === 'ready';
-  const hasIndex = (state?.stats.vectors ?? 0) > 0;
-
-  // Run the search when the query changes and refresh it when the index changes.
-  useEffect(() => {
-    if (query === '') {
-      setResponse(null);
-      setSearchError(null);
-      return;
-    }
-    const controller = new AbortController();
-    setSearching(true);
-    searchScenes(query, RESULT_LIMIT, controller.signal)
-      .then((res) => {
-        setResponse(res);
-        setSearchError(null);
-        setSearching(false);
-      })
-      .catch((err: unknown) => {
-        if (controller.signal.aborted) return;
-        setSearchError(err instanceof Error ? err.message : String(err));
-        setSearching(false);
-      });
-    return () => controller.abort();
-  }, [query, indexVersion]);
-
-  const submit = useCallback((text: string) => {
-    const trimmed = text.trim();
-    setInput(trimmed);
-    setQuery(trimmed);
-    if (trimmed !== '') {
-      window.requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    }
-  }, []);
-
-  const onSubmit = useCallback(
-    (event: FormEvent) => {
-      event.preventDefault();
-      submit(input);
-    },
-    [input, submit],
+  return (
+    <LangProvider>
+      <Root />
+    </LangProvider>
   );
+}
 
-  const visibleResults = useMemo(() => response?.results ?? [], [response]);
+function Root() {
+  const node = useNode();
+  const { t } = useLang();
+  const [skipMandate, setSkipMandate] = useState(false);
 
-  const openResult = useCallback(
-    (result: SearchResult) => {
-      setModal({
-        videoId: result.videoId,
-        sceneIndex: result.sceneIndex,
-        frameNumber: result.frameNumber,
-        frameUrl: result.frameUrl,
-        time: result.time,
-        query: response?.query ?? null,
-        confidence: result.confidence,
-        score: result.score,
-        box: result.box,
-      });
-    },
-    [response],
+  if (node.phase === 'loading' || node.phase === 'unreachable') {
+    return (
+      <div className="gate">
+        <div className="gate-map" />
+        <div className="gate-side">
+          <div>
+            <div className="gate-mark">SICHT</div>
+            <p className="gate-claim">{node.phase === 'unreachable' ? t('Knoten nicht erreichbar. Neuer Versuch …') : t('Verbinde …')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (node.phase === 'signed-out' || !node.session) return <Login node={node} />;
+  if (node.session.mandate === null && node.can('search') && !skipMandate) {
+    return <MandateGate node={node} onSkip={() => setSkipMandate(true)} />;
+  }
+  return <Shell node={node} />;
+}
+
+function LangSwitch() {
+  const { lang, setLang } = useLang();
+  return (
+    <span className="lang">
+      <button type="button" className={lang === 'de' ? 'on' : ''} onClick={() => setLang('de')}>
+        DE
+      </button>
+      <button type="button" className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>
+        EN
+      </button>
+    </span>
   );
+}
 
-  const openScene = useCallback((scene: SceneInfo) => {
-    setModal({
-      videoId: scene.videoId,
-      sceneIndex: scene.index,
-      frameNumber: scene.keyframeNumber,
-      frameUrl: scene.keyframeUrl,
-      time: scene.keyframeTime,
-      query: null,
-      confidence: null,
-      score: null,
-      box: null,
-    });
-  }, []);
-
-  const openMapPoint = useCallback(
-    (point: MapPoint) => {
-      const result = visibleResults.find((r) => r.sceneId === point.sceneId);
-      if (result) {
-        openResult(result);
-        return;
-      }
-      setModal({
-        videoId: point.videoId,
-        sceneIndex: point.sceneIndex,
-        frameNumber: point.frameNumber,
-        frameUrl: point.keyframeUrl,
-        time: point.time,
-        query: null,
-        confidence: null,
-        score: null,
-        box: null,
-      });
-    },
-    [openResult, visibleResults],
+function GateMap({ node }: { node: NodeConnection }) {
+  const info = node.info?.node;
+  const markers = useMemo<MapMarker[]>(
+    () => (info ? [{ id: info.id, lat: info.lat, lon: info.lon, shape: 'node', label: info.name, sub: info.operator }] : []),
+    [info],
   );
-
-  const modalIndex = useMemo(() => {
-    if (!modal || modal.query === null) return -1;
-    return visibleResults.findIndex((r) => r.videoId === modal.videoId && r.sceneIndex === modal.sceneIndex);
-  }, [modal, visibleResults]);
-
-  const stepModal = useCallback(
-    (delta: number) => {
-      const next = visibleResults[modalIndex + delta];
-      if (next) openResult(next);
-    },
-    [modalIndex, openResult, visibleResults],
+  if (!info) return <div className="gate-map" />;
+  return (
+    <div className="gate-map">
+      <MapCanvas view={{ lat: info.lat, lon: info.lon, zoom: 11.4 }} viewKey={info.id} markers={markers} readouts={false} />
+    </div>
   );
-  const onPrev = useMemo(() => (modalIndex > 0 ? () => stepModal(-1) : null), [modalIndex, stepModal]);
-  const onNext = useMemo(
-    () => (modalIndex >= 0 && modalIndex < visibleResults.length - 1 ? () => stepModal(1) : null),
-    [modalIndex, stepModal, visibleResults.length],
-  );
-  const closeModal = useCallback(() => setModal(null), []);
+}
 
-  const selectedVideo = videos.find((v) => v.id === selectedVideoId) ?? null;
+function Login({ node }: { node: NodeConnection }) {
+  const { t } = useLang();
+  const [user, setUser] = useState('');
+  const [password, setPassword] = useState('');
+  const action = useAction();
+  const info = node.info;
 
-  // One quiet status line instead of a header: it only speaks up when something is not ready.
-  let status = '';
-  if (!state) status = 'verbinde';
-  else if (!connected) status = 'verbindung getrennt';
-  else if (state.model.phase === 'loading') status = state.model.message.toLowerCase();
-  else if (state.model.phase === 'error') status = state.model.message;
-  else if (state.model.notice !== '') status = state.model.notice;
-  else if (!hasIndex) status = 'bereit · noch kein video indexiert';
-  const loading = state?.model.phase === 'loading' ? state.model.progress : null;
+  const submit = (event: FormEvent): void => {
+    event.preventDefault();
+    void action.run(() => node.signIn(user.trim(), password));
+  };
 
   return (
-    <div className="app">
-      {loading !== null && (
-        <div className="boot" aria-hidden="true">
-          <span style={{ width: `${Math.round(loading * 100)}%` }} />
+    <div className="gate">
+      <GateMap node={node} />
+      <div className="gate-side">
+        <div>
+          <div className="gate-mark">SICHT</div>
+          <p className="gate-claim">{t('Keine Sicht ohne Aufsicht.')}</p>
+        </div>
+        {info && (
+          <div className="gate-node">
+            <div className="strong">{info.node.name}</div>
+            <div className="dim">{info.node.operator}</div>
+          </div>
+        )}
+        <form className="form" onSubmit={submit}>
+          <Field label={t('Kennung')}>
+            <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus />
+          </Field>
+          <Field label={t('Passwort')}>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+          </Field>
+          {action.error && <p className="note">{action.error}</p>}
+          <div className="btn-row">
+            <button type="submit" className="btn btn-solid" disabled={action.busy || user === '' || password === ''}>
+              {t('Anmelden')}
+            </button>
+            <LangSwitch />
+          </div>
+        </form>
+        {info?.demo && (
+          <div className="section-gap">
+            <div className="label">{t('Vorführzugänge')}</div>
+            <table className="tbl">
+              <tbody>
+                {info.demo.users.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="clickable"
+                    onClick={() => {
+                      setUser(u.id);
+                      setPassword(info.demo?.passwordHint ?? '');
+                    }}
+                  >
+                    <td className="strong" style={{ width: 92 }}>
+                      {u.id}
+                    </td>
+                    <td>{t(ROLE_LABEL[u.role])}</td>
+                    <td className="dim">{u.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="hint">
+              {t('Passwort für alle Vorführzugänge')}: <span className="strong">{info.demo.passwordHint}</span>.{' '}
+              {t('Dieser Knoten läuft mit Übungsdaten; im Betrieb werden die Zugänge durch die der Behörde ersetzt.')}
+            </p>
+          </div>
+        )}
+        <p className="gate-foot">
+          {t('Jede Anmeldung, jede Abfrage und jede Freigabe wird in einem verketteten Protokoll festgehalten.')}
+          {info ? ` · v${info.node.version}` : ''}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MandateForm({ onCreated }: { onCreated: (mandate: Mandate) => void }) {
+  const { t } = useLang();
+  const [title, setTitle] = useState('');
+  const [legalBasis, setLegalBasis] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [hours, setHours] = useState('72');
+  const [exercise, setExercise] = useState(false);
+  const [persons, setPersons] = useState(false);
+  const action = useAction();
+
+  return (
+    <form
+      className="form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void action.run(async () => {
+          onCreated(
+            await createMandate({
+              title: title.trim(),
+              legalBasis: legalBasis.trim(),
+              purpose: purpose.trim(),
+              validHours: Math.max(0, Number(hours) || 0),
+              exercise,
+              personDescriptions: persons,
+            }),
+          );
+        });
+      }}
+    >
+      <Field label={t('Bezeichnung des Einsatzes')}>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
+      </Field>
+      <Field label={t('Rechtsgrundlage')} hint={t('So, wie die Behörde sie zitiert, etwa die Vorschrift des Brand- und Katastrophenschutzgesetzes.')}>
+        <input value={legalBasis} onChange={(e) => setLegalBasis(e.target.value)} maxLength={200} />
+      </Field>
+      <Field label={t('Zweck der Auswertung')}>
+        <textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} rows={3} maxLength={500} />
+      </Field>
+      <div className="field-row">
+        <Field label={t('Gültig für (Stunden, 0 = unbefristet)')}>
+          <input value={hours} onChange={(e) => setHours(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" />
+        </Field>
+        <div className="section-gap" style={{ justifyContent: 'flex-end' }}>
+          <label className="check">
+            <input type="checkbox" checked={exercise} onChange={(e) => setExercise(e.target.checked)} />
+            {t('Übung')}
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={persons} onChange={(e) => setPersons(e.target.checked)} />
+            {t('Personenbeschreibung nach Geschlecht und Altersgruppe zulässig')}
+          </label>
+        </div>
+      </div>
+      {action.error && <p className="note">{action.error}</p>}
+      <div className="btn-row">
+        <button type="submit" className="btn btn-solid" disabled={action.busy}>
+          {t('Mandat anlegen')}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MandateList({ node, onChosen }: { node: NodeConnection; onChosen: () => void }) {
+  const { t, pick, locale } = useLang();
+  const [mandates, setMandates] = useState<Mandate[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const action = useAction();
+
+  const load = useCallback(() => {
+    fetchMandates()
+      .then((list) => setMandates(list.filter((m) => m.status === 'open' && (m.validTo === null || m.validTo > Date.now()))))
+      .catch((err: unknown) => setError(errorText(err)));
+  }, []);
+  useEffect(load, [load]);
+
+  const choose = (id: string): void => {
+    void action.run(async () => {
+      node.setSession(await selectMandate(id));
+      onChosen();
+    });
+  };
+
+  return (
+    <div className="section-gap">
+      {error && <p className="note">{error}</p>}
+      {action.error && <p className="note">{action.error}</p>}
+      {mandates !== null && mandates.length === 0 && <p className="empty">{t('Kein gültiges Mandat vorhanden.')}</p>}
+      {(mandates ?? []).map((m) => (
+        <button key={m.id} type="button" className="incident" style={{ textAlign: 'left', padding: '12px 0' }} disabled={action.busy} onClick={() => choose(m.id)}>
+          <h4>
+            <span>{pick(m.title, m.titleEn)}</span>
+            <span />
+            {m.exercise && <span className="pill">{t('Übung')}</span>}
+            {node.session?.mandate?.id === m.id && <span className="pill pill-solid">{t('aktiv')}</span>}
+          </h4>
+          <div className="alert-line">{m.legalBasis}</div>
+          <div className="alert-line" style={{ whiteSpace: 'normal' }}>
+            {m.purpose}
+          </div>
+          <div className="alert-line low">
+            {t('erteilt von')} {m.issuedBy} · {m.validTo === null ? t('unbefristet') : `${t('bis')} ${new Date(m.validTo).toLocaleString(locale)}`}
+          </div>
+        </button>
+      ))}
+      {node.can('mandate.write') &&
+        (creating ? (
+          <MandateForm
+            onCreated={(m) => {
+              setCreating(false);
+              load();
+              choose(m.id);
+            }}
+          />
+        ) : (
+          <div>
+            <button type="button" className="btn" onClick={() => setCreating(true)}>
+              {t('Neues Mandat')}
+            </button>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+function MandateGate({ node, onSkip }: { node: NodeConnection; onSkip: () => void }) {
+  const { t } = useLang();
+  return (
+    <div className="gate">
+      <GateMap node={node} />
+      <div className="gate-side" style={{ justifyContent: 'flex-start', overflowY: 'auto', maxHeight: '100vh' }}>
+        <div>
+          <div className="gate-mark">SICHT</div>
+          <p className="gate-claim">{t('Unter welchem Mandat arbeiten Sie?')}</p>
+        </div>
+        <p className="dim">
+          {t(
+            'Ohne Zweck keine Auswertung. Jede Suche, jede Wache und jeder Vorgang wird dem gewählten Mandat zugeordnet und mit ihm protokolliert.',
+          )}
+        </p>
+        <MandateList node={node} onChosen={() => undefined} />
+        <div className="btn-row">
+          <button type="button" className="text-btn" onClick={onSkip}>
+            {t('Ohne Mandat fortfahren (nur Einsicht in Protokoll und Bestand)')}
+          </button>
+          <button type="button" className="text-btn" onClick={() => void node.signOut()}>
+            {t('Abmelden')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function initialTab(allowed: TabId[]): TabId {
+  const fromHash = window.location.hash.replace('#', '') as TabId;
+  return allowed.includes(fromHash) ? fromHash : (allowed[0] ?? 'protokoll');
+}
+
+function Shell({ node }: { node: NodeConnection }) {
+  const { t, pick } = useLang();
+  const session = node.session;
+  const allowed = useMemo(() => TABS.filter((tab) => tab.permission === null || node.can(tab.permission)).map((tab) => tab.id), [node]);
+  const [tab, setTab] = useState<TabId>(() => initialTab(allowed));
+  const [sheet, setSheet] = useState<{ list: FrameTarget[]; index: number } | null>(null);
+  const [mandateDialog, setMandateDialog] = useState(false);
+
+  useEffect(() => {
+    if (!allowed.includes(tab)) setTab(allowed[0] ?? 'protokoll');
+  }, [allowed, tab]);
+
+  useEffect(() => {
+    window.history.replaceState(null, '', `#${tab}`);
+  }, [tab]);
+
+  const openFrame = useCallback((target: FrameTarget, list?: FrameTarget[]) => {
+    const all = list && list.length > 0 ? list : [target];
+    const index = Math.max(0, all.findIndex((x) => x.videoId === target.videoId && x.frameNumber === target.frameNumber));
+    setSheet({ list: all, index });
+  }, []);
+
+  if (!session) return null;
+  const scenario = node.intel?.scenario ?? null;
+  const exerciseRunning = scenario !== null && (scenario.status === 'running' || scenario.status === 'paused' || scenario.status === 'finished');
+  const exerciseContext = session.mandate?.exercise === true || exerciseRunning;
+  const newAlerts = (node.intel?.alerts ?? []).filter((a) => a.status === 'new' && a.active).length;
+  const model = node.app?.model ?? null;
+  const current = sheet ? (sheet.list[sheet.index] ?? null) : null;
+  const props: ViewProps = { node, openFrame };
+
+  return (
+    <div className="shell">
+      {exerciseContext ? (
+        <div className="band">
+          {t('Übung')} · {t('keine Echtlage')}
+          {session.mandate ? ` · ${pick(session.mandate.title, session.mandate.titleEn)}` : ''}
+        </div>
+      ) : (
+        <div />
+      )}
+      <header className="top">
+        <div className="wordmark">
+          <b>SICHT</b>
+          <span>{node.info?.node.name ?? ''}</span>
+        </div>
+        <nav className="tabs" aria-label={t('Bereiche')}>
+          {TABS.filter((x) => allowed.includes(x.id)).map((x) => (
+            <button key={x.id} type="button" className={tab === x.id ? 'tab tab-on' : 'tab'} onClick={() => setTab(x.id)}>
+              {t(x.label)}
+              {x.id === 'lage' && newAlerts > 0 && <span className="tab-n">{newAlerts}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="top-right">
+          {node.can('mandate.read') && (
+            <button type="button" className="text-btn who" onClick={() => setMandateDialog(true)} title={session.mandate?.purpose ?? ''}>
+              {t('Mandat')}: <b>{session.mandate ? pick(session.mandate.title, session.mandate.titleEn) : t('keines')}</b>
+            </button>
+          )}
+          <span className="who">
+            <b>{session.user.name}</b> · {t(ROLE_LABEL[session.user.role])}
+          </span>
+          <LangSwitch />
+          <button type="button" className="text-btn" onClick={() => void node.signOut()}>
+            {t('Abmelden')}
+          </button>
+        </div>
+      </header>
+
+      <main className="view">
+        {tab === 'lage' && <Lage {...props} />}
+        {tab === 'suche' && <Suche {...props} />}
+        {tab === 'wachen' && <Wachen {...props} />}
+        {tab === 'vorgaenge' && <Vorgaenge {...props} />}
+        {tab === 'verbund' && <Verbund {...props} />}
+        {tab === 'protokoll' && <Protokoll {...props} />}
+        {tab === 'quellen' && <Quellen {...props} />}
+        {tab === 'wirkung' && <Wirkung {...props} />}
+      </main>
+
+      <footer className="foot">
+        <span>
+          {t('Protokoll')} <b>#{node.ledger?.length ?? '–'}</b> <b className="hash">{shortHash(node.ledger?.head)}</b>
+        </span>
+        <span>
+          {t('Modell')}{' '}
+          <b>
+            {model ? (model.phase === 'ready' ? `${model.modelId.split('/').pop() ?? ''} · ${model.device}` : model.message) : '–'}
+          </b>
+        </span>
+        <span>
+          {t('Verzeichnis')} <b>{node.app ? `${node.app.stats.frames.toLocaleString('de-DE')} ${t('Bilder')}` : '–'}</b>
+        </span>
+        {scenario && exerciseRunning && (
+          <span>
+            {t('Übungsuhr')} <b>{formatExercise(scenario.elapsedSec)}</b> <b>{scenario.speed}×</b>
+          </span>
+        )}
+        <span className="right">
+          {node.connected ? t('verbunden') : t('getrennt')} · v{node.info?.node.version ?? ''}
+        </span>
+      </footer>
+
+      {model && model.phase === 'loading' && (
+        <div className="boot">
+          <span style={{ width: `${Math.round(model.progress * 100)}%` }} />
         </div>
       )}
 
-      <form className="query" onSubmit={onSubmit}>
-        <span className="query-prompt" aria-hidden="true">
-          ›
-        </span>
-        <input
-          className="query-input"
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="man with a cup"
-          maxLength={300}
-          autoFocus
-          spellCheck={false}
-          autoComplete="off"
-          aria-label="Suchbegriff"
+      {current && sheet && (
+        <FrameSheet
+          target={current}
+          node={node}
+          onClose={() => setSheet(null)}
+          onPrev={sheet.index > 0 ? () => setSheet({ list: sheet.list, index: sheet.index - 1 }) : null}
+          onNext={sheet.index < sheet.list.length - 1 ? () => setSheet({ list: sheet.list, index: sheet.index + 1 }) : null}
         />
-        {query !== '' && (
-          <button type="button" className="text-btn" onClick={() => submit('')}>
-            leeren
-          </button>
-        )}
-        <button type="submit" className="btn btn-solid" disabled={!modelReady || input.trim() === ''}>
-          {searching ? '…' : 'Suchen'}
-        </button>
-      </form>
-      <div className="query-foot">
-        <span className="examples">
-          {EXAMPLES.map((example) => (
-            <button key={example} type="button" className="text-btn" disabled={!modelReady} onClick={() => submit(example)}>
-              {example}
+      )}
+      {mandateDialog && (
+        <Dialog title={t('Mandat wählen')} onClose={() => setMandateDialog(false)}>
+          <MandateList node={node} onChosen={() => setMandateDialog(false)} />
+          <div className="btn-row">
+            <button type="button" className="btn" onClick={() => setMandateDialog(false)}>
+              {t('Schließen')}
             </button>
-          ))}
-        </span>
-        <span className="status">{status}</span>
-      </div>
-
-      <main className="layout">
-        <aside className="sidebar">
-          <DatasetPanel videos={videos} selectedVideoId={selectedVideoId} onSelect={setSelectedVideoId} />
-        </aside>
-        <div className="content">
-          <div ref={resultsRef} className="anchor" />
-          {searchError && <p className="note">Suche fehlgeschlagen: {searchError}</p>}
-          {response && query !== '' && (
-            <Results response={response} threshold={threshold} onThresholdChange={setThreshold} onOpen={openResult} />
-          )}
-          {selectedVideo && (
-            <SceneBrowser
-              video={selectedVideo}
-              refreshKey={indexVersion}
-              onOpen={openScene}
-              onClose={() => setSelectedVideoId(null)}
-            />
-          )}
-          <LiveAnalysis live={live} videos={videos} />
-          <EmbeddingMap
-            videos={videos}
-            modelReady={modelReady}
-            refreshKey={indexVersion}
-            sceneScores={response && query !== '' ? response.sceneScores : null}
-            onOpen={openMapPoint}
-          />
-          {state && videos.length === 0 && (
-            <p className="empty">Lege links Videos ab. Analyse, Szenen und Suche erscheinen hier.</p>
-          )}
-        </div>
-      </main>
-
-      {modal && <SceneModal target={modal} onClose={closeModal} onPrev={onPrev} onNext={onNext} />}
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }

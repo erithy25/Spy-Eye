@@ -1,0 +1,92 @@
+{
+  "sources": [
+    {
+      "id": "uas-rheinufer",
+      "name": "UAS · Rheinufer",
+      "nameEn": "UAS · Rhine bank",
+      "kind": "drone",
+      "owner": "Berufsfeuerwehr",
+      "description": "Befliegung des Rheinufers an der Brücke.",
+      "lat": 50.0052,
+      "lon": 8.2741,
+      "shared": true,
+      "clips": [
+        {
+          "file": "mixkit-11940.mp4",
+          "credit": "Mixkit · sailing-below-a-busy-bridge · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/11940/11940-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/sailing-below-a-busy-bridge-11940/",
+          "daysAgo": 2
+        },
+        {
+          "file": "mixkit-6423.mp4",
+          "credit": "Mixkit · flying-over-flooded-fields · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/6423/6423-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/flying-over-flooded-fields-6423/",
+          "daysAgo": 1
+        },
+        {
+          "file": "mixkit-26833.mp4",
+          "credit": "Mixkit · top-aerial-tracking-shot-of-an-ambulance · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/26833/26833-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/top-aerial-tracking-shot-of-an-ambulance-26833/",
+          "daysAgo": 4
+        }
+      ]
+    },
+    {
+      "id": "fzg-a60",
+      "name": "Einsatzfahrzeug · A 60",
+      "nameEn": "Response vehicle · A 60",
+      "kind": "vehicle",
+      "owner": "Autobahnpolizei",
+      "description": "Frontkamera eines Einsatzfahrzeugs.",
+      "lat": 49.9654,
+      "lon": 8.2603,
+      "shared": true,
+      "clips": [
+        {
+          "file": "mixkit-42367.mp4",
+          "credit": "Mixkit · traveling-down-a-highway-on-a-sunny-day · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/42367/42367-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/traveling-down-a-highway-on-a-sunny-day-42367/",
+          "daysAgo": 5
+        }
+      ]
+    },
+    {
+      "id": "erk-mombach",
+      "name": "Erkunder · Mombach",
+      "nameEn": "Scout · Mombach",
+      "kind": "bodycam",
+      "owner": "Berufsfeuerwehr",
+      "description": "Handkamera eines Erkundungstrupps im Industriegebiet.",
+      "lat": 50.0181,
+      "lon": 8.2252,
+      "shared": true,
+      "clips": [
+        {
+          "file": "mixkit-32370.mp4",
+          "credit": "Mixkit · an-aggressive-fire-consuming-the-nature · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/32370/32370-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/an-aggressive-fire-consuming-the-nature-32370/",
+          "daysAgo": 6
+        },
+        {
+          "file": "mixkit-5276.mp4",
+          "credit": "Mixkit · firefighters-on-a-crane-putting-out-a-fire · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/5276/5276-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/firefighters-on-a-crane-putting-out-a-fire-5276/",
+          "daysAgo": 2
+        },
+        {
+          "file": "mixkit-4362.mp4",
+          "credit": "Mixkit · smoke-from-power-plant · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/4362/4362-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/smoke-from-power-plant-4362/",
+          "daysAgo": 7
+        }
+      ]
+    }
+  ]
+}

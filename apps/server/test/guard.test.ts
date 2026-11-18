@@ -12,10 +12,10 @@ const allowed = [
 ];
 
 const refused: [string, string][] = [
-  ['angela merkel', 'named-person'], ['find peter', 'named-person'], ['herr schmidt', 'named-person'],
+  ['angela merkel', 'named-person'], ['find peter', 'named-person'], ['Herr Schmidt', 'named-person'],
   ['Donald Trump', 'named-person'], ['Wolfgang', 'named-person'],
   ['who is the man in the red jacket', 'identification'], ['identify the driver', 'identification'],
-  ['license plate number of the van', 'identification'], ['face recognition of suspect', 'identification'],
+  ['license plate number of the van', 'licence-plate'], ['face recognition of suspect', 'identification'],
   ['wer ist die Frau', 'identification'],
   ['muslim woman', 'protected-attribute'], ['a black man running', 'protected-attribute'],
   ['people wearing a hijab', 'protected-attribute'], ['refugees at the station', 'protected-attribute'],
@@ -57,4 +57,52 @@ test('bodily features of animals and objects are not refused', () => {
   for (const prompt of ['a dog with long hair', 'a scar in the hillside', 'hair salon sign']) {
     assert.equal(screenPrompt(prompt).allowed, true, prompt);
   }
+});
+
+test('licence plates are never searched, however the request is worded', () => {
+  for (const prompt of [
+    'license plate KO AB 123', 'nummernschild des lieferwagens', 'Kennzeichen KO-AB 123', 'the car with number plate M XY 4711',
+    'white van KO AB 123', 'registration number of the truck',
+  ]) {
+    const verdict = screenPrompt(prompt);
+    assert.equal(verdict.allowed, false, prompt);
+    assert.equal(verdict.rule, 'licence-plate', prompt);
+  }
+  // Road numbers and unit designations are not registrations.
+  for (const prompt of ['accident on the B 9', 'UAS 3 over the A 48', 'flooded underpass near the K 12']) {
+    assert.equal(screenPrompt(prompt).allowed, true, prompt);
+  }
+});
+
+test('faces, re-identification and tracking are refused in German and English', () => {
+  for (const prompt of [
+    'gesicht von herrn müller', 'finde diese person wieder', 'the face of the driver', 'find this person again',
+    'the same man as before', 'verfolge den radfahrer', 'bewegungsprofil der person', 'where is she now', 'gesichter der zuschauer',
+    'erkenne die person am eingang', 'identität des fahrers',
+  ]) {
+    const verdict = screenPrompt(prompt);
+    assert.equal(verdict.allowed, false, prompt);
+    assert.equal(verdict.rule, 'identification', prompt);
+  }
+});
+
+test('forms of address only count as names when a name follows', () => {
+  assert.equal(screenPrompt('Frau Müller').rule, 'named-person');
+  assert.equal(screenPrompt('Herrn Schmidt am Ufer').rule, 'named-person');
+  assert.equal(screenPrompt('Familie Becker').rule, 'named-person');
+  // "Frau mit …" describes a person and is governed by the mandate, not by the name rule.
+  assert.deepEqual(screenPrompt('eine Frau mit Kinderwagen').flags, ['person-description']);
+  assert.equal(screenPrompt('eine Frau mit Kinderwagen').allowed, true);
+});
+
+test('clothing descriptions of persons depend on the mandate', () => {
+  const open = screenPrompt('person in a red jacket', { personDescriptions: true });
+  assert.equal(open.allowed, true);
+  assert.deepEqual(open.flags, ['person-description']);
+  const strict = screenPrompt('person in a red jacket', { personDescriptions: false });
+  assert.equal(strict.allowed, false);
+  assert.equal(strict.rule, 'person-description');
+  // Clothing without a person, and responders by role, stay ordinary scene descriptions.
+  assert.deepEqual(screenPrompt('a yellow jacket lying on the river bank', { personDescriptions: false }).flags, []);
+  assert.equal(screenPrompt('firefighters wearing breathing apparatus', { personDescriptions: false }).allowed, true);
 });

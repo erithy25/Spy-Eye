@@ -4,11 +4,8 @@ import path from 'node:path';
 import { config, repoRoot } from './config.js';
 import type { PeerRecord } from './intel/federation.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
-import { FaceDetector } from './ml/faces.js';
-import { HazardHead } from './ml/head.js';
-import { EmbeddingModel } from './ml/model.js';
-import { loadVocabulary } from './ml/vocab.js';
-import { PlatformNode, VERSION, type NodeConfig, type SharedRuntime } from './node.js';
+import { PlatformNode, VERSION, type NodeConfig } from './node.js';
+import { createSharedRuntime } from './runtime.js';
 
 interface NodesFile {
   /** Secret from which the pairwise federation keys of the nodes in this file are derived. */
@@ -24,6 +21,8 @@ interface NodesFile {
     dataDir: string;
     /** Ids of other nodes in this file that this node federates with. */
     peers: string[];
+    /** Optional directory (relative to the repository) with seed footage for a fresh node. */
+    seed?: string;
   }[];
 }
 
@@ -90,8 +89,45 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
       port: n.port,
       dataDir: fromRoot(n.dataDir),
       peers,
+      ...(n.seed ? { seedDir: fromRoot(n.seed) } : {}),
     };
   });
+}
+
+/**
+ * `--prepare`: loads the exercise footage into the first node, lets every node finish analysing
+ * what it holds, then exits. Run once before a demonstration so that nothing has to be computed
+ * in front of the audience.
+ */
+async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (line: string) => void): Promise<void> {
+  await ready;
+  await Promise.all(nodes.map((n) => n.settled));
+  const first = nodes[0];
+  if (first?.scenario.definition && first.scenario.info().status === 'absent') {
+    try {
+      await first.scenario.installFootage();
+    } catch (err: unknown) {
+      say(`  ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  }
+  const started = Date.now();
+  for (;;) {
+    const parts = nodes.map((n) => {
+      const videos = n.store.infos();
+      const done = videos.filter((v) => v.status === 'ready').length;
+      const failed = videos.filter((v) => v.status === 'error').length;
+      return { name: n.info.region || n.info.name, done, failed, total: videos.length };
+    });
+    process.stdout.write(`\r  Auswertung: ${parts.map((p) => `${p.name} ${p.done}/${p.total}${p.failed > 0 ? ` (${p.failed} Fehler)` : ''}`).join(' · ')}   `);
+    if (parts.every((p) => p.done + p.failed >= p.total)) {
+      const failed = parts.reduce((sum, p) => sum + p.failed, 0);
+      say(`\n  Vorbereitet in ${Math.round((Date.now() - started) / 1000)} s${failed > 0 ? `, ${failed} Aufnahme(n) mit Fehler` : ''}. Start der Vorführung: pnpm demo`);
+      await Promise.allSettled(nodes.map((n) => n.stop()));
+      process.exit(failed > 0 ? 1 : 0);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 }
 
 async function main(): Promise<void> {
@@ -99,50 +135,17 @@ async function main(): Promise<void> {
   say(`Sicht ${VERSION}`);
   say(`  ${await checkFfmpeg()}`);
 
-  const model = new EmbeddingModel();
-  const faces = new FaceDetector();
-  let hazard: HazardHead | null = null;
-  try {
-    hazard = await HazardHead.load(path.join(config.assetsDir, 'hazard-head.json'));
-    if (hazard && hazard.encoder !== config.modelId) {
-      say(`  Gefahren-Modell wurde für ${hazard.encoder} trainiert und ist mit ${config.modelId} nicht nutzbar.`);
-      hazard = null;
-    }
-  } catch (err: unknown) {
-    say(`  Gefahren-Modell nicht ladbar: ${err instanceof Error ? err.message : String(err)}`);
-  }
-
-  // Load in the background so the consoles are reachable (and show progress) immediately.
-  let lastMessage = '';
-  model.onState((state) => {
-    if (state.phase === 'loading' && state.message !== lastMessage && !state.message.startsWith('Lade Modellgewichte')) {
-      lastMessage = state.message;
-      say(`  ${state.message}`);
-    }
-  });
-  const ready = (async () => {
-    await Promise.all([model.load(), faces.load()]);
-    const vocabulary = await loadVocabulary(model, (done, total) => {
-      model.updateState({ message: `Berechne Tag-Vokabular … ${done}/${total}` });
-    });
-    model.updateState({ vocabSize: vocabulary.labels.length, message: 'Bereit' });
-    say(`  Modell ${config.modelId} bereit (${model.state.device}, ${model.dim} Dimensionen, ${vocabulary.labels.length} Tags)`);
-    if (model.state.notice !== '') say(`  Hinweis: ${model.state.notice}`);
-    say(faces.ready ? '  Gesichtsmaskierung aktiv' : `  Gesichtsmaskierung NICHT aktiv: ${faces.problem ?? 'unbekannt'}`);
-    say(hazard ? `  Gefahren-Modell ${hazard.card.version} aktiv (${hazard.classes.join(', ')})` : '  Gefahren-Modell nicht aktiv');
-    return vocabulary;
-  })();
-  ready.catch((err: unknown) => {
-    say(`  Modell konnte nicht geladen werden: ${err instanceof Error ? err.message : String(err)}`);
-  });
-
-  const shared: SharedRuntime = { model, faces, hazard, ready };
+  const shared = await createSharedRuntime(say);
   const nodes = (await loadNodeConfigs()).map((cfg) => new PlatformNode(cfg, shared));
   for (const node of nodes) {
     await node.start(true);
     say(`  ${node.info.name}: http://${node.cfg.host === '0.0.0.0' ? '127.0.0.1' : node.cfg.host}:${node.cfg.port}`);
   }
   const first = nodes[0];
+  if (process.argv.includes('--prepare')) {
+    await prepare(nodes, shared.ready, say);
+    return;
+  }
   if (first?.auth.demoMode) {
     say(`  Demo-Zugänge: ${first.auth.listUsers().map((u) => u.id).join(', ')} · Passwort: ${first.auth.demoHint}`);
   }

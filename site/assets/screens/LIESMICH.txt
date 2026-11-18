@@ -1,0 +1,7 @@
+Hier liegen die Bildschirmaufnahmen der Konsole für die Website.
+
+Erwartet werden sieben PNG-Dateien, Seitenverhältnis 16 : 10 (vorgesehen 2880 x 1800):
+
+  lage.png  suche.png  wachen.png  vorgaenge.png  verbund.png  protokoll.png  wirkung.png
+
+Fehlt eine Datei, zeigt die Seite an ihrer Stelle einen Rahmen mit Passmarke.

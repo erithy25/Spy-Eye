@@ -1,0 +1,352 @@
+{
+  "measuredAt": "2026-11-18T02:07:28.821Z",
+  "machine": {
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "cores": 4,
+    "threads": 4,
+    "device": "cpu"
+  },
+  "model": "onnx-community/siglip2-base-patch32-256-ONNX",
+  "scenario": {
+    "id": "rhein-mosel",
+    "title": "Übung RHEIN-MOSEL",
+    "durationSec": 600,
+    "speed": 8
+  },
+  "footage": {
+    "clips": 31,
+    "seconds": 577,
+    "framesIndexed": 571,
+    "facesMasked": 37
+  },
+  "analysis": null,
+  "evaluation": {
+    "events": [
+      {
+        "label": "Mosel tritt über die Ufer, Wiesen überflutet",
+        "sourceName": "UAS 1 · Moselbogen",
+        "onsetSec": 80,
+        "detectedSec": 82.2,
+        "latencySec": 2.2,
+        "watchName": "Überflutung"
+      },
+      {
+        "label": "Bachlauf führt Sturzflut",
+        "sourceName": "Erkunder 1 · Güls",
+        "onsetSec": 100,
+        "detectedSec": 102.2,
+        "latencySec": 2.2,
+        "watchName": "Überflutung"
+      },
+      {
+        "label": "Rheinvorland überflutet",
+        "sourceName": "UAS 2 · Rheinvorland",
+        "onsetSec": 150,
+        "detectedSec": 152.2,
+        "latencySec": 2.2,
+        "watchName": "Überflutung"
+      },
+      {
+        "label": "Baum auf Fahrzeug gestürzt",
+        "sourceName": "Erkunder 2 · Lützel",
+        "onsetSec": 160,
+        "detectedSec": 162.2,
+        "latencySec": 2.2,
+        "watchName": "Sturmschaden: umgestürzter Baum"
+      },
+      {
+        "label": "Verkehrsunfall auf der B 9",
+        "sourceName": "UAS 3 · B 9 Nord",
+        "onsetSec": 240,
+        "detectedSec": 242.4,
+        "latencySec": 2.4,
+        "watchName": "Verkehrsunfall"
+      },
+      {
+        "label": "Fahrbahn abgerutscht, Straße gesperrt",
+        "sourceName": "Erkunder 1 · Güls",
+        "onsetSec": 260,
+        "detectedSec": 262.4,
+        "latencySec": 2.4,
+        "watchName": "Fahrbahn zerstört"
+      },
+      {
+        "label": "Unfall im Tunnel, Einsatzkräfte am Fahrzeug",
+        "sourceName": "Tunnelkamera · Ostportal",
+        "onsetSec": 280,
+        "detectedSec": 282.4,
+        "latencySec": 2.4,
+        "watchName": "Einsatzkräfte am Unfallfahrzeug"
+      },
+      {
+        "label": "Lastkraftwagen umgestürzt",
+        "sourceName": "Erkunder 2 · Lützel",
+        "onsetSec": 320,
+        "detectedSec": 322.5,
+        "latencySec": 2.5,
+        "watchName": "Umgestürzter Lastkraftwagen"
+      },
+      {
+        "label": "Baum auf Wohnhaus gestürzt",
+        "sourceName": "Bürgerhinweise · Eingang",
+        "onsetSec": 360,
+        "detectedSec": 362.6,
+        "latencySec": 2.6,
+        "watchName": "Sturmschaden: umgestürzter Baum"
+      },
+      {
+        "label": "Gebäudebrand im Gewerbegebiet, starke Rauchentwicklung",
+        "sourceName": "UAS 4 · Rheinhafen",
+        "onsetSec": 400,
+        "detectedSec": 402.6,
+        "latencySec": 2.6,
+        "watchName": "Brand"
+      },
+      {
+        "label": "Gebäude in Vollbrand",
+        "sourceName": "Erkunder 3 · Wallersheim",
+        "onsetSec": 420,
+        "detectedSec": 422.6,
+        "latencySec": 2.6,
+        "watchName": "Brand"
+      },
+      {
+        "label": "Straße durch umgestürzten Baum blockiert",
+        "sourceName": "Erkunder 2 · Lützel",
+        "onsetSec": 440,
+        "detectedSec": 442.7,
+        "latencySec": 2.7,
+        "watchName": "Sturmschaden: umgestürzter Baum"
+      },
+      {
+        "label": "Teileinsturz, Suche in Trümmern",
+        "sourceName": "Bürgerhinweise · Eingang",
+        "onsetSec": 480,
+        "detectedSec": 482.7,
+        "latencySec": 2.7,
+        "watchName": "Einsturz und Trümmer"
+      }
+    ],
+    "total": 13,
+    "detected": 13,
+    "medianLatencySec": 2.4,
+    "falseAlarms": 1,
+    "alerts": 15
+  },
+  "incidents": [
+    {
+      "title": "Sturmschaden: umgestürzter Baum · Koblenz-Lützel",
+      "place": "Koblenz-Lützel",
+      "mgrs": "32U LA 9985 8084",
+      "alerts": 2,
+      "corroboration": 1
+    },
+    {
+      "title": "Brand · Niederwerth",
+      "place": "Niederwerth",
+      "mgrs": "32U MA 0045 8313",
+      "alerts": 3,
+      "corroboration": 2
+    },
+    {
+      "title": "Einsturz und Trümmer · Koblenz-Altstadt",
+      "place": "Koblenz-Altstadt",
+      "mgrs": "32U MA 0021 7961",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Umgestürzter Lastkraftwagen · Koblenz-Güls",
+      "place": "Koblenz-Güls",
+      "mgrs": "32U LA 9702 7756",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Fahrbahn zerstört · Koblenz-Güls",
+      "place": "Koblenz-Güls",
+      "mgrs": "32U LA 9702 7756",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Sturmschaden: umgestürzter Baum · Koblenz-Altstadt",
+      "place": "Koblenz-Altstadt",
+      "mgrs": "32U MA 0021 7961",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Umgestürzter Lastkraftwagen · Koblenz-Lützel",
+      "place": "Koblenz-Lützel",
+      "mgrs": "32U LA 9985 8084",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Einsatzkräfte am Unfallfahrzeug · Koblenz-Ehrenbreitstein",
+      "place": "Koblenz-Ehrenbreitstein",
+      "mgrs": "32U MA 0132 7915",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Verkehrsunfall · Koblenz-Lützel",
+      "place": "Koblenz-Lützel",
+      "mgrs": "32U LA 9888 8176",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Überflutung · Koblenz-Wallersheim",
+      "place": "Koblenz-Wallersheim",
+      "mgrs": "32U MA 0123 8187",
+      "alerts": 1,
+      "corroboration": 1
+    },
+    {
+      "title": "Überflutung · Koblenz-Moselweiß",
+      "place": "Koblenz-Moselweiß",
+      "mgrs": "32U LA 9763 7850",
+      "alerts": 2,
+      "corroboration": 2
+    }
+  ],
+  "alerts": [
+    {
+      "at": 82.192,
+      "watch": "Überflutung",
+      "source": "UAS 1 · Moselbogen",
+      "confidence": 0.885,
+      "score": 0.1442,
+      "frames": 76,
+      "explained": true
+    },
+    {
+      "at": 102.208,
+      "watch": "Überflutung",
+      "source": "Erkunder 1 · Güls",
+      "confidence": 0.97,
+      "score": 0.1586,
+      "frames": 144,
+      "explained": true
+    },
+    {
+      "at": 152.24,
+      "watch": "Überflutung",
+      "source": "UAS 2 · Rheinvorland",
+      "confidence": 0.89,
+      "score": 0.1447,
+      "frames": 160,
+      "explained": true
+    },
+    {
+      "at": 162.24,
+      "watch": "Sturmschaden: umgestürzter Baum",
+      "source": "Erkunder 2 · Lützel",
+      "confidence": 0.994,
+      "score": 0.175,
+      "frames": 145,
+      "explained": true
+    },
+    {
+      "at": 242.376,
+      "watch": "Verkehrsunfall",
+      "source": "UAS 3 · B 9 Nord",
+      "confidence": 0.81,
+      "score": 0.1383,
+      "frames": 95,
+      "explained": true
+    },
+    {
+      "at": 262.432,
+      "watch": "Fahrbahn zerstört",
+      "source": "Erkunder 1 · Güls",
+      "confidence": 0.98,
+      "score": 0.1628,
+      "frames": 161,
+      "explained": true
+    },
+    {
+      "at": 264.432,
+      "watch": "Umgestürzter Lastkraftwagen",
+      "source": "Erkunder 1 · Güls",
+      "confidence": 0.954,
+      "score": 0.1542,
+      "frames": 102,
+      "explained": false
+    },
+    {
+      "at": 282.448,
+      "watch": "Einsatzkräfte am Unfallfahrzeug",
+      "source": "Tunnelkamera · Ostportal",
+      "confidence": 0.984,
+      "score": 0.1651,
+      "frames": 105,
+      "explained": true
+    },
+    {
+      "at": 322.504,
+      "watch": "Umgestürzter Lastkraftwagen",
+      "source": "Erkunder 2 · Lützel",
+      "confidence": 0.991,
+      "score": 0.1706,
+      "frames": 104,
+      "explained": true
+    },
+    {
+      "at": 362.568,
+      "watch": "Sturmschaden: umgestürzter Baum",
+      "source": "Bürgerhinweise · Eingang",
+      "confidence": 0.979,
+      "score": 0.1621,
+      "frames": 94,
+      "explained": true
+    },
+    {
+      "at": 402.592,
+      "watch": "Brand",
+      "source": "UAS 4 · Rheinhafen",
+      "confidence": 0.748,
+      "score": 0.1347,
+      "frames": 184,
+      "explained": true
+    },
+    {
+      "at": 402.592,
+      "watch": "Starke Rauchentwicklung",
+      "source": "UAS 4 · Rheinhafen",
+      "confidence": 0.858,
+      "score": 0.1418,
+      "frames": 190,
+      "explained": true
+    },
+    {
+      "at": 422.648,
+      "watch": "Brand",
+      "source": "Erkunder 3 · Wallersheim",
+      "confidence": 0.88,
+      "score": 0.1438,
+      "frames": 95,
+      "explained": true
+    },
+    {
+      "at": 442.68,
+      "watch": "Sturmschaden: umgestürzter Baum",
+      "source": "Erkunder 2 · Lützel",
+      "confidence": 0.985,
+      "score": 0.1657,
+      "frames": 154,
+      "explained": true
+    },
+    {
+      "at": 482.736,
+      "watch": "Einsturz und Trümmer",
+      "source": "Bürgerhinweise · Eingang",
+      "confidence": 0.917,
+      "score": 0.1478,
+      "frames": 98,
+      "explained": true
+    }
+  ]
+}

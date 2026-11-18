@@ -10,7 +10,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "models:download": "tsx src/scripts/downloadModels.ts",
     "selftest": "tsx src/scripts/selftest.ts",
-    "test": "tsx --test test/*.test.ts"
+    "test": "tsx --test test/*.test.ts",
+    "exercise:fetch": "tsx src/scripts/fetchFootage.ts",
+    "exercise:evaluate": "tsx src/scripts/runExercise.ts",
+    "map:extract": "tsx src/scripts/map/extractTiles.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.9",

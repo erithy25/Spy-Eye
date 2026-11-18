@@ -82,7 +82,7 @@ export type ModelPhase = 'loading' | 'ready' | 'error';
 export interface ModelState {
   phase: ModelPhase;
   modelId: string;
-  family: 'siglip' | 'clip' | 'mobileclip' | null;
+  family: 'siglip' | 'siglip2' | 'clip' | 'mobileclip' | null;
   /** Execution provider actually in use (cpu, dml, cuda, ...). */
   device: string;
   /** Non-fatal remark from start-up, e.g. that a GPU provider was rejected. Empty when all is well. */
@@ -441,6 +441,11 @@ export interface Watch {
   version: number;
   /** Verdicts recorded since the last retraining; they have no effect until someone retrains. */
   pendingFeedback: number;
+  /**
+   * Watches of one group describe the same kind of event (fire, smoke, a trained fire model).
+   * Only their alerts are combined into one incident. Defaults to the watch's own id.
+   */
+  group: string;
 }
 
 export interface WatchPreview {
@@ -480,6 +485,13 @@ export interface Alert {
   reviewedBy: string | null;
   incidentId: string | null;
   exercise: boolean;
+  /** Group of the watch that raised the alert. */
+  group: string;
+  /**
+   * What the trained hazard model sees in the evidence frame, for alerts from aerial sources.
+   * It is an independent second opinion and may disagree with the watch.
+   */
+  secondOpinion: { label: string; p: number } | null;
 }
 
 export interface Incident {
@@ -501,6 +513,8 @@ export interface Incident {
   /** Independent sources reporting the same thing. */
   corroboration: number;
   exercise: boolean;
+  /** Watch group whose alerts form this incident. */
+  group: string;
 }
 
 export interface IntelSnapshot {

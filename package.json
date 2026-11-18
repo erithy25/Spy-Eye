@@ -13,6 +13,10 @@
     "typecheck": "pnpm -r typecheck",
     "models:download": "pnpm --filter @sicht/server models:download",
     "selftest": "pnpm --filter @sicht/server selftest",
-    "test": "pnpm --filter @sicht/server test"
+    "test": "pnpm --filter @sicht/server test",
+    "exercise:fetch": "pnpm --filter @sicht/server exercise:fetch",
+    "exercise:evaluate": "pnpm --filter @sicht/server exercise:evaluate",
+    "demo": "node apps/server/dist/index.js --nodes nodes.demo.json",
+    "demo:prepare": "node apps/server/dist/index.js --nodes nodes.demo.json --prepare"
   }
 }

@@ -586,6 +586,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
           await node.record(ctx, 'exercise.install', `Übungsmaterial „${title}“ eingespielt`);
           break;
         case 'start':
+          // Watches must be in place before the first picture of the exercise arrives.
+          await node.settled;
           scenario.start(speed);
           await node.record(ctx, 'exercise.start', `Übung „${title}“ gestartet (${speed}×)`, { speed });
           break;

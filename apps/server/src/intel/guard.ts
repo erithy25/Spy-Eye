@@ -85,12 +85,41 @@ const SEX_AGE_TERMS: readonly string[] = [
   'junge', 'madchen', 'kind', 'kinder', 'jugendliche', 'jugendlicher', 'senioren', 'greis',
 ];
 
-/** Phrases that ask for identification rather than description. */
+/** Phrases that ask for identification, re-identification or tracking rather than description. */
 const IDENTITY_PHRASES: readonly string[] = [
-  'who is', 'identify', 'identity of', 'name of the', 'recognize the person', 'recognise the person', 'face of',
-  'facial recognition', 'face recognition', 'find this person', 'same person', 'track the person', 'follow the person',
-  'license plate number', 'licence plate number', 'number plate', 'kennzeichen', 'wer ist', 'identifiziere',
-  'gesichtserkennung', 'verfolge',
+  // who is it
+  'who is', 'who are', 'identify', 'identity', 'name of the', 'wer ist', 'wer sind', 'identifizier', 'identitat',
+  // faces
+  'face of', 'faces of', 'facial recognition', 'face recognition', 'face match', 'recognize the person',
+  'recognise the person', 'recognize him', 'recognize her', 'recognise him', 'recognise her', 'gesichtserkennung',
+  'gesicht von', 'gesicht des', 'gesicht der', 'gesicht dieser', 'gesicht dieses', 'gesicht eines', 'gesicht einer',
+  'gesichter von', 'gesichter der', 'gesichter erkennen', 'erkenne die person', 'erkenne den mann', 'erkenne die frau',
+  // one particular individual, again
+  'find this person', 'this person', 'that person', 'this man', 'that man', 'this woman', 'that woman', 'same person',
+  'same man', 'same woman', 'the person from', 'the man from', 'the woman from', 'find him', 'find her', 'where is he',
+  'where is she', 'diese person', 'dieser person', 'diesen mann', 'dieser mann', 'diese frau', 'dieser frau',
+  'dieselbe person', 'derselbe mann', 'dieselbe frau', 'person wieder', 'personen wieder', 'mann wieder', 'frau wieder',
+  'wiedererkenn', 'finde ihn', 'finde sie wieder', 'wo ist er', 'wo ist sie',
+  // tracking
+  'track the person', 'follow the person', 'track him', 'track her', 'follow him', 'follow her', 'person tracking',
+  'movement profile', 'verfolge', 'bewegungsprofil', 'bewegungsbild',
+];
+
+/** Any mention of a vehicle registration: this system does not read or search licence plates. */
+const PLATE_PHRASES: readonly string[] = [
+  'license plate', 'licence plate', 'number plate', 'numberplate', 'registration plate', 'registration number',
+  'plate number', 'vehicle registration', 'kennzeichen', 'nummernschild', 'nummernschilder', 'zulassungsnummer',
+];
+
+/** A German registration as written ("KO AB 123", "M-XY 4711"); checked on the text as typed. */
+const GERMAN_PLATE = /(^|[^A-Za-zÄÖÜäöü])[A-ZÄÖÜ]{1,3}[ -][A-Z]{1,2}[ -]?\d{1,4}[EH]?($|[^0-9A-Za-z])/;
+
+/** Clothing and things carried: they describe a person without being biometric features. */
+const CLOTHING_TERMS: readonly string[] = [
+  'jacket', 'coat', 'hoodie', 'hood', 'shirt', 't-shirt', 'sweater', 'pullover', 'dress', 'skirt', 'trousers', 'pants',
+  'jeans', 'shorts', 'hat', 'cap', 'beanie', 'backpack', 'rucksack', 'handbag', 'sneakers', 'boots', 'wearing', 'dressed',
+  'jacke', 'mantel', 'kapuze', 'kapuzenpullover', 'hemd', 'kleid', 'rock', 'hose', 'mutze', 'kappe', 'tragt', 'gekleidet',
+  'bekleidet',
 ];
 
 /**
@@ -129,8 +158,13 @@ const GIVEN_NAMES: ReadonlySet<string> = new Set(
   ).split(' '),
 );
 
-/** Honorifics and role words that signal a personal name follows. */
-const NAME_MARKERS: readonly string[] = ['mr', 'mrs', 'ms', 'herr', 'frau', 'dr', 'prof', 'minister', 'president', 'kanzler'];
+/** Titles after which a personal name follows. */
+const NAME_TITLES: readonly string[] = ['mr', 'mrs', 'ms', 'mister', 'dr', 'prof'];
+/**
+ * German forms of address that are also ordinary nouns ("eine Frau mit Kinderwagen"). They only
+ * announce a name when the next word is capitalised as typed ("Frau Müller", "Herrn Schmidt").
+ */
+const NAME_NOUN_MARKERS: readonly string[] = ['herr', 'herrn', 'frau', 'familie', 'minister', 'ministerin', 'kanzler', 'kanzlerin', 'president'];
 
 /** Lower-case, diacritics removed, whitespace collapsed. */
 function normalize(text: string): string {
@@ -147,6 +181,16 @@ function tokens(normalized: string): string[] {
   return normalized.split(/[^a-z0-9-]+/).filter((t) => t !== '');
 }
 
+/** Tokens with the capitalisation as typed, aligned with `tokens(normalize(text))`. */
+function casedTokens(raw: string): string[] {
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ß/g, 'ss')
+    .split(/[^A-Za-z0-9-]+/)
+    .filter((t) => t !== '');
+}
+
 const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Whole-word match that also accepts a plural "s"; inflected German forms match by stem. */
@@ -155,6 +199,7 @@ const PROTECTED_PATTERNS: readonly { term: string; pattern: RegExp }[] = PROTECT
   return { term, pattern: new RegExp(`(^|[^a-z])${escapeRegExp(norm)}(s|e|er|en|em|es|isch\\w*)?($|[^a-z])`) };
 });
 const IDENTITY_NORMALIZED: readonly string[] = IDENTITY_PHRASES.map(normalize);
+const PLATE_NORMALIZED: readonly string[] = PLATE_PHRASES.map(normalize);
 
 const refuse = (rule: string, reason: string, reasonEn: string): GuardVerdict => ({
   allowed: false,
@@ -170,13 +215,21 @@ const containsTerm = (text: string, words: readonly string[], term: string): boo
 export function screenPrompt(raw: string, options: GuardOptions = { personDescriptions: true }): GuardVerdict {
   const text = normalize(raw);
   const words = tokens(text);
+  const cased = casedTokens(raw);
 
+  if (PLATE_NORMALIZED.some((phrase) => text.includes(phrase)) || GERMAN_PLATE.test(raw)) {
+    return refuse(
+      'licence-plate',
+      'Die Anfrage betrifft ein Kennzeichen. Dieses System liest und sucht keine Kennzeichen; über sie ließen sich Halter ermitteln.',
+      'The request concerns a licence plate. This system neither reads nor searches licence plates; they would lead to the keeper.',
+    );
+  }
   for (const phrase of IDENTITY_NORMALIZED) {
     if (text.includes(phrase)) {
       return refuse(
         'identification',
-        'Die Anfrage zielt auf die Identifizierung einer Person oder eines Kennzeichens. Dieses System beschreibt Lagen, es identifiziert niemanden.',
-        'The request aims at identifying a person or a licence plate. This system describes situations; it identifies no one.',
+        'Die Anfrage zielt darauf, eine bestimmte Person zu erkennen, wiederzufinden oder zu verfolgen. Dieses System beschreibt Lagen, es identifiziert niemanden.',
+        'The request aims at recognising, finding again or tracking a particular person. This system describes situations; it identifies no one.',
       );
     }
   }
@@ -197,7 +250,10 @@ export function screenPrompt(raw: string, options: GuardOptions = { personDescri
   for (let i = 0; i < words.length; i++) {
     const word = words[i] as string;
     const next = words[i + 1];
-    if (GIVEN_NAMES.has(word) || (NAME_MARKERS.includes(word) && next !== undefined && next.length > 2)) {
+    const nextAsTyped = cased[i + 1] ?? '';
+    const titled = NAME_TITLES.includes(word) && next !== undefined && next.length > 2;
+    const addressed = NAME_NOUN_MARKERS.includes(word) && next !== undefined && next.length > 2 && /^[A-Z][a-z]/.test(nextAsTyped);
+    if (GIVEN_NAMES.has(word) || titled || addressed) {
       return refuse(
         'named-person',
         'Die Anfrage enthält einen Personennamen. Die Suche nach benannten Personen ist ausgeschlossen.',
@@ -218,13 +274,18 @@ export function screenPrompt(raw: string, options: GuardOptions = { personDescri
     );
   }
 
+  // Describing a person by sex, age group or clothing narrows a search down towards individuals.
+  // It is needed for some tasks (a missing child, a person reported in the water) and therefore
+  // depends on the mandate; where it is allowed, the prompt is marked for the auditor.
   const sexAge = SEX_AGE_TERMS.find((term) => containsTerm(text, words, term));
-  if (sexAge !== undefined) {
+  const clothing = aboutPerson ? CLOTHING_TERMS.find((term) => containsTerm(text, words, term)) : undefined;
+  const describing = sexAge ?? clothing;
+  if (describing !== undefined) {
     if (!options.personDescriptions) {
       return refuse(
         'person-description',
-        `Dieses Mandat lässt keine Beschreibung von Personen nach Geschlecht oder Alter zu („${sexAge}“). Bitte neutral formulieren, zum Beispiel „person“.`,
-        `This mandate does not permit describing persons by sex or age group ("${sexAge}"). Please use a neutral wording such as "person".`,
+        `Dieses Mandat lässt keine Beschreibung von Personen nach Geschlecht, Alter oder Kleidung zu („${describing}“). Bitte neutral formulieren, zum Beispiel „person“.`,
+        `This mandate does not permit describing persons by sex, age group or clothing ("${describing}"). Please use a neutral wording such as "person".`,
       );
     }
     return { allowed: true, rule: null, reason: null, reasonEn: null, flags: ['person-description'] };

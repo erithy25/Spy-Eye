@@ -1,0 +1,92 @@
+{
+  "sources": [
+    {
+      "id": "uas-ehrang",
+      "name": "UAS · Ehrang",
+      "nameEn": "UAS · Ehrang",
+      "kind": "drone",
+      "owner": "Feuerwehr · Drohneneinheit",
+      "description": "Befliegung der Moselaue bei Ehrang.",
+      "lat": 49.8052,
+      "lon": 6.6884,
+      "shared": true,
+      "clips": [
+        {
+          "file": "mixkit-7835.mp4",
+          "credit": "Mixkit · aerial-shot-over-floodlands · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/7835/7835-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/aerial-shot-over-floodlands-7835/",
+          "daysAgo": 1
+        },
+        {
+          "file": "mixkit-6613.mp4",
+          "credit": "Mixkit · drone-flying-over-flooded-fields · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/6613/6613-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/drone-flying-over-flooded-fields-6613/",
+          "daysAgo": 1
+        },
+        {
+          "file": "mixkit-17115.mp4",
+          "credit": "Mixkit · flying-over-a-floodplain · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/17115/17115-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/flying-over-a-floodplain-17115/",
+          "daysAgo": 2
+        }
+      ]
+    },
+    {
+      "id": "uas-wald",
+      "name": "UAS · Meulenwald",
+      "nameEn": "UAS · Meulenwald",
+      "kind": "drone",
+      "owner": "Forstverwaltung",
+      "description": "Waldbrandüberwachung im Sommer.",
+      "lat": 49.8312,
+      "lon": 6.7105,
+      "shared": true,
+      "clips": [
+        {
+          "file": "mixkit-11028.mp4",
+          "credit": "Mixkit · fire-burning-on-the-forest · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/11028/11028-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/fire-burning-on-the-forest-11028/",
+          "daysAgo": 9
+        },
+        {
+          "file": "mixkit-43609.mp4",
+          "credit": "Mixkit · flying-low-over-a-large-river-in-nature · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/43609/43609-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/flying-low-over-a-large-river-in-nature-43609/",
+          "daysAgo": 3
+        }
+      ]
+    },
+    {
+      "id": "erk-pfalzel",
+      "name": "Erkunder · Pfalzel",
+      "nameEn": "Scout · Pfalzel",
+      "kind": "bodycam",
+      "owner": "Freiwillige Feuerwehr",
+      "description": "Handkamera eines Erkundungstrupps.",
+      "lat": 49.7812,
+      "lon": 6.6948,
+      "shared": true,
+      "clips": [
+        {
+          "file": "mixkit-10012.mp4",
+          "credit": "Mixkit · water-rising-in-the-ground · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/10012/10012-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/water-rising-in-the-ground-10012/",
+          "daysAgo": 1
+        },
+        {
+          "file": "mixkit-45375.mp4",
+          "credit": "Mixkit · cracked-and-destroyed-pavement · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/45375/45375-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/cracked-and-destroyed-pavement-45375/",
+          "daysAgo": 1
+        }
+      ]
+    }
+  ]
+}

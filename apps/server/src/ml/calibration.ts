@@ -24,6 +24,8 @@ export interface RelevanceCalibration {
 
 export const RELEVANCE: Readonly<Record<ModelFamily, RelevanceCalibration>> = {
   siglip: { floor: 0.06, ceiling: 0.09, prior: 0.075, width: 0.012, k: 2.5 },
+  // SigLIP 2 (base, patch 32): matches lie around 0.13-0.20, unrelated footage below about 0.12.
+  siglip2: { floor: 0.105, ceiling: 0.125, prior: 0.118, width: 0.01, k: 2.5 },
   clip: { floor: 0.24, ceiling: 0.285, prior: 0.27, width: 0.012, k: 2.5 },
   mobileclip: { floor: 0.225, ceiling: 0.26, prior: 0.245, width: 0.012, k: 2.5 },
 };
