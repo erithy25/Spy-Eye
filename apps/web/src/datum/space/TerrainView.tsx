@@ -46,6 +46,7 @@ import {
   type TapeMarker,
 } from './hud';
 import { formatCoordinate } from '../../map/geo';
+import { hhmm, localMinutes } from '../panel/common';
 import './space.css';
 
 /** The console's translation function (`useLang().t`). */
@@ -71,11 +72,15 @@ export interface TerrainViewProps {
   };
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   sunPath?: SunPathPoint[];
+  /** Time zone of the place (IANA); sunrise and sunset are written in its local time, as on the dials. */
+  timezone?: string | null;
   /** Terrain horizon at the camera: elevation angle (deg) for azimuth 0..359. */
   horizonProfile?: number[] | null;
   /** Skyline of the keyframe the heading was matched on: per column the normalised y of the sky boundary. */
   skyline?: number[] | null;
   label?: string;
+  /** Inside a page that names the place (RAUM): no title in the picture. */
+  embedded?: boolean;
 }
 
 type ViewMode = 'orbit' | 'walk';
@@ -302,6 +307,7 @@ interface Live {
   /** Image aspect the match assumed (width / height). */
   aspect: number;
   sunPath: SunPathPoint[];
+  timezone: string | null;
   horizonProfile: number[] | null;
   skyline: number[] | null;
 }
@@ -1021,7 +1027,7 @@ class TerrainEngine {
     const a = this.anchors;
     if (!walking) {
       const top = P(a.marker);
-      if (top) drawAnchor(ctx, top.x, top.y - 12, t('STANDPUNKT'), t('{h} M Ü. NN', { h: fmt(m.base, 0) }), 'center');
+      if (top) drawAnchor(ctx, top.x, top.y - 12, t('STANDPUNKT'), t('{h} m ü. NN', { h: fmt(m.base, 0) }), 'center');
       const peak = P([m.peak.x, (m.peak.h - m.base) * live.exag, m.peak.z]);
       if (peak) {
         ctx.save();
@@ -1033,7 +1039,7 @@ class TerrainEngine {
         ctx.closePath();
         ctx.stroke();
         ctx.restore();
-        hudLabel(ctx, `${fmt(m.peak.h, 0)} M`, peak.x, peak.y + 12, { align: 'center', size: 9, color: MID });
+        hudLabel(ctx, `${fmt(m.peak.h, 0)} m`, peak.x, peak.y + 12, { align: 'center', size: 9, color: MID });
       }
     }
     for (const c of a.cardinals) {
@@ -1044,10 +1050,8 @@ class TerrainEngine {
       const s = P(a.cone);
       if (s) hudLabel(ctx, `${t('BLICK')} ${fmtAz(live.headingDeg)} · ${fmt(live.fovDeg, 0)}°`, s.x + 8, s.y, { size: 8.5, color: MID, track: 0.14 });
     }
-    const fmtUtc = (t: number): string => {
-      const d = new Date(t);
-      return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
-    };
+    // Local time of the place, as the dials of BEFUND write it; UTC only when the zone is unknown.
+    const fmtUtc = (t: number): string => (live.timezone ? hhmm(localMinutes(t, live.timezone)) : `${hhmm(localMinutes(t, null))} UTC`);
     const sunAt = a.sun && live.sun ? P(a.sun) : null;
     // Sunrise and sunset labels give way to the sun's own label.
     const clear = (s: { x: number; y: number }): boolean => !sunAt || Math.hypot(s.x - sunAt.x, s.y - sunAt.y) > 110;
@@ -1064,7 +1068,7 @@ class TerrainEngine {
     }
     if (walking) {
       const c = this.cursor;
-      drawCrosshair(ctx, W / 2, H / 2, c ? fmtMetres(c.dist) : '—', c ? t('{h} M Ü. NN', { h: fmt(c.h, 0) }) : t('KEIN ZIEL'));
+      drawCrosshair(ctx, W / 2, H / 2, c ? fmtMetres(c.dist) : '—', c ? t('{h} m ü. NN', { h: fmt(c.h, 0) }) : t('KEIN ZIEL'));
     } else if (this.cursor && this.pointer) {
       const s = P([this.cursor.x, (this.cursor.h - m.base) * live.exag, this.cursor.z]);
       if (s) ring(ctx, s.x, s.y, 5, 0.9);
@@ -1107,12 +1111,12 @@ function ScaleBar({ mpp }: { mpp: number }) {
   return (
     <span className="sv-scale">
       <i style={{ width: `${Math.round(metres / mpp)}px` }} />
-      {metres >= 1000 ? `${metres / 1000} KM` : `${metres} M`}
+      {metres >= 1000 ? `${metres / 1000} km` : `${metres} m`}
     </span>
   );
 }
 
-export function TerrainView({ terrain, loading = false, camera, sun, sunPath, horizonProfile = null, skyline = null, label }: TerrainViewProps) {
+export function TerrainView({ terrain, loading = false, camera, sun, sunPath, timezone = null, horizonProfile = null, skyline = null, label, embedded = false }: TerrainViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<TerrainEngine | null>(null);
@@ -1148,6 +1152,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
     pitchDeg: camera.pitchDeg !== undefined && Number.isFinite(camera.pitchDeg) ? camera.pitchDeg : 0,
     aspect: camera.aspect !== undefined && camera.aspect > 0 ? camera.aspect : 16 / 9,
     sunPath: sunPath ?? [],
+    timezone: timezone ?? null,
     horizonProfile: horizonProfile ?? null,
     skyline: skyline ?? null,
   };
@@ -1164,6 +1169,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
     prev.pitchDeg !== next.pitchDeg ||
     prev.aspect !== next.aspect ||
     prev.sunPath !== next.sunPath ||
+    prev.timezone !== next.timezone ||
     prev.horizonProfile !== next.horizonProfile ||
     prev.skyline !== next.skyline
   ) {
@@ -1176,16 +1182,16 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
     if (r.cursor && m) {
       const g = m.toLatLon(r.cursor.x, r.cursor.z);
       setText(cursorRef.current, `${r.mode === 'walk' ? tr('ZIEL') : tr('ZEIGER')} ${formatCoordinate(g.lat, g.lon)}`);
-      setText(cursorSubRef.current, tr('HÖHE {h} M Ü. NN · ABSTAND {d}', { h: fmt(r.cursor.h, 0), d: fmtMetres(r.cursor.dist) }));
+      setText(cursorSubRef.current, tr('Höhe {h} m ü. NN · Abstand {d}', { h: fmt(r.cursor.h, 0), d: fmtMetres(r.cursor.dist) }));
     } else if (r.mode === 'walk' && m && r.ground !== null) {
       const g = m.toLatLon(r.eye[0], r.eye[2]);
       setText(cursorRef.current, `${tr('STANDORT')} ${formatCoordinate(g.lat, g.lon)}`);
-      setText(cursorSubRef.current, tr('GRUND {h} M Ü. NN', { h: fmt(r.ground, 0) }));
+      setText(cursorSubRef.current, tr('Grund {h} m ü. NN', { h: fmt(r.ground, 0) }));
     } else {
       setText(cursorRef.current, `${tr('STANDPUNKT')} ${formatCoordinate(m?.center.lat ?? 0, m?.center.lon ?? 0)}`);
       setText(
         cursorSubRef.current,
-        m ? tr('GRUND {h} M Ü. NN · RELIEF {min}–{max} M', { h: fmt(m.base, 0), min: fmt(m.minH, 0), max: fmt(m.maxH, 0) }) : '',
+        m ? tr('Grund {h} m ü. NN · Relief {min}–{max} m', { h: fmt(m.base, 0), min: fmt(m.minH, 0), max: fmt(m.maxH, 0) }) : '',
       );
     }
     setMpp((v) => {
@@ -1281,10 +1287,12 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
       onKeyDown={onKeyDown}
     >
       <canvas ref={hudRef} className="sv-hud" aria-hidden="true" />
-      <div className="sv-readout sv-tl">
-        <span>{t('Gelände')}</span>
-        {label && <span className="sv-dim">{label}</span>}
-      </div>
+      {!embedded && (
+        <div className="sv-readout sv-tl">
+          <span>{t('Gelände')}</span>
+          {label && <span className="sv-dim">{label}</span>}
+        </div>
+      )}
 
       {ready && (
         <>
@@ -1318,7 +1326,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
 
           <div className="sv-readout sv-bl sv-stack">
             <span ref={cursorRef} />
-            <span ref={cursorSubRef} className="sv-dim" />
+            <span ref={cursorSubRef} className="sv-dim sv-plain" />
           </div>
           <div className="sv-readout sv-br sv-stack">
             <span>
@@ -1326,13 +1334,10 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
                 ? t('Sonne Azimut {az} · Höhe {el}°', { az: fmtAz(sun.azimuthDeg), el: fmtSigned(sun.elevationDeg, 1) })
                 : t('Kein Sonnenstand')}
             </span>
-            <span className="sv-dim">
-              {t('Höhenlinien {minor} / {major} m · Überhöhung {exag}×', { minor: contourStep(built)[0], major: contourStep(built)[1], exag })}
-            </span>
             {mpp !== null && mode === 'orbit' && <ScaleBar mpp={mpp} />}
           </div>
           {dome && (
-            <div className="sv-readout sv-legend" style={{ top: 44, left: 12 }}>
+            <div className="sv-readout sv-legend" style={{ top: embedded ? 12 : 44, left: 12 }}>
               <i />
               <span>{t('Geländehorizont')}</span>
               {skyline && camera.headingDeg !== null && (

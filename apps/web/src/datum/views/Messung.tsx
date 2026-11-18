@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '../../i18n';
-import { pressable } from '../../ui';
+import { Dialog, pressable } from '../../ui';
 import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '../api';
+import { datasets, groupRecordings, useDatasets } from '../datasets';
 import { caseLabel } from '../labels';
 import { DatumSettingsPanel } from '../Settings';
-import { TruthControl, useTruthUpload } from '../TruthUpload';
+import { TruthButton, useTruthUpload } from '../TruthUpload';
 import { kmText } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
@@ -48,6 +49,13 @@ function evalRows(evaluation: unknown, t: (s: string) => string): EvalRow[] {
   return rows;
 }
 
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
 /** One table of cases with a known place: the reference set, or the analyst's own truths. */
 function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Map<string, string>; select: (id: string | null) => void; go: DatumViewProps['go'] }) {
   const { t, locale, region } = useLang();
@@ -56,7 +64,7 @@ function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Ma
       <thead>
         <tr>
           <th>{t('Fall')}</th>
-          <th>{t('Wahrer Ort')}</th>
+          <th>{t('Grundwahrheit')}</th>
           <th>{t('Land')}</th>
           <th>{t('Abweichung')}</th>
           <th style={{ width: 160 }} />
@@ -78,8 +86,8 @@ function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Ma
             <td>{r.label}</td>
             <td title={r.country ?? ''}>{r.country ? region(r.country) : '–'}</td>
             <td>
-              {r.errorKm != null ? kmText(r.errorKm, locale) : r.videoId ? t('wird geortet …') : <span className="low">{t('keine Aufnahme dieses Namens')}</span>}
-              {r.stage === 'quick' && <span className="dt-tag dt-tag-inline">{t('schnell geortet')}</span>}
+              {r.errorKm != null ? kmText(r.errorKm, locale) : r.videoId ? <span className="low">{t('wird geortet …')}</span> : '–'}
+              {r.stage === 'quick' && <span className="low"> · {t('vorläufig')}</span>}
             </td>
             <td>
               {r.errorKm != null && (
@@ -95,12 +103,14 @@ function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Ma
   );
 }
 
-export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
-  const { t, locale } = useLang();
+export function Messung({ videos, can, fixes, byId, select, go }: DatumViewProps) {
+  const { t, locale, pick } = useLang();
   const truth = useTruthUpload();
+  const sets = useDatasets();
   const [summary, setSummary] = useState<DatumSummary | null>(null);
   const [rows, setRows] = useState<DatasetRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // The figures are read again when a fix starts, ends or is replaced by a recomputation, and when
   // a ground truth arrives for it (that keeps computedAt). The steps announced while a fix runs
   // keep status and computedAt and do not count.
@@ -114,6 +124,10 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
   );
   // A truth list for files not on the node yet changes no fix; it still belongs in the table.
   const truthStamp = truth.result?.ok ? truth.result.text : '';
+
+  useEffect(() => {
+    if (sets.list === null && sets.supported) void datasets.refresh();
+  }, [sets.list, sets.supported]);
 
   const firstRead = useRef(true);
   useEffect(() => {
@@ -143,141 +157,183 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
   const referenceRows = useMemo(() => rows.filter((r) => r.kind !== 'eigene'), [rows]);
   // Headline figures are those of the reference set; older nodes have no split and count all.
   const reference = summary ? (summary.bySource?.referenz ?? summary) : null;
-  const ownAccuracy = summary?.bySource?.eigene ?? null;
   const videoNames = useMemo(() => new Map(videos.map((v) => [v.id, v.name])), [videos]);
+
+  // Own truths by the dataset of their recording; truths without a recording are listed apart.
+  const ownGroups = useMemo(() => {
+    const groups = groupRecordings(videos, byId, sets, { pick, t });
+    const home = new Map<string, { id: string; name: string }>();
+    for (const g of groups) for (const v of g.videos) home.set(v.id, { id: g.id, name: g.name });
+    const out = new Map<string, { id: string; name: string; rows: DatasetRow[] }>();
+    const loose: DatasetRow[] = [];
+    for (const r of ownRows) {
+      const g = r.videoId ? home.get(r.videoId) : undefined;
+      if (!g) {
+        loose.push(r);
+        continue;
+      }
+      const entry = out.get(g.id) ?? { ...g, rows: [] };
+      entry.rows.push(r);
+      out.set(g.id, entry);
+    }
+    const order = new Map(groups.map((g, i) => [g.id, i]));
+    return { groups: [...out.values()].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)), loose };
+  }, [ownRows, videos, byId, sets, pick, t]);
 
   const modes = evalRows(summary?.evaluation, t);
   const pct = (v: number | null | undefined): string => (v == null ? '–' : `${Math.round(v * 100).toLocaleString(locale)} %`);
+  const refLocated = referenceRows.filter((r) => r.errorKm != null).length;
+  const mayWrite = can('source.write');
 
   return (
-    <div className="view">
-      <div className="dt-messung">
-        <div className="section-head">
-          <h2 className="label">{t('Messung gegen die Grundwahrheit')}</h2>
-          <span className="low">
-            {t('Referenzbestand mit bekanntem Aufnahmeort (Wikidata); der Ort wird der Ortung nicht mitgegeben.')}
-          </span>
+    <div className="page dt-messung">
+      {/* The page head of BESTAND and PROTOKOLL: title, a line for the last outcome, page actions. */}
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">{t('Messung')}</h1>
+          {truth.result && <p className={truth.result.ok ? 'page-sub' : 'note'}>{truth.result.text}</p>}
+          {error && <p className="note">{error}</p>}
         </div>
-        {error && <p className="note">{error}</p>}
-        {summary && (
+        <div className="btn-row">
+          {mayWrite && <TruthButton truth={truth} className="btn" />}
+          <button type="button" className="btn" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>
+            {t('Einstellungen der Ortung')}
+          </button>
+        </div>
+      </header>
+
+      <section className="dt-msection">
+        <h3 className="label">
+          {t('Referenzbestand')} <span className="count">{referenceRows.length}</span>
+          {referenceRows.length > 0 && refLocated < referenceRows.length && (
+            <span className="count-of">· {t('{located}/{n} geortet', { located: refLocated, n: referenceRows.length })}</span>
+          )}
+        </h3>
+        {summary && referenceRows.length === 0 ? (
+          <p className="hint">{t('Kein Referenzbestand auf diesem Knoten.')}</p>
+        ) : (
           <>
-            <div className="dt-figures">
-              <div className="dt-figure">
-                <b>
-                  {summary.ready}/{summary.recordings}
-                </b>
-                <span>
-                  {t('Aufnahmen geortet')}
-                  {(summary.quick ?? 0) > 0 ? ` · ${t('{n} schnell', { n: summary.quick ?? 0 })}` : ''}
-                </span>
-              </div>
-              <div className="dt-figure">
-                <b>{reference?.medianErrorKm == null ? '–' : kmText(reference.medianErrorKm, locale)}</b>
-                <span>{t('Abweichung im Median')}</span>
-              </div>
-              {/* Two thresholds here; all five are in the stored evaluation below. */}
-              {(reference?.within ?? []).filter((w) => w.km === 25 || w.km === 750).map((w) => (
-                <div className="dt-figure" key={w.km}>
-                  <b>{reference?.withTruth ? pct(w.share) : '–'}</b>
-                  <span>
-                    {t('innerhalb')} {w.km.toLocaleString(locale)} km
-                  </span>
+            <p className="hint">{t('Wahrer Ort aus Wikidata; der Ortung nicht mitgegeben.')}</p>
+            {summary && (
+              <div className="dt-figures">
+                <div className="dt-figure">
+                  <b>{reference?.medianErrorKm == null ? '–' : kmText(reference.medianErrorKm, locale)}</b>
+                  <span>{t('Median')}</span>
                 </div>
-              ))}
-              <div className="dt-figure">
-                <b>{pct(reference?.insideRadius)}</b>
-                <span>{t('Wahrheit im angegebenen Kreis')}</span>
+                {[25, 750].map((km) => (
+                  <div className="dt-figure" key={km}>
+                    <b>{reference?.withTruth ? pct(reference.within.find((w) => w.km === km)?.share) : '–'}</b>
+                    <span>
+                      ≤ {km.toLocaleString(locale)} <span className="unit">km</span>
+                    </span>
+                  </div>
+                ))}
+                <div className="dt-figure">
+                  <b>{pct(reference?.insideRadius)}</b>
+                  <span>{t('Grundwahrheit im Kreis')}</span>
+                </div>
               </div>
-              <div className="dt-figure">
-                <b>{summary.medianSeconds == null ? '–' : `${summary.medianSeconds.toLocaleString(locale, { maximumFractionDigits: 1 })} s`}</b>
-                <span>{t('Rechenzeit je Aufnahme')}</span>
-              </div>
-            </div>
+            )}
+            <TruthTable rows={referenceRows} names={videoNames} select={select} go={go} />
             <p className="hint">
-              {summary.holdout
-                ? t('Gemessen wie bei einem unbekannten Ort: Das Referenzbild desselben Bauwerks ist aus der Galerie genommen.')
-                : t('Gemessen mit vollständiger Galerie: Das Referenzbild desselben Bauwerks ist enthalten.')}{' '}
-              {t('Schwellen 1, 25, 200, 750 und 2 500 km wie in der Fachliteratur zur Bildverortung (Im2GPS).')}
+              {t('Quelle der Videos: Wikimedia Commons, verknüpft über Wikidata (Eigenschaften P10 und P625). Lizenzen je Datei auf der jeweiligen Dateiseite.')}
             </p>
           </>
         )}
+      </section>
 
-        <section className="section-gap dt-own" style={{ marginTop: 26 }}>
-          <h3 className="label">
-            {t('Eigene Aufnahmen mit Grundwahrheit')} <span className="count">{ownRows.length}</span>
-          </h3>
-          {can('source.write') && <TruthControl truth={truth} />}
-          {ownAccuracy && ownAccuracy.withTruth > 0 && (
-            <p className="dt-own-figures">
-              {t('Abweichung im Median')} <b>{ownAccuracy.medianErrorKm == null ? '–' : kmText(ownAccuracy.medianErrorKm, locale)}</b>
-              {' · '}
-              {t('innerhalb')} 25 km <b>{pct(ownAccuracy.within.find((w) => w.km === 25)?.share)}</b>
-              {' · '}
-              {t('Wahrheit im angegebenen Kreis')} <b>{pct(ownAccuracy.insideRadius)}</b>
-              <span className="low"> · {t('{n} mit Grundwahrheit', { n: ownAccuracy.withTruth })}</span>
-            </p>
-          )}
-          {ownRows.length === 0 ? (
-            <p className="hint">{t('Noch keine. Mit einer Grundwahrheit zu eigenen Videos steht hier, wie weit die Ortung danebenliegt.')}</p>
-          ) : (
-            <TruthTable rows={ownRows} names={videoNames} select={select} go={go} />
-          )}
+      {ownGroups.groups.map((g) => {
+        const errors = g.rows.map((r) => r.errorKm).filter((v): v is number => v != null);
+        const mid = median(errors);
+        const near = errors.length > 0 ? errors.filter((e) => e <= 25).length / errors.length : null;
+        return (
+          <section className="dt-msection" key={g.id}>
+            <h3 className="label">
+              {g.name} <span className="count">{g.rows.length}</span>
+            </h3>
+            {errors.length > 0 && (
+              <p className="dt-own-figures">
+                {t('Median')} <b>{mid == null ? '–' : kmText(mid, locale)}</b>
+                {' · '}≤ 25 km <b>{pct(near)}</b>
+              </p>
+            )}
+            <TruthTable rows={g.rows} names={videoNames} select={select} go={go} />
+          </section>
+        );
+      })}
+      {ownGroups.loose.length > 0 && (
+        <section className="dt-msection">
+          <details className="dt-trace-box dt-fold">
+            <summary className="label">{t('{n} ohne passende Aufnahme', { n: ownGroups.loose.length })}</summary>
+            <TruthTable rows={ownGroups.loose} names={videoNames} select={select} go={go} />
+          </details>
         </section>
+      )}
 
-        {modes.length > 0 && (
-          <section className="section-gap" style={{ marginTop: 26 }}>
-            <h3 className="label">{t('Gespeicherte Auswertung')}</h3>
-            <p className="hint">
-              {t('Mit pnpm datum:evaluate gemessen. Die Schwellen der Ortung wurden nur an der Abstimmungshälfte eingestellt; die Prüfhälfte zeigt, was ohne Anpassung herauskommt.')}
+      {(modes.length > 0 || summary) && (
+        <section className="dt-msection">
+        <details className="dt-trace-box dt-fold">
+          <summary className="label">{t('Gespeicherte Auswertung')}</summary>
+          <p className="hint">
+            {t('Die Schwellen der Ortung wurden nur an der Abstimmungshälfte eingestellt; die Prüfhälfte zeigt, was ohne Anpassung herauskommt.')}{' '}
+            {summary?.holdout
+              ? t('Gemessen wie bei einem unbekannten Ort: Das Referenzbild desselben Bauwerks ist aus der Galerie genommen.')
+              : t('Gemessen mit vollständiger Galerie: Das Referenzbild desselben Bauwerks ist enthalten.')}{' '}
+            {t('Schwellen 1, 25, 200, 750 und 2 500 km wie in der Fachliteratur zur Bildverortung (Im2GPS).')}
+          </p>
+          {summary?.medianSeconds != null && (
+            <p className="dt-own-figures">
+              {t('Rechenzeit je Aufnahme')} <b>{summary.medianSeconds.toLocaleString(locale, { maximumFractionDigits: 1 })} s</b>
             </p>
+          )}
+          {modes.length > 0 && (
             <table className="tbl">
               <thead>
                 <tr>
-                  <th style={{ width: 330 }}>{t('Fall')}</th>
-                  <th>n</th>
-                  <th>{t('Median')}</th>
+                  <th>{t('Fall')}</th>
+                  <th className="num dt-num-col">n</th>
+                  <th className="num dt-num-col">{t('Median')}</th>
                   {modes[0]!.within.map((w) => (
-                    <th key={w.km}>≤ {w.km.toLocaleString(locale)} km</th>
+                    <th key={w.km} className="num dt-num-col">
+                      ≤ {w.km.toLocaleString(locale)} <span className="unit">km</span>
+                    </th>
                   ))}
-                  <th>{t('Land richtig')}</th>
-                  <th>{t('im Kreis')}</th>
+                  <th className="num dt-num-col">{t('Land richtig')}</th>
+                  <th className="num dt-num-col">{t('im Kreis')}</th>
                 </tr>
               </thead>
               <tbody>
                 {modes.map((m) => (
                   <tr key={m.name}>
-                    <td className="strong">{m.name}</td>
-                    <td>{m.n ?? '–'}</td>
-                    <td>{m.median == null ? '–' : kmText(m.median, locale)}</td>
+                    <td className="strong nowrap">{m.name}</td>
+                    <td className="num">{m.n ?? '–'}</td>
+                    <td className="num nowrap">{m.median == null ? '–' : kmText(m.median, locale)}</td>
                     {m.within.map((w) => (
-                      <td key={w.km}>{Number.isFinite(w.share) ? pct(w.share) : '–'}</td>
+                      <td key={w.km} className="num">
+                        {Number.isFinite(w.share) ? pct(w.share) : '–'}
+                      </td>
                     ))}
-                    <td>{pct(m.country)}</td>
-                    <td>{pct(m.inside)}</td>
+                    <td className="num">{pct(m.country)}</td>
+                    <td className="num">{pct(m.inside)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </section>
-        )}
-
-        <section className="section-gap" style={{ marginTop: 26 }}>
-          <h3 className="label">
-            {t('Referenzbestand: Einzelfälle')} <span className="count">{referenceRows.length}</span>
-          </h3>
-          <TruthTable rows={referenceRows} names={videoNames} select={select} go={go} />
-          <p className="hint">
-            {t('Quelle der Videos: Wikimedia Commons, verknüpft über Wikidata (Eigenschaften P10 und P625). Lizenzen je Datei auf der jeweiligen Dateiseite.')}
-          </p>
+          )}
+        </details>
         </section>
+      )}
 
-        {/* What the engine may use (street-level pictures, the world model): it decides what the
-            figures above can reach, so it is listed with them. */}
-        <section className="section-gap" style={{ marginTop: 26 }}>
-          <h3 className="label">{t('Einstellungen der Ortung')}</h3>
+      {settingsOpen && (
+        <Dialog title={t('Einstellungen der Ortung')} onClose={() => setSettingsOpen(false)}>
           <DatumSettingsPanel can={can} />
-        </section>
-      </div>
+          <div className="btn-row">
+            <button type="button" className="btn" onClick={() => setSettingsOpen(false)}>
+              {t('Schließen')}
+            </button>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }

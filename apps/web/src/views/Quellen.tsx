@@ -1,9 +1,14 @@
-import { useMemo, useState } from 'react';
-import { SOURCE_KINDS, createSource, deleteSource, updateSource, type SceneInfo, type SourceInfo, type SourceKind } from '../api';
+import { useEffect, useMemo, useState } from 'react';
+import { SOURCE_KINDS, createSource, deleteSource, updateSource, type SceneInfo, type SourceInfo, type SourceKind, type VideoInfo } from '../api';
 import type { ViewProps } from '../App';
 import { DatasetPanel } from '../components/DatasetPanel';
 import { LiveAnalysis } from '../components/LiveAnalysis';
 import { SceneBrowser } from '../components/SceneBrowser';
+import type { Fix } from '../datum/api';
+import { datasets, groupRecordings, useDatasets, type DatasetGroup } from '../datum/datasets';
+import { DeleteDatasetDialog } from '../datum/DeleteDatasetDialog';
+import { useTruthUpload } from '../datum/TruthUpload';
+import { UploadDialog } from '../datum/UploadDialog';
 import { useLang } from '../i18n';
 import { toMgrs } from '../map/geo';
 import { Dialog, Field, Glyph, KIND_LABEL, pressable, useAction } from '../ui';
@@ -108,7 +113,173 @@ function NewSource({ node, onClose }: { node: NodeConnection; onClose: () => voi
   );
 }
 
-export function Quellen({ node, openFrame }: ViewProps) {
+const NO_FIXES = new Map<string, Fix>();
+
+/**
+ * BESTAND on a DATUM node: the datasets in ORTUNG's words (Datensatz, Aufnahmen, Hochladen) with
+ * the same upload and delete, and the recordings of the chosen one. Sources, owners, grid
+ * references and sharing belong to SICHT and are not shown.
+ */
+function DatumHoldings({ node, archive, openScene, selectedVideoId, setSelectedVideoId }: {
+  node: NodeConnection;
+  archive: VideoInfo[];
+  openScene: (scene: SceneInfo, video: VideoInfo | null) => void;
+  selectedVideoId: string | null;
+  setSelectedVideoId: (id: string | null) => void;
+}) {
+  const { t, pick, n } = useLang();
+  const sets = useDatasets();
+  const [target, setTarget] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{ kind: 'upload' } | { kind: 'delete'; group: DatasetGroup } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const truth = useTruthUpload((r) => setNotice(r.text));
+  const may = node.can('source.write');
+  const groups = useMemo(() => groupRecordings(archive, NO_FIXES, sets, { pick, t }), [archive, sets, pick, t]);
+  // Counts and names follow new and deleted recordings once they pause.
+  useEffect(() => {
+    datasets.refreshSoon();
+  }, [archive.length]);
+  const chosen = groups.find((g) => g.id === target) ?? groups[0] ?? null;
+  const selectedVideo = chosen?.videos.find((v) => v.id === selectedVideoId) ?? null;
+
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">{t('Bestand')}</h1>
+          {notice && <p className="page-sub">{notice}</p>}
+        </div>
+        {may && (
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setNotice(null);
+                setDialog({ kind: 'upload' });
+              }}
+            >
+              {t('Hochladen')}
+            </button>
+          </div>
+        )}
+      </header>
+
+      <section className="section-gap">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>{t('Datensatz')}</th>
+              <th style={{ width: 124 }} className="num">
+                {t('Aufnahmen')}
+              </th>
+              <th style={{ width: 40 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((g) => (
+              <tr key={g.id} className={`clickable${chosen?.id === g.id ? ' sel' : ''}`} {...pressable(() => setTarget(g.id), chosen?.id === g.id)}>
+                <td className="strong">{g.name}</td>
+                <td className="num">{g.videos.length}</td>
+                <td className="num">
+                  {may && g.managed && (
+                    <button
+                      type="button"
+                      className="text-btn"
+                      aria-label={t('Datensatz {name} löschen', { name: g.name })}
+                      title={t('Löschen …')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNotice(null);
+                        setDialog({ kind: 'delete', group: g });
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {groups.length === 0 && <p className="empty">{t('Noch keine Aufnahmen.')}</p>}
+      </section>
+
+      {chosen && (
+        <div className="cols cols-side">
+          <div className="section-gap">
+            <header className="panel-head">
+              <h2 className="label">
+                {chosen.name} <span className="count">{chosen.videos.length}</span>
+              </h2>
+            </header>
+            <DatasetPanel videos={chosen.videos} selectedVideoId={selectedVideoId} onSelect={setSelectedVideoId} sourceId={chosen.id} canWrite={false} />
+          </div>
+          <div className="section-gap" style={{ gap: 40 }}>
+            {selectedVideo && (
+              <SceneBrowser video={selectedVideo} refreshKey={node.indexVersion} onOpen={(scene) => openScene(scene, selectedVideo)} onClose={() => setSelectedVideoId(null)} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {dialog?.kind === 'upload' && <UploadDialog initial={null} list={sets.list} supported={sets.supported} sendTruth={truth.send} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'delete' && (
+        <DeleteDatasetDialog
+          group={dialog.group}
+          onClose={() => setDialog(null)}
+          onDone={(result) => {
+            setDialog(null);
+            const parts = [t('{deleted} gelöscht', { deleted: n(result.deleted, 'recording') })];
+            if (result.kept > 0) parts.push(t('{kept} bleiben (in einem Vorgang gesichert)', { kept: result.kept }));
+            setNotice(parts.join(' · '));
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export function Quellen(props: ViewProps) {
+  const sets = useDatasets();
+  const datum = props.node.info?.product !== undefined && props.node.info.product !== 'sicht';
+  useEffect(() => {
+    if (datum) void datasets.refresh();
+  }, [datum]);
+  // A DATUM node that lists its datasets gets the dataset view; SICHT and older nodes the sources.
+  if (datum && sets.supported) return <DatumBestand {...props} />;
+  return <SourcesView {...props} />;
+}
+
+function DatumBestand({ node, openFrame }: ViewProps) {
+  const { pick } = useLang();
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const videos = node.app?.videos ?? [];
+  const archive = useMemo(() => videos.filter((v) => v.scenario === null), [videos]);
+  const sources = node.intel?.sources ?? [];
+  const openScene = (scene: SceneInfo, video: VideoInfo | null): void => {
+    const source = sources.find((s) => s.id === video?.sourceId);
+    openFrame({
+      videoId: scene.videoId,
+      frameNumber: scene.keyframeNumber,
+      frameUrl: scene.keyframeUrl,
+      time: scene.keyframeTime,
+      sceneIndex: scene.index,
+      at: null,
+      sourceName: source ? pick(source.name, source.nameEn) : null,
+      lat: source?.lat ?? null,
+      lon: source?.lon ?? null,
+      query: null,
+      confidence: null,
+      score: null,
+      box: null,
+      alert: null,
+    });
+  };
+  return <DatumHoldings node={node} archive={archive} openScene={openScene} selectedVideoId={selectedVideoId} setSelectedVideoId={setSelectedVideoId} />;
+}
+
+function SourcesView({ node, openFrame }: ViewProps) {
   const { t, pick } = useLang();
   const [creating, setCreating] = useState(false);
   const [target, setTarget] = useState('eingang');
@@ -154,15 +325,8 @@ export function Quellen({ node, openFrame }: ViewProps) {
     <div className="page">
       <header className="page-head">
         <div>
-          <h1 className="page-title">
-            <small>{t('Sensoren und Bestand')}</small>
-            {t('Quellen')}
-          </h1>
-          <p className="lede">
-            {t(
-              'Eine Quelle ist ein Sensor mit Standort und Eigentümer. Ihr Material bleibt auf diesem Knoten. Beim Einspielen werden Gesichter maskiert, die Bilder in Merkmale übersetzt und jede Wache auf das neue Material angewandt.',
-            )}
-          </p>
+          {/* The tab is called BESTAND on DATUM and QUELLEN on SICHT; the page says the same. */}
+          <h1 className="page-title">{node.info?.product === 'sicht' ? t('Quellen') : t('Bestand')}</h1>
         </div>
         {may && (
           <button type="button" className="btn btn-solid" onClick={() => setCreating(true)}>
@@ -178,7 +342,7 @@ export function Quellen({ node, openFrame }: ViewProps) {
               <th>{t('Quelle')}</th>
               <th style={{ width: 130 }}>{t('Art')}</th>
               <th>{t('Eigentümer')}</th>
-              <th style={{ width: 150 }}>UTMREF</th>
+              <th style={{ width: 150 }}>{t('UTMREF')}</th>
               <th style={{ width: 130 }}>{t('Betrieb')}</th>
               <th style={{ width: 124 }} className="num">
                 {t('Aufzeichnungen')}

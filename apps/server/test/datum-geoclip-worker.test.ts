@@ -76,6 +76,7 @@ test('the thread: a crash fails the call in it, the thread starts once more, a s
     const second = await wm.predict([frame]);
     assert.equal(second.state, 'failed');
     assert.match(second.reason?.en ?? '', /world model failed/);
+    assert.doesNotMatch(second.reason?.en ?? '', /Ortsgalerie|nicht verfügbar/);
 
     // A crash with a call waiting behind it: the call fails cleanly, the thread comes back.
     const crash = wm.crashForTest();
@@ -83,6 +84,9 @@ test('the thread: a crash fails the call in it, the thread starts once more, a s
     await crash;
     assert.equal(caught.state, 'failed');
     assert.match(caught.reason?.de ?? '', /ausgefallen/);
+    // The English twin is English throughout, also for the host's own errors.
+    assert.match(caught.reason?.en ?? '', /world model failed: the computing thread failed/);
+    assert.doesNotMatch(caught.reason?.en ?? '', /ausgefallen|Rechenthread|Aufruf/);
     const afterRestart = await wm.predict([frame]);
     assert.ok(afterRestart.state === 'building' || afterRestart.state === 'failed', 'the restarted thread answers');
     assert.ok(logs.some((l) => /neu gestartet/.test(l)));
@@ -95,6 +99,8 @@ test('the thread: a crash fails the call in it, the thread starts once more, a s
     const gone = await wm.predict([frame]);
     assert.equal(gone.state, 'failed');
     assert.match(gone.reason?.de ?? '', /erneut ausgefallen|Neustart/);
+    assert.match(gone.reason?.en ?? '', /failed again|restarting/);
+    assert.doesNotMatch(gone.reason?.en ?? '', /ausgefallen|Rechenthread|Neustart|Weltmodell/);
     assert.ok(logs.some((l) => /aufgegeben/.test(l)));
   } finally {
     await wm.close();

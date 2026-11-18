@@ -1,7 +1,7 @@
-import { Activity, Suspense, lazy, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Activity, Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createMandate, errorText, fetchMandates, selectMandate, type Mandate, type Role } from './api';
 import type { FrameTarget } from './components/FrameSheet';
-import { formatCount, formatExercise, shortHash } from './format';
+import { formatCount, formatExercise } from './format';
 import { LangProvider, useLang } from './i18n';
 import { MapCanvas, type MapMarker } from './map/MapCanvas';
 import { Dialog, Field, pressable, useAction } from './ui';
@@ -28,7 +28,15 @@ const FrameSheet = lazy(() => import('./components/FrameSheet').then((m) => ({ d
 type TabId = 'ortung' | 'befund' | 'raum' | 'suche' | 'quellen' | 'messung' | 'protokoll' | 'lage' | 'wachen' | 'vorgaenge' | 'verbund' | 'wirkung';
 
 /** The console of the predecessor platform, shown by nodes that run the civil operating picture. */
-const SICHT_TABS: { id: TabId; label: string; permission: string | null }[] = [
+interface TabDef {
+  id: TabId;
+  label: string;
+  permission: string | null;
+  /** A thin line before the tab: the platform's views after DATUM's own. */
+  sep?: boolean;
+}
+
+const SICHT_TABS: TabDef[] = [
   { id: 'lage', label: 'Lage', permission: 'media' },
   { id: 'suche', label: 'Suche', permission: 'search' },
   { id: 'wachen', label: 'Wachen', permission: 'watch.read' },
@@ -39,13 +47,14 @@ const SICHT_TABS: { id: TabId; label: string; permission: string | null }[] = [
   { id: 'wirkung', label: 'Wirkung', permission: 'metrics.read' },
 ];
 
-const TABS: { id: TabId; label: string; permission: string | null }[] = [
+/** DATUM's own views first; the platform's (search, holdings, ledger) after a separator. */
+const TABS: TabDef[] = [
   { id: 'ortung', label: 'Ortung', permission: 'media' },
   { id: 'befund', label: 'Befund', permission: 'media' },
   { id: 'raum', label: 'Raum', permission: 'media' },
-  { id: 'suche', label: 'Suche', permission: 'search' },
-  { id: 'quellen', label: 'Bestand', permission: 'source.read' },
   { id: 'messung', label: 'Messung', permission: 'media' },
+  { id: 'suche', label: 'Suche', permission: 'search', sep: true },
+  { id: 'quellen', label: 'Bestand', permission: 'source.read' },
   { id: 'protokoll', label: 'Protokoll', permission: null },
 ];
 
@@ -126,7 +135,7 @@ function GateMap({ node }: { node: NodeConnection }) {
       {isSicht(node) ? (
         <MapCanvas view={{ lat: info.lat, lon: info.lon, zoom: 11.4 }} viewKey={info.id} markers={markers} readouts={false} />
       ) : (
-        <MapCanvas view={{ lat: 30, lon: 10, zoom: 1.8 }} viewKey={info.id} markers={markers} minZoom={1} readouts={false} />
+        <MapCanvas view={{ lat: 24, lon: 12, zoom: 2.25, fit: true }} viewKey={info.id} markers={markers} minZoom={1} readouts={false} globe />
       )}
     </div>
   );
@@ -190,8 +199,9 @@ function Login({ node }: { node: NodeConnection }) {
                     <td className="strong" style={{ width: 92 }}>
                       {u.id}
                     </td>
-                    <td>{t(ROLE_LABEL[u.role])}</td>
-                    <td className="dim">{t(u.name)}</td>
+                    <td className="dim" title={t(ROLE_LABEL[u.role])}>
+                      {t(u.name)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -202,16 +212,14 @@ function Login({ node }: { node: NodeConnection }) {
                   {t('Passwort für alle Vorführzugänge')}: <span className="strong">{info.demo.passwordHint}</span>.{' '}
                 </>
               ) : (
-                <>{t('Das Passwort der Vorführzugänge hat der Betreiber gesetzt.')} </>
+                <>{t('Das Passwort der Vorführzugänge hat der Betreiber gesetzt.')}</>
               )}
-              {t('Dieser Knoten läuft mit Übungsdaten; im Betrieb werden die Zugänge durch die der Behörde ersetzt.')}
             </p>
           </div>
         )}
-        <p className="gate-foot">
-          {t('Jede Anmeldung, jede Abfrage und jede Freigabe wird in einem verketteten Protokoll festgehalten.')}
+        <p className="gate-foot" title={`${t('Jede Anmeldung, jede Abfrage und jede Freigabe wird in einem verketteten Protokoll festgehalten.')} ${t('Stand der Konsole')}: ${__DATUM_BUILD__}`}>
+          {t('Jede Anmeldung wird protokolliert.')}
           {info ? ` · v${info.node.version}` : ''}
-          <span className="dim" title={t('Stand der Konsole')}>{` · ${__DATUM_BUILD__}`}</span>
         </p>
       </div>
     </div>
@@ -442,7 +450,6 @@ function Shell({ node }: { node: NodeConnection }) {
     () => ({ videos: videos ?? [], can: node.can, fixes: datum.fixes, byId: datum.byId, selected, select: setSelected, go }),
     [videos, node.can, datum.fixes, datum.byId, selected, go],
   );
-  const located = datum.fixes.filter((f) => f.status === 'ready').length;
   const locating = datum.fixes.filter((f) => f.status === 'pending' || f.status === 'running').length;
 
   return (
@@ -450,7 +457,6 @@ function Shell({ node }: { node: NodeConnection }) {
       {exerciseContext ? (
         <div className="band">
           {t('Übung')} · {t('keine Echtlage')}
-          {session.mandate ? ` · ${pick(session.mandate.title, session.mandate.titleEn)}` : ''}
         </div>
       ) : (
         <div />
@@ -458,15 +464,18 @@ function Shell({ node }: { node: NodeConnection }) {
       <header className="top">
         <div className="wordmark">
           <b>{MARK}</b>
-          <span>{t(node.info?.node.name ?? '')}</span>
+          {/* The node's name without the product's, which the mark already says. */}
+          <span>{t(node.info?.node.name ?? '').replace(new RegExp(`^${MARK}\\s*·\\s*`, 'i'), '')}</span>
         </div>
         <nav className="tabs" aria-label={t('Bereiche')}>
           {tabs.filter((x) => allowed.includes(x.id)).map((x) => (
-            <button key={x.id} type="button" className={tab === x.id ? 'tab tab-on' : 'tab'} onClick={() => setTab(x.id)}>
-              {t(x.label)}
-              {x.id === 'ortung' && locating > 0 && <span className="tab-n">{locating}</span>}
-              {x.id === 'lage' && newAlerts > 0 && <span className="tab-n">{newAlerts}</span>}
-            </button>
+            <Fragment key={x.id}>
+              {x.sep && <span className="tab-sep" aria-hidden="true" />}
+              <button type="button" className={tab === x.id ? 'tab tab-on' : 'tab'} onClick={() => setTab(x.id)}>
+                {t(x.label)}
+                {x.id === 'lage' && newAlerts > 0 && <span className="tab-n">{newAlerts}</span>}
+              </button>
+            </Fragment>
           ))}
         </nav>
         <div className="top-right">
@@ -475,8 +484,8 @@ function Shell({ node }: { node: NodeConnection }) {
               {t('Mandat')}: <b>{session.mandate ? pick(session.mandate.title, session.mandate.titleEn) : t('keines')}</b>
             </button>
           )}
-          <span className="who">
-            <b>{t(session.user.name)}</b> · {t(ROLE_LABEL[session.user.role])}
+          <span className="who" title={t(ROLE_LABEL[session.user.role])}>
+            <b>{t(session.user.name)}</b>
           </span>
           <LangSwitch />
           <button type="button" className="text-btn" onClick={() => void node.signOut()}>
@@ -509,22 +518,20 @@ function Shell({ node }: { node: NodeConnection }) {
       </main>
 
       <footer className="foot">
-        <span>
-          {t('Protokoll')} <b>#{node.ledger?.length ?? '–'}</b> <b className="hash">{shortHash(node.ledger?.head)}</b>
-        </span>
-        <span>
-          {t('Modell')}{' '}
-          <b>
-            {model ? (model.phase === 'ready' ? `${model.modelId.split('/').pop() ?? ''} · ${model.device}` : model.message) : '–'}
-          </b>
+        <span title={node.ledger?.head ?? ''}>
+          {t('Protokoll')} <b>{node.ledger ? formatCount(node.ledger.length) : '–'}</b>
         </span>
         <span>
           {t('Verzeichnis')} <b>{node.app ? `${formatCount(node.app.stats.frames)} ${t('Bilder')}` : '–'}</b>
         </span>
-        {!isSicht(node) && (
+        {model && model.phase !== 'ready' && (
           <span>
-            {t('Ortung')} <b>{located}/{datum.fixes.length}</b>
-            {locating > 0 && <b> · {t('offen')} {locating}</b>}
+            {t('Modell')} <b>{model.message}</b>
+          </span>
+        )}
+        {!isSicht(node) && locating > 0 && (
+          <span>
+            <b>{t('Ortung läuft · {n}', { n: locating })}</b>
           </span>
         )}
         {scenario && exerciseRunning && (
@@ -532,9 +539,11 @@ function Shell({ node }: { node: NodeConnection }) {
             {t('Übungsuhr')} <b>{formatExercise(scenario.elapsedSec)}</b> <b>{scenario.speed}×</b>
           </span>
         )}
-        <span className="right">
-          {node.connected ? t('verbunden') : t('getrennt')} · v{node.info?.node.version ?? ''}
-          <span title={t('Stand der Konsole')}>{` · ${__DATUM_BUILD__.split(' · ')[0]}`}</span>
+        <span
+          className="right"
+          title={[model && model.phase === 'ready' ? `${model.modelId} · ${model.device}` : '', `${t('Stand der Konsole')}: ${__DATUM_BUILD__}`].filter((x) => x !== '').join('\n')}
+        >
+          {node.connected ? t('verbunden') : t('getrennt')} · <span className="unit">v{node.info?.node.version ?? ''}</span>
         </span>
       </footer>
 

@@ -16,6 +16,11 @@ export function setNumberLocale(locale: string): void {
   numberLocale = locale;
 }
 
+/** Whether the console writes in German (decimal comma, "O" for east). */
+export function writesGerman(): boolean {
+  return numberLocale.startsWith('de');
+}
+
 export function formatCount(n: number): string {
   return n.toLocaleString(numberLocale);
 }

@@ -507,6 +507,87 @@ test('network errors, HTTP errors and a failing model never throw out of the sta
   assert.ok(e.timing.failed > 0);
 });
 
+test('only JPEG, PNG and WebP thumbnails are decoded; other formats and huge rasters are skipped', async () => {
+  const model = new ColourEmbedder();
+  const input = { frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 1.5 }], model, options: BASE };
+  const { fetchImpl } = await fakeServices();
+  // A few bytes of SVG that declare a 6000 x 6000 raster (108 MB decoded), and a PNG of the same
+  // size that compresses to a few kB: neither may reach the decoder's raster.
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="6000" height="6000"><rect width="6000" height="6000" fill="red"/></svg>');
+  const bigPng = await sharp({ create: { width: 4000, height: 3000, channels: 3, background: { r: 230, g: 20, b: 20 } } }).png({ compressionLevel: 9 }).toBuffer();
+  const greyJpeg = await jpeg(100, 100, 100);
+  for (const [what, body, type] of [
+    ['svg', svg, 'image/svg+xml'],
+    ['svg as octet-stream', svg, 'application/octet-stream'],
+    ['huge png', bigPng, 'image/png'],
+    ['jpeg declared as png', greyJpeg, 'image/png'],
+  ] as const) {
+    const thumbs: FetchLike = async (url, init) => {
+      if (url.startsWith('https://thumbs.example.org/')) return new Response(new Uint8Array(body), { status: 200, headers: { 'content-type': type } });
+      return fetchImpl(url, init);
+    };
+    model.pictures = 0;
+    const lines: string[] = [];
+    const r = await refineStreetLevel(input, { fetch: thumbs, env: {}, log: (l) => lines.push(l) });
+    assert.equal(r.matched, false, what);
+    assert.equal(r.timing.downloaded, 0, `${what}: nothing counted as downloaded`);
+    assert.ok(r.timing.failed > 0, what);
+    assert.equal(model.pictures, 0, `${what}: nothing reached the image model`);
+  }
+  // A JPEG sent as octet-stream (as some storage hosts do) is still taken.
+  const generic: FetchLike = async (url, init) => {
+    const res = await fetchImpl(url, init);
+    if (!url.startsWith('https://thumbs.example.org/')) return res;
+    return new Response(new Uint8Array(await res.arrayBuffer()), { status: res.status, headers: { 'content-type': 'application/octet-stream' } });
+  };
+  const ok = await refineStreetLevel(input, { fetch: generic, env: {} });
+  assert.ok(ok.timing.downloaded > 0);
+});
+
+test('a body without Content-Length is read only up to the limit', async () => {
+  const model = new ColourEmbedder();
+  const input = { frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 1.5 }], model, options: { ...BASE, maxImageBytes: 64 * 1024 } };
+  const { fetchImpl } = await fakeServices();
+  let pulled = 0;
+  const endless: FetchLike = async (url, init) => {
+    if (!url.startsWith('https://thumbs.example.org/')) return fetchImpl(url, init);
+    // A JPEG start, then chunks for as long as anyone reads (no Content-Length).
+    const chunk = new Uint8Array(16 * 1024);
+    chunk.set([0xff, 0xd8, 0xff, 0xe0]);
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += chunk.byteLength;
+        controller.enqueue(chunk);
+      },
+    });
+    return new Response(stream, { status: 200, headers: { 'content-type': 'image/jpeg' } });
+  };
+  const r = await refineStreetLevel(input, { fetch: endless, env: {} });
+  assert.equal(r.matched, false);
+  assert.equal(r.timing.downloaded, 0);
+  const requests = r.timing.requests;
+  // Each thumbnail stops shortly past the limit (a chunk or two of read-ahead), not at the timeout.
+  assert.ok(pulled <= requests * (64 * 1024 + 4 * 16 * 1024), `read ${pulled} bytes over ${requests} requests`);
+});
+
+test('the English reason carries no German error fragments', async () => {
+  const model = new ColourEmbedder();
+  const input = { frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 1.5 }], model, options: BASE };
+  // Every listing request is answered with endless redirects: the error is the stage's own.
+  let n = 0;
+  const loops: FetchLike = async () => new Response(null, { status: 302, headers: { location: `https://api.panoramax.xyz/loop/${n++}` } });
+  const r = await refineStreetLevel(input, { fetch: loops, env: {} });
+  assert.equal(r.matched, false);
+  assert.match(r.reason, /Zu viele Weiterleitungen/);
+  assert.match(r.reasonEn, /too many redirects/);
+  assert.doesNotMatch(r.reasonEn, /Weiterleitungen|Zeitüberschreitung|Zeitbudget|Adresse|Name nicht/);
+  const p = r.providers.find((x) => x.name === 'panoramax');
+  assert.equal(p?.lastErrorEn, 'too many redirects');
+  // Evidence and trace take reasonEn as their English detail.
+  const e = streetLevelEvidence(r);
+  assert.equal(e[0]?.detailEn, r.reasonEn);
+});
+
 /** A request that only ends when it is aborted. */
 const hanging: FetchLike = (_url, init) =>
   new Promise<Response>((_resolve, reject) => {

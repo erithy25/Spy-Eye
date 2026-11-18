@@ -14,16 +14,19 @@
  *          localisation is the same and is not computed twice.
  *
  * The world model (GeoCLIP, geoclipService.ts) looks at the quick stage's frames in a thread of
- * its own while the image model embeds them; the full stage takes its prediction over. Without
- * its weights, or while its place gallery is still being computed once (40-50 s on a fresh
- * machine), a fix is located without it and its trace says so; a fix computed during that build
- * is computed again once the gallery is ready.
+ * its own while the image model embeds them; the full stage takes its prediction over. Its thread
+ * starts when the engine is initialised, not with the first upload. The quick stage waits for it
+ * at most QUICK_WORLD_WAIT_MS; a later answer goes into the full fix. Without its weights, or
+ * while its place gallery is still being computed once (40-50 s on a fresh machine), a fix is
+ * located without it and its trace says so; a fix computed during that build is computed again
+ * once the gallery is ready.
  *
  * The full stage then compares the frames with public street-level pictures around a recognised
  * place (streetlevel.ts, when the node's setting allows it and the node is not offline), while it
  * builds the spaces; a match pins the place to a street before the horizon and the time are
  * computed. The stage has a budget of 20 s, and the engine waits no longer than that (plus half a
  * second): a slow, failing or unreachable service costs the fix the refinement, never the fix.
+ * A background job stops waiting for the services as soon as a person's job is queued.
  *
  * Quick jobs go before full ones, and recordings a person has queued before background work
  * (the seeded reference set). A fix is written next to the recording (`<videoDir>/datum/fix.json`)
@@ -41,7 +44,7 @@ import { haversineKm } from '../core/geo.js';
 import type { Evidence, Fix, FixLocation, Keyframe, TimeEstimate, TraceStep } from './contract.js';
 import { truthForName } from './dataset.js';
 import { Gallery } from './gallery.js';
-import { acquireWorldModel, releaseWorldModel, worldModelPrecision, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
+import { acquireWorldModel, releaseWorldModel, worldModelFailure, worldModelPrecision, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
 import { reportWorldModel, streetLevelEnabled } from './settings.js';
 import {
   applyStreetLevel,
@@ -126,6 +129,8 @@ export interface DatumEngineOptions {
   worldModel?: WorldModel | null;
   /** The street-level comparison of the full stage; absent: the node's settings and the network. */
   streetLevel?: StreetLevelHooks;
+  /** Longest the quick stage waits for the world model (ms); default QUICK_WORLD_WAIT_MS (tests). */
+  quickWorldWaitMs?: number;
 }
 
 /** What tests replace of the street-level comparison (streetlevel.ts). */
@@ -151,6 +156,15 @@ const STREET_GRACE_MS = 500;
 
 /** How often a waiting background job looks again whether it may run. */
 const BACKGROUND_POLL_MS = 500;
+
+/**
+ * Longest the quick stage waits for the world model, counted from when its frames were handed to
+ * the model's thread. Twelve frames take about 5 s there (more on a loaded machine), and that
+ * runs while the image model embeds the crops; a thread that is starting, busy with another call
+ * or hung must not hold the quick fix of an upload, which should stand within about a minute.
+ * The call goes on: the full stage takes its answer (see QuickFrames.late).
+ */
+export const QUICK_WORLD_WAIT_MS = 20_000;
 
 function emptyTime(): TimeEstimate {
   return {
@@ -284,8 +298,10 @@ function timeNote(time: TimeEstimate): Named {
  * Frames sampled from the file with their light statistics and the world model's prediction for
  * them: what the quick stage hands on. The JPEG bytes are kept only while the world model still
  * has to look at them (its gallery was being built), otherwise dropped (about 0.5 MB a video).
+ * `late` is the world model's call the quick stage stopped waiting for: it goes on, and the full
+ * stage takes its answer instead of asking again.
  */
-type QuickFrames = SampledFrames & { stats: FrameStats[]; geoclip: WorldModelResult | null };
+type QuickFrames = SampledFrames & { stats: FrameStats[]; geoclip: WorldModelResult | null; late?: Promise<WorldModelResult> };
 
 /** What the trace says about the world model's answer. */
 function worldModelNote(result: WorldModelResult | null, located: LocateResult): Named {
@@ -339,6 +355,8 @@ export class DatumEngine {
   private worldListening = false;
   /** Set by compute() when the world model's gallery was still being built (read by runFull). */
   private readonly locatedDuringBuild = new Set<string>();
+  /** Told when a job for a person's recording is queued (see awaitStreet). */
+  private readonly personListeners = new Set<() => void>();
 
   constructor(private readonly opts: DatumEngineOptions) {
     // DATUM_WORLDMODEL=0 switches the world model off for the whole node (every fix says so).
@@ -434,6 +452,8 @@ export class DatumEngine {
    * recordings it has to analyse, so that their quick fixes are not computed twice.
    */
   async init(): Promise<void> {
+    // The world model loads in its own thread meanwhile (see warmWorld).
+    this.warmWorld();
     for (const info of this.opts.store.infos()) {
       // Already queued or computed in this run (its index was rebuilt before init): the stored
       // fix is older than that.
@@ -497,9 +517,17 @@ export class DatumEngine {
   }
 
   private push(videoId: string, kind: JobKind): void {
-    this.queue.push({ id: videoId, kind, background: this.opts.background?.(videoId) ?? false, seq: this.seq++ });
+    const background = this.opts.background?.(videoId) ?? false;
+    this.queue.push({ id: videoId, kind, background, seq: this.seq++ });
     this.wake?.();
+    // A background job waiting on the street-level services lets a person's job go first.
+    if (!background) for (const listener of [...this.personListeners]) listener();
     void this.drain();
+  }
+
+  /** Whether a job for a person's recording is waiting in the queue. */
+  private personWaiting(): boolean {
+    return this.queue.some((j) => !j.background);
   }
 
   /** Index of the job that runs next (see jobRank), or -1 when the queue is empty. */
@@ -561,8 +589,10 @@ export class DatumEngine {
   }
 
   /**
-   * Starts the world model's thread (and the reading of its gallery) at the beginning of the first
-   * localisation, so that it loads while the frames are sampled.
+   * Starts the world model's thread (and the reading of its gallery): at init, which the node
+   * calls once the image model is ready, so that the first upload's quick fix does not pay the
+   * thread start, the image tower's session and the gallery read; and at the beginning of every
+   * localisation for engines that were not initialised (idempotent).
    */
   private warmWorld(): void {
     if (this.warmed || !this.world) return;
@@ -793,10 +823,8 @@ export class DatumEngine {
   private askWorld(jpegs: readonly Buffer[]): Promise<WorldModelResult> | null {
     const world = this.world;
     if (!world || jpegs.length === 0) return null;
-    return world.predict(jpegs).catch((err: unknown): WorldModelResult => {
-      const message = err instanceof Error ? err.message : String(err);
-      return { state: 'failed', prediction: null, reason: { de: `Weltmodell fehlgeschlagen: ${message}`, en: `world model failed: ${message}` }, ms: 0 };
-    });
+    // A stand-in may throw; the real model never does. Either way the reason has its English twin.
+    return world.predict(jpegs).catch((err: unknown): WorldModelResult => ({ state: 'failed', prediction: null, reason: worldModelFailure(err), ms: 0 }));
   }
 
   /**
@@ -804,20 +832,61 @@ export class DatumEngine {
    * the full stage may still ask (gallery being built, or a failure that a new thread may not
    * repeat); otherwise they are dropped.
    */
-  private keepWorld(frames: QuickFrames, result: WorldModelResult | null): void {
+  private keepWorld(frames: QuickFrames, result: WorldModelResult | null, inFlight: Promise<WorldModelResult> | null = null): void {
     frames.geoclip = result;
+    if (result?.state === 'late' && inFlight) {
+      // The call goes on; the frames stay in case it fails and the full stage has to ask again.
+      frames.late = inFlight;
+      return;
+    }
     if (!result || result.state === 'ok' || result.state === 'unavailable') frames.jpegs = [];
   }
 
   /**
    * The world model's answer for the full stage: the quick stage's when it had one (the same
-   * frames are never looked at twice), else asked now from the kept frames.
+   * frames are never looked at twice), the call the quick stage stopped waiting for when it was
+   * late, else asked now from the kept frames.
    */
   private worldFor(kept: QuickFrames): { result: Promise<WorldModelResult | null>; reused: boolean } {
+    const late = kept.late;
+    if (late) {
+      const jpegs = kept.jpegs;
+      return { result: late.then((r) => (r.state === 'failed' && jpegs.length > 0 ? (this.askWorld(jpegs) ?? r) : r)), reused: false };
+    }
     if (kept.geoclip && (kept.geoclip.state === 'ok' || kept.geoclip.state === 'unavailable' || kept.jpegs.length === 0)) {
       return { result: Promise.resolve(kept.geoclip), reused: true };
     }
     return { result: this.askWorld(kept.jpegs) ?? Promise.resolve(null), reused: false };
+  }
+
+  /**
+   * The world model's answer as the quick stage waits for it: at most quickWorldWaitMs from now,
+   * then a 'late' result (the call itself goes on, see QuickFrames.late). Never rejects.
+   */
+  private quickDeadline(asked: Promise<WorldModelResult>): Promise<WorldModelResult> {
+    const waitMs = this.opts.quickWorldWaitMs ?? QUICK_WORLD_WAIT_MS;
+    const started = performance.now();
+    let timer: NodeJS.Timeout | null = null;
+    const late = new Promise<WorldModelResult>((resolve) => {
+      const t = setTimeout(() => {
+        const secs = Math.round(waitMs / 1000);
+        resolve({
+          state: 'late',
+          prediction: null,
+          reason: {
+            de: `keine Antwort des Weltmodells binnen ${secs} s; Schnellortung ohne Weltmodell, die vollständige Ortung übernimmt seine Antwort`,
+            en: `no answer from the world model within ${secs} s; quick fix without it, the full fix takes its answer`,
+          },
+          ms: performance.now() - started,
+        });
+      }, waitMs);
+      // A pending deadline must not keep the process alive on its own.
+      t.unref();
+      timer = t;
+    });
+    return Promise.race([asked, late]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
   }
 
   /**
@@ -877,6 +946,46 @@ export class DatumEngine {
     }
   }
 
+  /**
+   * Waits for the street-level stage. The engine runs one job at a time, and this wait is mostly
+   * idle network time of up to the stage's budget; a background job (the reference set) must not
+   * hold a person's job for it. With `stop` (background jobs only), the stage is stopped as soon
+   * as a person's job is waiting, or comes while it runs, and decides on the pictures it has
+   * compared so far; the result says so.
+   */
+  private async awaitStreet(job: Promise<StreetLevelResult>, stop: (() => void) | null): Promise<{ result: StreetLevelResult; yielded: boolean }> {
+    if (!stop) return { result: await job, yielded: false };
+    let settled = false;
+    const tracked = job.then((r) => {
+      settled = true;
+      return r;
+    });
+    // A stage that has finished already reports itself first; there is nothing left to stop.
+    await Promise.resolve();
+    let yielded = false;
+    const yieldNow = (): void => {
+      if (settled || yielded) return;
+      yielded = true;
+      stop();
+    };
+    this.personListeners.add(yieldNow);
+    if (this.personWaiting()) yieldNow();
+    try {
+      const result = await tracked;
+      if (!yielded) return { result, yielded };
+      return {
+        result: {
+          ...result,
+          reason: `${result.reason} Vorzeitig beendet: die Aufnahme einer Person wartete.`,
+          reasonEn: `${result.reasonEn} Ended early: a person's recording was waiting.`,
+        },
+        yielded,
+      };
+    } finally {
+      this.personListeners.delete(yieldNow);
+    }
+  }
+
   /** Keeps the quick stage's frames for the full stage, oldest dropped first. */
   private rememberSampled(id: string, frames: QuickFrames): void {
     this.sampled.delete(id);
@@ -904,8 +1013,9 @@ export class DatumEngine {
     const truthVideo = await truthForName(entry.info.name);
 
     // The world model starts on the frames as soon as they are read and works in its own thread
-    // while the image model embeds the crops and the gallery is searched.
-    const worldJob: { current: Promise<WorldModelResult> | null } = { current: null };
+    // while the image model embeds the crops and the gallery is searched. The quick stage waits
+    // for it only up to a deadline (quickDeadline); the call itself is kept for the full stage.
+    const worldJob: { current: Promise<WorldModelResult> | null; bounded: Promise<WorldModelResult> | null } = { current: null, bounded: null };
     const sampled = await sampleAndEmbedFrames(videoPath, model, {
       count: LOCATE_FRAMES,
       durationSec: meta?.durationSec ?? null,
@@ -913,7 +1023,9 @@ export class DatumEngine {
       detail: 'standard',
       frameStats: true,
       onFrames: (jpegs) => {
-        worldJob.current = this.askWorld(jpegs);
+        const asked = this.askWorld(jpegs);
+        worldJob.current = asked;
+        worldJob.bounded = asked ? this.quickDeadline(asked) : null;
       },
     });
     if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
@@ -925,7 +1037,7 @@ export class DatumEngine {
       en: `${sampled.frameNumbers.length} frames, ${crops} crops`,
     });
 
-    const world: Promise<WorldModelResult | null> = worldJob.current ?? Promise.resolve(null);
+    const world: Promise<WorldModelResult | null> = worldJob.bounded ?? Promise.resolve(null);
     const located = await locate({
       videoPath,
       frameVectors: sampled.vectors,
@@ -940,7 +1052,7 @@ export class DatumEngine {
       geoclip: world.then((r) => r?.prediction ?? null),
     });
     const worldResult = await world;
-    this.keepWorld(frames, worldResult);
+    this.keepWorld(frames, worldResult, worldJob.current);
     mark('Mit der Referenzgalerie verglichen', placeNote(galleryPlace(located), gallery.size));
     mark('Weltmodell befragt', worldModelNote(worldResult, located));
     await breathe();
@@ -1126,8 +1238,11 @@ export class DatumEngine {
           streetStop.signal,
         )
       : null;
+    // Background work (the reference set) stops waiting on the services for a person's job.
+    const background = this.active?.id === id && this.active.background;
+    const streetYield = background ? (): void => streetStop.abort() : null;
     try {
-      return await this.computeRest(entry, located, streetJob, { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim });
+      return await this.computeRest(entry, located, streetJob, { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield });
     } finally {
       // Deleted meanwhile or failed: the stage stops asking the services (a finished one ignores it).
       streetStop.abort();
@@ -1149,10 +1264,12 @@ export class DatumEngine {
       meta: VideoMetadata | null;
       hints: ReturnType<typeof filenameHints>;
       dim: number;
+      /** Stops the street-level stage for a person's job (background jobs only, see awaitStreet). */
+      streetYield: (() => void) | null;
     },
   ): Promise<Fix> {
     const id = entry.info.id;
-    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim } = ctx;
+    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield } = ctx;
 
     // Spaces from keyframes: depth → walkable grid, skyline.
     const keyframes: Keyframe[] = [];
@@ -1191,12 +1308,16 @@ export class DatumEngine {
     let evidence: Evidence[] = [...located.evidence];
     let location = located.location;
     if (streetJob && location) {
-      const street = await streetJob;
+      const { result: street, yielded } = await this.awaitStreet(streetJob, streetYield);
       if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
       location = applyStreetLevel(location, street);
       // A match decides the place and leads the evidence; without one, the entry says why.
       evidence = street.matched ? [...streetLevelEvidence(street), ...evidence] : [...evidence, ...streetLevelEvidence(street)];
-      mark('Mit Straßenbildern verglichen', streetLevelNote(street));
+      const note = streetLevelNote(street);
+      mark(
+        'Mit Straßenbildern verglichen',
+        yielded ? { de: `${note.de}, vorzeitig beendet für die Aufnahme einer Person`, en: `${note.en}, ended early for a person's recording` } : note,
+      );
     }
     let heading: Fix['heading'] = null;
     let horizon: Fix['horizon'] = null;

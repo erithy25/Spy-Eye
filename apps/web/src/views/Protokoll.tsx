@@ -91,19 +91,41 @@ export function Protokoll({ node }: ViewProps) {
     <div className="page">
       <header className="page-head">
         <div>
-          <h1 className="page-title">
-            <small>{t('Aufsicht')}</small>
-            {t('Protokoll')}
-          </h1>
-          <p className="lede">
-            {t(
+          <h1
+            className="page-title"
+            title={t(
               'Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Wer einen Eintrag ändert oder entfernt, bricht die Kette ab dieser Stelle; die Prüfung zeigt, wo. Nachbarknoten bezeugen den jeweils letzten Stand.',
             )}
-            {!full && ` ${t('Sie sehen Ihre eigenen Einträge; Leitung und Aufsicht sehen alle.')}`}
+          >
+            {t('Protokoll')}
+          </h1>
+          {/* Last state and check in one line under the title; the count heads the table. */}
+          <p className="page-sub">
+            <span className="hash" title={head?.head ?? entries[0]?.hash ?? ''}>
+              {shortHash(head?.head ?? entries[0]?.hash, 16)}
+            </span>
+            {' · '}
+            {verification ? (
+              <span className={verification.ok ? '' : 'note'}>
+                {verification.ok ? t('Kette unversehrt') : t('Kette gebrochen')}
+                {' · '}
+                {n(verification.entries, 'entry')} · {formatDecimal(verification.tookMs, 0)} ms
+                {verification.brokenAt !== null ? ` · ${t('ab Eintrag')} ${verification.brokenAt}: ${verification.reason ?? ''}` : ''}
+              </span>
+            ) : (
+              (verify.error ?? t('nicht geprüft'))
+            )}
           </p>
+          {!full && <p className="lede">{t('Sie sehen Ihre eigenen Einträge; Leitung und Aufsicht sehen alle.')}</p>}
         </div>
         <div className="btn-row">
-          <button type="button" className="btn btn-solid" disabled={verify.busy} onClick={() => void verify.run(async () => setVerification(await verifyLedger()))}>
+          <button
+            type="button"
+            className="btn"
+            disabled={verify.busy}
+            title={t('Die Prüfung rechnet alle Prüfsummen nach und wird selbst protokolliert.')}
+            onClick={() => void verify.run(async () => setVerification(await verifyLedger()))}
+          >
             {verify.busy ? t('prüfe …') : t('Kette prüfen')}
           </button>
           {full && (
@@ -118,35 +140,6 @@ export function Protokoll({ node }: ViewProps) {
           )}
         </div>
       </header>
-
-      <div className="kpis">
-        <div>
-          <div className="label">{t('Einträge')}</div>
-          <div className="figure">{head?.length ?? entries[0]?.seq ?? '–'}</div>
-        </div>
-        <div>
-          <div className="label">{t('Letzter Stand')}</div>
-          <div className="hash" style={{ fontSize: 13, overflowWrap: 'anywhere' }}>
-            {head?.head ?? entries[0]?.hash ?? '–'}
-          </div>
-        </div>
-        <div>
-          <div className="label">{t('Prüfung')}</div>
-          {verification ? (
-            <>
-              <div className="figure" style={{ fontSize: 22 }}>
-                {verification.ok ? t('Kette unversehrt') : t('Kette gebrochen')}
-              </div>
-              <p>
-                {n(verification.entries, 'entry')} · {formatDecimal(verification.tookMs, 0)} ms
-                {verification.brokenAt !== null ? ` · ${t('ab Eintrag')} ${verification.brokenAt}: ${verification.reason ?? ''}` : ''}
-              </p>
-            </>
-          ) : (
-            <p style={{ marginTop: 0 }}>{verify.error ?? t('Noch nicht geprüft. Die Prüfung rechnet alle Prüfsummen nach und wird selbst protokolliert.')}</p>
-          )}
-        </div>
-      </div>
 
       {sample && (
         <section className="section-gap">
@@ -176,7 +169,9 @@ export function Protokoll({ node }: ViewProps) {
 
       <section className="section-gap">
         <header className="panel-head">
-          <h2 className="label">{t('Einträge')}</h2>
+          <h2 className="label">
+            {t('Einträge')} <span className="count">{head?.length ?? entries[0]?.seq ?? '–'}</span>
+          </h2>
           <span className="segments">
             {FILTERS.map((f) => (
               <button key={f.action} type="button" className={filter === f.action ? 'segment segment-on' : 'segment'} onClick={() => setFilter(f.action)}>

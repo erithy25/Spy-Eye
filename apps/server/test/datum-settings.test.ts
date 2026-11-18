@@ -31,18 +31,19 @@ function envOf(values: Record<string, string>): EnvReader {
 
 // ------------------------------------------------------------------ the store
 
-test('street-level comparison is on by default, persists per node and is forced off by DATUM_STREETLEVEL=0', async () => {
+test('street-level comparison is on by default, persists per node and is forced off by DATUM_STREETLEVEL=0 and offline mode', async () => {
   const dir = await tempDir();
   const env: Record<string, string> = {};
-  const a = new DatumSettingsStore(dir, { env: envOf(env), geoclipDir: dir });
+  let offline = false;
+  const a = new DatumSettingsStore(dir, { env: envOf(env), geoclipDir: dir, offline: () => offline });
   assert.equal(a.streetLevelEnabled(), true);
-  assert.deepEqual(a.view().streetLevel, { enabled: true, forcedOff: false, providers: ['panoramax'], mapillaryKey: false, mapillaryKeySource: 'none' });
+  assert.deepEqual(a.view().streetLevel, { enabled: true, forcedOff: false, offline: false, providers: ['panoramax'], mapillaryKey: false, mapillaryKeySource: 'none' });
   await a.setStreetLevel(false);
   assert.equal(a.streetLevelEnabled(), false);
   const stored = JSON.parse(await fs.readFile(path.join(dir, 'datum', 'settings.json'), 'utf8')) as unknown;
   assert.deepEqual(stored, { version: 1, streetLevel: { enabled: false } });
   // Another store on the same directory (a restart) reads it back.
-  const b = new DatumSettingsStore(dir, { env: envOf(env), geoclipDir: dir });
+  const b = new DatumSettingsStore(dir, { env: envOf(env), geoclipDir: dir, offline: () => offline });
   assert.equal(b.streetLevelEnabled(), false);
   await b.setStreetLevel(true);
   // The environment wins, and says so; the stored choice stays visible.
@@ -52,8 +53,15 @@ test('street-level comparison is on by default, persists per node and is forced 
   assert.equal(b.view().streetLevel.enabled, true);
   env['DATUM_STREETLEVEL'] = '1';
   assert.equal(b.streetLevelEnabled(), true);
+  // Offline mode (SICHT_OFFLINE) forbids any network access: forced off as well, and said so.
+  offline = true;
+  assert.equal(b.streetLevelEnabled(), false);
+  assert.equal(b.view().streetLevel.forcedOff, true);
+  assert.equal(b.view().streetLevel.offline, true);
+  offline = false;
+  assert.equal(b.streetLevelEnabled(), true);
   // Two nodes in one process have separate settings.
-  const other = new DatumSettingsStore(await tempDir(), { env: envOf({}) });
+  const other = new DatumSettingsStore(await tempDir(), { env: envOf({}), offline: () => false });
   assert.equal(other.streetLevelEnabled(), true);
 });
 
@@ -61,7 +69,7 @@ test('a damaged settings file keeps the default instead of switching anything of
   const dir = await tempDir();
   await fs.mkdir(path.join(dir, 'datum'), { recursive: true });
   await fs.writeFile(path.join(dir, 'datum', 'settings.json'), '{ not json');
-  const s = new DatumSettingsStore(dir, { env: envOf({}) });
+  const s = new DatumSettingsStore(dir, { env: envOf({}), offline: () => false });
   assert.equal(s.streetLevelEnabled(), true);
 });
 
@@ -167,6 +175,8 @@ interface Harness {
   fixes: Fix[];
   env: Record<string, string>;
   fetched: string[];
+  /** Offline mode of the node (SICHT_OFFLINE), switchable during a test. */
+  state: { offline: boolean };
 }
 
 async function harness(thumbs: (url: string) => Response = () => new Response(new Uint8Array(JPEG), { status: 200, headers: { 'content-type': 'image/jpeg' } })): Promise<Harness> {
@@ -176,6 +186,7 @@ async function harness(thumbs: (url: string) => Response = () => new Response(ne
   const fixes: Fix[] = [];
   const env: Record<string, string> = {};
   const fetched: string[] = [];
+  const state = { offline: false };
   const fetchImpl: StreetFetch = async (url) => {
     fetched.push(url);
     return thumbs(url);
@@ -205,11 +216,11 @@ async function harness(thumbs: (url: string) => Response = () => new Response(ne
   const sendError = (reply: FastifyReply, status: number, message: string): FastifyReply => reply.code(status).send({ error: message });
   const app = Fastify();
   registerDatumRoutes(app, node, need, sendError, {
-    settings: new DatumSettingsStore(dir, { env: () => env, geoclipDir: dir }),
+    settings: new DatumSettingsStore(dir, { env: () => env, geoclipDir: dir, offline: () => state.offline }),
     streetImages: new StreetImageCache({ fetch: fetchImpl }),
   });
   await app.ready();
-  return { app, ledger, dir, fixes, env, fetched };
+  return { app, ledger, dir, fixes, env, fetched, state };
 }
 
 const as = (role: Role, lang: 'de' | 'en' = 'de'): Record<string, string> => ({ 'x-test-role': role, 'x-test-lang': lang });
@@ -378,5 +389,38 @@ test('the street-picture proxy fetches only URLs stored in the fix, under the gu
   // Same rights as reading a fix.
   assert.equal((await get('/api/datum/fixes/aaaaaaaaaaaaaaaa/street/0', 'auditor')).statusCode, 403);
   assert.equal((await h.app.inject({ method: 'GET', url: '/api/datum/fixes/aaaaaaaaaaaaaaaa/street/0' })).statusCode, 401);
+  await h.app.close();
+});
+
+test('the street-picture proxy fetches nothing while street-level is off: offline, DATUM_STREETLEVEL=0, switched off', async () => {
+  const h = await harness();
+  h.fixes.push(fixOf('aaaaaaaaaaaaaaaa', ['https://t.example.org/a.jpg', 'https://t.example.org/b.jpg', 'https://t.example.org/c.jpg', 'https://t.example.org/d.jpg']));
+  const get = (n: number, lang: 'de' | 'en' = 'de') => h.app.inject({ method: 'GET', url: `/api/datum/fixes/aaaaaaaaaaaaaaaa/street/${n}`, headers: as('operator', lang) });
+  const refused = async (n: number, what: string): Promise<void> => {
+    const de = await get(n);
+    assert.equal(de.statusCode, 404, what);
+    assert.match((de.json() as { error: string }).error, /abgeschaltet/, what);
+    const en = await get(n, 'en');
+    assert.equal(en.statusCode, 404, what);
+    assert.match((en.json() as { error: string }).error, /switched off/, what);
+  };
+  // Offline mode: refused, and the settings say why.
+  h.state.offline = true;
+  await refused(0, 'offline');
+  const view = (await h.app.inject({ method: 'GET', url: '/api/datum/settings', headers: as('operator') })).json() as { streetLevel: { enabled: boolean; forcedOff: boolean; offline: boolean } };
+  assert.deepEqual([view.streetLevel.forcedOff, view.streetLevel.offline], [true, true]);
+  h.state.offline = false;
+  // DATUM_STREETLEVEL=0.
+  h.env['DATUM_STREETLEVEL'] = '0';
+  await refused(1, 'DATUM_STREETLEVEL=0');
+  delete h.env['DATUM_STREETLEVEL'];
+  // Switched off by the supervisor.
+  assert.equal((await h.app.inject({ method: 'PUT', url: '/api/datum/settings/streetlevel', headers: as('supervisor'), payload: { enabled: false } })).statusCode, 200);
+  await refused(2, 'switched off');
+  assert.deepEqual(h.fetched, [], 'no remote host was contacted');
+  // Switched on again: the picture is fetched.
+  assert.equal((await h.app.inject({ method: 'PUT', url: '/api/datum/settings/streetlevel', headers: as('supervisor'), payload: { enabled: true } })).statusCode, 200);
+  assert.equal((await get(3)).statusCode, 200);
+  assert.deepEqual(h.fetched, ['https://t.example.org/d.jpg']);
   await h.app.close();
 });

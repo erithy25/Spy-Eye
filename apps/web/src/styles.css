@@ -452,6 +452,16 @@ li.incident:focus-visible,
   white-space: nowrap;
 }
 
+.row-sub {
+  margin-top: 2px;
+  color: var(--low);
+  font-size: 11px;
+}
+
+.row-sub:empty {
+  display: none;
+}
+
 .row-x {
   color: var(--low);
   opacity: 0;
@@ -1260,6 +1270,15 @@ a {
   border-bottom-color: var(--fg);
 }
 
+/* Between DATUM's own views and the platform's. */
+.tab-sep {
+  align-self: center;
+  width: 1px;
+  height: 14px;
+  margin: 0 12px;
+  background: var(--line-2);
+}
+
 .tab-n {
   margin-left: 7px;
   padding: 0 4px;
@@ -1416,6 +1435,29 @@ a {
   line-height: 1.15;
 }
 
+/* One dim line under a page title: state, counts, the last check. */
+.page-sub {
+  margin-top: 8px;
+  color: var(--low);
+  font-size: 11px;
+}
+
+.page-sub .hash {
+  color: var(--mid);
+}
+
+.page-sub .note {
+  color: var(--fg);
+}
+
+/* Units, versions and the like keep their case inside uppercase captions: "km", "s", "v0.5.0". */
+.unit,
+.label .low,
+.label .count,
+.label .count-of {
+  text-transform: none;
+}
+
 .page-title small {
   display: block;
   font-size: 11px;
@@ -1557,9 +1599,12 @@ a {
   resize: vertical;
 }
 
+/* A choice says it is one: a small chevron at the right. */
 .field select {
   appearance: none;
   cursor: pointer;
+  padding-right: 20px;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5' viewBox='0 0 9 5'%3E%3Cpath d='M.5.5l4 4 4-4' fill='none' stroke='%23a8a8a8'/%3E%3C/svg%3E") no-repeat right 2px center;
 }
 
 .field select option {

@@ -32,6 +32,21 @@ import { config, repoRoot } from '../config.js';
 import type { CountryProb, GeoPoint } from './contract.js';
 import { greatCircleKm, type World } from './world.js';
 
+/**
+ * An error whose message (German, as the node's log) has an English twin. The world model's
+ * failures end up in a fix's trace, which the console shows in either language; this carries the
+ * English text along, also across the thread boundary (geoclipService.ts serializeError).
+ */
+export class NamedError extends Error {
+  constructor(
+    de: string,
+    readonly en: string,
+  ) {
+    super(de);
+    this.name = 'NamedError';
+  }
+}
+
 let ortModule: Promise<typeof Ort> | null = null;
 
 /** onnxruntime, loaded on first use (only the thread that runs the model ever needs it). */
@@ -189,7 +204,7 @@ export async function preprocessImage(
     .raw()
     .toBuffer();
   const plane = size * size;
-  if (raw.length !== plane * 3) throw new Error(`GeoCLIP: Bild hat ${raw.length} Bytes statt ${plane * 3}.`);
+  if (raw.length !== plane * 3) throw new NamedError(`GeoCLIP: Bild hat ${raw.length} Bytes statt ${plane * 3}.`, `GeoCLIP: picture has ${raw.length} bytes instead of ${plane * 3}.`);
   for (let c = 0; c < 3; c++) {
     const k = 1 / (255 * (GEOCLIP_STD[c] as number));
     const b = (GEOCLIP_MEAN[c] as number) / (GEOCLIP_STD[c] as number);
@@ -273,7 +288,7 @@ const CACHE_MAGIC = 'GCL1';
 
 /** Writes embeddings (rows x dim) as float16 with a small header: "GCL1", uint32 rows, uint32 dim. */
 export async function writeEmbeddingCache(file: string, embeds: Float32Array, rows: number, dim: number): Promise<void> {
-  if (embeds.length !== rows * dim) throw new Error(`GeoCLIP-Cache: ${embeds.length} Werte statt ${rows * dim}.`);
+  if (embeds.length !== rows * dim) throw new NamedError(`GeoCLIP-Cache: ${embeds.length} Werte statt ${rows * dim}.`, `GeoCLIP cache: ${embeds.length} values instead of ${rows * dim}.`);
   const half = float32ToFloat16(embeds);
   const header = Buffer.alloc(12);
   header.write(CACHE_MAGIC, 0, 'ascii');
@@ -832,7 +847,7 @@ export class GeoClip {
       const input = new ort.Tensor('float32', pixels.subarray(i * plane, (i + n) * plane), [n, 3, GEOCLIP_IMAGE_SIZE, GEOCLIP_IMAGE_SIZE]);
       const result = await this.serial(() => session.run({ pixel_values: input }));
       const embeds = result['image_embeds'];
-      if (!embeds || embeds.dims[1] !== GEOCLIP_DIM) throw new Error('GeoCLIP: unerwartete Ausgabe des Bildmodells.');
+      if (!embeds || embeds.dims[1] !== GEOCLIP_DIM) throw new NamedError('GeoCLIP: unerwartete Ausgabe des Bildmodells.', 'GeoCLIP: unexpected output of the image model.');
       out.set(embeds.data as Float32Array, i * GEOCLIP_DIM);
     }
     return normaliseRows(out, GEOCLIP_DIM);
@@ -857,7 +872,7 @@ export class GeoClip {
       const input = new ort.Tensor('float32', coords.slice(2 * i, 2 * (i + m)), [m, 2]);
       const result = await this.serial(() => session.run({ location: input }));
       const embeds = result['location_embeds'];
-      if (!embeds || embeds.dims[1] !== GEOCLIP_DIM) throw new Error('GeoCLIP: unerwartete Ausgabe des Ortsmodells.');
+      if (!embeds || embeds.dims[1] !== GEOCLIP_DIM) throw new NamedError('GeoCLIP: unerwartete Ausgabe des Ortsmodells.', 'GeoCLIP: unexpected output of the location model.');
       out.set(embeds.data as Float32Array, i * GEOCLIP_DIM);
     }
     return normaliseRows(out, GEOCLIP_DIM);

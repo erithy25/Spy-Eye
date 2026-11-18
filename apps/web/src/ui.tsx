@@ -170,9 +170,11 @@ interface DialogProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** What takes the focus when the dialog opens (a selector); by default the first control. */
+  initialFocus?: string;
 }
 
-export function Dialog({ title, onClose, children }: DialogProps) {
+export function Dialog({ title, onClose, children, initialFocus = 'input, textarea, select, button' }: DialogProps) {
   const ref = useRef<HTMLDivElement>(null);
   // The parent re-renders with every event from the node; the handler must not re-run the effect,
   // or the focus would jump back to the first field while someone is typing.
@@ -183,8 +185,10 @@ export function Dialog({ title, onClose, children }: DialogProps) {
       if (event.key === 'Escape') close.current();
     };
     window.addEventListener('keydown', onKey);
-    ref.current?.querySelector<HTMLElement>('input, textarea, select, button')?.focus();
+    ref.current?.querySelector<HTMLElement>(initialFocus)?.focus();
     return () => window.removeEventListener('keydown', onKey);
+    // The selector is read once, when the dialog opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div className="overlay overlay-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

@@ -88,6 +88,19 @@ class UploadQueue {
     this.emit(true);
   }
 
+  /**
+   * Forgets the uploads into one source that the node took, once none into it is waiting or
+   * sending: their recordings are listed as such, and the next batch counts from zero. Refused
+   * uploads stay until dismissed.
+   */
+  forgetDone(sourceId: string): void {
+    const mine = this.items.filter((u) => u.sourceId === sourceId);
+    if (mine.length === 0 || mine.some((u) => u.status === 'waiting' || u.status === 'uploading')) return;
+    if (!mine.some((u) => u.status === 'done')) return;
+    this.items = this.items.filter((u) => u.sourceId !== sourceId || u.status !== 'done');
+    this.emit(true);
+  }
+
   private patch(key: string, patch: Partial<UploadItem>, now: boolean): void {
     this.items = this.items.map((u) => (u.key === key ? { ...u, ...patch } : u));
     this.emit(now);
@@ -173,6 +186,30 @@ export async function filesFromDrop(event: DragEvent): Promise<File[]> {
   if (entries.length === 0) return Array.from(event.dataTransfer.files);
   const nested = await Promise.all(entries.map(filesFromEntry));
   return nested.flat();
+}
+
+/**
+ * The name of the one folder a drop carries, or null (several entries, or files only). Must be
+ * called inside the drop handler, before anything is awaited: the browser empties the drop's
+ * items once the handler returns.
+ */
+export function droppedFolderName(event: DragEvent): string | null {
+  const entries = Array.from(event.dataTransfer.items)
+    .map((item) => (typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null))
+    .filter((entry): entry is FileSystemEntry => entry !== null);
+  return entries.length === 1 && entries[0]!.isDirectory ? entries[0]!.name : null;
+}
+
+/** The top folder all chosen files share (a folder picked with the folder picker), or null. */
+export function pickedFolderName(files: File[]): string | null {
+  let top: string | null = null;
+  for (const f of files) {
+    const first = (f.webkitRelativePath ?? '').split('/')[0] ?? '';
+    if (first === '' || !f.webkitRelativePath.includes('/')) return null;
+    if (top === null) top = first;
+    else if (top !== first) return null;
+  }
+  return top;
 }
 
 /** Whether a drag carries files (and not, say, selected text or a link). */

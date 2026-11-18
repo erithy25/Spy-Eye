@@ -6,17 +6,36 @@ DATUM bestimmt aus einem Video, wo und wann es aufgenommen wurde: Ort mit Unsich
 Uhrzeit als Zeitfenster in Ortszeit, Sonnenstand und Schattenrichtung, Blickrichtung, wo der
 Geländehorizont sie verrät. Aus einem einzelnen Bild baut es einen begehbaren 3D-Raum, und es
 zeigt das Gelände um den Fundort mit der Sonne zur geschätzten Zeit, in 3D und als Höhenlinien
-auf der Karte. Alles läuft auf einem
-Rechner ohne Grafikkarte; zur Laufzeit wird kein Dienst im Netz gefragt. Beschreibung, Verfahren,
-Messung und Grenzen: [`docs/DATUM.md`](docs/DATUM.md).
+auf der Karte. Alles läuft auf einem Rechner ohne Grafikkarte. Beschreibung, Verfahren, Messung
+und Grenzen: [`docs/DATUM.md`](docs/DATUM.md).
+
+- **Überall auf der Erde eine Region.** Ein Weltmodell (GeoCLIP, MIT-Lizenz) schätzt eine
+  Region auch dort, wo kein bekanntes Bauwerk zu sehen ist. Gemessen an Orten ohne Referenzbild
+  (Prüfhälfte, 30 Videos): 93 % auf 2 500 km genau, 33 % auf 25 km, Land richtig in 60 %. Die
+  Referenzvideos zeigen bekannte Bauwerke, die vermutlich in den Trainingsdaten des Modells
+  liegen; anonymes Material wird schlechter abschneiden.
+- **Straßengenau, wo es freie Straßenbilder gibt.** Nach einer klaren Wiedererkennung vergleicht
+  die vollständige Ortung das Video mit Straßenbildern von Panoramax (vor allem Europa) und, mit
+  einem kostenlosen Schlüssel, Mapillary (weltweit). Das ist die einzige Verbindung ins Netz zur
+  Laufzeit; die Dienste erfahren, welche Gegend untersucht wird, vom Video verlässt nichts den
+  Knoten. Abschalten in der Konsole (Einstellungen der Ortung) oder mit `DATUM_STREETLEVEL=0`.
+- **Google nur als Verweis.** „In Street View prüfen“ und „In Google Maps öffnen“ öffnen Google
+  erst, wenn eine Person klickt. Automatisch wird nichts mit Bildern von Google abgeglichen; die
+  Nutzungsbedingungen der Google Maps Platform verbieten das.
+- **Schnell.** Eine erste Ortung steht kurz nach dem Hochladen, die vollständige nach der
+  Auswertung; gemessen an einem 20 Minuten langen Video 7,0 bis 11,7 s und 280,5 bis 287,3 s, auf
+  einem belasteten Rechner mit vier Kernen (Obergrenzen).
+- **Deutsch und Englisch.** Jeder Text des Knotens kommt in beiden Sprachen; die Konsole schaltet
+  um.
 
 Stand: Erprobung mit einem Referenzbestand von 60 Videos mit bekanntem Aufnahmeort aus Wikimedia
 Commons. Keine Kunden, keine Zulassung, der Name ist markenrechtlich nicht geprüft.
 
 ### DATUM starten
 
-Windows, im Ordner des Repositorys. Der erste Lauf lädt Modelle, Vorschaubilder und Höhendaten
-(Referenzclips und Galerie-Vektoren liegen bei) und startet dann sofort; die 60 Videos werden im
+Windows, im Ordner des Repositorys. Der erste Lauf lädt Modelle (darunter das Weltmodell
+GeoCLIP), Vorschaubilder und Höhendaten (Referenzclips und Galerie-Vektoren liegen bei) und
+startet dann sofort; die 60 Videos werden im
 Hintergrund ausgewertet und geortet, die Karte füllt sich in 15 bis 30 Minuten. Für eine
 Vorführung vorher `.\datum.cmd -NurPruefen` (wertet alles aus und prüft, ohne zu starten):
 
@@ -55,13 +74,27 @@ Eigene Videos im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung 
 
 | Befehl | Tut |
 | --- | --- |
-| `pnpm datum:fetch` | lädt Vorschaubilder der Referenzgalerie und Höhendaten (setzt nach Abbruch fort); die 60 Referenzclips (mit Lizenzen in `datasets/datum/clips/LIZENZEN.md`) und die Galerie-Vektoren liegen dem Repository bei |
+| `pnpm datum:fetch` | lädt Vorschaubilder der Referenzgalerie, Höhendaten und das Weltmodell GeoCLIP (feste Fassung, SHA-256 geprüft) und berechnet dessen Ortsgalerie einmal (setzt nach Abbruch fort); die 60 Referenzclips (mit Lizenzen in `datasets/datum/clips/LIZENZEN.md`) und die Galerie-Vektoren liegen dem Repository bei |
+| `pnpm models:download` | lädt die Modelle einschließlich des Weltmodells vorab; scheitert das Weltmodell, ortet der Knoten ohne es |
 | `pnpm datum:prepare` | wertet den Referenzbestand aus, rechnet die Galerie ein, ortet jede Aufnahme |
-| `pnpm datum:check` | prüft, ob alles da ist; jede Zeile endet mit OK oder FEHLT |
-| `pnpm datum` | startet den Knoten auf Anschluss 8787 |
-| `pnpm datum:evaluate` | misst die Ortung gegen die Grundwahrheit (`docs/measurements/datum-geolocation.json`) |
+| `pnpm datum:check` | prüft, ob alles da ist, auch Weltmodell und dessen Ortsgalerie; jede Zeile endet mit OK oder FEHLT |
+| `pnpm datum` | startet den Knoten auf Anschluss 8787; Ortungen einer älteren Fassung des Verfahrens rechnet er im Hintergrund neu, die alten bleiben bis dahin sichtbar |
+| `pnpm datum:evaluate --params default` | misst die Ortung gegen die Grundwahrheit mit den Parametern, mit denen der Knoten läuft (`docs/measurements/datum-geolocation.json`); ohne `--params default` stimmt es die Galerie neu ab |
+| `pnpm --filter @sicht/server datum:streetlevel --worldmodel` | misst den Abgleich mit Straßenbildern (`--mode open`: Referenzbilder der Orte in der Galerie) |
 | `pnpm --filter @sicht/server datum:ship-gallery` | schreibt nach einer Änderung der Galerie die mitgelieferten Galerie-Vektoren (`datasets/datum/gallery-vectors-*`), damit ein frischer Rechner nichts einrechnen muss |
 | `DATUM_HOLDOUT=1` | Referenzbild desselben Bauwerks aus der Galerie nehmen, wie bei einem unbekannten Ort (voreingestellt: die Galerie enthält Referenzbilder der Orte, wie bei einem Einsatz mit vorbereitetem Gebiet) |
+| `DATUM_WORLDMODEL=0` | ortet ohne Weltmodell |
+| `DATUM_GEOCLIP_THREADS` | Threads des Weltmodells (voreingestellt: die Hälfte der Kerne) |
+| `DATUM_STREETLEVEL=0` | schaltet den Abgleich mit Straßenbildern ab, gleich was in der Konsole eingestellt ist; `SICHT_OFFLINE=1` tut das ebenfalls |
+| `MAPILLARY_TOKEN` | Mapillary-Schlüssel aus der Umgebung statt aus der Konsole; nie in eine Datei im Repository schreiben |
+
+**Mapillary-Schlüssel.** Ohne Schlüssel fragt der Knoten nur Panoramax. Einen kostenlosen
+Client-Token gibt es auf mapillary.com: Dashboard → Developers → eine Anwendung registrieren →
+„Client Token“ kopieren (beginnt mit `MLY|`). Eintragen in der Konsole als `leitung` unter
+ORTUNG → „Einstellungen“ → „Mapillary-Schlüssel“, oder den Knoten mit `MAPILLARY_TOKEN` starten.
+Der Schlüssel erscheint in keiner Antwort, keinem Protokoll und keinem Log und gehört nicht ins
+Repository (`.gitignore` schließt die Schlüsseldatei aus). Einzelheiten, auch wer was erfährt:
+[`docs/DATUM.md`](docs/DATUM.md#abgleich-mit-straßenbildern).
 
 ---
 
@@ -299,6 +332,8 @@ fremdem Einsatzmaterial.
 | Höhenlinien | abgeleitet aus Mapzen Terrain Tiles | siehe deren Quellenliste |
 | Schrift JetBrains Mono | JetBrains | SIL OFL 1.1 |
 | Übungsaufnahmen | Mixkit | Mixkit Stock Video Free License; werden geladen, nicht mitgeliefert |
+| Weltmodell GeoCLIP (DATUM) | Vivanco Cepeda, Nayak, Shah; ONNX-Fassung `Xenova/geoclip-large-patch14`, int8; wird geladen, nicht mitgeliefert | MIT |
+| Straßenbilder (DATUM, zur Laufzeit) | Panoramax, Mapillary; nur im Arbeitsspeicher, nie auf der Platte | je Bild, meist CC BY-SA 4.0; Namensnennung unter jedem Bild in der Konsole |
 
 Alle 143 Pakete mit Fassung, Prüfsumme und Lizenz stehen in [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md).
 

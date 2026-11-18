@@ -27,6 +27,12 @@ import './panel.css';
 export interface ClockDialProps {
   time: TimeEstimate;
   sun: SunReport | null;
+  /**
+   * Under a header that already states the time and its confidence (BEFUND): the dial, the date
+   * and the windows only, without the big readout, the confidence and the notes (the notes are the
+   * sun evidence in other words).
+   */
+  compact?: boolean;
 }
 
 // Geometry of the dial (SVG user units).
@@ -99,7 +105,7 @@ function lightRuns(sun: SunReport, zone: string | null): LightRun[] {
   return runs.filter((run) => run.light !== 2 && run.to !== run.from);
 }
 
-export function ClockDial({ time, sun }: ClockDialProps) {
+export function ClockDial({ time, sun, compact = false }: ClockDialProps) {
   const { t, locale, pickList } = useLang();
   const id = useSvgId('dp-clock');
   const zone = time.timezone;
@@ -275,35 +281,49 @@ export function ClockDial({ time, sun }: ClockDialProps) {
       </svg>
 
       <div className="dp-clock-read">
-        <div className="dp-big-row">
-          <span className={time.method === 'none' ? 'dp-big dp-big-off' : 'dp-big'}>{readout}</span>
-          {exact && <span className="dp-tag dp-tag-on">{t('exakt')}</span>}
-          {plusMinus && <span className="dp-pm">{plusMinus}</span>}
-        </div>
-        <div className="dp-line">
-          <span>{zone ?? t('Zeitzone unbekannt')}</span>
-          <span className="dp-sep">,</span>
-          <span>{offset}</span>
-          {!zone && <span className="dp-low"> · {t('Ort unbekannt')}</span>}
-        </div>
+        {!compact && (
+          <div className="dp-big-row">
+            <span className={time.method === 'none' ? 'dp-big dp-big-off' : 'dp-big'}>{readout}</span>
+            {exact && <span className="dp-tag dp-tag-on">{t('exakt')}</span>}
+            {plusMinus && <span className="dp-pm">{plusMinus}</span>}
+          </div>
+        )}
+        {!compact && (
+          <div className="dp-line">
+            <span>{zone ?? t('Zeitzone unbekannt')}</span>
+            <span className="dp-sep">,</span>
+            <span>{offset}</span>
+            {!zone && <span className="dp-low"> · {t('Ort unbekannt')}</span>}
+          </div>
+        )}
         <div className="dp-line">
           <span>{dateText}</span>
           {dateNote && <span className="dp-low"> · {dateNote}</span>}
-        </div>
-        <div className="dp-line dp-low">
-          {t('Licht')}: {phaseText[time.phase]}
-          {time.sunElevationBand && (
-            <>
+          {compact && (
+            <span className="dp-low">
               {' · '}
-              {t('Sonnenhöhe')} {fmtElev(time.sunElevationBand[0])}–{fmtElev(time.sunElevationBand[1])}
-            </>
+              {zone ?? 'UTC'} {offset}
+            </span>
           )}
         </div>
-        <div className="dp-conf">
-          <span className="dp-key">{t('Konfidenz')}</span>
-          <Meter value={time.confidence} label={t('Konfidenz')} ticks />
-          <span className="dp-val">{fmtScore(time.confidence)}</span>
-        </div>
+        {!compact && (
+          <div className="dp-line dp-low">
+            {t('Licht')}: {phaseText[time.phase]}
+            {time.sunElevationBand && (
+              <>
+                {' · '}
+                {t('Sonnenhöhe')} {fmtElev(time.sunElevationBand[0])}–{fmtElev(time.sunElevationBand[1])}
+              </>
+            )}
+          </div>
+        )}
+        {!compact && (
+          <div className="dp-conf">
+            <span className="dp-key">{t('Konfidenz')}</span>
+            <Meter value={time.confidence} label={t('Konfidenz')} ticks />
+            <span className="dp-val">{fmtScore(time.confidence)}</span>
+          </div>
+        )}
         {time.windows.length > 0 && !exact && (
           <ol className="dp-windows" aria-label={t('Zeitfenster')}>
             {time.windows.map((w, i) => (
@@ -319,7 +339,7 @@ export function ClockDial({ time, sun }: ClockDialProps) {
             ))}
           </ol>
         )}
-        {time.notes.length > 0 && (
+        {!compact && time.notes.length > 0 && (
           <ul className="dp-notes">
             {pickList(time.notes, time.notesEn).map((note, i) => (
               <li key={i}>{note}</li>

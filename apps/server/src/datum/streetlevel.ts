@@ -47,7 +47,7 @@ import { tileLayout, writeTile, type DecodedFrame, type PixelRect } from '../ml/
 import type { Evidence, EvidenceKind, FixLocation, GeoPoint } from './contract.js';
 import { modelSlug, type ImageEmbedder } from './gallery.js';
 import { datumSettings, envMapillaryToken } from './settings.js';
-import { checkHost, defaultLookup, isSafeRemoteUrl, type HostLookup } from './streetImage.js';
+import { BodyTooLarge, checkHost, defaultLookup, isSafeRemoteUrl, readLimited, sniffImageType, untilAborted, type HostLookup } from './streetImage.js';
 
 export { isSafeRemoteUrl, streetImagePath, withStreetImagePaths } from './streetImage.js';
 
@@ -151,8 +151,9 @@ export interface StreetLevelProviderReport {
   requests: number;
   errors: number;
   listed: number;
-  /** Last error, without any credential. */
+  /** Last error, without any credential (German, as the reasons), and its English twin. */
   lastError: string | null;
+  lastErrorEn: string | null;
 }
 
 export type StreetLevelReasonCode = 'matched' | 'no-candidates' | 'no-providers' | 'no-coverage' | 'too-few' | 'no-match' | 'error';
@@ -763,6 +764,19 @@ class HttpError extends Error {
   }
 }
 
+/**
+ * A failure of the stage with an English twin: the message (German) goes into `reason`, `en` into
+ * `reasonEn`, so that the English console never shows a German fragment.
+ */
+class StageError extends Error {
+  constructor(
+    de: string,
+    readonly en: string,
+  ) {
+    super(de);
+  }
+}
+
 /** At most `n` tasks at a time, first come first served. */
 class Limiter {
   private active = 0;
@@ -804,34 +818,10 @@ interface CallContext {
 /** Most redirects followed for one request; each target is checked like the first URL. */
 const MAX_REDIRECTS = 2;
 
-class RefusedUrlError extends Error {
+class RefusedUrlError extends StageError {
   constructor() {
-    super('Adresse nicht erlaubt');
+    super('Adresse nicht erlaubt', 'address not allowed');
   }
-}
-
-/**
- * Settles with `promise`, or rejects with the signal's reason (a timeout, or the end of the
- * budget) as soon as `signal` aborts. The system resolver takes no signal and can hang for many
- * seconds on a broken network; a request must not wait for it beyond its timeout and budget.
- */
-function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  const reason = (): Error => (signal.reason instanceof Error ? signal.reason : new BudgetError());
-  if (signal.aborted) return Promise.reject(reason());
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = (): void => reject(reason());
-    signal.addEventListener('abort', onAbort, { once: true });
-    promise.then(
-      (value) => {
-        signal.removeEventListener('abort', onAbort);
-        resolve(value);
-      },
-      (err: unknown) => {
-        signal.removeEventListener('abort', onAbort);
-        reject(err instanceof Error ? err : new Error(String(err)));
-      },
-    );
-  });
 }
 
 /** The host of `url` may be contacted (checked once per host and call). */
@@ -844,9 +834,11 @@ async function allowedHost(ctx: CallContext, url: string, signal: AbortSignal): 
     verdict = checkHost(url, ctx.lookup);
     ctx.hosts.set(host, verdict);
   }
-  const v = await untilAborted(verdict, signal);
+  // The system resolver takes no signal and can hang for many seconds on a broken network; a
+  // request must not wait for it beyond its timeout and budget.
+  const v = await untilAborted(verdict, signal, () => new BudgetError());
   if (v === 'refused') throw new RefusedUrlError();
-  if (v === 'error') throw new Error('Name nicht auflösbar');
+  if (v === 'error') throw new StageError('Name nicht auflösbar', 'name cannot be resolved');
 }
 
 /** Removes every credential from a text (error messages may quote request details). */
@@ -856,15 +848,21 @@ export function redact(text: string, secrets: readonly string[]): string {
   return out.replace(/access_token=[^&\s"']+/gi, 'access_token=***').replace(/(OAuth|Bearer)\s+[^\s"']+/g, '$1 ***');
 }
 
-function errorText(err: unknown, secrets: readonly string[]): string {
-  if (err instanceof BudgetError) return 'Zeitbudget erschöpft';
-  if (err instanceof HttpError) return err.message;
-  if (err instanceof RefusedUrlError) return err.message;
+/**
+ * What went wrong, in German and English, without any credential. Errors of the stage carry their
+ * English twin; foreign errors (undici, the system) are technical English text and stay as they are
+ * in both languages.
+ */
+function errorText(err: unknown, secrets: readonly string[]): { de: string; en: string } {
+  if (err instanceof BudgetError) return { de: 'Zeitbudget erschöpft', en: 'time budget used up' };
+  if (err instanceof HttpError) return { de: err.message, en: err.message };
+  if (err instanceof StageError) return { de: redact(err.message, secrets).slice(0, 200), en: redact(err.en, secrets).slice(0, 200) };
   const e = err as { name?: unknown; message?: unknown; cause?: { message?: unknown } } | null;
-  if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) return 'Zeitüberschreitung';
+  if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) return { de: 'Zeitüberschreitung', en: 'timeout' };
   const msg = e && typeof e.message === 'string' ? e.message : String(err);
   const cause = e?.cause && typeof e.cause.message === 'string' ? ` (${e.cause.message})` : '';
-  return redact(`${msg}${cause}`, secrets).slice(0, 200);
+  const text = redact(`${msg}${cause}`, secrets).slice(0, 200);
+  return { de: text, en: text };
 }
 
 /** Request bookkeeping of a provider: queued requests are dropped once it is stopped. */
@@ -909,23 +907,25 @@ async function httpGet(
         } catch {
           throw new RefusedUrlError();
         }
-        if (hop >= MAX_REDIRECTS) throw new Error('Zu viele Weiterleitungen');
+        if (hop >= MAX_REDIRECTS) throw new StageError('Zu viele Weiterleitungen', 'too many redirects');
         if (next.origin !== new URL(current).origin) {
           const { Authorization: _dropped, ...rest } = sent;
           sent = rest;
         }
         current = next.href;
       }
-      const declared = Number(res.headers.get('content-length') ?? '');
-      if (Number.isFinite(declared) && declared > maxBytes) {
-        await res.body?.cancel().catch(() => undefined);
-        throw new Error(`Antwort zu groß (${declared} B)`);
-      }
       // A rejected key or a rate limit will not change within this call: requests of the
       // provider still waiting for a slot are dropped (the caller reports why).
       if (tracker && (res.status === 401 || res.status === 403 || res.status === 429)) tracker.stopped = true;
-      const body = Buffer.from(await res.arrayBuffer());
-      if (body.byteLength > maxBytes) throw new Error(`Antwort zu groß (${body.byteLength} B)`);
+      // Read only up to maxBytes, also without a declared length: a host that streams on must not
+      // make the node hold (or wait for) more than that.
+      let body: Buffer;
+      try {
+        body = await readLimited(res, maxBytes);
+      } catch (err) {
+        if (err instanceof BodyTooLarge) throw new StageError(`Antwort zu groß (mehr als ${maxBytes} B)`, `response too large (more than ${maxBytes} B)`);
+        throw err;
+      }
       return { status: res.status, body, type: res.headers.get('content-type') ?? '' };
     } catch (err) {
       // Cut off by the end of the budget (or the caller): not an error of the service.
@@ -1047,14 +1047,21 @@ function chooseKey(deps: StreetLevelDeps): KeyChoice {
 
 // ------------------------------------------------------------------ pixels and vectors
 
+/**
+ * Largest picture decoded (pixels). Thumbnails are at most 2048 px wide (Panoramax 'sd'; Mapillary
+ * thumb_1024 is smaller); the limit is checked from the header before anything is decoded, so a
+ * small file that declares a huge raster cannot make the node allocate hundreds of MB.
+ */
+const MAX_PICTURE_PIXELS = 8_000_000;
+
 async function decodeBuffer(encoded: Buffer): Promise<DecodedFrame> {
   // The same decoding as ml/preprocess.ts decodeFrame, from memory instead of a file.
-  const { data, info } = await sharp(encoded, { failOn: 'none', limitInputPixels: 40_000_000 })
+  const { data, info } = await sharp(encoded, { failOn: 'none', limitInputPixels: MAX_PICTURE_PIXELS })
     .toColourspace('srgb')
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  if (info.channels !== 3) throw new Error(`Unerwartete Kanalzahl ${info.channels}`);
+  if (info.channels !== 3) throw new StageError(`Unerwartete Kanalzahl ${info.channels}`, `unexpected channel count ${info.channels}`);
   return { data, width: info.width, height: info.height };
 }
 
@@ -1246,7 +1253,7 @@ export async function refineStreetLevel(input: StreetLevelInput, deps: StreetLev
     return await run(input, deps, started, choice, secrets);
   } catch (err) {
     const text = errorText(err, secrets);
-    return emptyResult('error', `Straßenbilder nicht auswertbar: ${text}.`, `Street-level pictures could not be compared: ${text}.`, started);
+    return emptyResult('error', `Straßenbilder nicht auswertbar: ${text.de}.`, `Street-level pictures could not be compared: ${text.en}.`, started);
   }
 }
 
@@ -1260,7 +1267,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
   const states: ProviderState[] = [];
   const active: Provider[] = [];
   if (opts.providers.includes('panoramax')) {
-    states.push({ name: 'panoramax', enabled: true, note: null, noteEn: null, requests: 0, errors: 0, listed: 0, lastError: null, stopped: false });
+    states.push({ name: 'panoramax', enabled: true, note: null, noteEn: null, requests: 0, errors: 0, listed: 0, lastError: null, lastErrorEn: null, stopped: false });
     active.push(panoramax);
   }
   if (opts.providers.includes('mapillary')) {
@@ -1274,7 +1281,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
       : choice.malformed
         ? 'The Mapillary key (MAPILLARY_TOKEN) is malformed; Mapillary not asked.'
         : 'No Mapillary key stored (settings or MAPILLARY_TOKEN); Mapillary not asked.';
-    states.push({ name: 'mapillary', enabled: token !== null, note, noteEn, requests: 0, errors: 0, listed: 0, lastError: null, stopped: false });
+    states.push({ name: 'mapillary', enabled: token !== null, note, noteEn, requests: 0, errors: 0, listed: 0, lastError: null, lastErrorEn: null, stopped: false });
     if (token) active.push(mapillary(token));
   }
   const report = (): StreetLevelProviderReport[] => states.map(({ stopped: _stopped, ...r }) => r);
@@ -1350,7 +1357,9 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
           if (err instanceof BudgetError || err instanceof SkippedError) return [];
           if (st.stopped && st.note !== null) return [];
           st.errors++;
-          st.lastError = errorText(err, secrets);
+          const text = errorText(err, secrets);
+          st.lastError = text.de;
+          st.lastErrorEn = text.en;
           if (err instanceof HttpError && (err.status === 401 || err.status === 403 || err.status === 429)) {
             // A rejected key or a rate limit will not change within this call.
             st.stopped = true;
@@ -1363,7 +1372,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
                 ? `${p.name === 'panoramax' ? 'Panoramax' : 'Mapillary'} is rate limiting (429); stopped for this call.`
                 : `${p.name === 'panoramax' ? 'Panoramax' : 'Mapillary'} refuses access (${err.status}); check the key.`;
           }
-          log(`streetlevel: ${p.name} search failed: ${st.lastError}`);
+          log(`streetlevel: ${p.name} search failed: ${st.lastErrorEn}`);
           return [];
         }
       }),
@@ -1377,7 +1386,18 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
     try {
       const res = await httpGet(ctx, l.thumbUrl, { Accept: 'image/jpeg, image/*' }, opts.maxImageBytes);
       if (res.status !== 200) throw new HttpError(res.status);
-      if (res.type !== '' && !res.type.startsWith('image/') && !res.type.startsWith('application/octet-stream')) throw new Error(`kein Bild (${res.type})`);
+      // Only JPEG, PNG and WebP reach the decoder, as in the console's proxy (streetImage.ts): the
+      // listings come from federated instances, and other formats the decoder knows (SVG, TIFF,
+      // HEIF, GIF) turn a few hundred bytes into a raster of hundreds of MB. The first bytes decide;
+      // a declared image type they contradict is refused, a generic one ('' or octet-stream, which
+      // some storage hosts send) is taken when the bytes are one of the three.
+      const declared = res.type.split(';')[0]?.trim().toLowerCase() ?? '';
+      const sniffed = sniffImageType(res.body);
+      const generic = declared === '' || declared === 'application/octet-stream' || declared === 'binary/octet-stream';
+      if (!sniffed || (!generic && declared !== sniffed)) {
+        const shown = declared === '' ? 'ohne Typ' : declared;
+        throw new StageError(`kein JPEG-, PNG- oder WebP-Bild (${shown})`, `not a JPEG, PNG or WebP picture (${declared === '' ? 'no type' : declared})`);
+      }
       const decoded = await decodeBuffer(res.body);
       const size = model.imageSize;
       const plane = 3 * size * size;
@@ -1390,7 +1410,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
       if (!(err instanceof BudgetError)) {
         timing.failed++;
         failed.add(key);
-        log(`streetlevel: ${l.provider} picture ${l.id} skipped: ${errorText(err, secrets)}`);
+        log(`streetlevel: ${l.provider} picture ${l.id} skipped: ${errorText(err, secrets).en}`);
       }
       return null;
     }
@@ -1578,7 +1598,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
     const errorsNote = states.some((s) => s.errors > 0)
       ? {
           de: ` Fehler beim Abruf: ${states.filter((s) => s.errors > 0).map((s) => `${s.name} ${s.errors}× (${s.lastError ?? ''})`).join(', ')}.`,
-          en: ` Request errors: ${states.filter((s) => s.errors > 0).map((s) => `${s.name} ${s.errors}× (${s.lastError ?? ''})`).join(', ')}.`,
+          en: ` Request errors: ${states.filter((s) => s.errors > 0).map((s) => `${s.name} ${s.errors}× (${s.lastErrorEn ?? ''})`).join(', ')}.`,
         }
       : { de: '', en: '' };
 

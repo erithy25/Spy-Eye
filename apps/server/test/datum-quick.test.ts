@@ -117,6 +117,25 @@ class WorldStandIn implements WorldModel {
   }
 }
 
+/** A world model whose answers come only when the test releases them (a slow or busy thread). */
+class SlowWorld extends WorldStandIn {
+  warms = 0;
+  private gate: Promise<void>;
+  release: () => void = () => undefined;
+  constructor() {
+    super();
+    this.gate = new Promise<void>((resolve) => (this.release = resolve));
+  }
+  override warm(): void {
+    this.warms++;
+  }
+  override async predict(jpegs: readonly Buffer[]): Promise<WorldModelResult> {
+    const answer = await super.predict(jpegs);
+    await this.gate;
+    return answer;
+  }
+}
+
 class MemoryStore {
   readonly entries = new Map<string, VideoEntry>();
   constructor(readonly root: string) {}
@@ -206,12 +225,12 @@ interface Setup {
   dispose: () => Promise<void>;
 }
 
-async function setup(): Promise<Setup> {
+async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number } = {}): Promise<Setup> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-quick-'));
   const store = new MemoryStore(root);
   const events: Fix[] = [];
   const background = new Set<string>();
-  const world = new WorldStandIn();
+  const world = opts.world ?? new WorldStandIn();
   const hub = {
     broadcast: (event: ServerEvent): void => {
       if (event.type === 'datum-fix') events.push(event.fix);
@@ -226,6 +245,7 @@ async function setup(): Promise<Setup> {
     holdout: false,
     background: (id) => background.has(id),
     worldModel: world,
+    ...(opts.quickWorldWaitMs !== undefined ? { quickWorldWaitMs: opts.quickWorldWaitMs } : {}),
   });
   return {
     store,
@@ -265,6 +285,19 @@ function replace(engine: InstanceType<typeof DatumEngine>, quick: Compute | null
   const target = engine as unknown as { computeQuick: Compute; compute: Compute };
   if (quick) target.computeQuick = quick;
   if (full) target.compute = full;
+}
+
+/** Gives a recording the frames and vectors the analysis would store, and marks it analysed. */
+async function analysed(store: MemoryStore, entry: VideoEntry): Promise<void> {
+  const framesDir = path.join(store.videoDir(entry.info.id), 'frames');
+  await fs.mkdir(framesDir, { recursive: true });
+  spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', store.sourcePath(entry), '-vf', 'fps=1', '-q:v', '3', path.join(framesDir, '%d.jpg')]);
+  const frameFiles = (await fs.readdir(framesDir)).filter((f) => f.endsWith('.jpg'));
+  entry.frames = frameFiles.map((f) => Number.parseInt(f, 10)).sort((a, b) => a - b).map((n, i) => ({ n, t: i, s: 0 }));
+  const vectors = new Float32Array(entry.frames.length * DIM);
+  entry.frames.forEach((_, i) => vectors.set(hashVector(`frame-${i}`), i * DIM));
+  entry.embeddings = GrowableMatrix.fromData(vectors, DIM);
+  entry.info.status = 'ready';
 }
 
 /** A short test picture video (moving colour bars, 6 s) made with ffmpeg. */
@@ -456,6 +489,43 @@ test('quick stage: located from the file alone, before the analysis, every text 
     for (const step of full.trace ?? []) if (step.detail) assert.ok(step.detailEn, `full trace "${step.label}" has an English detail`);
     assert.equal(engine.outstanding, 0);
   } finally {
+    await dispose();
+  }
+});
+
+test('quick stage: a slow world model does not hold the quick fix; the full stage takes its late answer', async () => {
+  const world = new SlowWorld();
+  const { store, engine, dispose } = await setup({ world, quickWorldWaitMs: 300 });
+  try {
+    // The world model's thread is started when the engine is initialised (the node does that once
+    // the image model is ready), not at the first upload.
+    await engine.init();
+    assert.equal(world.warms, 1);
+    const entry = recording('slow', 'queued', 'Langsam.mp4');
+    await add(store, entry);
+    await testVideo(store.sourcePath(entry));
+    engine.quick('slow');
+    await until(() => engine.get('slow')?.status === 'ready' || engine.get('slow')?.status === 'error');
+    const fix = engine.get('slow')!;
+    assert.equal(fix.status, 'ready', fix.error ?? '');
+    assert.equal(fix.stage, 'quick');
+    assert.match(fix.location?.label ?? '', /Deutsches Eck/, 'located by the gallery alone');
+    assert.equal(fix.evidence.some((e) => e.kind === 'worldmodel'), false);
+    const step = fix.trace?.find((s) => s.label === 'Weltmodell befragt');
+    assert.match(step?.detail ?? '', /keine Antwort des Weltmodells binnen/);
+    assert.match(step?.detailEn ?? '', /no answer from the world model within/);
+    assert.equal(world.calls.length, 1);
+
+    // The answer comes later; the full stage takes it instead of asking again.
+    world.release();
+    await analysed(store, entry);
+    engine.enqueue('slow', true);
+    await until(() => engine.get('slow')?.stage === 'full', 120_000);
+    const full = engine.get('slow')!;
+    assert.equal(world.calls.length, 1, 'the frames were looked at once');
+    assert.ok(full.evidence.some((e) => e.kind === 'worldmodel'), 'the late answer is part of the full fix');
+  } finally {
+    world.release();
     await dispose();
   }
 });

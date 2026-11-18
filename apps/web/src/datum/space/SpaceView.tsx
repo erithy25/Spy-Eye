@@ -72,7 +72,15 @@ export interface SpaceViewProps {
   /** Sun at the determined time; drawn when the heading is known as well. */
   sun?: { azimuthDeg: number; elevationDeg: number } | null;
   onExit?: () => void;
+  /**
+   * Inside a page that names the place and has its own way back (RAUM): no title in the picture
+   * and no exit button; Esc still leaves.
+   */
+  embedded?: boolean;
 }
+
+/** Grid size, triangles and frame rate are for development: shown with ?debug in the address only. */
+const DEBUG = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug');
 
 type RenderMode = 'surface' | 'points' | 'wire';
 
@@ -1042,7 +1050,7 @@ function setText(el: HTMLElement | null, text: string): void {
   if (el && el.textContent !== text) el.textContent = text;
 }
 
-export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg, pitchDeg = 0, sun = null, onExit }: SpaceViewProps) {
+export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg, pitchDeg = 0, sun = null, onExit, embedded = false }: SpaceViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<SpaceEngine | null>(null);
@@ -1071,10 +1079,11 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
   const onReadout = useCallback((r: Readout) => {
     const tr = tRef.current;
     const [x, y, z] = r.position;
-    setText(posRef.current, `X ${fmtSigned(x, 2)}  Y ${fmtSigned(y, 2)}  Z ${fmtSigned(z, 2)} M`);
+    // The position is for development (?debug); the view direction is for everyone.
+    if (DEBUG) setText(posRef.current, `X ${fmtSigned(x, 2)}  Y ${fmtSigned(y, 2)}  Z ${fmtSigned(z, 2)} m`);
     setText(
       viewRef.current,
-      `${r.relative ? `${tr('RICHTUNG')} ${fmtSigned(((r.azimuth % 360) + 540) % 360 - 180, 0)}° REL` : `${tr('AZIMUT')} ${fmtAz(r.azimuth)}`}  ${tr('NICK')} ${fmtSigned(r.pitch, 0)}°`,
+      `${r.relative ? `${tr('Richtung')} ${fmtSigned(((r.azimuth % 360) + 540) % 360 - 180, 0)}°` : `${tr('Azimut')} ${fmtAz(r.azimuth)}`} · ${tr('Nick')} ${fmtSigned(r.pitch, 0)}°`,
     );
     setText(opticRef.current, `${tr('SICHTFELD')} ${fmt(r.hfov, 0)}°  ${fmt(r.speed, 1)} M/S`);
     setText(rateRef.current, `${fmt(Math.min(240, r.fps), 0)} ${tr('BILDER/S')}`);
@@ -1184,7 +1193,8 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
     e.preventDefault();
   };
 
-  const help = `${t('W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück')}${onExit ? ` · ${t('Esc verlassen')}` : ''}`;
+  // Inside a tab (embedded) there is nothing to leave: Esc goes back, but the line does not offer it.
+  const help = `${t('W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück')}${onExit && !embedded ? ` · ${t('Esc verlassen')}` : ''}`;
 
   return (
     <div
@@ -1198,10 +1208,12 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
       onKeyDown={onKeyDown}
     >
       <canvas ref={hudRef} className="sv-hud" aria-hidden="true" />
-      <div className="sv-readout sv-tl">
-        <span>{t('Raum')}</span>
-        {label && <span className="sv-dim">{label}</span>}
-      </div>
+      {!embedded && (
+        <div className="sv-readout sv-tl">
+          <span>{t('Raum')}</span>
+          {label && <span className="sv-dim">{label}</span>}
+        </div>
+      )}
 
       {phase.kind === 'ready' && (
         <>
@@ -1232,7 +1244,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
               <button type="button" title={`${t('Zurück zum Aufnahmepunkt')} (R)`} onClick={() => engineRef.current?.reset()}>
                 {t('Aufnahmepunkt')}
               </button>
-              {onExit && (
+              {onExit && !embedded && (
                 <button type="button" title={`${t('Verlassen')} (Esc)`} onClick={onExit}>
                   {t('Verlassen')}
                 </button>
@@ -1240,19 +1252,21 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
             </div>
           </div>
 
-          <div className="sv-readout sv-bl sv-stack" aria-live="off">
-            <span ref={posRef} />
+          <div className="sv-readout sv-bl sv-stack sv-plain" aria-live="off">
+            {DEBUG && <span ref={posRef} />}
             <span ref={viewRef} />
-            <span ref={opticRef} className="sv-dim" />
           </div>
-          <div className="sv-readout sv-br sv-stack">
-            <span>
-              {t('Raster {w} × {h} · {n} Dreiecke', { w: phase.stats.columns, h: phase.stats.rows, n: fmt(phase.stats.triangles, 0) })}
-            </span>
-            <span className="sv-dim">
-              {t('Sichtfeld {fov}° · Reichweite {far} m', { fov: fmt(phase.stats.fovDeg, 0), far: fmt(phase.stats.far, 0) })} · <span ref={rateRef} />
-            </span>
-          </div>
+          {DEBUG && (
+            <div className="sv-readout sv-br sv-stack">
+              <span>
+                {t('Raster {w} × {h} · {n} Dreiecke', { w: phase.stats.columns, h: phase.stats.rows, n: fmt(phase.stats.triangles, 0) })}
+              </span>
+              <span className="sv-dim">
+                {t('Sichtfeld {fov}° · Reichweite {far} m', { fov: fmt(phase.stats.fovDeg, 0), far: fmt(phase.stats.far, 0) })} · <span ref={rateRef} /> ·{' '}
+                <span ref={opticRef} />
+              </span>
+            </div>
+          )}
           <div className="sv-help" aria-hidden="true">
             {help}
           </div>

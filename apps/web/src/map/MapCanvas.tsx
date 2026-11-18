@@ -73,6 +73,87 @@ const TILE_COUNTRY_EN: Record<string, string> = {
   Zypern: 'Cyprus',
 };
 
+/** City labels of the map tiles (German exonyms) and their English names; the others are the same in both. */
+const CITY_EN: Record<string, string> = {
+  'Addis Abeba': 'Addis Ababa',
+  Algier: 'Algiers',
+  Aschgabat: 'Ashgabat',
+  Athen: 'Athens',
+  Bagdad: 'Baghdad',
+  Belgrad: 'Belgrade',
+  Bischkek: 'Bishkek',
+  Brügge: 'Bruges',
+  Brünn: 'Brno',
+  Brüssel: 'Brussels',
+  Bukarest: 'Bucharest',
+  Damaskus: 'Damascus',
+  Danzig: 'Gdańsk',
+  Daressalam: 'Dar es Salaam',
+  'Den Haag': 'The Hague',
+  Dschibuti: 'Djibouti',
+  Dschidda: 'Jeddah',
+  Dschuba: 'Juba',
+  Duschanbe: 'Dushanbe',
+  Eriwan: 'Yerevan',
+  Florenz: 'Florence',
+  'Frankfurt am Main': 'Frankfurt',
+  Genf: 'Geneva',
+  'Guatemala-Stadt': 'Guatemala City',
+  Havanna: 'Havana',
+  'Ho-Chi-Minh-Stadt': 'Ho Chi Minh City',
+  Hongkong: 'Hong Kong',
+  Jaunde: 'Yaoundé',
+  Kairo: 'Cairo',
+  Kalkutta: 'Kolkata',
+  Kapstadt: 'Cape Town',
+  Karatschi: 'Karachi',
+  Khartum: 'Khartoum',
+  Kiew: 'Kyiv',
+  Kischinau: 'Chișinău',
+  Köln: 'Cologne',
+  Kopenhagen: 'Copenhagen',
+  Krakau: 'Kraków',
+  'Kuwait-Stadt': 'Kuwait City',
+  Laibach: 'Ljubljana',
+  Lissabon: 'Lisbon',
+  Lüttich: 'Liège',
+  Mailand: 'Milan',
+  Maschhad: 'Mashhad',
+  Maskat: 'Muscat',
+  Mekka: 'Mecca',
+  'Mexiko-Stadt': 'Mexico City',
+  Mogadischu: 'Mogadishu',
+  Moskau: 'Moscow',
+  Mülhausen: 'Mulhouse',
+  München: 'Munich',
+  Neapel: 'Naples',
+  'Neu-Delhi': 'New Delhi',
+  Nikosia: 'Nicosia',
+  Nürnberg: 'Nuremberg',
+  Peking: 'Beijing',
+  Pjöngjang: 'Pyongyang',
+  Prag: 'Prague',
+  Riad: 'Riyadh',
+  Rom: 'Rome',
+  'Sankt Petersburg': 'Saint Petersburg',
+  Singapur: 'Singapore',
+  Straßburg: 'Strasbourg',
+  Taipeh: 'Taipei',
+  Taschkent: 'Tashkent',
+  Teheran: 'Tehran',
+  Tiflis: 'Tbilisi',
+  Tokio: 'Tokyo',
+  Tripolis: 'Tripoli',
+  'Ulan Bator': 'Ulaanbaatar',
+  Urumtschi: 'Ürümqi',
+  Venedig: 'Venice',
+  Warschau: 'Warsaw',
+  Wien: 'Vienna',
+  Windhuk: 'Windhoek',
+  'Zona Metropolitana de Monterrey': 'Monterrey',
+  Zürich: 'Zurich',
+};
+
 /** Point reached from (lat, lon) after `km` along the great circle with initial bearing `azimuthDeg`. */
 export function destination(lat: number, lon: number, azimuthDeg: number, km: number): [number, number] {
   const d = km / R_EARTH_KM;
@@ -826,9 +907,10 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const font = placeFont(p.cls, zoom);
       ctx.font = `${font.weight} ${font.size}px ${FONT}`;
       setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
-      // The tiles carry German names; countries are named in the console language (cities keep
-      // the names the tiles have).
-      const name = p.cls === 'country' ? (countryNamesRef.current?.get(p.name) ?? p.name) : p.name;
+      // The tiles carry German names; in English (the country names are loaded) countries and the
+      // German exonyms of cities are named in English.
+      const english = countryNamesRef.current;
+      const name = !english ? p.name : p.cls === 'country' ? (english.get(p.name) ?? p.name) : (CITY_EN[p.name] ?? p.name);
       const text = p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? name.toUpperCase() : name;
       const w = ctx.measureText(text).width + 8;
       const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
@@ -1351,7 +1433,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
                 <span className="geo-dim">{formatCoordinate(cursor.lat, cursor.lon)}</span>
               </>
             ) : (
-              <span className="geo-dim">UTMREF · WGS 84</span>
+              <span className="geo-dim">{t('UTMREF')} · WGS 84</span>
             )}
           </div>
           <div className="geo-readout geo-br">

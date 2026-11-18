@@ -188,7 +188,7 @@ interface Run {
   dispose: () => Promise<void>;
 }
 
-async function engineWith(streetLevel: StreetLevelHooks): Promise<Run> {
+async function engineWith(streetLevel: StreetLevelHooks, background: (id: string) => boolean = () => false): Promise<Run> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-streetwire-'));
   const store = new MemoryStore(root);
   const logs: string[] = [];
@@ -201,6 +201,7 @@ async function engineWith(streetLevel: StreetLevelHooks): Promise<Run> {
     holdout: false,
     worldModel: null,
     streetLevel,
+    background,
   });
   return {
     engine,
@@ -539,6 +540,54 @@ test('a stand-in stage that throws costs the fix nothing but the refinement', as
     const street = fix.evidence.find((e) => e.kind === 'streetlevel');
     assert.ok(street);
     assert.match(street.detail, /kaputt/);
+  } finally {
+    await run.dispose();
+  }
+});
+
+test('a background fix waiting on the services lets a person\'s upload go first', async () => {
+  let started = false;
+  let stoppedAfterMs: number | null = null;
+  const run = await engineWith(
+    {
+      enabled: () => true,
+      // A stage that waits on the services until it is told to stop (or 15 s, the test's limit).
+      refine: async (_input, d) => {
+        started = true;
+        const t0 = Date.now();
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 15_000);
+          d.signal?.addEventListener('abort', () => {
+            clearTimeout(timer);
+            stoppedAfterMs = Date.now() - t0;
+            resolve();
+          });
+        });
+        return { ...sl.streetLevelCutOff(20_000, Date.now() - t0), reasonCode: 'no-match' as const, reason: 'Kein Treffer.', reasonEn: 'No match.' };
+      },
+    },
+    (id) => id.startsWith('ref'),
+  );
+  try {
+    const ref = await stored(run.store, 'ref1');
+    await analysed(run.store, ref);
+    run.engine.enqueue('ref1', true);
+    await until(() => started);
+    // A person uploads a recording while the reference fix waits on the services.
+    await stored(run.store, 'own1');
+    const t0 = Date.now();
+    run.engine.quick('own1');
+    await until(() => run.engine.get('own1')?.status === 'ready' || run.engine.get('own1')?.status === 'error', 14_000);
+    assert.equal(run.engine.get('own1')?.status, 'ready');
+    assert.ok(stoppedAfterMs !== null, 'the background stage was stopped');
+    assert.ok(Date.now() - t0 < 14_000, 'the upload did not wait for the services');
+    await until(() => run.engine.get('ref1')?.stage === 'full');
+    const fix = run.engine.get('ref1')!;
+    const step = fix.trace?.find((s) => s.label === STEP);
+    assert.match(step?.detail ?? '', /vorzeitig beendet für die Aufnahme einer Person/);
+    assert.match(step?.detailEn ?? '', /ended early for a person's recording/);
+    const street = fix.evidence.find((e) => e.kind === 'streetlevel');
+    assert.match(street?.detailEn ?? '', /Ended early: a person's recording was waiting\./);
   } finally {
     await run.dispose();
   }

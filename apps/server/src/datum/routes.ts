@@ -3,7 +3,8 @@
  * rest of the node. Results are read from what the engine stored. The one route that contacts a
  * service outside this machine is the street-level thumbnail (GET
  * /api/datum/fixes/:videoId/street/:n): it fetches only a picture URL the engine stored in that
- * fix, under the guards of streetImage.ts, so that the console never loads it from the remote host.
+ * fix, under the guards of streetImage.ts, so that the console never loads it from the remote host,
+ * and only while the street-level comparison is on (never in offline mode).
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -209,11 +210,18 @@ export function registerDatumRoutes(app: FastifyInstance, node: PlatformNode, ne
    * The n-th street-level thumbnail of a fix (0-based, counting the evidence items with a
    * refSource in evidence order), fetched by the node into memory. Only a URL stored in the fix
    * is fetched; the request names nothing but the fix and the number.
+   *
+   * Nothing is fetched while the street-level comparison is off (offline mode, DATUM_STREETLEVEL=0
+   * or switched off by an operator): each picture fetched tells the service which place is under
+   * examination, which is exactly what switching it off rules out, also for fixes computed before.
    */
   app.get<{ Params: { videoId: string; n: string } }>('/api/datum/fixes/:videoId/street/:n', async (request, reply) => {
     const ctx = need(request, reply, 'media');
     if (!ctx) return reply;
     const say = (de: string, en: string): string => (ctx.lang === 'en' ? en : de);
+    if (!settings.streetLevelEnabled()) {
+      return sendError(reply, 404, say('Straßenbilder sind auf diesem Knoten abgeschaltet.', 'Street-level pictures are switched off on this node.'));
+    }
     const { videoId, n } = request.params;
     const fix = isValidVideoId(videoId) && /^\d{1,4}$/.test(n) ? datum.get(videoId) : null;
     const url = fix ? streetSources(fix)[Number(n)] : undefined;

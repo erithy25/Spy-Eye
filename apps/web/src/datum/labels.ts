@@ -6,6 +6,7 @@ import type { Fix, FixCandidate, FixLocation } from '../../../server/src/datum/c
 import type { VideoInfo } from '../api';
 import { VIDEO_FILE_PATTERN } from '../format';
 import type { useLang } from '../i18n';
+import { formatCoordinate } from '../map/geo';
 import { kmText } from './useFixes';
 
 type Lang = ReturnType<typeof useLang>;
@@ -21,7 +22,13 @@ const CONTINENTS = new Set(['Afrika', 'Asien', 'Europa', 'Nordamerika', 'Südame
  * the level of a country carries the German country name as its label, which is shown as the
  * country's name in the chosen language instead. Fixes of the current engine carry `labelEn`.
  */
-export function placeText(lang: Lang, place: Pick<FixLocation, 'label' | 'country'> & { labelEn?: string; countryName?: string | null }, fix?: Fix | null): string {
+export function placeText(
+  lang: Lang,
+  place: Pick<FixLocation, 'label' | 'country'> & { labelEn?: string; countryName?: string | null; lat?: number; lon?: number },
+  fix?: Fix | null,
+): string {
+  // A point without a place name is named by its coordinates, written as every view writes them.
+  if (isCoordLabel(place.label) && place.lat !== undefined && place.lon !== undefined) return formatCoordinate(place.lat, place.lon);
   if (lang.lang === 'en' && place.labelEn) return place.labelEn;
   if (CONTINENTS.has(place.label)) return lang.t(place.label);
   if (place.country) {
@@ -31,19 +38,36 @@ export function placeText(lang: Lang, place: Pick<FixLocation, 'label' | 'countr
   return place.label;
 }
 
-/** Country of a fix or candidate in the console language, or '' when unknown. */
-export function countryText(lang: Lang, place: Pick<FixCandidate, 'country'> & { countryName?: string | null }): string {
+/**
+ * Country of a fix or candidate in the console language, or '' when unknown. A point named only by
+ * its coordinates has no country beside it: the country of a world-model answer is the model's
+ * likeliest country, which such a point (often at sea) need not lie in.
+ */
+export function countryText(lang: Lang, place: Pick<FixCandidate, 'country'> & { countryName?: string | null; label?: string }): string {
+  if (place.label !== undefined && isCoordLabel(place.label)) return '';
   return place.country ? lang.region(place.country, place.countryName ?? null) : '';
 }
 
+/** The radius of a fix as the console states it: "± 1.500 km". */
+export function radiusText(lang: Lang, loc: Pick<FixLocation, 'radiusKm'>): string {
+  return `± ${kmText(loc.radiusKm, lang.locale)}`;
+}
+
 /**
- * The radius of a fix as the console states it. An answer of the world model stands for a region
- * (often hundreds of kilometres), not a point: it says so, so that its circle is not read as a
- * place that was pinned down.
+ * The hover text of a radius. An answer of the world model stands for a region (often hundreds of
+ * kilometres), not a point: its title says so, so that the circle is not read as a place that was
+ * pinned down. '' for every other method.
  */
-export function radiusText(lang: Lang, loc: Pick<FixLocation, 'radiusKm' | 'method'>): string {
-  const r = kmText(loc.radiusKm, lang.locale);
-  return loc.method === 'worldmodel' ? lang.t('Weltmodell: Region ± {r}', { r }) : `± ${r}`;
+export function radiusHint(lang: Lang, loc: Pick<FixLocation, 'radiusKm' | 'method'>): string {
+  return loc.method === 'worldmodel' ? lang.t('Weltmodell: Region ± {r}', { r: kmText(loc.radiusKm, lang.locale) }) : '';
+}
+
+/**
+ * Whether a place label is a bare coordinate pair ("39,4881° N, 13,5324° O"), as the engine
+ * names a point without a place name nearby.
+ */
+export function isCoordLabel(label: string): boolean {
+  return /^-?\d+[.,]\d+°\s*[NS],?\s+-?\d+[.,]\d+°\s*[EOW]$/.test(label.trim());
 }
 
 export type Stage = 'quick' | 'full';

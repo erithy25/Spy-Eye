@@ -64,10 +64,7 @@ export function CandidateList({ candidates, selected, onSelect, fix }: Candidate
                   {fmtCoord(c.lat, c.lon)}
                   <span className="dp-low"> · ± {fmtKm(c.radiusKm)}</span>
                 </span>
-                <CheckLinks lat={c.lat} lon={c.lon} compact />
-              </span>
-              <span className="dp-cand-bar" aria-hidden="true">
-                <span style={{ width: `${Math.max(0, Math.min(1, c.score)) * 100}%` }} />
+                {on && <CheckLinks lat={c.lat} lon={c.lon} compact />}
               </span>
             </li>
           );

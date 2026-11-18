@@ -1,19 +1,22 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import type { VideoInfo } from '../../api';
-import { formatPercent, formatScore } from '../../format';
+import { formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker, type MapShape } from '../../map/MapCanvas';
-import { formatCoordinate } from '../../map/geo';
-import { Dialog, pressable } from '../../ui';
-import { VIDEO_ACCEPT, dragHasFiles, filesFromDrop, uploads, useUploads, type UploadItem, type UploadOptions } from '../../uploads';
-import { fetchCountries, fetchTerrain, rel, type CountryShape, type Fix } from '../api';
+import { Dialog } from '../../ui';
+import { VIDEO_ACCEPT, dragHasFiles, droppedFolderName, filesFromDrop, pickedFolderName, uploads, useUploads } from '../../uploads';
+import { fetchCountries, fetchTerrain, type CountryShape, type DatasetDeleteResult, type Fix } from '../api';
 import { terrainContours, type ContourSet } from '../contours';
-import { caseLabel, countryText, isReference, placeText, radiusText, stageOf } from '../labels';
-import { CheckLinks } from '../panel/CheckLinks';
+import { datasets, groupRecordings, useDatasets, type DatasetGroup } from '../datasets';
+import { DeleteDatasetDialog } from '../DeleteDatasetDialog';
+import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
+import { referenceInstant, utcOffset } from '../panel/common';
 import { DatumSettingsPanel } from '../Settings';
-import { TruthControl, useTruthUpload } from '../TruthUpload';
+import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
+import { UPLOAD_OPTIONS, UploadDialog, type Picked } from '../UploadDialog';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
+import { OrtungList, progressText, type GroupActions } from './OrtungList';
 
 export interface DatumViewProps {
   /** Recordings of the node (for names, analysis progress and playback). */
@@ -28,12 +31,6 @@ export interface DatumViewProps {
 
 // The whole Earth: the globe is sized to fit the map area (`fit`), centred on Europe and Africa.
 const WORLD = { lat: 24, lon: 12, zoom: 2.25, fit: true };
-
-/**
- * Own recordings go into the inbox source, sampled and described as BESTAND does by default; the
- * quick fix of the node does not depend on these settings.
- */
-const OWN_UPLOAD: UploadOptions = { sampleFps: 1, detail: 'standard', sourceId: 'eingang' };
 
 /** Map geometry for one fix: uncertainty, candidates, sun and shadow, view cone, ground truth. */
 export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[], withCountries: boolean, tr: (s: string) => string, locale: string): MapShape[] {
@@ -70,174 +67,94 @@ export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[],
   return shapes;
 }
 
-function medianOf(values: number[]): number {
-  const s = [...values].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
-}
-
 /**
- * The picture of a recording: its middle keyframe, chosen as the node chooses the one keyframe of
- * a slim list entry (floor(n / 2)), so that a row keeps its picture when a full summary from the
- * event stream replaces the slim entry.
+ * The result of the chosen recording over the map: place, clock, how sure, and the way on to its
+ * findings. Coordinates, sun and terrain belong to BEFUND; the picture is in the row.
  */
-function middleFrame(fix: Fix | null): string | null {
-  if (!fix || fix.keyframes.length === 0) return null;
-  return rel(fix.keyframes[Math.floor(fix.keyframes.length / 2)]!.imageUrl);
-}
-
-/** What a recording is waiting for, or how its analysis went, in one short line. */
-function progressText(fix: Fix | null, video: VideoInfo, t: (de: string, vars?: Record<string, string | number>) => string): string {
-  if (fix?.status === 'error') return t('Fehler bei der Ortung');
-  if (video.status === 'error') return t('Fehler bei der Auswertung');
-  if (fix?.status === 'running') {
-    const step = fix.trace?.[fix.trace.length - 1];
-    return step ? `${t('wird geortet …')} ${t(step.label)}` : t('wird geortet …');
-  }
-  if (fix?.status === 'ready') return t('Kein Ort bestimmbar');
-  if (video.status === 'processing') return `${t('Bilder werden ausgewertet …')} ${formatPercent(video.progress)}`;
-  return t('Ortung steht an');
-}
-
-interface RowProps {
-  video: VideoInfo;
-  fix: Fix | null;
-  selected: boolean;
-  select: (videoId: string | null) => void;
-}
-
-/**
- * One recording in the list: picture, case name, place and clock; the deviation small below.
- * Memoised: while recordings are analysed and located, only the rows whose recording or fix
- * changed render again, not the whole list.
- */
-const FixRow = memo(function FixRow({ video, fix, selected, select }: RowProps) {
+function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go: DatumViewProps['go'] }) {
   const lang = useLang();
   const { t, locale } = lang;
-  const loc = fix?.status === 'ready' || fix?.status === 'running' ? (fix.location ?? null) : null;
-  const win = fix && loc ? bestWindowText(fix) : null;
-  const quick = fix !== null && loc !== null && stageOf(fix) === 'quick';
-  const image = middleFrame(fix);
-  const country = loc ? countryText(lang, loc) : '';
-  const place = loc ? placeText(lang, loc, fix) : '';
+  const loc = fix.location;
+  const befund = (
+    <button type="button" className="btn" onClick={() => go('befund')}>
+      {t('Befund')}
+    </button>
+  );
+  if (!loc || (fix.status !== 'ready' && fix.status !== 'running')) {
+    return (
+      <div className="dt-hud">
+        <div className="dt-hud-place">{video ? caseLabel(video.name) : ''}</div>
+        <div className="dt-hud-sub">{video ? progressText(fix, video, t) : t('Ort unbestimmt')}</div>
+        <div className="dt-hud-actions">{befund}</div>
+      </div>
+    );
+  }
+  const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
+  const method = fix.time.method === 'metadata' ? t('Metadaten') : fix.time.method === 'sun' ? t('Sonnenstand') : t('Uhrzeit nicht bestimmbar');
+  const state = fix.status === 'running' ? t('wird geortet …') : stageOf(fix) === 'quick' ? t('vorläufig') : '';
+  // The zone as an offset; its name (Europe/Paris) is in the title.
+  const zone = fix.time.timezone ? utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun)) : '';
   return (
-    <li className={selected ? 'dt-row on' : 'dt-row'} {...pressable(() => select(selected ? null : video.id), selected)}>
-      {image ? <img className="dt-row-img" src={image} alt="" loading="lazy" decoding="async" /> : <span className="dt-row-img" />}
-      <div className="dt-row-text">
-        <div className="dt-row-top">
-          <b className="dt-row-name">{caseLabel(video.name)}</b>
-          {quick && <span className="dt-tag">{t('schnell geortet')}</span>}
-          <span className="dt-clock">{win ?? (loc ? '––:––' : '')}</span>
-        </div>
-        {loc ? (
-          <div className="dt-row-mid">
-            <span className="dt-place">
-              {place}
-              {country !== '' && country !== place ? <span className="low"> · {country}</span> : null}
-            </span>
-          </div>
-        ) : (
-          <div className="dt-row-mid">
-            <span className="dt-place low">{progressText(fix, video, t)}</span>
-          </div>
-        )}
-        {loc && (
-          <div className="dt-row-sub">
-            {radiusText(lang, loc)}
-            {fix?.status === 'running' && ` · ${t('wird neu geortet …')}`}
-            {fix?.truth?.errorKm != null && ` · ${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}`}
-          </div>
+    <div className="dt-hud">
+      <div className="dt-hud-place">{placeText(lang, loc, fix)}</div>
+      <div className="dt-hud-sub" title={radiusHint(lang, loc)}>
+        {[countryText(lang, loc), radiusText(lang, loc), state].filter((x) => x !== '').join(' · ')}
+      </div>
+      <div className="dt-hud-clock">{bestWindowText(fix) ?? '––:––'}</div>
+      <div className="dt-hud-note" title={fix.time.timezone ?? ''}>
+        {[method, zone].filter((x) => x !== '').join(' · ')}
+      </div>
+      {/* Confidence and, with a ground truth, the deviation: one grid, so that both rows align. */}
+      <div className="dt-hud-conf">
+        <span>{t('Konfidenz')}</span>
+        <span className="dt-meter" aria-hidden="true">
+          <span style={{ width: `${Math.round(loc.confidence * 100)}%` }} />
+        </span>
+        <b>{formatScore(loc.confidence)}</b>
+        {fix.truth?.errorKm != null && (
+          <>
+            <span>{t('Abweichung')}</span>
+            <span />
+            <b>{kmText(fix.truth.errorKm, locale)}</b>
+          </>
         )}
       </div>
-    </li>
-  );
-});
-
-/** The four stations of an own recording, from the file to the walkable spaces. */
-const STATIONS = ['hochgeladen', 'wird geortet', 'geortet', 'Räume fertig'] as const;
-
-function uploadStation(item: UploadItem, video: VideoInfo | undefined, fix: Fix | undefined, t: (de: string, vars?: Record<string, string | number>) => string): { reached: number; text: string; failed: boolean } {
-  if (item.status === 'failed') return { reached: 0, text: item.error ? t(item.error) : t('Fehler'), failed: true };
-  if (item.status === 'waiting') return { reached: 0, text: t('wartet auf das Hochladen'), failed: false };
-  if (item.status === 'uploading') return { reached: 0, text: `${t('wird hochgeladen')} ${formatPercent(item.progress)}`, failed: false };
-  if (fix?.status === 'error') return { reached: 1, text: t('Fehler bei der Ortung'), failed: true };
-  if (video?.status === 'error' && !fix?.location) return { reached: 1, text: t('Fehler bei der Auswertung'), failed: true };
-  if (fix?.location && (fix.status === 'ready' || fix.status === 'running')) {
-    if (stageOf(fix) === 'full' && fix.status === 'ready') return { reached: 4, text: t('Räume fertig'), failed: false };
-    return { reached: 3, text: fix.status === 'running' ? t('geortet · Räume werden gebaut') : t('schnell geortet · Räume folgen'), failed: false };
-  }
-  if (fix?.status === 'ready') return { reached: 3, text: t('Kein Ort bestimmbar'), failed: false };
-  if (fix?.status === 'running') return { reached: 2, text: t('wird geortet …'), failed: false };
-  return { reached: 1, text: t('hochgeladen · Ortung steht an'), failed: false };
-}
-
-function UploadTray({ items, videos, byId, select }: { items: UploadItem[]; videos: Map<string, VideoInfo>; byId: Map<string, Fix>; select: (id: string) => void }) {
-  const { t } = useLang();
-  const states = items.map((item) => {
-    const video = item.videoId ? videos.get(item.videoId) : undefined;
-    const fix = item.videoId ? byId.get(item.videoId) : undefined;
-    return { item, ...uploadStation(item, video, fix, t) };
-  });
-  const finished = states.filter((s) => s.reached === 4 || s.failed).length;
-  const located = states.filter((s) => s.reached >= 3).length;
-  return (
-    <section className="dt-tray" aria-label={t('Hochladen')}>
-      <header className="dt-tray-head">
-        <span className="label">
-          {t('Eigene Videos')} <span className="count">{located}</span>
-          <span className="count-of">/ {items.length} {t('geortet')}</span>
-        </span>
-        {finished === items.length && (
-          <button type="button" className="text-btn" onClick={() => uploads.clearFinished()}>
-            {t('Liste leeren')}
+      <div className="dt-hud-actions">
+        {befund}
+        <span title={hasSpace ? '' : t('Die Räume folgen, sobald die Auswertung des Videos fertig ist.')}>
+          <button type="button" className="text-btn" disabled={!hasSpace} onClick={() => go('raum')}>
+            {t('Raum')}
           </button>
-        )}
-      </header>
-      <ul className="dt-tray-list">
-        {states.map(({ item, reached, text, failed }) => (
-          <li key={item.key} className={failed ? 'dt-tray-item failed' : 'dt-tray-item'}>
-            <button type="button" className="dt-tray-name" disabled={!item.videoId} onClick={() => item.videoId && select(item.videoId)} title={item.name}>
-              {caseLabel(item.name)}
-            </button>
-            <span className="dt-steps" role="img" aria-label={`${reached} / 4`}>
-              {STATIONS.map((station, i) => (
-                <i key={station} className={i < reached ? 'on' : ''} title={t(station)} />
-              ))}
-            </span>
-            <span className="dt-tray-state">{text}</span>
-            {(failed || reached === 4) && (
-              <button type="button" className="row-x" aria-label={t('Hinweis entfernen')} onClick={() => uploads.dismiss(item.key)}>
-                ×
-              </button>
-            )}
-            {item.status === 'uploading' && (
-              <div className="bar dt-tray-bar">
-                <span style={{ width: `${Math.round(item.progress * 100)}%` }} />
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+        </span>
+      </div>
+    </div>
   );
 }
+
+type OpenDialog = { kind: 'upload'; initial: Picked | null } | { kind: 'delete'; group: DatasetGroup } | { kind: 'settings' };
 
 function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumViewProps) {
   const lang = useLang();
-  const { t, locale } = lang;
+  const { t, locale, pick, n } = lang;
   const [countries, setCountries] = useState<CountryShape[]>([]);
   const [showTruth, setShowTruth] = useState(true);
   const [dragging, setDragging] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dropGroup, setDropGroup] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
+  const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const dragDepth = useRef(0);
+  // Where the files of the hidden pickers go: a dataset's id, or 'new' (the upload dialog).
+  const pickTarget = useRef<string>('new');
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
-  const uploadItems = useUploads();
-  const truth = useTruthUpload();
+  const truthInput = useRef<HTMLInputElement>(null);
+  // Each outcome of a ground-truth file shows once, when it arrives.
+  const truth = useTruthUpload(useCallback((r: { ok: boolean; text: string }) => setNotice(r), []));
   const mayUpload = can('source.write');
+  const sets = useDatasets();
   useEffect(() => {
     void fetchCountries().then(setCountries);
+    void datasets.refresh();
   }, []);
 
   const summary = selected ? byId.get(selected) : undefined;
@@ -245,20 +162,25 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
   const current = full ?? summary ?? null;
 
   const videoById = useMemo(() => new Map(videos.map((v) => [v.id, v])), [videos]);
-
-  // Own footage first, newest on top; the reference set after it, by case name.
-  const groups = useMemo(() => {
-    const own: VideoInfo[] = [];
-    const reference: VideoInfo[] = [];
-    for (const v of videos) (isReference(v) ? reference : own).push(v);
-    own.sort((a, b) => b.createdAt - a.createdAt);
-    reference.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-    return { own, reference };
-  }, [videos]);
+  const groups = useMemo(() => groupRecordings(videos, byId, sets, { pick, t }), [videos, byId, sets, pick, t]);
   const total = videos.length;
-
   const located = useMemo(() => fixes.filter((f) => f.location && videoById.has(f.videoId)).length, [fixes, videoById]);
-  const deviations = useMemo(() => fixes.map((f) => f.truth?.errorKm).filter((v): v is number => typeof v === 'number'), [fixes]);
+  const anyTruth = useMemo(() => fixes.some((f) => f.truth), [fixes]);
+
+  // The node's counts and names follow new recordings, fixes and finished uploads, once they pause.
+  const changeKey = `${total}:${located}`;
+  const firstChange = useRef(true);
+  useEffect(() => {
+    if (firstChange.current) {
+      firstChange.current = false;
+      return;
+    }
+    datasets.refreshSoon();
+  }, [changeKey]);
+  const uploaded = useUploads().filter((u) => u.status === 'done').length;
+  useEffect(() => {
+    if (uploaded > 0) datasets.refreshSoon();
+  }, [uploaded]);
 
   const markers = useMemo<MapMarker[]>(() => {
     const out: MapMarker[] = [];
@@ -317,27 +239,66 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
     [select],
   );
 
-  const take = useCallback(
-    (files: File[]) => {
+  /** Files straight into an existing dataset: no dialog. A ground-truth file among them is sent as such. */
+  const addInto = useCallback(
+    (datasetId: string, files: File[]) => {
+      setNotice(null);
       const truthFiles = files.filter((f) => isTruthFile(f.name));
       const rest = files.filter((f) => !isTruthFile(f.name));
-      if (truthFiles[0]) truth.send(truthFiles[0]);
+      if (truthFiles[0]) truth.send(truthFiles[0], { withVideos: rest.length > 0 });
       if (rest.length === 0) {
-        setNotice(truthFiles.length > 0 ? null : t('Keine Videodateien gefunden.'));
+        if (truthFiles.length === 0) setNotice({ text: t('Keine Videodateien gefunden.'), ok: false });
         return;
       }
-      const { accepted, skipped } = uploads.add(rest, OWN_UPLOAD);
-      setNotice(accepted === 0 ? t('Keine Videodateien gefunden.') : skipped > 0 ? t('{n} Datei(en) übersprungen, kein Videoformat.', { n: skipped }) : null);
+      const { accepted, skipped } = uploads.add(rest, { ...UPLOAD_OPTIONS, sourceId: datasetId });
+      if (accepted === 0) setNotice({ text: t('Keine Videodateien gefunden.'), ok: false });
+      else if (skipped > 0) setNotice({ text: t('{n} Datei(en) übersprungen, kein Videoformat.', { n: skipped }), ok: false });
     },
     [t, truth],
   );
 
-  // The whole view takes a drop: files or folders over the list or the map.
+  const openUpload = useCallback((initial: Picked | null) => {
+    setNotice(null);
+    setDialog({ kind: 'upload', initial });
+  }, []);
+
+  const picked = (files: File[], folder: string | null): void => {
+    if (files.length === 0) return;
+    if (pickTarget.current === 'new') openUpload({ files, folder });
+    else addInto(pickTarget.current, files);
+  };
+
+  const actions = useMemo<GroupActions>(
+    () => ({
+      addVideos: (group) => {
+        pickTarget.current = group.id;
+        fileInput.current?.click();
+      },
+      addFolder: (group) => {
+        pickTarget.current = group.id;
+        folderInput.current?.click();
+      },
+      addTruth: () => truthInput.current?.click(),
+      remove: (group) => {
+        setNotice(null);
+        setDialog({ kind: 'delete', group });
+      },
+    }),
+    [],
+  );
+
+  const groupAt = (e: DragEvent): string | null => {
+    const el = e.target instanceof Element ? e.target.closest('[data-drop-group]') : null;
+    return el?.getAttribute('data-drop-group') ?? null;
+  };
+
+  // The whole view takes a drop: on a dataset it goes into that dataset, elsewhere into a new one.
   const dropProps = mayUpload
     ? {
         onDragEnter: (e: DragEvent) => {
           if (!dragHasFiles(e)) return;
           e.preventDefault();
+          if (dialog) return;
           dragDepth.current++;
           setDragging(true);
         },
@@ -345,37 +306,49 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
           if (!dragHasFiles(e)) return;
           e.preventDefault();
           e.dataTransfer.dropEffect = 'copy';
+          if (dialog) return;
+          const at = groupAt(e);
+          setDropGroup((prev) => (prev === at ? prev : at));
         },
         onDragLeave: () => {
           dragDepth.current = Math.max(0, dragDepth.current - 1);
-          if (dragDepth.current === 0) setDragging(false);
+          if (dragDepth.current === 0) {
+            setDragging(false);
+            setDropGroup(null);
+          }
         },
         onDrop: (e: DragEvent) => {
           if (!dragHasFiles(e)) return;
           e.preventDefault();
           dragDepth.current = 0;
           setDragging(false);
-          void filesFromDrop(e).then(take);
+          setDropGroup(null);
+          if (dialog) return;
+          const at = groupAt(e);
+          const folder = droppedFolderName(e);
+          void filesFromDrop(e).then((files) => {
+            if (files.length === 0) return;
+            if (at) addInto(at, files);
+            else openUpload({ files, folder });
+          });
         },
       }
     : {};
+
+  const deleted = (group: DatasetGroup, result: DatasetDeleteResult): void => {
+    setDialog(null);
+    if (selected && group.videos.some((v) => v.id === selected)) select(null);
+    const parts = [t('{deleted} gelöscht', { deleted: n(result.deleted, 'recording') })];
+    if (result.kept > 0) parts.push(t('{kept} bleiben (in einem Vorgang gesichert)', { kept: result.kept }));
+    setNotice({ text: parts.join(' · '), ok: true });
+  };
 
   const view = current?.location
     ? { lat: current.location.lat, lon: current.location.lon, zoom: zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }
     : WORLD;
   const viewKey = current?.location ? `${current.videoId}:${current.computedAt}` : 'world';
-  const keyImage = middleFrame(current);
-  const sun = current?.sun?.at ?? null;
   const selectedVideo = selected ? (videoById.get(selected) ?? null) : null;
-  const ownUploads = uploadItems.length > 0;
-
-  const renderRows = (list: VideoInfo[]) => (
-    <ul className="dt-rows">
-      {list.map((v) => (
-        <FixRow key={v.id} video={v} fix={byId.get(v.id) ?? null} selected={v.id === selected} select={select} />
-      ))}
-    </ul>
-  );
+  const hoverName = dropGroup ? (groups.find((g) => g.id === dropGroup)?.name ?? null) : null;
 
   return (
     <div className={dragging ? 'dt-ortung dt-dragging' : 'dt-ortung'} {...dropProps}>
@@ -383,215 +356,127 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
         <div className="dt-list-head">
           <h2 className="label">
             {t('Aufnahmen')} <span className="count">{total}</span>
-            {total > 0 && (
-              <span className="count-of">
-                · {located} {t('geortet')}
-              </span>
-            )}
           </h2>
           {mayUpload && (
-            <div className="dt-upload-btns">
-              <button type="button" className="btn btn-solid" onClick={() => fileInput.current?.click()}>
-                {t('Videos hochladen')}
-              </button>
-              <input
-                ref={fileInput}
-                type="file"
-                accept={`${VIDEO_ACCEPT},.csv,.json`}
-                multiple
-                hidden
-                onChange={(e) => {
-                  take(Array.from(e.target.files ?? []));
-                  e.target.value = '';
-                }}
-              />
-              <input
-                ref={(el) => {
-                  folderInput.current = el;
-                  if (el) el.setAttribute('webkitdirectory', '');
-                }}
-                type="file"
-                multiple
-                hidden
-                onChange={(e) => {
-                  take(Array.from(e.target.files ?? []));
-                  e.target.value = '';
-                }}
-              />
-            </div>
+            <button type="button" className="btn btn-solid" onClick={() => openUpload(null)}>
+              {t('Hochladen')}
+            </button>
           )}
+        </div>
+        {notice && <p className={notice.ok ? 'dt-notice' : 'note dt-notice'}>{notice.text}</p>}
+        <div className="pane-body">
+          {total === 0 && <p className="dt-empty">{mayUpload ? t('Noch keine Aufnahmen. Videos oder einen Ordner hierher ziehen.') : t('Noch keine Aufnahmen.')}</p>}
+          <OrtungList groups={groups} byId={byId} selected={selected} select={select} mayWrite={mayUpload} managed={sets.supported && sets.list !== null} actions={actions} dropGroup={dropGroup} />
         </div>
         {mayUpload && (
-          <div className="dt-intake">
-            {/* A hint for the first own upload; once there is own footage it is known. */}
-            {groups.own.length === 0 && <p className="dt-hint">{t('Videos oder ganze Ordner auf Liste oder Karte ziehen. Die Ortung beginnt sofort, auch bei langen Videos.')}</p>}
-            <button type="button" className="text-btn dt-intake-btn" onClick={() => folderInput.current?.click()}>
-              + {t('Einen ganzen Ordner hochladen')}
-            </button>
-            <TruthControl truth={truth} compact />
-            {notice && <p className="note">{notice}</p>}
-          </div>
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              accept={`${VIDEO_ACCEPT},.csv,.json`}
+              multiple
+              hidden
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = '';
+                picked(files, null);
+              }}
+            />
+            <input
+              ref={(el) => {
+                folderInput.current = el;
+                if (el) el.setAttribute('webkitdirectory', '');
+              }}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = '';
+                picked(files, pickedFolderName(files));
+              }}
+            />
+            <input
+              ref={truthInput}
+              type="file"
+              accept={TRUTH_ACCEPT}
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) {
+                  setNotice(null);
+                  truth.send(file);
+                }
+              }}
+            />
+          </>
         )}
-        {ownUploads && <UploadTray items={uploadItems} videos={videoById} byId={byId} select={select} />}
-        <div className="pane-body">
-          {total === 0 && (
-            <div className="dt-empty">
-              <p className="dt-empty-title">{t('Noch keine Aufnahmen')}</p>
-              <p className="low">{mayUpload ? t('Videos hochladen oder hierher ziehen. DATUM bestimmt Ort und Uhrzeit.') : t('Diese Rolle darf keine Videos hochladen.')}</p>
-            </div>
-          )}
-          {groups.own.length > 0 && (
-            <>
-              {groups.reference.length > 0 && <div className="dt-group">{t('Eigene Aufnahmen')}</div>}
-              {renderRows(groups.own)}
-            </>
-          )}
-          {groups.reference.length > 0 && (
-            <>
-              {groups.own.length > 0 && <div className="dt-group">{t('Referenzbestand')}</div>}
-              {renderRows(groups.reference)}
-            </>
-          )}
-        </div>
       </aside>
 
       <section className="dt-map">
         <MapCanvas view={view} viewKey={viewKey} markers={markers} shapes={shapes} minZoom={1} maxZoom={16} fly globe onSelect={onMapSelect} />
-        {!current && total > 0 && (
-          <div className="dt-hud">
-            <div className="dt-hud-clock">
-              {located}
-              <span className="dt-hud-of">/{total}</span>
-            </div>
-            <div className="dt-hud-sub">{t('Aufnahmen geortet')}</div>
-            {deviations.length > 0 && (
-              <div className="dt-hud-line">
-                {t('Abweichung im Median')} <b>{kmText(medianOf(deviations), locale)}</b>
-                <span className="low"> · {t('{n} mit Grundwahrheit', { n: deviations.length })}</span>
-              </div>
-            )}
-            <div className="dt-hud-hint">{t('Eine Aufnahme wählen: Ort, Uhrzeit, Sonne, Raum.')}</div>
-          </div>
-        )}
-        {current && current.location && (current.status === 'ready' || current.status === 'running') && (
-          <div className="dt-hud">
-            <div className="dt-hud-stage">
-              {current.status === 'running' ? (
-                <span className="dt-tag dt-tag-live">{t('wird geortet …')}</span>
-              ) : stageOf(current) === 'quick' ? (
-                <span className="dt-tag dt-tag-live">{t('schnell geortet · Räume folgen')}</span>
-              ) : (
-                <span className="dt-tag">{t('vollständig')}</span>
-              )}
-            </div>
-            <div className="dt-hud-place">{placeText(lang, current.location, current)}</div>
-            <div className="dt-hud-sub">
-              {[countryText(lang, current.location), radiusText(lang, current.location)].filter((x) => x !== '').join(' · ')}
-            </div>
-            <div className="dt-hud-clock">{bestWindowText(current) ?? '––:––'}</div>
-            <div className="dt-hud-sub">
-              {current.time.method === 'metadata' ? t('Uhrzeit aus den Metadaten') : current.time.method === 'sun' ? t('Uhrzeit aus dem Sonnenstand') : t('Uhrzeit nicht bestimmbar')}
-              {current.time.timezone ? ` · ${current.time.timezone}` : ''}
-            </div>
-            <div className="dt-hud-conf">
-              <span>{t('Konfidenz')}</span>
-              <span className="dt-meter" aria-hidden="true">
-                <span style={{ width: `${Math.round(current.location.confidence * 100)}%` }} />
-              </span>
-              <b>{formatScore(current.location.confidence)}</b>
-            </div>
-            <div className="dt-hud-detail">
-              <div>{formatCoordinate(current.location.lat, current.location.lon)}</div>
-              <div className="dt-hud-checks">
-                <CheckLinks lat={current.location.lat} lon={current.location.lon} />
-              </div>
-              {sun && (
-                <div>
-                  {t('Sonne')} {Math.round(sun.azimuthDeg)}° / {Math.round(sun.elevationDeg)}° · {t('Schatten')} {Math.round(sun.shadowAzimuthDeg)}°
-                </div>
-              )}
-              {terrain && (
-                <div>
-                  {t('Gelände {min}–{max} m · Höhenlinien alle {step} m', {
-                    min: Math.round(terrain.minHeight).toLocaleString(locale),
-                    max: Math.round(terrain.maxHeight).toLocaleString(locale),
-                    step: terrain.interval.toLocaleString(locale),
-                  })}
-                </div>
-              )}
-              {current.truth?.errorKm != null && (
-                <div className="dt-hud-truth">
-                  {t('Abweichung zur Wahrheit')} <b>{kmText(current.truth.errorKm, locale)}</b>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        {current && !current.location && (
-          <div className="dt-hud">
-            <div className="dt-hud-place">{selectedVideo ? caseLabel(selectedVideo.name) : ''}</div>
-            <div className="dt-hud-sub">{selectedVideo ? progressText(current, selectedVideo, t) : t('Ort unbestimmt')}</div>
-          </div>
-        )}
-        {current && (
-          <div className="dt-strip">
-            {keyImage && <img src={keyImage} alt="" />}
-            <div className="dt-strip-text">
-              <div className="label">{selectedVideo ? caseLabel(selectedVideo.name) : ''}</div>
-              <div className="btn-row">
-                <button type="button" className="btn" onClick={() => go('befund')}>
-                  {t('Befund')}
-                </button>
-                <button type="button" className="btn" onClick={() => go('raum')} disabled={!current.keyframes.some((k) => k.spaceUrl)}>
-                  {t('Raum betreten')}
-                </button>
-              </div>
-              {stageOf(current) === 'quick' && <div className="low">{t('Die Räume folgen, sobald die Auswertung des Videos fertig ist.')}</div>}
-            </div>
-          </div>
-        )}
+        {current && <ResultCard fix={current} video={selectedVideo} go={go} />}
         <div className="dt-map-tools">
-          <label className="check">
-            <input type="checkbox" checked={showTruth} onChange={(e) => setShowTruth(e.target.checked)} />
-            {t('Wahrheit zeigen')}
-          </label>
+          {anyTruth && (
+            <label className="check">
+              <input type="checkbox" checked={showTruth} onChange={(e) => setShowTruth(e.target.checked)} />
+              {t('Wahrheit zeigen')}
+            </label>
+          )}
           {selected && (
             <button type="button" className="text-btn" onClick={() => select(null)}>
               {t('Weltansicht')}
             </button>
           )}
-          <button type="button" className="text-btn" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">
+          <button type="button" className="text-btn" onClick={() => setDialog({ kind: 'settings' })} aria-haspopup="dialog">
             {t('Einstellungen')}
           </button>
         </div>
+        {dragging && (
+          <div className="dt-drop" aria-hidden="true">
+            <div className="dt-drop-box">
+              <b>{hoverName ? t('Loslassen: in »{name}«', { name: hoverName }) : sets.supported ? t('Loslassen: neuer Datensatz') : t('Loslassen zum Hochladen')}</b>
+            </div>
+          </div>
+        )}
         {total === 0 && mayUpload && (
           <div className="dt-map-empty">
             <p className="dt-empty-title">{t('Videos hierher ziehen')}</p>
             <p className="low">{t('oder')}</p>
-            <button type="button" className="btn btn-solid" onClick={() => fileInput.current?.click()}>
-              {t('Videos hochladen')}
+            <button
+              type="button"
+              className="text-btn"
+              onClick={() => {
+                pickTarget.current = 'new';
+                fileInput.current?.click();
+              }}
+            >
+              {t('Dateien wählen')}
             </button>
           </div>
         )}
       </section>
-      {settingsOpen && (
-        <Dialog title={t('Einstellungen der Ortung')} onClose={() => setSettingsOpen(false)}>
+      {dialog?.kind === 'settings' && (
+        <Dialog title={t('Einstellungen der Ortung')} onClose={() => setDialog(null)}>
           <DatumSettingsPanel can={can} />
           <div className="btn-row">
-            <button type="button" className="btn" onClick={() => setSettingsOpen(false)}>
+            <button type="button" className="btn" onClick={() => setDialog(null)}>
               {t('Schließen')}
             </button>
           </div>
         </Dialog>
       )}
-      {dragging && (
-        <div className="dt-drop" aria-hidden="true">
-          <div className="dt-drop-box">
-            <b>{t('Loslassen zum Hochladen')}</b>
-            <span>{t('Videos und Ordner; eine CSV- oder JSON-Datei gilt als Grundwahrheit.')}</span>
-          </div>
-        </div>
+      {dialog?.kind === 'upload' && (
+        <UploadDialog
+          initial={dialog.initial}
+          list={sets.list}
+          supported={sets.supported}
+          sendTruth={truth.send}
+          onClose={() => setDialog(null)}
+        />
       )}
+      {dialog?.kind === 'delete' && <DeleteDatasetDialog group={dialog.group} onClose={() => setDialog(null)} onDone={(result) => deleted(dialog.group, result)} />}
     </div>
   );
 }

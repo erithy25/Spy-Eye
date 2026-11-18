@@ -27,7 +27,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { config, repoRoot } from '../config.js';
-import { GEOCLIP_FILES, defaultGeoclipDir, geoclipFilesPresent, type GeoclipPrecision, type GeoclipPrediction } from './geoclip.js';
+import { GEOCLIP_FILES, NamedError, defaultGeoclipDir, geoclipFilesPresent, type GeoclipPrecision, type GeoclipPrediction } from './geoclip.js';
 import { reportWorldModel } from './settings.js';
 
 /** A text in both languages. */
@@ -62,7 +62,8 @@ export interface WorldModelInfo {
 export type PredictReply =
   | { status: 'ok'; prediction: GeoclipPrediction }
   | { status: 'building'; done: number; total: number }
-  | { status: 'failed'; reason: string };
+  /** reason in German, reasonEn its English twin (absent when the text is technical, e.g. of onnxruntime). */
+  | { status: 'failed'; reason: string; reasonEn?: string };
 
 export interface WorldModelOps {
   /** JPEG frames of one video → the prediction (wait: also while the gallery is still built). */
@@ -78,12 +79,14 @@ export interface WorldModelOps {
 export type GalleryEvent =
   | { kind: 'gallery'; state: 'loading' | 'building'; done: number; total: number }
   | { kind: 'gallery'; state: 'ready'; built: boolean; ms: number; cacheProblem: string | null }
-  | { kind: 'gallery'; state: 'failed'; reason: string };
+  | { kind: 'gallery'; state: 'failed'; reason: string; reasonEn?: string };
 
 export interface SerializedError {
   name: string;
   message: string;
   stack: string | null;
+  /** English twin of the message (NamedError), so that it survives the thread boundary. */
+  en?: string;
 }
 
 export type HostMessage = { type: 'call'; id: number; op: keyof WorldModelOps; args: unknown } | { type: 'close' };
@@ -96,15 +99,29 @@ export type ThreadMessage =
   | { type: 'error'; id: number; error: SerializedError };
 
 export function serializeError(err: unknown): SerializedError {
+  if (err instanceof NamedError) return { name: err.name, message: err.message, stack: err.stack ?? null, en: err.en };
   if (err instanceof Error) return { name: err.name, message: err.message, stack: err.stack ?? null };
   return { name: 'Error', message: String(err), stack: null };
 }
 
 function deserializeError(e: SerializedError): Error {
-  const err = new Error(e.message);
+  const err = e.en !== undefined ? new NamedError(e.message, e.en) : new Error(e.message);
   err.name = e.name;
   if (e.stack !== null) err.stack = e.stack;
   return err;
+}
+
+/** An error in both languages: a NamedError's own twin, else the (technical) message for both. */
+export function namedErrorText(err: unknown): Named {
+  if (err instanceof NamedError) return { de: err.message, en: err.en };
+  const message = err instanceof Error ? err.message : String(err);
+  return { de: message, en: message };
+}
+
+/** The trace's reason for a failed call of the world model, in both languages. */
+export function worldModelFailure(err: unknown): Named {
+  const text = namedErrorText(err);
+  return { de: `Weltmodell fehlgeschlagen: ${text.de}`, en: `world model failed: ${text.en}` };
 }
 
 // ------------------------------------------------------------------ the interface the engine uses
@@ -112,8 +129,11 @@ function deserializeError(e: SerializedError): Error {
 export type GalleryState = 'unknown' | 'loading' | 'building' | 'ready' | 'failed';
 
 export interface WorldModelResult {
-  /** 'ok' with a prediction; otherwise why there is none. */
-  state: 'ok' | 'unavailable' | 'building' | 'failed';
+  /**
+   * 'ok' with a prediction; otherwise why there is none. 'late' is set by the engine, never by
+   * the model: no answer within the quick stage's wait (the call itself goes on).
+   */
+  state: 'ok' | 'unavailable' | 'building' | 'failed' | 'late';
   prediction: GeoclipPrediction | null;
   /** The reason in both languages when there is no prediction (for the fix's trace). */
   reason: Named | null;
@@ -181,8 +201,17 @@ export interface WorldModelServiceOptions {
   cacheDir?: string;
   threads?: number;
   testOps?: boolean;
-  /** Longest a predict call may take before the thread is considered hung (ms). Default 180 s. */
+  /**
+   * Longest a call may take before the thread is considered hung (ms). Default 180 s: a call that
+   * waits for the gallery (wait: true, the scripts) may have to wait for its one-time build.
+   */
   callTimeoutMs?: number;
+  /**
+   * The same for a prediction that does not wait for the gallery (the engine's calls, wait: false):
+   * twelve frames take about 5 s of computing, so a call still running after this is hung, and
+   * holding the fix of an upload for the full callTimeoutMs would be far too long. Default 60 s.
+   */
+  predictTimeoutMs?: number;
   log?: (message: string) => void;
 }
 
@@ -194,6 +223,7 @@ const UNAVAILABLE: Named = {
 export class WorldModelService implements WorldModel {
   readonly boot: WorldModelBoot;
   private readonly callTimeoutMs: number;
+  private readonly predictTimeoutMs: number;
   private readonly log: (message: string) => void;
   private state: HostState = 'idle';
   private worker: Worker | null = null;
@@ -218,6 +248,7 @@ export class WorldModelService implements WorldModel {
       testOps: options.testOps ?? false,
     };
     this.callTimeoutMs = options.callTimeoutMs ?? 180_000;
+    this.predictTimeoutMs = Math.min(options.predictTimeoutMs ?? 60_000, this.callTimeoutMs);
     this.log = options.log ?? (() => undefined);
   }
 
@@ -303,12 +334,12 @@ export class WorldModelService implements WorldModel {
     // Copies with buffers of their own, which can be moved to the thread: the caller keeps its
     // frames (the full stage may need them again).
     const copies = jpegs.map((j) => new Uint8Array(j));
+    const wait = opts.wait ?? false;
     try {
-      const reply = await this.call('predict', { jpegs: copies, wait: opts.wait ?? false }, copies.map((c) => c.buffer as ArrayBuffer));
+      const reply = await this.call('predict', { jpegs: copies, wait }, copies.map((c) => c.buffer as ArrayBuffer), wait ? this.callTimeoutMs : this.predictTimeoutMs);
       return this.fromReply(reply, done);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return done('failed', null, { de: `Weltmodell fehlgeschlagen: ${message}`, en: `world model failed: ${message}` });
+      return done('failed', null, worldModelFailure(err));
     }
   }
 
@@ -343,7 +374,7 @@ export class WorldModelService implements WorldModel {
   async close(): Promise<void> {
     if (this.state === 'closed') return;
     this.state = 'closed';
-    const error = new Error('Weltmodell: Rechenthread wurde beendet.');
+    const error = new NamedError('Weltmodell: Rechenthread wurde beendet.', 'world model: its computing thread was ended.');
     this.rejectPending(error);
     this.live = Promise.reject(error);
     this.live.catch(() => undefined);
@@ -365,12 +396,12 @@ export class WorldModelService implements WorldModel {
         en: `the world model's place gallery is being computed once${shareEn}; this fix without the world model`,
       });
     }
-    return done('failed', null, { de: `Weltmodell fehlgeschlagen: ${reply.reason}`, en: `world model failed: ${reply.reason}` });
+    return done('failed', null, { de: `Weltmodell fehlgeschlagen: ${reply.reason}`, en: `world model failed: ${reply.reasonEn ?? reply.reason}` });
   }
 
   private current(): Promise<Worker> {
-    if (this.state === 'closed') return Promise.reject(new Error('Weltmodell: Rechenthread wurde beendet.'));
-    if (this.state === 'failed') return Promise.reject(this.failure ?? new Error('Weltmodell nicht verfügbar.'));
+    if (this.state === 'closed') return Promise.reject(new NamedError('Weltmodell: Rechenthread wurde beendet.', 'world model: its computing thread was ended.'));
+    if (this.state === 'failed') return Promise.reject(this.failure ?? new NamedError('Weltmodell nicht verfügbar.', 'world model not available.'));
     if (!this.live) {
       this.state = 'starting';
       this.live = this.spawn().then(
@@ -389,7 +420,12 @@ export class WorldModelService implements WorldModel {
     return this.live;
   }
 
-  private async call<K extends keyof WorldModelOps>(op: K, args: WorldModelOps[K]['args'], transfer: ArrayBuffer[]): Promise<WorldModelOps[K]['result']> {
+  private async call<K extends keyof WorldModelOps>(
+    op: K,
+    args: WorldModelOps[K]['args'],
+    transfer: ArrayBuffer[],
+    timeoutMs: number = this.callTimeoutMs,
+  ): Promise<WorldModelOps[K]['result']> {
     const worker = await this.current();
     return new Promise<WorldModelOps[K]['result']>((resolve, reject) => {
       const id = this.nextId++;
@@ -402,9 +438,10 @@ export class WorldModelService implements WorldModel {
               const call = this.pending.get(id);
               if (!call) return;
               this.pending.delete(id);
-              call.reject(new Error(`keine Antwort nach ${Math.round(this.callTimeoutMs / 1000)} s`));
+              const secs = Math.round(timeoutMs / 1000);
+              call.reject(new NamedError(`keine Antwort nach ${secs} s`, `no answer after ${secs} s`));
               void worker.terminate();
-            }, this.callTimeoutMs);
+            }, timeoutMs);
       timer?.unref();
       this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
       worker.ref();
@@ -530,7 +567,7 @@ export class WorldModelService implements WorldModel {
       worker.on('exit', (code: number) => {
         this.workers.delete(worker);
         if (!ready) {
-          reject(lastError ?? new Error(`Weltmodell: Rechenthread endete beim Laden (Code ${code}).`));
+          reject(lastError ?? new NamedError(`Weltmodell: Rechenthread endete beim Laden (Code ${code}).`, `world model: the computing thread ended while loading (code ${code}).`));
           return;
         }
         this.died(worker, lastError, code);
@@ -542,12 +579,18 @@ export class WorldModelService implements WorldModel {
   private died(worker: Worker, error: Error | null, code: number): void {
     if (worker !== this.worker || this.state === 'closed') return;
     const reason = error ? error.message : `Code ${code}`;
+    const reasonEn = error ? namedErrorText(error).en : `code ${code}`;
     this.worker = null;
-    this.rejectPending(new Error(`Rechenthread ist ausgefallen (${reason}); der Aufruf wurde nicht beendet`));
+    this.rejectPending(new NamedError(`Rechenthread ist ausgefallen (${reason}); der Aufruf wurde nicht beendet`, `the computing thread failed (${reasonEn}); the call did not finish`));
     // The gallery lives in the thread: a new one loads it again (from the cache when it was built).
     if (this.gallery.state !== 'failed') this.gallery = { state: 'unknown', done: 0, total: 0, reason: null };
     if (!this.restartAllowed) {
-      this.giveUp(new Error(`Weltmodell: Rechenthread ist erneut ausgefallen (${reason}); bis zum Neustart des Knotens ohne Weltmodell.`));
+      this.giveUp(
+        new NamedError(
+          `Weltmodell: Rechenthread ist erneut ausgefallen (${reason}); bis zum Neustart des Knotens ohne Weltmodell.`,
+          `world model: the computing thread failed again (${reasonEn}); without the world model until the node restarts.`,
+        ),
+      );
       return;
     }
     this.restartAllowed = false;
@@ -557,14 +600,14 @@ export class WorldModelService implements WorldModel {
       (next) => {
         if (this.state === 'closed') {
           void stopWorker(next);
-          throw new Error('Weltmodell: Rechenthread wurde beendet.');
+          throw new NamedError('Weltmodell: Rechenthread wurde beendet.', 'world model: its computing thread was ended.');
         }
         this.adopt(next);
         return next;
       },
       (err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        const failure = new Error(`Weltmodell: Neustart des Rechenthreads fehlgeschlagen (${message}).`);
+        const text = namedErrorText(err);
+        const failure = new NamedError(`Weltmodell: Neustart des Rechenthreads fehlgeschlagen (${text.de}).`, `world model: restarting the computing thread failed (${text.en}).`);
         if (this.state !== 'closed') this.giveUp(failure);
         throw failure;
       },

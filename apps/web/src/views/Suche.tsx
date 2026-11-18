@@ -243,26 +243,31 @@ export function Suche({ node, openFrame }: ViewProps) {
 
       {!response && !failure && (
         <div className="primer">
+          {/* One line each; the full rules are in the titles. */}
           <div>
             <div className="label">{t('Gesucht wird')}</div>
-            <p>{t('Lagen, Schäden, Gegenstände, Fahrzeuge und Tätigkeiten, so wie man sie einem Kollegen beschreiben würde.')}</p>
-            <p>{t('Die Bilder müssen dafür nicht verschlagwortet sein; das Modell vergleicht die Bedeutung der Anfrage mit dem Inhalt jedes Bildes.')}</p>
+            <p title={t('Lagen, Schäden, Gegenstände, Fahrzeuge und Tätigkeiten, so wie man sie einem Kollegen beschreiben würde.')}>
+              {t('Lagen, Schäden, Gegenstände, Fahrzeuge, Tätigkeiten.')}
+            </p>
           </div>
           <div>
             <div className="label">{t('Abgelehnt wird')}</div>
-            <p>{t('Namen, Gesichter, Kennzeichen. Herkunft, Religion und andere geschützte Merkmale. Haarfarbe, Tätowierungen und andere körperliche Merkmale. Das Wiederfinden oder Verfolgen einer bestimmten Person.')}</p>
-            <p>{t('Jede Ablehnung steht mit der auslösenden Regel im Protokoll.')}</p>
+            <p
+              title={t(
+                'Namen, Gesichter, Kennzeichen. Herkunft, Religion und andere geschützte Merkmale. Haarfarbe, Tätowierungen und andere körperliche Merkmale. Das Wiederfinden oder Verfolgen einer bestimmten Person.',
+              )}
+            >
+              {t('Alles, was eine bestimmte Person erkennbar macht.')}
+            </p>
           </div>
           <div>
             <div className="label">{t('Durchsucht wird')}</div>
-            <p>
+            <p title={node.info?.product === 'sicht' ? t('Material einer laufenden Übung zählt ab dem Augenblick, in dem es eingeht.') : ''}>
               {t('{f} Bilder aus {s} Quellen dieses Knotens.', {
                 f: formatCount(node.app?.stats.frames ?? 0),
                 s: node.intel?.sources.length ?? 0,
-              })}{' '}
-              {t('Material einer laufenden Übung zählt ab dem Augenblick, in dem es eingeht.')}
+              })}
             </p>
-            <p>{t('Im Verbund reist die Frage zu den Nachbarknoten; deren Aufnahmen bleiben dort.')}</p>
           </div>
         </div>
       )}

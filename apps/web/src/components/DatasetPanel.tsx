@@ -21,7 +21,7 @@ const DETAIL_OPTIONS: { value: DetailLevel; label: string; hint: string }[] = [
 
 const FPS_OPTIONS: readonly number[] = [0.5, 1, 2, 4];
 
-function statusText(video: VideoInfo, t: (de: string) => string): string {
+function statusText(video: VideoInfo, t: (de: string, vars?: Record<string, string | number>) => string): string {
   switch (video.status) {
     case 'queued':
       // "grob": already searchable through the quick first pass, dense analysis pending.
@@ -31,12 +31,12 @@ function statusText(video: VideoInfo, t: (de: string) => string): string {
     case 'error':
       return t('Fehler');
     case 'ready':
-      return `${video.sceneCount} ${t('Sz.')}`;
+      return t('{n} Szenen', { n: video.sceneCount });
   }
 }
 
 export function DatasetPanel({ videos, selectedVideoId, onSelect, sourceId, canWrite }: DatasetPanelProps) {
-  const { t, locale } = useLang();
+  const { t, locale, n } = useLang();
   const [detail, setDetail] = useState<DetailLevel>('standard');
   const [sampleFps, setSampleFps] = useState(1);
   const [dragging, setDragging] = useState(false);
@@ -213,19 +213,22 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect, sourceId, canW
                 >
                   {video.name}
                 </button>
-                {video.durationSec !== null && <span className="row-dim">{formatTime(video.durationSec)}</span>}
-                {video.facesMasked > 0 && <span className="row-dim" title={t('maskierte Gesichter')}>▒ {video.facesMasked}</span>}
-                {video.deleteAfter !== null && (
-                  <span className="row-dim" title={t('wird gelöscht am')}>
-                    ⌫ {formatDate(video.deleteAfter, locale)}
-                  </span>
-                )}
                 <span className="row-state">{statusText(video, t)}</span>
                 {canWrite && (
                   <button type="button" className="row-x" aria-label={t('löschen')} onClick={() => onDelete(video)}>
                     ×
                   </button>
                 )}
+              </div>
+              {/* Length, masked faces and the deletion date in words, on a line of their own. */}
+              <div className="row-sub">
+                {[
+                  video.durationSec !== null ? formatTime(video.durationSec) : '',
+                  video.facesMasked > 0 ? t('{faces} maskiert', { faces: n(video.facesMasked, 'face') }) : '',
+                  video.deleteAfter !== null ? t('gelöscht ab {date}', { date: formatDate(video.deleteAfter, locale) }) : '',
+                ]
+                  .filter((x) => x !== '')
+                  .join(' · ')}
               </div>
               {video.status === 'processing' && (
                 <div className="bar">

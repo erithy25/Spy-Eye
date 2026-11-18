@@ -15,9 +15,9 @@
  *      still reach an internal address once; rules 1 and 2 keep that to names a picture service
  *      published in its own listing.
  *   4. At most two redirects, each target checked by 2 and 3 again.
- * Each picture: 8 s for the whole exchange, at most 3 MB, JPEG, PNG or WebP only (the declared
- * type and the first bytes must agree). Pictures are kept in memory only (a small LRU), never on
- * disk; no request carries a key or anything of the analyst.
+ * Each picture: 8 s for the whole exchange (name resolution included), at most 3 MB, JPEG, PNG or
+ * WebP only (the declared type and the first bytes must agree). Pictures are kept in memory only
+ * (a small LRU), never on disk; no request carries a key or anything of the analyst.
  */
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { BlockList, isIP } from 'node:net';
@@ -191,14 +191,24 @@ export function sniffImageType(body: Buffer): StreetImageType | null {
   return null;
 }
 
-class TooLarge extends Error {}
+/** A response body larger than allowed (readLimited); nothing more of it was read. */
+export class BodyTooLarge extends Error {
+  constructor(readonly max: number) {
+    super(`more than ${max} bytes`);
+    this.name = 'BodyTooLarge';
+  }
+}
 
-/** Reads a body up to `max` bytes; stops reading (and throws) as soon as it is larger. */
-async function readLimited(res: Response, max: number): Promise<Buffer> {
+/**
+ * Reads a body up to `max` bytes; stops reading (and throws BodyTooLarge) as soon as it is larger,
+ * whether the size was declared or not: a host that streams without Content-Length must not make
+ * the node hold more than `max` bytes. Also used by the street-level stage (streetlevel.ts).
+ */
+export async function readLimited(res: Response, max: number): Promise<Buffer> {
   const declared = Number(res.headers.get('content-length') ?? '');
   if (Number.isFinite(declared) && declared > max) {
     await res.body?.cancel().catch(() => undefined);
-    throw new TooLarge();
+    throw new BodyTooLarge(max);
   }
   if (!res.body) return Buffer.alloc(0);
   const reader = res.body.getReader();
@@ -210,7 +220,7 @@ async function readLimited(res: Response, max: number): Promise<Buffer> {
     size += value.byteLength;
     if (size > max) {
       await reader.cancel().catch(() => undefined);
-      throw new TooLarge();
+      throw new BodyTooLarge(max);
     }
     parts.push(value);
   }
@@ -218,6 +228,32 @@ async function readLimited(res: Response, max: number): Promise<Buffer> {
 }
 
 // ------------------------------------------------------------------ fetching
+
+/**
+ * Settles with `promise`, or rejects as soon as `signal` aborts: with the signal's reason when it
+ * is an Error (a TimeoutError of AbortSignal.timeout), else with `fallback()`. The system resolver
+ * (dns.lookup, getaddrinfo) takes no signal and can hang for many seconds on a broken network; a
+ * request must not wait for it beyond its own time limit. The lookup itself runs on; its answer is
+ * dropped. Also used by the street-level stage (streetlevel.ts).
+ */
+export function untilAborted<T>(promise: Promise<T>, signal: AbortSignal, fallback: () => Error = () => new Error('aborted')): Promise<T> {
+  const reason = (): Error => (signal.reason instanceof Error ? signal.reason : fallback());
+  if (signal.aborted) return Promise.reject(reason());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(reason());
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
+}
 
 export interface StreetImageDeps {
   fetch?: StreetFetch;
@@ -242,7 +278,8 @@ export async function fetchStreetImage(url: string, deps: StreetImageDeps = {}):
   let current = url;
   try {
     for (let hop = 0; ; hop++) {
-      const host = await checkHost(current, lookup);
+      // The address check counts against the same 8 s as the exchange (see untilAborted).
+      const host = await untilAborted(checkHost(current, lookup), signal);
       if (host !== 'ok') return { ok: false, failure: host };
       const res = await doFetch(current, {
         // Redirects are followed here, one by one, so that every target passes the same checks.
@@ -282,7 +319,7 @@ export async function fetchStreetImage(url: string, deps: StreetImageDeps = {}):
       return { ok: true, body, type: sniffed };
     }
   } catch (err: unknown) {
-    if (err instanceof TooLarge) return { ok: false, failure: 'too-large' };
+    if (err instanceof BodyTooLarge) return { ok: false, failure: 'too-large' };
     const name = (err as { name?: unknown } | null)?.name;
     if (signal.aborted || name === 'TimeoutError' || name === 'AbortError') return { ok: false, failure: 'timeout' };
     return { ok: false, failure: 'error' };

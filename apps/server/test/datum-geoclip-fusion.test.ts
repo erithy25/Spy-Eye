@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
-import { compactPrediction, cosines, massWithin, normaliseRows, type GeoclipPrediction } from '../src/datum/geoclip.js';
+import { compactPrediction, cosines, massWithin, modesOf, normaliseRows, type GeoclipPrediction } from '../src/datum/geoclip.js';
 import { DEFAULT_LOCATE_PARAMS, decideLocation, worldModelRadiusKm, type LocateEvidence } from '../src/datum/locate.js';
 import { World, greatCircleKm, type LonLat } from '../src/datum/world.js';
 
@@ -196,6 +196,72 @@ test('a diffuse GeoCLIP answer gets the wide radius; no gallery answer at all is
   assert.ok(e && e.weight <= 0.05);
   assert.match(e.detail, /GPS/);
   assert.match(e.detailEn ?? '', /GPS/);
+});
+
+test('a world-model answer in a small mode still leads the candidates', () => {
+  const world = fixtureWorld();
+  // Diffuse prediction: the single most probable point (Munich, 1.5 %) is a mode of its own,
+  // below candidateMinMass and behind three larger clusters (Madrid, Rome, Amsterdam, 7.2 % each)
+  // that use up candidateModes. The rest lies scattered in small points far from all of them.
+  const points: { lat: number; lon: number; p: number }[] = [{ lat: 48.14, lon: 11.58, p: 0.015 }];
+  for (const [lat, lon] of [
+    [40.42, -3.7],
+    [41.9, 12.5],
+    [52.37, 4.9],
+  ] as const) {
+    for (let k = 0; k < 6; k++) points.push({ lat: lat + k * 0.01, lon: lon + k * 0.01, p: 0.012 });
+  }
+  for (let k = 0; k < 60; k++) points.push({ lat: -50 + (k % 10) * 9, lon: -170 + Math.floor(k / 10) * 25, p: 0.011 });
+  points.sort((a, b) => b.p - a.p);
+  const coords = Float32Array.from(points.flatMap((x) => [x.lat, x.lon]));
+  const probs = Float32Array.from(points.map((x) => x.p));
+  const support = Uint32Array.from(points.map((_, i) => i));
+  const modes = modesOf(coords, probs, support, 25, 10);
+  // The fixture holds what it should: Munich's mode is the fourth and below the mass cut-off.
+  assert.ok(modes.slice(0, 3).every((m) => m.p > 0.07));
+  assert.ok(greatCircleKm(modes[3]?.lat ?? 0, modes[3]?.lon ?? 0, 48.14, 11.58) < 1);
+  assert.ok((modes[3]?.p ?? 1) < DEFAULT_LOCATE_PARAMS.geoclip.candidateMinMass);
+  const base: GeoclipPrediction = {
+    frames: 12,
+    aggregation: 'mixture',
+    probs,
+    coords,
+    support,
+    top: points.slice(0, 20),
+    modes,
+    refined: null,
+    best: { lat: 48.14, lon: 11.58 },
+    countries: [{ iso: 'DE', name: 'Deutschland', p: 1 }],
+    timing: { embedMs: 0, scoreMs: 0, refineMs: 0 },
+  };
+  // No gallery answer at all: GeoCLIP gives the place.
+  const weak: LocateEvidence = {
+    neighbours: [[n('a', 52.5, 13.4, 0.3)]],
+    countryCosines: new Float32Array([0.1, 0.1]),
+    frameNumbers: [1],
+    metadata: null,
+    hints: null,
+  };
+  const check = (geo: GeoclipPrediction, what: string): void => {
+    const r = decideLocation(world, { ...weak, geoclip: geo }, { countryMinP: 0.9, continentMinP: 1.1 });
+    assert.equal(r.location?.method, 'worldmodel', what);
+    const first = r.candidates[0];
+    assert.ok(first, what);
+    assert.ok(greatCircleKm(first.lat, first.lon, geo.best.lat, geo.best.lon) < 0.1, `${what}: the answer leads the candidates`);
+    assert.equal(first.label, r.location?.label, what);
+    assert.ok(first.labelEn, what);
+    assert.ok(r.candidates.every((c) => c.score <= first.score + 1e-12), `${what}: the answer has the top score`);
+    assert.ok(r.candidates.reduce((s, c) => s + c.score, 0) <= 1 + 1e-9, what);
+    // The three large clusters are still offered.
+    assert.ok(r.candidates.filter((c) => greatCircleKm(c.lat, c.lon, 40.42, -3.7) < 30).length === 1, what);
+  };
+  check(base, 'answer in a small mode');
+  // A refined answer that is no member of any mode (Lyon, no support near it) gets its own entry.
+  const refined: GeoclipPrediction = { ...base, refined: { lat: 45.76, lon: 4.84, gain: 0.5 }, best: { lat: 45.76, lon: 4.84 } };
+  check(refined, 'answer away from every mode');
+  const r = decideLocation(world, { ...weak, geoclip: refined }, { countryMinP: 0.9, continentMinP: 1.1 });
+  assert.equal(r.candidates[0]?.radiusKm, DEFAULT_LOCATE_PARAMS.geoclip.candidateKm);
+  assert.equal(r.candidates[0]?.country, 'FR');
 });
 
 test('radius tiers of world-model answers by concentration', () => {

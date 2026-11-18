@@ -39,11 +39,11 @@ export function fmtAz(a: number): string {
 
 export function fmtMetres(m: number): string {
   if (!Number.isFinite(m)) return '—';
-  if (m >= 10_000) return `${fmt(m / 1000, 1)} KM`;
-  if (m >= 1000) return `${fmt(m / 1000, 2)} KM`;
-  if (m >= 100) return `${fmt(m, 0)} M`;
-  if (m >= 10) return `${fmt(m, 1)} M`;
-  return `${fmt(m, 2)} M`;
+  if (m >= 10_000) return `${fmt(m / 1000, 1)} km`;
+  if (m >= 1000) return `${fmt(m / 1000, 2)} km`;
+  if (m >= 100) return `${fmt(m, 0)} m`;
+  if (m >= 10) return `${fmt(m, 1)} m`;
+  return `${fmt(m, 2)} m`;
 }
 
 const POINTS16 = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];

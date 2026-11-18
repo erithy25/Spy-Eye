@@ -78,8 +78,12 @@ async function getJson<T>(url: string, signal?: AbortSignal, cache?: RequestCach
   return (await response.json()) as T;
 }
 
-async function sendJson<T>(method: 'POST' | 'PUT', url: string, body: unknown): Promise<T> {
-  const response = await fetch(url, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+async function sendJson<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    credentials: 'same-origin',
+    ...(body !== undefined ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
+  });
   if (!response.ok) throw await failure(response);
   return (await response.json()) as T;
 }
@@ -132,6 +136,34 @@ export interface TruthResult {
 export function postTruth(entries: { name: string; lat: number; lon: number; label?: string }[]): Promise<TruthResult> {
   return sendJson<TruthResult>('POST', 'api/datum/truth', { entries });
 }
+
+/**
+ * A set of recordings as the node lists it (GET /api/datum/datasets): an archive source the
+ * analyst uploads into, the seeded reference set, or the inbox ("Eigene Aufnahmen") while it holds
+ * recordings. Mirrors DatasetInfo of the server (datum/datasets.ts), which is not imported here
+ * because that module pulls in the server's routes.
+ */
+export interface DatasetInfo {
+  id: string;
+  name: string;
+  nameEn?: string;
+  reference: boolean;
+  recordings: number;
+  located: number;
+  createdAt: number | null;
+}
+
+/** What deleting a dataset did: recordings deleted, recordings kept (a case holds them), dataset gone. */
+export interface DatasetDeleteResult {
+  deleted: number;
+  kept: number;
+  removed: boolean;
+}
+
+export const fetchDatasets = (signal?: AbortSignal): Promise<DatasetInfo[]> => getJson('api/datum/datasets', signal, 'no-store');
+export const createDataset = (name: string): Promise<DatasetInfo> => sendJson('POST', 'api/datum/datasets', { name });
+export const renameDataset = (id: string, name: string): Promise<DatasetInfo> => sendJson('PATCH', `api/datum/datasets/${encodeURIComponent(id)}`, { name });
+export const deleteDataset = (id: string): Promise<DatasetDeleteResult> => sendJson('DELETE', `api/datum/datasets/${encodeURIComponent(id)}`);
 
 /** The engine settings of the node (GET /api/datum/settings); never the Mapillary key itself. */
 export const fetchSettings = (signal?: AbortSignal): Promise<DatumSettings> => getJson('api/datum/settings', signal, 'no-store');

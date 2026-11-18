@@ -1,14 +1,23 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { formatDecimal, formatDuration, formatScore } from '../../format';
+import { formatDecimal, formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker } from '../../map/MapCanvas';
 import { useAction } from '../../ui';
 import { recompute, rel, fetchCountries, type CountryShape } from '../api';
-import { caseLabel, countryText, placeText, radiusText, stageOf } from '../labels';
-import { CandidateList, CheckLinks, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
-import { kindMethod } from '../panel/common';
+import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
+import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
+import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps } from './Ortung';
+
+/** The length of a recording as a clock reads it: 0:12, 4:05, 1:02:05. */
+function lengthText(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const ss = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
 
 function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const lang = useLang();
@@ -17,6 +26,8 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const { fix, error } = useFullFix(selected, summary);
   const [keyIndex, setKeyIndex] = useState(0);
   const [candidate, setCandidate] = useState(0);
+  // The picture under the video's place: the video itself, or the keyframe with its skyline drawn.
+  const [showSkyline, setShowSkyline] = useState(false);
   const [countries, setCountries] = useState<CountryShape[]>([]);
   const action = useAction();
   const video = videos.find((v) => v.id === selected) ?? null;
@@ -64,6 +75,20 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const trace = fix.trace ?? [];
   const quick = stageOf(fix) === 'quick';
   const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
+  // The skyline is drawn on the keyframe in place of the video (one picture, switched), and only
+  // when there is a line to draw.
+  const skyline = key !== null && (fix.keyframes.some((k) => k.skyline) || headingHere !== null);
+  const skylineOn = skyline && showSkyline;
+  const keyThumbs =
+    fix.keyframes.length > 1 ? (
+      <div className="dt-keys">
+        {fix.keyframes.map((k, i) => (
+          <button key={k.frame} type="button" className={i === keyIndex ? 'on' : ''} onClick={() => setKeyIndex(i)} aria-label={`${t('Schlüsselbild')} ${i + 1}`}>
+            <img src={rel(k.imageUrl)} alt="" loading="lazy" decoding="async" />
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   return (
     <div className="dt-befund-page">
@@ -72,29 +97,28 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
         <div className="dt-result-case">
           <span className="label">{t('Aufnahme')}</span>
           <b>{caseLabel(video.name)}</b>
-          <span className="dt-result-stage">
+          <span className="low dt-result-stage">
+            {video.durationSec ? lengthText(video.durationSec) : ''}
             {fix.status === 'running' ? (
               <span className="dt-tag dt-tag-live">{t('wird geortet …')}</span>
             ) : quick ? (
-              <span className="dt-tag dt-tag-live">{t('schnell geortet · Räume folgen')}</span>
-            ) : (
-              <span className="dt-tag">{t('vollständig')}</span>
-            )}
-            {video.durationSec ? <span className="low"> {formatDuration(video.durationSec)}</span> : null}
+              `${video.durationSec ? ' · ' : ''}${t('vorläufig')}`
+            ) : null}
           </span>
         </div>
         <div className="dt-result-place">
           <span className="label">{t('Ort')}</span>
           <b>{loc ? placeText(lang, loc, fix) : t('Ort unbestimmt')}</b>
-          <span className="low">{loc ? [countryText(lang, loc), radiusText(lang, loc)].filter((x) => x !== '').join(' · ') : ''}</span>
-          {loc && <CheckLinks lat={loc.lat} lon={loc.lon} />}
+          <span className="low" title={loc ? radiusHint(lang, loc) : ''}>
+            {loc ? [countryText(lang, loc), radiusText(lang, loc)].filter((x) => x !== '').join(' · ') : ''}
+          </span>
         </div>
         <div className="dt-result-time">
           <span className="label">{t('Uhrzeit')}</span>
           <b>{bestWindowText(fix) ?? '––:––'}</b>
-          <span className="low">
+          <span className="low" title={fix.time.timezone ?? ''}>
             {fix.time.windows[0] ? t(fix.time.windows[0].label) : t('nicht bestimmbar')}
-            {fix.time.timezone ? ` · ${fix.time.timezone}` : ''}
+            {fix.time.timezone ? ` · ${utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun))}` : ''}
           </span>
         </div>
         <div className="dt-result-conf">
@@ -125,33 +149,39 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
       <div className="dt-befund">
         <div className="dt-col">
           <section className="dt-section">
-            {video.playable ? (
+            {skylineOn && key ? (
+              <SkylineFrame imageUrl={rel(key.imageUrl)} skyline={key.skyline} horizonProfile={fix.horizon?.profile ?? null} heading={headingHere} />
+            ) : video.playable ? (
               <video className="dt-video" src={`media/${video.id}/source`} poster={key ? rel(key.imageUrl) : undefined} controls muted playsInline preload="metadata" />
             ) : (
               key && <img className="dt-video" src={rel(key.imageUrl)} alt="" />
             )}
+            {skyline && (
+              <div className="dt-media-switch" role="group" aria-label={t('Ansicht')}>
+                <button type="button" className="text-btn" aria-pressed={!skylineOn} onClick={() => setShowSkyline(false)}>
+                  {video.playable ? t('Video') : t('Bild')}
+                </button>
+                <button type="button" className="text-btn" aria-pressed={skylineOn} onClick={() => setShowSkyline(true)}>
+                  {t('Himmelslinie und Horizont')}
+                </button>
+              </div>
+            )}
+            {keyThumbs}
           </section>
-          {key && (
-            <section className="dt-section">
-              <div className="label">{t('Himmelslinie und Horizont')}</div>
-              <SkylineFrame imageUrl={rel(key.imageUrl)} skyline={key.skyline} horizonProfile={fix.horizon?.profile ?? null} heading={headingHere} />
-              {fix.keyframes.length > 1 && (
-                <div className="dt-keys">
-                  {fix.keyframes.map((k, i) => (
-                    <button key={k.frame} type="button" className={i === keyIndex ? 'on' : ''} onClick={() => setKeyIndex(i)} aria-label={`${t('Schlüsselbild')} ${i + 1}`}>
-                      <img src={rel(k.imageUrl)} alt="" loading="lazy" decoding="async" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
         </div>
 
         <div className="dt-col">
           <section className="dt-section">
             <EvidenceList evidence={fix.evidence} at={loc} />
           </section>
+          <section className="dt-section">
+            <ClockDial time={fix.time} sun={fix.sun} compact />
+          </section>
+          {fix.sun && (
+            <section className="dt-section">
+              <SunDial sun={fix.sun} heading={fix.heading} time={fix.time} />
+            </section>
+          )}
           {trace.length > 0 && (
             <section className="dt-section">
               {/* The steps of the analysis are for checking, not for reading first: folded while the fix is done. */}
@@ -171,15 +201,6 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
                   {fix.status === 'running' && <li className="dt-trace-run">{t('läuft …')}</li>}
                 </ol>
               </details>
-            </section>
-          )}
-          <section className="dt-section">
-            <ClockDial time={fix.time} sun={fix.sun} />
-          </section>
-          {fix.sun && (
-            <section className="dt-section">
-              <div className="label">{t('Sonnenstand')}</div>
-              <SunDial sun={fix.sun} heading={fix.heading} time={fix.time} />
             </section>
           )}
         </div>
@@ -210,7 +231,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
             <CandidateList candidates={fix.candidates} selected={candidate} onSelect={setCandidate} fix={fix} />
           </section>
           <section className="dt-section">
-            <CountryBars countries={fix.countries} limit={6} />
+            <CountryBars countries={fix.countries} limit={5} />
           </section>
         </div>
       </div>

@@ -7,7 +7,7 @@
  * 'building' (unless the caller asked to wait): the quick fix of an upload must not wait for it.
  */
 import { parentPort, workerData } from 'node:worker_threads';
-import { GeoClip, compactPrediction, type GeoclipPrediction } from './geoclip.js';
+import { GeoClip, NamedError, compactPrediction, type GeoclipPrediction } from './geoclip.js';
 import { World } from './world.js';
 import {
   serializeError,
@@ -29,7 +29,8 @@ let world: World | null = null;
 let galleryState: 'loading' | 'building' | 'ready' | 'failed' = 'loading';
 /** The gallery's state as it is now (other calls change it while this one awaits). */
 const gallery = (): typeof galleryState => galleryState;
-let galleryProblem: string | null = null;
+/** Why the gallery failed, in German and English (the English twin is the message when technical). */
+let galleryProblem: { de: string; en: string } | null = null;
 let progress = { done: 0, total: 0 };
 let galleryLoad: Promise<void> | null = null;
 /** Resolves once it is known whether the gallery is read from the cache or built. */
@@ -74,9 +75,10 @@ function startGallery(): Promise<void> {
       event({ kind: 'gallery', state: 'ready', built: !cached, ms: performance.now() - t0, cacheProblem: model.cacheProblem });
     } catch (err: unknown) {
       galleryState = 'failed';
-      galleryProblem = err instanceof Error ? err.message : String(err);
+      const message = err instanceof Error ? err.message : String(err);
+      galleryProblem = { de: message, en: err instanceof NamedError ? err.en : message };
       settle();
-      event({ kind: 'gallery', state: 'failed', reason: galleryProblem });
+      event({ kind: 'gallery', state: 'failed', reason: galleryProblem.de, reasonEn: galleryProblem.en });
     }
   })();
   return galleryLoad;
@@ -91,7 +93,7 @@ async function galleryGate(wait: boolean): Promise<PredictReply | null> {
   // Read from the cache (about a second), or the caller waits for the build.
   await load;
   if (gallery() === 'ready') return null;
-  return { status: 'failed', reason: galleryProblem ?? 'Ortsgalerie nicht verfügbar' };
+  return { status: 'failed', reason: galleryProblem?.de ?? 'Ortsgalerie nicht verfügbar', reasonEn: galleryProblem?.en ?? 'place gallery not available' };
 }
 
 /** The prediction as it crosses to the main thread: its support only, buffers moved. */
@@ -128,7 +130,7 @@ async function handle(op: keyof WorldModelOps, args: unknown): Promise<{ value: 
       return packed(await model.predictFromEmbeddings(embeds, frames, { ...PREDICT, ...(world ? { world } : {}) }));
     }
     case 'exit': {
-      if (!boot.testOps) throw new Error('exit: nur im Test');
+      if (!boot.testOps) throw new NamedError('exit: nur im Test', 'exit: tests only');
       // Ends this thread the way an uncaught crash would (the host sees an exit while it works).
       process.exit(3);
     }
@@ -152,7 +154,7 @@ port.on('message', (message: HostMessage) => {
   const { id, op, args } = message;
   chain = chain.then(async () => {
     if (closing) {
-      post({ type: 'error', id, error: serializeError(new Error('Weltmodell wird beendet.')) });
+      post({ type: 'error', id, error: serializeError(new NamedError('Weltmodell wird beendet.', 'world model is shutting down.')) });
       return;
     }
     try {
@@ -170,7 +172,7 @@ async function start(): Promise<WorldModelInfo> {
     // Life-cycle tests: ready at once, the model loads (and fails) only when a prediction is asked.
     return { galleryCached: false, sessionMs: 0, threads: boot.threads };
   }
-  if (!(await model.available())) throw new Error(`GeoCLIP-Dateien fehlen unter ${model.modelDir}`);
+  if (!(await model.available())) throw new NamedError(`GeoCLIP-Dateien fehlen unter ${model.modelDir}`, `GeoCLIP files missing under ${model.modelDir}`);
   // The country shapes give every gallery point its country (cached once per machine). Without
   // them the prediction has no country distribution, nothing else is lost.
   world = await World.load().catch(() => null);

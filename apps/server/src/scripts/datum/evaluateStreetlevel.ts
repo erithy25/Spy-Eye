@@ -57,11 +57,20 @@ const { modelSlug } = await import('../../datum/gallery.js');
 const { readMetadata } = await import('../../datum/metadata.js');
 const { sampleAndEmbedFrames } = await import('../../datum/locate.js');
 const sl = await import('../../datum/streetlevel.js');
+const { envMapillaryToken } = await import('../../datum/settings.js');
 type StreetLevelResult = import('../../datum/streetlevel.js').StreetLevelResult;
 type StreetLevelStats = import('../../datum/streetlevel.js').StreetLevelStats;
 type StreetLevelOptions = import('../../datum/streetlevel.js').StreetLevelOptions;
 
 const say = (line: string): void => void process.stdout.write(`${line}\n`);
+
+/**
+ * The stage reads the Mapillary key only from this environment (deps.env), never a key an operator
+ * stored in the node's settings (<dataDir>/datum/mapillary-key): what the measurement reports as
+ * asked must be what was asked. A malformed MAPILLARY_TOKEN counts as none, as in the stage.
+ */
+const measureEnv: Readonly<Record<string, string | undefined>> = process.env;
+const mapillaryUsed = envMapillaryToken(measureEnv).key !== null;
 
 function argument(name: string, fallback: string): string {
   const idx = process.argv.indexOf(`--${name}`);
@@ -118,7 +127,7 @@ if (fromFile === '') {
   await model.load();
   say(`Modell ${config.modelId} (${model.state.device}, ${config.threads} Threads) in ${((performance.now() - tModel) / 1000).toFixed(1)} s geladen.`);
 }
-say(`Straßenbilder: ${videos.length} Videos, Radius ${radiusKm} km, falscher Ort ${wrongKm} km, Budget ${budgetMs} ms, Ausschnitte ${crops ? 'ja' : 'nein'}, Mapillary ${process.env['MAPILLARY_TOKEN'] ? 'mit Schlüssel' : 'ohne Schlüssel (nicht gefragt)'}.`);
+say(`Straßenbilder: ${videos.length} Videos, Radius ${radiusKm} km, falscher Ort ${wrongKm} km, Budget ${budgetMs} ms, Ausschnitte ${crops ? 'ja' : 'nein'}, Mapillary ${mapillaryUsed ? 'mit Schlüssel (MAPILLARY_TOKEN)' : 'ohne Schlüssel (nicht gefragt)'}.`);
 
 // ---- frames: the vector cache of evaluate.ts (same sampling), else sampled here
 type FrameCacheEntry = { bytes: number; frameNumbers: number[]; dim: number; vectors: string; tiles: string | null; frameRow: number[]; tile: number[] };
@@ -226,7 +235,8 @@ interface CallRecord {
   sampled: number;
   compared: number;
   timing: StreetLevelResult['timing'];
-  providers: { name: string; requests: number; errors: number; listed: number; lastError: string | null }[];
+  /** Per provider of this call: whether it was asked at all (enabled), and what it did. */
+  providers: { name: string; enabled: boolean; requests: number; errors: number; listed: number; lastError: string | null }[];
   top: PictureOut[];
   /** Best picture's distance from the truth (km), null without pictures. */
   bestKm: number | null;
@@ -242,6 +252,25 @@ interface CallRecord {
   nearestRank: number | null;
   /** Compared pictures within 1 km of the truth. */
   within1km: number;
+}
+
+/**
+ * The services the measurement actually asked, from its own calls: a provider counts when it was
+ * enabled in a call. Calls read from a file of an earlier version carry no `enabled`; for those
+ * the environment of this run decides, as it did then.
+ */
+function providersAsked(calls: readonly CallRecord[]): string[] {
+  const names = new Set<string>();
+  let known = false;
+  for (const c of calls) {
+    for (const p of c.providers) {
+      if (typeof p.enabled !== 'boolean') continue;
+      known = true;
+      if (p.enabled) names.add(p.name);
+    }
+  }
+  if (!known) return mapillaryUsed ? ['panoramax', 'mapillary'] : ['panoramax'];
+  return ['panoramax', 'mapillary'].filter((n) => names.has(n));
 }
 
 function pictureOut(p: { provider: string; id: string; lat: number; lon: number; similarity: number; pass: 1 | 2; pageUrl: string; license: string }, truth: { lat: number; lon: number }): PictureOut {
@@ -284,7 +313,7 @@ async function measure(
     candidates: [{ ...centre, radiusKm }],
     model,
     options: { budgetMs, pictureCrops: crops, returnAll: true, ...options },
-  }, verbose ? { log: (line) => say(`    ${line}`) } : {});
+  }, { env: measureEnv, ...(verbose ? { log: (line: string) => say(`    ${line}`) } : {}) });
   const truth = { lat: video.lat, lon: video.lon };
   const all = result.all ?? [];
   const best = all[0];
@@ -316,7 +345,7 @@ async function measure(
     sampled: cand?.sampled ?? 0,
     compared: cand?.compared ?? 0,
     timing: result.timing,
-    providers: result.providers.map((p) => ({ name: p.name, requests: p.requests, errors: p.errors, listed: p.listed, lastError: p.lastError })),
+    providers: result.providers.map((p) => ({ name: p.name, enabled: p.enabled, requests: p.requests, errors: p.errors, listed: p.listed, lastError: p.lastError })),
     top: result.top.map((p) => pictureOut(p, truth)),
     bestKm: best ? Number(sl.distanceKm(truth.lat, truth.lon, best.lat, best.lon).toFixed(3)) : null,
     refinedKm: result.location ? Number(sl.distanceKm(truth.lat, truth.lon, result.location.lat, result.location.lon).toFixed(3)) : null,
@@ -510,8 +539,8 @@ async function runWorldModelMode(): Promise<void> {
       candidateRadiusKm: radiusKm,
       worldModelCandidate: "GeoCLIP's best point (LocateDiagnostics.worldModel.best) of every answer with method 'worldmodel'",
       landmarkCandidate: "the answer of method 'landmark' with tier strong or recognised (the engine searches strong only, streetlevel.ts STREETLEVEL_RULE)",
-      providers: process.env['MAPILLARY_TOKEN'] ? ['panoramax', 'mapillary'] : ['panoramax'],
-      mapillary: process.env['MAPILLARY_TOKEN'] ? 'used' : 'not measured: no Mapillary key on the measuring machine',
+      providers: providersAsked(calls),
+      mapillary: providersAsked(calls).includes('mapillary') ? 'used (MAPILLARY_TOKEN)' : 'not measured: no MAPILLARY_TOKEN on the measuring machine',
       decision: { minPictures: minPicturesWm, minSimilarity: sl.DEFAULT_STREETLEVEL_OPTIONS.minSimilarity, minGap: sl.DEFAULT_STREETLEVEL_OPTIONS.minGap, minZ: sl.DEFAULT_STREETLEVEL_OPTIONS.minZ },
       wrongPin: 'a match whose refined point lies farther from the truth than its stated radius (at least 1 km)',
       rule: `chosen on the train half (even index): the lowest concentration threshold from 0.2 with at least ${MIN_RULE_MATCHES} matches and at most one wrong pin per ten of them; none: the world-model path stays off`,
@@ -730,8 +759,8 @@ const report = {
     wrongPlaceKm: wrongKm,
     wrongPlacesPerVideo: wrongCount,
     wrongBearing: 'index × 137.508° (golden angle) plus 180° for the second place, fixed per video',
-    providers: process.env['MAPILLARY_TOKEN'] ? ['panoramax', 'mapillary'] : ['panoramax'],
-    mapillary: process.env['MAPILLARY_TOKEN'] ? 'used' : 'not measured: no MAPILLARY_TOKEN on the measuring machine',
+    providers: providersAsked(records),
+    mapillary: providersAsked(records).includes('mapillary') ? 'used (MAPILLARY_TOKEN)' : 'not measured: no MAPILLARY_TOKEN on the measuring machine',
     pictureCrops: crops,
     options: {
       budgetMs,

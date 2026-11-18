@@ -150,10 +150,8 @@ export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOp
         <h2 className="label">
           {t('Merkmalsraum')} <span className="count">{data.points.length}</span>
         </h2>
-        <span className="meta">
-          {hover
-            ? `x ${formatDecimal(hover.point.x, 3)}  y ${formatDecimal(hover.point.y, 3)}`
-            : `${t('Hauptachsen')} · ${Math.round(data.explainedVariance * 100)} % ${t('der Streuung')}`}
+        <span className="meta" title={`${t('Hauptachsen')} · ${Math.round(data.explainedVariance * 100)} % ${t('der Streuung')}`}>
+          {hover ? `x ${formatDecimal(hover.point.x, 3)}  y ${formatDecimal(hover.point.y, 3)}` : ''}
         </span>
       </header>
       <div className="map" ref={wrapper}>

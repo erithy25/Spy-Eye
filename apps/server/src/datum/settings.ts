@@ -9,7 +9,9 @@
  *
  * The street-level comparison is on by default: the owner allowed free external services for
  * finding the place. DATUM_STREETLEVEL=0 in the environment switches it off whatever the file
- * says (an installation that must not contact anyone can be sure of that from its start script).
+ * says (an installation that must not contact anyone can be sure of that from its start script),
+ * and so does offline mode (SICHT_OFFLINE). Switched off, it is off everywhere: the engine does
+ * not ask the services and the thumbnail route does not fetch pictures of earlier fixes.
  * MAPILLARY_TOKEN in the environment wins over a stored key and cannot be changed from the
  * console; it is how installations that keep secrets out of the data directory provide it.
  *
@@ -109,6 +111,8 @@ export interface DatumSettingsOptions {
   env?: EnvReader;
   /** Directory of the GeoCLIP weights (tests). */
   geoclipDir?: string;
+  /** Whether the node runs in offline mode (default: SICHT_OFFLINE, config.offline; tests swap it). */
+  offline?: () => boolean;
 }
 
 /**
@@ -166,8 +170,18 @@ export class DatumSettingsStore {
     this.loaded = false;
   }
 
-  /** True when the environment switches the comparison off (DATUM_STREETLEVEL=0). */
+  /** True when the node runs in offline mode (SICHT_OFFLINE): it must not contact anyone. */
+  offline(): boolean {
+    return this.options.offline ? this.options.offline() : config.offline;
+  }
+
+  /**
+   * True when the environment switches the comparison off: DATUM_STREETLEVEL=0, or offline mode,
+   * which forbids every network access and so this one too. The console then shows it as off,
+   * whatever the stored choice says.
+   */
   forcedOff(): boolean {
+    if (this.offline()) return true;
     const v = this.env()['DATUM_STREETLEVEL'];
     return v !== undefined && OFF_VALUES.has(v.trim().toLowerCase());
   }
@@ -208,6 +222,7 @@ export class DatumSettingsStore {
       streetLevel: {
         enabled: this.enabled,
         forcedOff: this.forcedOff(),
+        offline: this.offline(),
         providers: key ? ['panoramax', 'mapillary'] : ['panoramax'],
         mapillaryKey: key !== null,
         mapillaryKeySource: this.mapillaryKeySource(),

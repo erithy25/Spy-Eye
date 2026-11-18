@@ -29,14 +29,18 @@ git pull
 .\datum.cmd
 ```
 
-- Der erste Lauf lädt Modelle (rund 1 GB), Vorschaubilder der Referenzgalerie und Höhendaten
-  und wertet alles aus. Die 60 Referenzclips und die Vektoren der Galerie liegen im Repository
+- Der erste Lauf lädt Modelle (rund 1 GB) und das Weltmodell GeoCLIP, Vorschaubilder der
+  Referenzgalerie und Höhendaten und wertet alles aus. Die 60 Referenzclips und die Vektoren der Galerie liegen im Repository
   bei; Wikimedia drosselt Abrufe, deshalb hängt der Start nicht mehr davon ab. Drosselt Wikimedia
   die Vorschaubilder, bricht dieser Teil nach drei Minuten Wartezeit ab und lädt den Rest beim
   nächsten Mal; die Ortung ist davon nicht betroffen. Das dauert je nach Rechner und Netz
   20 bis 40 Minuten (gemessen unter Linux auf vier Kernen: Ortung aller 60 Videos 5,7 Minuten;
   die Messung auf einem Windows-Rechner läuft in der CI); danach startet derselbe Befehl in unter
-  einer Minute und ohne Netz.
+  einer Minute und ohne Netz. Ohne Netz entfällt nur der Abgleich mit Straßenbildern; die
+  Ortung läuft ohne ihn durch und sagt im Beleg, warum.
+- Nach dem Aktualisieren rechnet der Knoten beim ersten Start alle Ortungen im Hintergrund neu
+  (Fassung 7 des Verfahrens, mit Weltmodell), je Ortung etwa 5 bis 15 s. Die alten Ortungen
+  bleiben bis dahin auf der Karte.
 - Beim ersten Start ist die Konsole sofort nach dem Download erreichbar; die 60 Videos werden
   dann im Hintergrund ausgewertet und geortet (15 bis 30 Minuten), die Karte füllt sich nach und
   nach. Für eine Vorführung vorher einmal `.\datum.cmd -NurPruefen` laufen lassen: Das wertet
@@ -45,18 +49,38 @@ git pull
 - Reiter ORTUNG: Weltkarte mit allen Videos. Eine Zeile wählen: Ort mit Kreis, Uhrzeit, Sonne,
   Schatten. BEFUND: alle Belege, Uhr, Sonnenstand. RAUM: in das Video hineingehen (W A S D,
   Maus) und das Gelände in 3D. MESSUNG: Abweichung jeder Ortung gegen die Wahrheit.
-- Eigene Videos: im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung geortet
-  (rund 5 s je Video nach der Auswertung der Bilder). Trägt die Datei GPS und Aufnahmezeit, gelten
-  diese exakt.
+- Eigene Videos: im Reiter BESTAND ablegen. Eine erste Ortung steht kurz nach dem Hochladen,
+  die vollständige nach der Auswertung (gemessen an einem 20 Minuten langen Video: 7,0 bis 11,7 s
+  und 280,5 bis 287,3 s, auf einem belasteten Rechner mit vier Kernen; Obergrenzen). Trägt die
+  Datei GPS und Aufnahmezeit, gelten diese exakt.
+- Weltmodell: schätzt überall auf der Erde eine Region, auch ohne bekanntes Bauwerk; der Kreis
+  ist dann 25 oder 1 500 km groß. Abschalten mit `DATUM_WORLDMODEL=0`.
+- Abgleich mit Straßenbildern: voreingestellt eingeschaltet. Nach einer klaren Wiedererkennung
+  vergleicht die vollständige Ortung das Video mit freien Straßenbildern im Umkreis von 3 km
+  (Panoramax, vor allem Europa; Mapillary weltweit, nur mit Schlüssel). Panoramax und Mapillary
+  erfahren dabei, welche Gegend untersucht wird; vom Video verlässt nichts den Knoten, die Bilder
+  laufen über den Knoten und werden nicht gespeichert. Abschalten: ORTUNG → „Einstellungen“ →
+  „Straßenbildvergleich“ (nur `leitung`), oder `DATUM_STREETLEVEL=0` beim Start.
+- Mapillary-Schlüssel (freiwillig, kostenlos): mapillary.com → Dashboard → Developers → eine
+  Anwendung registrieren → „Client Token“ kopieren; in der Konsole als `leitung` unter ORTUNG →
+  „Einstellungen“ → „Mapillary-Schlüssel“ hinterlegen, oder als `MAPILLARY_TOKEN` setzen. Nie in
+  eine Datei im Repository schreiben.
+- Google: „In Street View prüfen“ und „In Google Maps öffnen“ am Ort und an jedem Kandidaten
+  öffnen Google erst auf Klick. Automatisch wird nichts mit Bildern von Google abgeglichen; die
+  Nutzungsbedingungen der Google Maps Platform verbieten das.
 - Präsentation: privates Dokument <https://claude.ai/artifact/Co1LMwmb6jBPNSHWqnVbDU>, als PDF
   [`deliverables/DATUM-Praesentation.pdf`](deliverables/DATUM-Praesentation.pdf), Sprechzettel
   [`deliverables/DATUM-Praesentation-Sprechzettel.md`](deliverables/DATUM-Praesentation-Sprechzettel.md).
 - Produktfilm, 94 s: `deliverables/film/datum-produktfilm.mp4` (als Datei übergeben, nicht im
   Repository; Neubau mit `media/brand/tools/datum-take.cjs`, `datum_sequence.py` und
   `media/brand/build.sh`).
-- Gemessen (Prüfhälfte, 30 Videos): bekannter Ort 27 % auf 1 km, 43 % auf 25 km; unbekannter Ort
-  13 % auf 25 km, 60 % auf 2 500 km; die Wahrheit liegt in 67 bzw. 60 % der Fälle im angegebenen
-  Kreis. Einzelheiten und Grenzen in [`docs/DATUM.md`](docs/DATUM.md).
+- Gemessen (Prüfhälfte, 30 Videos, mit Weltmodell): bekannter Ort 27 % auf 1 km, 53 % auf
+  25 km; unbekannter Ort 33 % auf 25 km, 93 % auf 2 500 km (ohne Weltmodell 13 und 60 %); die
+  Wahrheit liegt in beiden Fällen in 90 % im angegebenen Kreis. Die Referenzvideos zeigen
+  bekannte Bauwerke, die vermutlich in den Trainingsdaten des Weltmodells liegen; anonymes
+  Material wird schlechter abschneiden. 30 Videos je Hälfte schwanken um rund neun
+  Prozentpunkte. Abgleich mit Straßenbildern: ein Treffer bei fünf Orten mit genug Bildern, kein
+  falscher. Einzelheiten und Grenzen in [`docs/DATUM.md`](docs/DATUM.md).
 
 ## 1. Was vorliegt
 
@@ -253,6 +277,12 @@ am System zeigt; wer vorführt, überspringt sie und hat sie als Rückfallebene.
    repository visibility) oder bewusst offen lassen und die Geschäftsunterlagen in ein privates
    Repository auslagern. Für einen offenen Quelltext spricht, dass Aufsichtsbehörden
    überprüfbare Systeme bevorzugen; für offene Geschäftsunterlagen spricht nichts.
+6. **DATUM: Straßenbilder in der Vorführung.** Der Abgleich ist voreingestellt eingeschaltet und
+   verrät Panoramax (mit Schlüssel auch Mapillary), welche Gegend untersucht wird. Vor einem
+   Publikum, vor dem schon das nicht sein darf, vorher in den Einstellungen ausschalten oder mit
+   `DATUM_STREETLEVEL=0` starten. Ob ein Mapillary-Schlüssel hinterlegt wird, ist eine eigene
+   Entscheidung: Er erweitert den Abgleich über Europa hinaus und bindet die Abfragen an ein
+   Konto bei Mapillary.
 
 ## 5. Was belegt ist und was nicht
 

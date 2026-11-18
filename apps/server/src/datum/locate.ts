@@ -935,7 +935,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       // The gallery's answer stands; how much of GeoCLIP's mass confirms it enters its confidence.
       visual = { ...galleryAnswer, confidence: confidenceOf(level) };
     }
-    candidates = withWorldModelCandidates(world, candidates, geo, params, replaced);
+    candidates = withWorldModelCandidates(world, candidates, geo, params, replaced, worldModelRadiusKm(gp.radius, concentration));
 
     const coords: Named = { de: formatCoord(best.lat, best.lon), en: formatCoordEn(best.lat, best.lon) };
     const agreeText: Named = !galleryAnswer
@@ -1065,12 +1065,32 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
 }
 
 /**
+ * Radius of a GeoCLIP mode around its seed (km): every support point within it of the seed (the
+ * mode's peak) is a member. The same value as the default `modeKm` of predict(), which the engine
+ * uses; membership of GeoCLIP's answer in a mode is decided with it.
+ */
+const GEOCLIP_MODE_KM = 25;
+
+/**
  * The candidates with the world model's view: GeoCLIP's strongest modes that lie farther than
  * candidateKm from every gallery candidate join the list, and the scores are mixed, half and
  * half when GeoCLIP gave the answer (its point first), a quarter for GeoCLIP when the gallery's
  * answer stood (that one stays first). Scores stay normalised (sum <= 1).
+ *
+ * When GeoCLIP gave the answer (`replaced`), that answer is always in the list and leads it, even
+ * when its mode is small: with a diffuse prediction the single most probable point can sit in a
+ * mode below candidateMinMass, or behind candidateModes larger modes elsewhere. The console
+ * centres its map on candidate 0, so a list without the answer would show another place than the
+ * fix states. `answerRadiusKm` is the radius stated for the answer.
  */
-function withWorldModelCandidates(world: World, gallery: FixCandidate[], geo: GeoclipPrediction, params: LocateParams, replaced: boolean): FixCandidate[] {
+function withWorldModelCandidates(
+  world: World,
+  gallery: FixCandidate[],
+  geo: GeoclipPrediction,
+  params: LocateParams,
+  replaced: boolean,
+  answerRadiusKm: number,
+): FixCandidate[] {
   const gp = params.geoclip;
   const share = replaced ? 0.5 : 0.25;
   const out: FixCandidate[] = gallery.map((c) => ({
@@ -1080,23 +1100,32 @@ function withWorldModelCandidates(world: World, gallery: FixCandidate[], geo: Ge
   }));
   const galleryLead = out[0] ?? null;
   const near = (lat: number, lon: number): boolean => out.some((c) => greatCircleKm(c.lat, c.lon, lat, lon) <= gp.candidateKm);
-  let added = 0;
-  let answer: FixCandidate | null = null;
-  if (replaced) {
-    // GeoCLIP's answer close to a gallery candidate: that candidate stands for it.
+  /** The candidate already in the list closest to GeoCLIP's answer, within candidateKm. */
+  const standingFor = (): FixCandidate | null => {
+    let found: FixCandidate | null = null;
     let bestKm = gp.candidateKm;
     for (const c of out) {
       const d = greatCircleKm(c.lat, c.lon, geo.best.lat, geo.best.lon);
       if (d <= bestKm) {
         bestKm = d;
-        answer = c;
+        found = c;
       }
     }
-  }
+    return found;
+  };
+  let added = 0;
+  // GeoCLIP's answer close to a gallery candidate: that candidate stands for it.
+  let answer: FixCandidate | null = replaced ? standingFor() : null;
   for (const m of geo.modes) {
-    if (added >= gp.candidateModes || m.p < gp.candidateMinMass) break;
+    // The mode holding GeoCLIP's answer: the answer is one of its members (within the mode radius
+    // of its seed, the peak), or, for a refined point beside the gallery points, close to its centre.
+    const holdsBest =
+      greatCircleKm(m.peak.lat, m.peak.lon, geo.best.lat, geo.best.lon) <= GEOCLIP_MODE_KM ||
+      greatCircleKm(m.lat, m.lon, geo.best.lat, geo.best.lon) <= gp.candidateKm;
+    // The answer's mode is exempt from the cut-offs while the answer still needs a candidate.
+    const exempt = replaced && answer === null && holdsBest;
+    if (!exempt && (added >= gp.candidateModes || m.p < gp.candidateMinMass)) continue;
     // The mode holding GeoCLIP's answer stands for it with that point, the others with their peak.
-    const holdsBest = greatCircleKm(m.lat, m.lon, geo.best.lat, geo.best.lon) <= gp.candidateKm;
     const at = holdsBest ? geo.best : m.peak;
     if (near(at.lat, at.lon)) continue;
     const name = placeLabel(world, at.lat, at.lon, null);
@@ -1111,7 +1140,25 @@ function withWorldModelCandidates(world: World, gallery: FixCandidate[], geo: Ge
     };
     out.push(candidate);
     added++;
-    if (holdsBest) answer = candidate;
+    if (holdsBest && answer === null) answer = candidate;
+  }
+  if (replaced && answer === null) {
+    // No mode stood for the answer (a refined point away from every mode, or a candidate added
+    // from another mode lies next to it): the nearest candidate stands for it, else its own point.
+    answer = standingFor();
+    if (answer === null) {
+      const name = placeLabel(world, geo.best.lat, geo.best.lon, null);
+      answer = {
+        lat: geo.best.lat,
+        lon: geo.best.lon,
+        label: name.de,
+        labelEn: name.en,
+        country: world.countryNear(geo.best.lat, geo.best.lon)?.iso ?? null,
+        score: share * massWithin(geo, geo.best.lat, geo.best.lon, gp.candidateKm),
+        radiusKm: Math.max(1, Math.min(gp.candidateKm, answerRadiusKm)),
+      };
+      out.push(answer);
+    }
   }
   out.sort((a, b) => b.score - a.score);
   // The answer leads the list: GeoCLIP's point when it replaced the gallery's answer, else the

@@ -5,6 +5,7 @@
 import { useId } from 'react';
 import type { EvidenceKind, SunPathPoint, TimeEstimate } from '../../../../server/src/datum/contract';
 import { formatCount, formatDecimal } from '../../format';
+import { coordinateParts, formatCoordinate } from '../../map/geo';
 
 export type { EvidenceKind };
 
@@ -192,15 +193,11 @@ export function fmtPct(value: number): string {
   return `${Math.round(v * 100)} %`;
 }
 
-/** Decimal degrees with five places and the hemisphere: "50.93962", "N". */
-export function coordParts(lat: number, lon: number): { lat: string; ns: string; lon: string; ew: string } {
-  return { lat: Math.abs(lat).toFixed(5), ns: lat >= 0 ? 'N' : 'S', lon: Math.abs(lon).toFixed(5), ew: lon >= 0 ? 'E' : 'W' };
-}
+/** Decimal degrees with five places and the hemisphere, as every view writes them (see map/geo). */
+export const coordParts = coordinateParts;
 
-export function fmtCoord(lat: number, lon: number): string {
-  const c = coordParts(lat, lon);
-  return `${c.lat} ${c.ns}  ${c.lon} ${c.ew}`;
-}
+/** "50,93962° N  6,95829° O" */
+export const fmtCoord = formatCoordinate;
 
 /** "17. Juni 2018" / "17 June 2018" for a local calendar date (YYYY-MM-DD). */
 export function fmtLongDate(date: string, locale: string): string {
@@ -262,7 +259,7 @@ export const KIND_METHOD: Record<EvidenceKind, string> = {
   season: 'Jahreszeit',
   text: 'Schrift im Bild',
   filename: 'Angabe im Dateinamen',
-  worldmodel: 'Weltmodell (GeoCLIP)',
+  worldmodel: 'Weltmodell',
   streetlevel: 'Abgleich mit Straßenbildern',
 };
 

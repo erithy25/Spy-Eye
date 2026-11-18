@@ -1,10 +1,10 @@
-/* ---------- DATUM: shared layout of the views ---------- */
-
-.dt-pad {
-  padding: 14px 16px;
-}
+/* ---------- DATUM: shared layout of the views ----------
+   Type sizes: 10 px captions, 11 px labels and secondary lines, 12 px body, 13 px case names,
+   15 px the result place, 20 / 26 px header values and figures, 40 px the ORTUNG clock.
+   Spacing: 4 / 8 / 12 / 16 / 24 / 32; one left edge of 16 px per column. */
 
 .dt-ortung {
+  position: relative;
   height: 100%;
   display: grid;
   grid-template-columns: 380px minmax(0, 1fr);
@@ -19,20 +19,228 @@
   border-right: 1px solid var(--line-2);
 }
 
+/* ---------- ORTUNG: list head ---------- */
+
+.dt-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.dt-notice {
+  margin: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--mid);
+  font-size: 11px;
+}
+
+.dt-notice.note {
+  color: var(--fg);
+}
+
+.dt-empty {
+  padding: 16px;
+  color: var(--low);
+}
+
+/* ---------- ORTUNG: datasets ---------- */
+
+.dt-ds {
+  border-bottom: 1px solid var(--line-2);
+}
+
+.dt-ds-drop {
+  box-shadow: inset 2px 0 0 var(--fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dt-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dt-group-toggle {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 0;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.dt-group-toggle:hover .dt-group-name {
+  color: var(--fg);
+}
+
+/* A folded group: chevron to the right and the head dimmed; open: chevron down. */
+.dt-group-toggle[aria-expanded='false'] {
+  color: var(--low);
+}
+
+.dt-group-sign {
+  flex: none;
+  align-self: center;
+  width: 5px;
+  height: 5px;
+  margin: 0 1px 3px;
+  border-right: 1px solid var(--mid);
+  border-bottom: 1px solid var(--mid);
+  transform: rotate(45deg);
+}
+
+.dt-group-toggle[aria-expanded='false'] .dt-group-sign {
+  margin: 0 2px 0 0;
+  transform: rotate(-45deg);
+}
+
+.dt-group-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-group-toggle .count,
+.dt-group-toggle .count-of {
+  flex: none;
+  font-size: 11px;
+  text-transform: none;
+}
+
+.dt-group-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 8px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--fg);
+  padding: 2px 0 3px 18px;
+  outline: 0;
+  font-size: 12px;
+}
+
+.dt-group-note {
+  margin: 0;
+  padding: 0 16px 8px;
+}
+
+.dt-menu-box {
+  position: relative;
+  flex: none;
+}
+
+.dt-group-more {
+  color: var(--low);
+  padding: 4px 2px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.dt-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: -4px;
+  min-width: 200px;
+  padding: 4px 0;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.dt-menu-item {
+  text-align: left;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--mid);
+  white-space: nowrap;
+}
+
+.dt-menu-item:hover,
+.dt-menu-item:focus-visible {
+  background: #0c0c0c;
+  color: var(--fg);
+  outline: 0;
+}
+
+.dt-menu-danger {
+  color: var(--fg);
+}
+
+.dt-menu-sep {
+  border: 0;
+  border-top: 1px solid var(--line-2);
+  margin: 4px 0;
+}
+
+.dt-upload-line {
+  padding: 8px 16px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--mid);
+  font-size: 11px;
+}
+
+.dt-upload-line .bar {
+  margin-top: 6px;
+}
+
+.dt-upload-failed {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.dt-upload-failed > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-upload-failed .row-x {
+  opacity: 1;
+}
+
+/* ---------- ORTUNG: rows ---------- */
+
 .dt-rows {
   display: flex;
   flex-direction: column;
 }
 
 .dt-row {
+  position: relative;
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  padding: 10px 16px 10px 14px;
+  padding: 12px 16px 12px 14px;
   border-bottom: 1px solid var(--line);
   border-left: 2px solid transparent;
   cursor: pointer;
+}
+
+.dt-rows > .dt-row:last-child {
+  border-bottom: 0;
 }
 
 .dt-row:hover {
@@ -49,6 +257,26 @@
   outline-offset: -3px;
 }
 
+.dt-row-img {
+  width: 72px;
+  height: 41px;
+  object-fit: cover;
+  display: block;
+  margin-top: 2px;
+  background: #111;
+  filter: grayscale(0.6) contrast(1.05);
+  border: 1px solid var(--line);
+}
+
+.dt-row.on .dt-row-img {
+  filter: none;
+  border-color: var(--fg);
+}
+
+.dt-row-text {
+  min-width: 0;
+}
+
 .dt-row-top {
   display: flex;
   align-items: baseline;
@@ -59,6 +287,7 @@
 
 .dt-row-name {
   min-width: 0;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -79,9 +308,9 @@
   display: flex;
   gap: 12px;
   color: var(--fg);
-  font-size: 11.5px;
+  font-size: 12px;
   min-width: 0;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .dt-place {
@@ -91,20 +320,67 @@
   white-space: nowrap;
 }
 
-/* The radius keeps its line; a long place name gives way. */
-.dt-row-mid > .low {
-  flex: none;
-  white-space: nowrap;
-}
-
-.dt-row-truth {
-  font-size: 10px;
+.dt-row-sub {
+  padding-right: 16px;
+  font-size: 11px;
   color: var(--low);
-  letter-spacing: 0.04em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.dt-row-ask {
+  display: flex;
+  gap: 12px;
+  color: var(--fg);
+}
+
+.dt-row-ask .text-btn {
+  font-size: 11px;
+}
+
+.dt-row-ask .dt-row-yes {
+  color: var(--fg);
+}
+
+.dt-row .note {
+  font-size: 11px;
+}
+
+/* Delete: at the right of the row, seen on hover, on focus and on the chosen row. */
+.dt-row > .row-x {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  width: auto;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.dt-row:hover > .row-x,
+.dt-row:focus-within > .row-x,
+.dt-row.on > .row-x {
+  opacity: 1;
+}
+
+.dt-tag {
+  flex: none;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  color: var(--mid);
+  padding: 0 4px;
+  line-height: 14px;
+}
+
+.dt-tag-live {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+/* ---------- ORTUNG: map, result card, tools ---------- */
 
 .dt-map {
   position: relative;
@@ -112,94 +388,237 @@
   min-width: 0;
 }
 
+/* The one result box over the map; the map keeps the pointer except for the buttons. */
 .dt-hud {
   position: absolute;
-  top: 18px;
+  top: 16px;
   right: 64px;
-  min-width: 300px;
-  padding: 14px 16px 12px;
-  background: rgba(5, 5, 5, 0.86);
+  width: 312px;
+  padding: 12px 16px;
+  background: var(--bg);
   border: 1px solid var(--line-2);
   pointer-events: none;
 }
 
+.dt-hud button,
+.dt-hud a,
+.dt-hud-actions > span {
+  pointer-events: auto;
+}
+
+.dt-hud-place {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.dt-hud-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--mid);
+}
+
 .dt-hud-clock {
+  margin-top: 12px;
   font-size: 40px;
   font-weight: 300;
   letter-spacing: 0.02em;
   line-height: 1.05;
+  white-space: nowrap;
 }
 
-.dt-hud-sub {
-  margin-top: 6px;
+.dt-hud-note {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--low);
+}
+
+.dt-hud-conf {
+  display: grid;
+  grid-template-columns: auto minmax(60px, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--mid);
 }
 
-.dt-hud-coord,
-.dt-hud-sun,
-.dt-hud-truth {
-  margin-top: 6px;
-  font-size: 11px;
+.dt-hud-conf b {
   color: var(--fg);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12px;
+  text-align: right;
 }
 
-.dt-hud-truth {
-  color: var(--low);
+.dt-meter {
+  position: relative;
+  height: 3px;
+  background: var(--line-2);
 }
 
-.dt-strip {
+.dt-meter > span {
   position: absolute;
-  left: 20px;
-  bottom: 20px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--fg);
+}
+
+.dt-hud-actions {
   display: flex;
-  gap: 14px;
-  align-items: stretch;
-  padding: 10px;
-  background: rgba(5, 5, 5, 0.9);
-  border: 1px solid var(--line-2);
-  max-width: min(640px, calc(100% - 40px));
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
-.dt-strip img {
-  width: 220px;
-  height: 124px;
-  object-fit: cover;
-  display: block;
-  filter: grayscale(0.35);
-}
-
-.dt-strip-text {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.dt-strip-text .label {
-  white-space: normal;
-}
-
-.dt-strip-text .btn-row {
-  margin-top: auto;
+.dt-hud-actions .text-btn {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .dt-map-tools {
   position: absolute;
-  top: 18px;
-  left: 20px;
+  top: 16px;
+  left: 16px;
   display: flex;
-  gap: 18px;
+  gap: 16px;
   align-items: center;
-  padding: 6px 10px;
-  background: rgba(5, 5, 5, 0.8);
-  border: 1px solid var(--line);
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
   font-size: 11px;
 }
 
-/* ---------- Befund ---------- */
+.dt-map-empty {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 360px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed var(--line-2);
+  background: rgba(5, 5, 5, 0.86);
+}
+
+.dt-empty-title {
+  font-size: 12px;
+  color: var(--fg);
+}
+
+/* A drag over the map or the list; the overlay names where the files go. */
+.dt-drop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 5, 5, 0.78);
+  pointer-events: none;
+}
+
+.dt-drop-box {
+  padding: 32px 48px;
+  border: 1px dashed var(--fg);
+  background: var(--bg);
+}
+
+.dt-drop-box b {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dt-drop-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--fg);
+}
+
+/* ---------- BEFUND ---------- */
+
+.dt-befund-page {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+/* The result first; captions on one line, values below. */
+.dt-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line-2);
+  min-width: 0;
+}
+
+.dt-result > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dt-result b {
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dt-result-place {
+  flex: 0 1 auto;
+}
+
+.dt-result-time b {
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.dt-result .low {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dt-result-case b {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+}
+
+.dt-result-stage {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dt-result-actions {
+  margin-left: auto;
+  align-self: center;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 16px !important;
+}
 
 .dt-befund {
   height: 100%;
@@ -221,12 +640,12 @@
 }
 
 .dt-section {
-  padding: 14px 18px 16px;
+  padding: 16px;
   border-bottom: 1px solid var(--line);
 }
 
 .dt-section > .label {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .dt-video {
@@ -273,133 +692,12 @@
   display: grid;
   place-items: center;
   color: var(--low);
-  letter-spacing: 0.1em;
-}
-
-/* ---------- Raum ---------- */
-
-.dt-raum {
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-}
-
-.dt-raum-bar {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 8px 20px;
-  border-bottom: 1px solid var(--line-2);
-  min-width: 0;
-}
-
-.dt-raum-bar .seg {
-  display: flex;
-  gap: 2px;
-}
-
-.dt-raum-bar .seg button {
-  padding: 4px 10px;
-  border: 1px solid var(--line-2);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--mid);
-}
-
-.dt-raum-bar .seg button.on {
-  color: var(--bg);
-  background: var(--fg);
-  border-color: var(--fg);
-}
-
-.dt-raum-stage {
-  position: relative;
-  min-height: 0;
-}
-
-/* ---------- Messung ---------- */
-
-.dt-messung {
-  padding: 22px 28px 40px;
-  max-width: 1280px;
-}
-
-.dt-figures {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 0;
-  border-top: 1px solid var(--line-2);
-  border-left: 1px solid var(--line-2);
-  margin: 14px 0 24px;
-}
-
-.dt-figure {
-  padding: 14px 16px;
-  border-right: 1px solid var(--line-2);
-  border-bottom: 1px solid var(--line-2);
-}
-
-.dt-figure b {
-  display: block;
-  font-size: 26px;
-  font-weight: 300;
-  letter-spacing: 0.02em;
-}
-
-.dt-figure span {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mid);
-}
-
-.dt-bar {
-  height: 3px;
-  background: var(--line-2);
-  position: relative;
-  min-width: 80px;
-}
-
-.dt-bar > i {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--fg);
-}
-
-.dt-row-img {
-  width: 72px;
-  height: 41px;
-  object-fit: cover;
-  display: block;
-  margin-top: 2px;
-  background: #111;
-  filter: grayscale(0.6) contrast(1.05);
-  border: 1px solid var(--line);
-}
-
-.dt-row.on .dt-row-img {
-  filter: none;
-  border-color: var(--fg);
-}
-
-.dt-row-text {
-  min-width: 0;
-}
-
-.dt-hud-of {
-  font-size: 22px;
-  color: var(--mid);
 }
 
 .dt-trace {
   list-style: none;
   margin: 0;
   padding: 0;
-  counter-reset: step;
 }
 
 .dt-trace li {
@@ -434,413 +732,7 @@
   }
 }
 
-/* ---------- ORTUNG: list head, intake, uploads ---------- */
-
-.dt-list-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.dt-upload-btns {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: none;
-}
-
-.dt-intake {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 16px 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.dt-hint {
-  color: var(--mid);
-  font-size: 11px;
-}
-
-.dt-intake-btn {
-  align-self: flex-start;
-  font-size: 11px;
-}
-
-.dt-truth-ctl {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-.dt-truth-ctl .low {
-  font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.dt-truth-ctl-compact .text-btn {
-  font-size: 11px;
-}
-
-.dt-truth-ok {
-  color: var(--fg);
-  margin-top: 4px;
-}
-
-.dt-tray {
-  border-bottom: 1px solid var(--line-2);
-  max-height: 34vh;
-  overflow-y: auto;
-  flex: none;
-}
-
-.dt-tray-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 10px 16px 6px;
-}
-
-.dt-tray-list {
-  padding: 0 16px 8px;
-}
-
-.dt-tray-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 10px;
-  grid-template-areas:
-    'name steps x'
-    'state state state'
-    'bar bar bar';
-  column-gap: 10px;
-  padding: 6px 0;
-  border-top: 1px solid var(--line);
-  font-size: 11px;
-}
-
-.dt-tray-name {
-  grid-area: name;
-  text-align: left;
-  letter-spacing: 0.06em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dt-tray-name:hover:not(:disabled) {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.dt-tray-name:disabled {
-  color: var(--mid);
-}
-
-.dt-steps {
-  grid-area: steps;
-  display: flex;
-  gap: 3px;
-  align-items: center;
-}
-
-.dt-steps i {
-  width: 14px;
-  height: 3px;
-  background: var(--line-2);
-}
-
-.dt-steps i.on {
-  background: var(--fg);
-}
-
-.dt-tray-state {
-  grid-area: state;
-  color: var(--mid);
-  font-size: 10.5px;
-}
-
-.dt-tray-item.failed .dt-tray-state {
-  color: var(--fg);
-}
-
-.dt-tray-item.failed .dt-tray-state::before {
-  content: '! ';
-  color: var(--mid);
-}
-
-.dt-tray-item .row-x {
-  grid-area: x;
-  opacity: 1;
-}
-
-.dt-tray-bar {
-  grid-area: bar;
-  margin-top: 5px;
-}
-
-.dt-group {
-  padding: 14px 16px 6px 16px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--low);
-  border-bottom: 1px solid var(--line);
-}
-
-.dt-tag {
-  flex: none;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  border: 1px solid var(--line-2);
-  color: var(--mid);
-  padding: 0 4px;
-  line-height: 14px;
-}
-
-.dt-tag-live {
-  border-color: var(--fg);
-  color: var(--fg);
-}
-
-.dt-row-sub {
-  font-size: 10.5px;
-  color: var(--low);
-  letter-spacing: 0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dt-empty {
-  padding: 28px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.dt-empty-title {
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg);
-}
-
-.dt-map-empty {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 360px;
-  height: 160px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 1px dashed var(--line-2);
-  background: rgba(5, 5, 5, 0.86);
-}
-
-.dt-ortung {
-  position: relative;
-}
-
-.dt-drop {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  background: rgba(5, 5, 5, 0.78);
-  pointer-events: none;
-}
-
-.dt-drop-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 36px 48px;
-  border: 1px dashed var(--fg);
-  background: var(--bg);
-}
-
-.dt-drop-box b {
-  font-size: 15px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.dt-drop-box span {
-  color: var(--mid);
-}
-
-/* ---------- ORTUNG: the result over the map ---------- */
-
-.dt-hud-stage {
-  margin-bottom: 8px;
-}
-
-.dt-hud-place {
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: 1.3;
-  max-width: 340px;
-}
-
-.dt-hud-place + .dt-hud-sub {
-  margin-top: 2px;
-  margin-bottom: 10px;
-}
-
-.dt-hud-conf {
-  display: grid;
-  grid-template-columns: auto minmax(60px, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mid);
-}
-
-.dt-hud-conf b {
-  color: var(--fg);
-  font-weight: 500;
-  letter-spacing: 0;
-  font-size: 12px;
-}
-
-.dt-meter {
-  position: relative;
-  height: 3px;
-  background: var(--line-2);
-}
-
-.dt-meter > span {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--fg);
-}
-
-.dt-hud-detail {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-  font-size: 10.5px;
-  color: var(--low);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dt-hud-detail b,
-.dt-hud-line b {
-  color: var(--fg);
-  font-weight: 500;
-}
-
-.dt-hud-line {
-  margin-top: 8px;
-  font-size: 11px;
-}
-
-.dt-hud-hint {
-  margin-top: 10px;
-  color: var(--low);
-  font-size: 11px;
-}
-
-.dt-strip-text .low {
-  font-size: 10.5px;
-  max-width: 260px;
-}
-
-/* ---------- BEFUND: result first ---------- */
-
-.dt-befund-page {
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-}
-
-.dt-result {
-  display: flex;
-  align-items: flex-end;
-  gap: 36px;
-  padding: 14px 18px 14px;
-  border-bottom: 1px solid var(--line-2);
-  min-width: 0;
-}
-
-.dt-result > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.dt-result b {
-  font-size: 20px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dt-result-place {
-  flex: 0 1 auto;
-}
-
-.dt-result-place b {
-  font-weight: 500;
-}
-
-.dt-result-time b {
-  font-size: 26px;
-  font-weight: 300;
-}
-
-.dt-result .low {
-  font-size: 10.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dt-result-case b {
-  font-size: 13px;
-  letter-spacing: 0.1em;
-}
-
-.dt-result-stage {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.dt-result-actions {
-  margin-left: auto;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 16px !important;
-}
-
+/* A fold: '+' closed, '−' open (the steps of a fix, saved evaluations, loose truths). */
 .dt-trace-box > summary {
   cursor: pointer;
   list-style: none;
@@ -861,25 +753,125 @@
 }
 
 .dt-trace-box[open] > summary {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-.dt-own .dt-intake-btn {
-  align-self: flex-start;
-  font-size: 11px;
+/* ---------- RAUM ---------- */
+
+.dt-raum {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
 }
 
-.dt-truth-ctl {
-  margin: 4px 0 8px;
+.dt-raum-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line-2);
+  min-width: 0;
 }
 
-.dt-tag-inline {
-  margin-left: 10px;
+.dt-raum-bar .seg {
+  display: flex;
+  gap: 2px;
+}
+
+.dt-raum-bar .seg button {
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.dt-raum-bar .seg button.on {
+  color: var(--bg);
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+.dt-raum-stage {
+  position: relative;
+  min-height: 0;
+}
+
+/* ---------- MESSUNG ---------- */
+
+.dt-messung {
+  gap: 32px;
+}
+
+.dt-messung .tbl .nowrap {
+  white-space: nowrap;
+}
+
+/* The numeric columns of the stored evaluation: narrow, right-aligned; the case takes the rest. */
+.dt-messung .tbl .dt-num-col {
+  width: 72px;
+}
+
+.dt-messung .section-head {
+  margin-bottom: 0;
+}
+
+.dt-msection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dt-msection > .hint {
+  margin-top: -6px;
+}
+
+.dt-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line-2);
+  border-left: 1px solid var(--line-2);
+}
+
+.dt-figure {
+  padding: 12px 16px;
+  border-right: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+}
+
+.dt-figure b {
+  display: block;
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.dt-figure span {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.dt-bar {
+  height: 3px;
+  background: var(--line-2);
+  position: relative;
+  min-width: 80px;
+}
+
+.dt-bar > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--fg);
 }
 
 .dt-own-figures {
   color: var(--mid);
-  margin: 2px 0 10px;
 }
 
 .dt-own-figures b {
@@ -887,19 +879,8 @@
   font-weight: 500;
 }
 
-/* ---------- check links over the map and in the result header ---------- */
-
-/* The overlay lets the map take the pointer; its links take it back. */
-.dt-hud a {
-  pointer-events: auto;
-}
-
-.dt-hud-checks {
-  margin-top: 2px;
-}
-
-.dt-result-place .dp-checks {
-  font-size: 10.5px;
+.dt-fold > :not(summary) + :not(summary) {
+  margin-top: 12px;
 }
 
 /* ---------- settings of the location engine ---------- */
@@ -915,7 +896,7 @@
   display: grid;
   grid-template-columns: 170px minmax(0, 1fr);
   gap: 16px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -941,7 +922,7 @@
 .dt-set-state {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -990,4 +971,22 @@
 
 .dialog .dt-settings {
   max-width: none;
+}
+
+/* BEFUND: the video, or the keyframe with its skyline, in one place. */
+.dt-media-switch {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.dt-media-switch .text-btn {
+  color: var(--low);
+}
+
+.dt-media-switch .text-btn[aria-pressed='true'] {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }

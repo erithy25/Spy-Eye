@@ -216,6 +216,23 @@ test('a source that does not answer is cut off after the timeout', async () => {
   assert.ok(performance.now() - t0 < 3_000);
 });
 
+test('a resolver that hangs counts against the same timeout as the exchange', async () => {
+  let fetched = 0;
+  const fetchImpl: StreetFetch = async () => {
+    fetched++;
+    return image(JPEG);
+  };
+  // dns.lookup takes no signal; a broken resolver answers late or never.
+  const neverAnswers = (): Promise<string[]> => new Promise<string[]>(() => undefined);
+  const keepAlive = setInterval(() => undefined, 50);
+  const t0 = performance.now();
+  const r = await fetchStreetImage('https://a.example.org/x.jpg', { fetch: fetchImpl, lookup: neverAnswers, timeoutMs: 150 }).finally(() => clearInterval(keepAlive));
+  assert.deepEqual(r, { ok: false, failure: 'timeout' });
+  assert.equal(fetched, 0, 'nothing is fetched without a verdict on the address');
+  // Upper bound only: the machine running the tests is shared and loaded.
+  assert.ok(performance.now() - t0 < 3_000);
+});
+
 test('the memory cache keeps pictures and "gone" answers, evicts by count and bytes, forgets after the TTL', async () => {
   let now = 1_000_000;
   const calls = new Map<string, number>();

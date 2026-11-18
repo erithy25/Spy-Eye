@@ -314,7 +314,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
               )}
               {target.lat !== null && target.lon !== null && (
                 <div>
-                  <dt>UTMREF</dt>
+                  <dt>{t('UTMREF')}</dt>
                   <dd>{toMgrs(target.lat, target.lon)}</dd>
                 </div>
               )}

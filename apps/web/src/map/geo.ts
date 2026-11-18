@@ -1,3 +1,5 @@
+import { formatDecimal, writesGerman } from '../format';
+
 export { toMgrs, toUtm, haversineKm } from '../../../server/src/core/geo';
 
 const TILE = 256;
@@ -23,10 +25,23 @@ export function metresPerPixel(lat: number, zoom: number): number {
   return (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
 }
 
+/**
+ * A coordinate as every view writes it: five decimals in the console's decimal mark and the
+ * hemisphere letter in its language ("50,93962" "N" / "6,95829" "O"; "E" in English).
+ */
+export function coordinateParts(lat: number, lon: number): { lat: string; ns: string; lon: string; ew: string } {
+  return {
+    lat: formatDecimal(Math.abs(lat), 5),
+    ns: lat >= 0 ? 'N' : 'S',
+    lon: formatDecimal(Math.abs(lon), 5),
+    ew: lon >= 0 ? (writesGerman() ? 'O' : 'E') : 'W',
+  };
+}
+
+/** "50,93962° N  6,95829° O" / "50.93962° N  6.95829° E" */
 export function formatCoordinate(lat: number, lon: number): string {
-  const ns = lat >= 0 ? 'N' : 'S';
-  const ew = lon >= 0 ? 'E' : 'W';
-  return `${Math.abs(lat).toFixed(5)}° ${ns}  ${Math.abs(lon).toFixed(5).padStart(9, '0')}° ${ew}`;
+  const c = coordinateParts(lat, lon);
+  return `${c.lat}° ${c.ns}  ${c.lon}° ${c.ew}`;
 }
 
 /** Inverse transverse Mercator (Krüger series): UTM grid coordinates to latitude / longitude, northern hemisphere. */

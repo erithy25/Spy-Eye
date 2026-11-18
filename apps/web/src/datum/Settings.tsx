@@ -109,16 +109,16 @@ export function DatumSettingsPanel({ can }: DatumSettingsPanelProps) {
             ) : (
               <b>{active ? t('eingeschaltet') : t('ausgeschaltet')}</b>
             )}
-            {street.forcedOff && <span className="low">{t('durch die Umgebung abgeschaltet (DATUM_STREETLEVEL)')}</span>}
+            {active && providers !== '' && <span className="low">· {providers}</span>}
+            {street.forcedOff && (
+              <span className="low">
+                {street.offline ? t('abgeschaltet: der Knoten läuft offline (SICHT_OFFLINE)') : t('durch die Umgebung abgeschaltet (DATUM_STREETLEVEL)')}
+              </span>
+            )}
           </div>
-          <p className="hint">
-            {t('Vergleicht die Bilder des Videos mit öffentlichen Straßenbildern rund um einen erkannten Ort. Panoramax und, mit Schlüssel, Mapillary erfahren dabei, welche Gegend untersucht wird; Videos und Bilder verlassen den Knoten nicht.')}
+          <p className="hint" title={t('Panoramax und, mit Schlüssel, Mapillary erfahren dabei, welche Gegend untersucht wird.')}>
+            {t('Vergleicht mit öffentlichen Straßenbildern rund um den Ort. Videos verlassen den Knoten nicht.')}
           </p>
-          {active && providers !== '' && (
-            <p className="hint">
-              {t('Abgefragt werden')}: {providers}
-            </p>
-          )}
         </div>
       </div>
 
@@ -156,8 +156,7 @@ export function DatumSettingsPanel({ can }: DatumSettingsPanelProps) {
                 {t('Kostenloser Client-Token:')}{' '}
                 <a className="dp-link" href={MAPILLARY_DEVELOPERS} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">
                   mapillary.com
-                </a>{' '}
-                {t('→ Dashboard → Developers → App registrieren → „Client Token“.')}
+                </a>
               </p>
             </>
           ) : street.mapillaryKeySource === 'none' ? (
@@ -167,27 +166,18 @@ export function DatumSettingsPanel({ can }: DatumSettingsPanelProps) {
       </div>
 
       <div className="dt-set-row">
-        <div className="dt-set-key">{t('Weltmodell (GeoCLIP)')}</div>
+        <div className="dt-set-key">{t('Weltmodell')}</div>
         <div className="dt-set-body">
-          <div className="dt-set-state">
+          <div className="dt-set-state" title={world.available ? `GeoCLIP · ${world.precision}` : 'GeoCLIP'}>
             <b>{world.available ? t('vorhanden') : t('nicht vorhanden')}</b>
-            {world.available && <span className="low">{world.precision}</span>}
           </div>
-          <p className="hint">
-            {world.available
-              ? t('Schätzt eine Region überall auf der Erde, auch ohne erkannte Landmarke; ihr Kreis ist entsprechend groß.')
-              : t('Ohne Weltmodell bleibt es bei Landmarken, Länderschätzung und Gelände.')}
-          </p>
+          {!world.available && <p className="hint">{t('Ohne Weltmodell bleibt es bei Landmarken, Länderschätzung und Gelände.')}</p>}
         </div>
       </div>
 
       {action.error && <p className="note">{action.error}</p>}
       {done && !action.error && <p className="hint dt-set-done">{done}</p>}
-      <p className="hint">
-        {mayChange
-          ? t('Änderungen gelten für die nächsten Ortungen und stehen im Protokoll.')
-          : t('Nur die Leitung kann diese Einstellungen ändern.')}
-      </p>
+      {!mayChange && <p className="hint">{t('Nur die Leitung kann diese Einstellungen ändern.')}</p>}
     </section>
   );
 }

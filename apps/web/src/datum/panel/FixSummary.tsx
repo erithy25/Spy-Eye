@@ -2,8 +2,8 @@ import type { Fix } from '../../../../server/src/datum/contract';
 import { formatDateTime, formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
 import { haversineKm, toMgrs } from '../../map/geo';
-import { placeText } from '../labels';
-import { Meter, coordParts, fmtCoord, fmtKm, fmtScore, kindCode, kindMethod } from './common';
+import { CheckLinks } from './CheckLinks';
+import { coordParts, fmtCoord, fmtKm } from './common';
 import './panel.css';
 
 export interface FixSummaryProps {
@@ -70,7 +70,7 @@ function significantDecimals(radiusKm: number): number {
 }
 
 function Digits({ value, decimals }: { value: string; decimals: number }) {
-  const dot = value.indexOf('.');
+  const dot = value.search(/[.,]/);
   const cut = dot < 0 ? value.length : decimals === 0 ? dot : dot + 1 + decimals;
   return (
     <span className="dp-coord-v">
@@ -101,26 +101,25 @@ function TruthSource({ source, url }: { source: string; url: string | undefined 
 }
 
 export function FixSummary({ fix }: FixSummaryProps) {
-  const lang = useLang();
-  const { t, locale, region } = lang;
+  const { t, locale } = useLang();
   const loc = fix.location;
   const truth = fix.truth;
   const errorKm = truth && loc ? (truth.errorKm ?? haversineKm(loc.lat, loc.lon, truth.lat, truth.lon)) : (truth?.errorKm ?? null);
+  // When and how long the fix was computed is for checking: in the title, not on the page.
+  const computed = fix.status === 'ready' ? `${formatDateTime(fix.computedAt, locale)} · ${formatDecimal(fix.elapsedMs / 1000, 1)} s` : '';
   const head = (
     <header className="dp-head">
-      <h3 className="label">{t('Fix')}</h3>
-      <span className="dp-head-note">
-        <span className={`dp-status dp-status-${fix.status}`}>
-          {fix.status === 'running' && <span className="blink" aria-hidden="true" />}
-          {t(STATUS[fix.status])}
+      <h3 className="label" title={computed}>
+        {t('Fix')}
+      </h3>
+      {fix.status !== 'ready' && (
+        <span className="dp-head-note">
+          <span className={`dp-status dp-status-${fix.status}`}>
+            {fix.status === 'running' && <span className="blink" aria-hidden="true" />}
+            {t(STATUS[fix.status])}
+          </span>
         </span>
-        {fix.status === 'ready' && (
-          <>
-            {' · '}
-            {formatDecimal(fix.elapsedMs / 1000, 1)} s · {formatDateTime(fix.computedAt, locale)}
-          </>
-        )}
-      </span>
+      )}
     </header>
   );
 
@@ -167,14 +166,18 @@ export function FixSummary({ fix }: FixSummaryProps) {
         aria-label={`${t('Position')} ${fmtCoord(loc.lat, loc.lon)}`}
         title={t('Blasse Stellen liegen unterhalb der Genauigkeit des Fixes.')}
       >
-        <Digits value={c.lat} decimals={sig} />
-        <span className="dp-coord-h">°{c.ns}</span>
-        <Digits value={c.lon} decimals={sig} />
-        <span className="dp-coord-h">°{c.ew}</span>
+        <span className="dp-coord-pair">
+          <Digits value={c.lat} decimals={sig} />
+          <span className="dp-coord-h">°{c.ns}</span>
+        </span>
+        <span className="dp-coord-pair">
+          <Digits value={c.lon} decimals={sig} />
+          <span className="dp-coord-h">°{c.ew}</span>
+        </span>
       </div>
       <div className="dp-fix-grid">
         <div>
-          <span className="dp-key">MGRS</span>
+          <span className="dp-key">{t('UTMREF')}</span>
           <span className="dp-mgrs">{mgrs}</span>
         </div>
         <div>
@@ -182,45 +185,18 @@ export function FixSummary({ fix }: FixSummaryProps) {
           <span className="dp-radius">± {fmtKm(loc.radiusKm)}</span>
         </div>
       </div>
+      <CheckLinks lat={loc.lat} lon={loc.lon} className="dp-fix-checks" />
       <PrecisionScale radiusKm={loc.radiusKm} errorKm={errorKm} />
-      <p className="dp-place">
-        <span className="dp-strong">{placeText(lang, loc, fix)}</span>
-        {loc.country && (
-          <span className="dp-mid">
-            {' · '}
-            {region(loc.country, loc.countryName)} ({loc.country})
-          </span>
-        )}
-      </p>
-      <dl className="dp-kv">
-        <div>
-          <dt>{t('Methode')}</dt>
-          <dd>
-            <span className="dp-code">{t(kindCode(loc.method))}</span> {t(kindMethod(loc.method))}
-          </dd>
-        </div>
-        <div>
-          <dt>{t('Konfidenz')}</dt>
-          <dd className="dp-kv-meter">
-            <Meter value={loc.confidence} label={t('Konfidenz')} ticks />
-            <span className="dp-val">{fmtScore(loc.confidence)}</span>
-          </dd>
-        </div>
-      </dl>
       {truth && (
         <div className="dp-truth">
           <span className="dp-key">{t('Grundwahrheit')}</span>
           <p>
+            <i className="dp-diamond" aria-hidden="true" />
             <span className="dp-strong">{truth.label}</span>
             <span className="dp-low"> · {fmtCoord(truth.lat, truth.lon)}</span>
           </p>
-          <p>
-            <i className="dp-diamond" aria-hidden="true" />
-            {t('Abweichung')} <span className="dp-strong">{errorKm !== null ? fmtKm(errorKm) : '—'}</span>
-            <span className="dp-low">
-              {' · '}
-              {t('Quelle')}: <TruthSource source={truth.source} url={truth.url} />
-            </span>
+          <p className="dp-low">
+            <TruthSource source={truth.source} url={truth.url} />
           </p>
         </div>
       )}

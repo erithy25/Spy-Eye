@@ -66,7 +66,13 @@ export interface Evidence {
   weight: number;
   /** Frame number in the video this evidence was read from, if any. */
   frame?: number;
-  /** Gallery reference: thumbnail URL served by the node, label and position. */
+  /**
+   * Reference picture: thumbnail URL served by the node, label and position. For a gallery
+   * reference the label is the landmark's name. For street-level evidence `refImage` is the node's
+   * proxy path GET /api/datum/fixes/:videoId/street/:n (n counts the items that have a `refSource`,
+   * 0-based, in evidence order, so it is set last, on the final order) and `refLabel` is the
+   * attribution (author, licence, service), which the console shows under the picture.
+   */
   refImage?: string;
   refLabel?: string;
   refLat?: number;
@@ -90,8 +96,13 @@ export interface DatumSettings {
   streetLevel: {
     /** Whether the full stage compares frames with public street-level pictures. */
     enabled: boolean;
-    /** True when the environment (DATUM_STREETLEVEL=0) switches it off, whatever `enabled` says. */
+    /**
+     * True when the environment switches it off, whatever `enabled` says: DATUM_STREETLEVEL=0, or
+     * offline mode (SICHT_OFFLINE, see `offline`).
+     */
     forcedOff: boolean;
+    /** True when the node runs in offline mode and contacts no one. Missing on older nodes. */
+    offline?: boolean;
     /** Services that would be asked: Panoramax always, Mapillary only with a stored key. */
     providers: Array<'panoramax' | 'mapillary'>;
     /** Whether a Mapillary key is stored (from MAPILLARY_TOKEN or saved by an operator). Never the key. */
@@ -100,8 +111,13 @@ export interface DatumSettings {
     mapillaryKeySource: 'env' | 'stored' | 'none';
   };
   worldModel: {
-    /** Whether the GeoCLIP weights are on this machine. */
+    /**
+     * Whether the world model can be used: read from the GeoCLIP files on disk until the engine
+     * reports what actually runs (false when switched off with DATUM_WORLDMODEL=0, when the
+     * weights are missing or when its thread failed or was given up).
+     */
     available: boolean;
+    /** Precision of the image tower: int8 (the default download) or fp32. */
     precision: 'int8' | 'fp32';
   };
 }
@@ -262,9 +278,19 @@ export interface TraceStep {
 }
 
 export interface FixLocation extends GeoPoint {
+  /**
+   * Radius of the uncertainty circle (km). Chosen per evidence tier on the tuning half of the
+   * reference set, so that the truth lies inside in about 70 % of its cases: e.g. 3 km for a clear
+   * landmark match, 25 km for a concentrated world-model answer, 1 500 km for a diffuse one.
+   */
   radiusKm: number;
   /** 0..1 */
   confidence: number;
+  /**
+   * What decided the place: 'metadata' (GPS in the file), 'landmark' (reference gallery),
+   * 'worldmodel' (GeoCLIP replaced the gallery's answer), 'region' (country prior),
+   * 'streetlevel' (moved onto a matching street-level picture in the full stage).
+   */
   method: EvidenceKind;
   label: string;
   /** English version of label, as FixCandidate.labelEn. */

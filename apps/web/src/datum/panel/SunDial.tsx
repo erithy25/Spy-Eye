@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Heading, SunPathPoint, SunReport, TimeEstimate } from '../../../../server/src/datum/contract';
 import { formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
-import { anchorFor, fmtDeg, fmtElev, fmtLongDate, hhmm, localMinutes, norm360, polar, windowSpan } from './common';
+import { fmtDeg, fmtElev, fmtLongDate, hhmm, localMinutes, norm360, polar, windowSpan } from './common';
 import './panel.css';
 
 export interface SunDialProps {
@@ -84,7 +84,6 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
   const daySpan = sorted.length > 1 ? localMinutes((sorted[sorted.length - 1] as SunPathPoint).t, zone) - dayFrom : 0;
 
   const at = sun.at;
-  const maxEl = path.reduce((m, p) => Math.max(m, p.el), -90);
 
   // ---- grid ----
   const grid: ReactNode[] = [];
@@ -149,20 +148,13 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
     if (!p) return null;
     const a = p.az;
     const [x1, y1] = polar(CX, CY, R - 5, a);
-    const [x2, y2] = polar(CX, CY, R + 30, a);
-    const [lx, ly] = polar(CX, CY, R + 36, a);
-    const anchor = anchorFor(a);
-    const c = Math.cos((a * Math.PI) / 180);
-    const dy = c < -0.3 ? 9 : c > 0.3 ? -6 : 1;
+    const [x2, y2] = polar(CX, CY, R + 12, a);
+    // The times of sunrise and sunset are on the clock dial; here only their direction, the
+    // time in the title.
     return (
       <g key={key} className="dp-ev">
+        <title>{`${name} ${hhmm(localMinutes(instant, zone))}`}</title>
         <line x1={x1} y1={y1} x2={x2} y2={y2} />
-        <text x={lx} y={ly + dy} textAnchor={anchor} className="dp-ev-time">
-          {hhmm(localMinutes(instant, zone))}
-        </text>
-        <text x={lx} y={ly + dy + 10} textAnchor={anchor} className="dp-ev-name">
-          {name}
-        </text>
       </g>
     );
   };
@@ -253,7 +245,8 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
     <section className="dp dp-sundial" aria-label={t('Sonnenstand')}>
       <header className="dp-head">
         <h3 className="label">{t('Sonnenstand')}</h3>
-        <span className="dp-head-note">{fmtLongDate(sun.date, locale)}</span>
+        {/* Without a known date the path is drawn for an assumed day, and says so. */}
+        <span className="dp-head-note">{time.date ? fmtLongDate(sun.date, locale) : t('angenommen: {date}', { date: fmtLongDate(sun.date, locale) })}</span>
       </header>
       <svg className="dp-sun-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
         <line x1={CX - R} y1={CY} x2={CX + R} y2={CY} className="dp-cross" />
@@ -305,34 +298,18 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
             )}
           </dd>
         </div>
-        <div>
-          <dt>{t('Auf / Unter')}</dt>
-          <dd>
-            {sun.sunrise !== null ? hhmm(localMinutes(sun.sunrise, zone)) : '—'} / {sun.sunset !== null ? hhmm(localMinutes(sun.sunset, zone)) : '—'}
-            {sun.solarNoon !== null && (
+        {heading && (
+          <div>
+            <dt>{t('Kamera')}</dt>
+            <dd>
+              {fmtDeg(heading.deg)} · {t('Sichtfeld')} {Math.round(heading.fovDeg)}°
               <span className="dp-low">
                 {' · '}
-                {t('Mittag')} {hhmm(localMinutes(sun.solarNoon, zone))}, {fmtElev(maxEl)}
+                {t(HEADING_METHOD[heading.method])}
               </span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt>{t('Kamera')}</dt>
-          <dd>
-            {heading ? (
-              <>
-                {fmtDeg(heading.deg)} · {t('Sichtfeld')} {Math.round(heading.fovDeg)}°
-                <span className="dp-low">
-                  {' · '}
-                  {t(HEADING_METHOD[heading.method])}
-                </span>
-              </>
-            ) : (
-              <span className="dp-low">{t('Blickrichtung unbekannt')}</span>
-            )}
-          </dd>
-        </div>
+            </dd>
+          </div>
+        )}
       </dl>
     </section>
   );

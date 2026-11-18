@@ -3,7 +3,7 @@ import { useLang } from '../../i18n';
 import { fetchTerrain, rel, type Fix, type TerrainGrid } from '../api';
 import { SpaceView } from '../space/SpaceView';
 import { TerrainView } from '../space/TerrainView';
-import { caseLabel, placeText, radiusText } from '../labels';
+import { caseLabel, placeText } from '../labels';
 import { bestWindowText, useFullFix } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
@@ -90,7 +90,7 @@ export function Raum({ videos, byId, selected, go }: DatumViewProps) {
           </div>
         )}
         <span className="low" style={{ marginLeft: 'auto' }}>
-          {loc ? `${placeText(lang, loc, fix)} · ${radiusText(lang, loc)}` : t('Ort unbestimmt')}
+          {loc ? placeText(lang, loc, fix) : t('Ort unbestimmt')}
           {bestWindowText(fix) ? ` · ${bestWindowText(fix)}` : ''}
         </span>
         <button type="button" className="text-btn" onClick={() => go('befund')}>
@@ -110,6 +110,7 @@ export function Raum({ videos, byId, selected, go }: DatumViewProps) {
               pitchDeg={key.pitchDeg ?? 0}
               sun={sun}
               onExit={() => go('befund')}
+              embedded
             />
           ) : (
             <div className="dt-empty-view">
@@ -131,9 +132,11 @@ export function Raum({ videos, byId, selected, go }: DatumViewProps) {
               }}
               sun={sun}
               sunPath={fix.sun?.path ?? []}
+              timezone={fix.time.timezone}
               horizonProfile={fix.horizon?.profile ?? null}
               skyline={matchedKey?.skyline ?? null}
               label={placeText(lang, loc, fix)}
+              embedded
             />
           ) : (
             <div className="dt-empty-view">{terrain?.error ? t(terrain.error) : t('Gelände wird geladen …')}</div>
