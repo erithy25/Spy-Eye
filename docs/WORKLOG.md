@@ -162,3 +162,20 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   evaluation and both ledger verifiers follow in the same run (result below in the final
   report of the session).
 
+## 10:00 UTC · T+587 min
+
+- Clean clone on Linux ran the whole path: install, build, 83 tests, fetch (316 MB), prepare
+  (271 s), preflight, evaluation (13 of 13, one false alert), both ledger verifiers, the check of
+  the bill of materials.
+- Upgrade from the first version: the node was started on a data folder written by it (44
+  recordings indexed with the earlier encoders). It re-indexes them in the background; "Beach",
+  "Man with a cup" and "Black car" return hits, "Green bus" reports that no scene is above the
+  threshold. The same holds for a fresh upload of the folder through the console (198 s).
+- The first version listened on the same port. The start command and the node now say so when
+  something that is not a node of Sicht holds the port; the Windows workflow tests it with a
+  listener.
+- Two more points from the review: free space is checked before an upload
+  (`SICHT_MIN_FREE_MB`), and the operator can name the hosts live streams may come from
+  (`SICHT_STREAM_HOSTS`). 88 tests.
+- Website: bill of materials and keyboard use under operation, accessibility among the limits.
+
