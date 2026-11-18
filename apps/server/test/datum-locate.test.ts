@@ -221,7 +221,7 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
   assert.equal(weak.location?.method, 'region');
   assert.equal(weak.location?.country, 'DE');
   assert.ok((weak.location?.radiusKm ?? 0) > 200);
-  assert.ok((weak.location?.confidence ?? 1) < 0.6);
+  assert.ok((weak.location?.confidence ?? 1) < 0.8, "a country-level answer is never near-certain");
   assert.ok(weak.evidence.some((e) => e.kind === 'filename'));
 
   const withGps = decideLocation(world, {

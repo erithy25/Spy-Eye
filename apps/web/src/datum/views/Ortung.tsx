@@ -16,7 +16,7 @@ export interface DatumViewProps {
   go: (tab: 'ortung' | 'befund' | 'raum') => void;
 }
 
-const WORLD = { lat: 28, lon: 12, zoom: 1.6 };
+const WORLD = { lat: 24, lon: 12, zoom: 2.25 };
 
 /** Map geometry for one fix: uncertainty, candidates, sun and shadow, view cone, ground truth. */
 export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[], withCountries: boolean): MapShape[] {
@@ -189,7 +189,6 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
             if (id === null) return;
             select(id.startsWith('truth:') ? id.slice(6) : id);
           }}
-          label={t('Ortung')}
         />
         {!current && rows.length > 0 && (
           <div className="dt-hud">

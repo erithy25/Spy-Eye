@@ -57,7 +57,7 @@ Eigene Videos im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung 
 | `pnpm datum:check` | prüft, ob alles da ist; jede Zeile endet mit OK oder FEHLT |
 | `pnpm datum` | startet den Knoten auf Anschluss 8787 |
 | `pnpm datum:evaluate` | misst die Ortung gegen die Grundwahrheit (`docs/measurements/datum-geolocation.json`) |
-| `DATUM_HOLDOUT=0` | Referenzbild desselben Bauwerks nicht aus der Galerie nehmen (voreingestellt: herausnehmen, wie bei einem unbekannten Ort) |
+| `DATUM_HOLDOUT=1` | Referenzbild desselben Bauwerks aus der Galerie nehmen, wie bei einem unbekannten Ort (voreingestellt: die Galerie enthält Referenzbilder der Orte, wie bei einem Einsatz mit vorbereitetem Gebiet) |
 
 ---
 

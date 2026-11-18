@@ -104,9 +104,9 @@ export interface CountryPriorParams {
 }
 
 /**
- * Tuned on the even-indexed half of the DATUM test videos (see scripts/datum/evaluate.ts and
- * docs/measurements/datum-geolocation.json): the temperature that maximises the likelihood of the
- * true country.
+ * Tuned on the training half of the DATUM test videos (see scripts/datum/evaluate.ts and
+ * docs/measurements/datum-geolocation.json): temperature and population exponent that maximise
+ * the likelihood of the true country.
  */
 export const DEFAULT_PRIOR_PARAMS: CountryPriorParams = { temperature: 0.0075, uniformMix: 0.01, populationExponent: 1 };
 

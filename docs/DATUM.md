@@ -58,8 +58,44 @@ genehmigungspflichtig sein (EU-Dual-Use-Verordnung); das ist vor jeder Lieferung
 
 ## Was gemessen ist
 
-Die Messung steht in `docs/measurements/datum-geolocation.json` und im Reiter MESSUNG; sie wird
-mit `pnpm datum:evaluate` wiederholt. Abschnitt „Messwerte“ unten.
+Referenzbestand: 60 Videos aus Wikimedia Commons in 30 Ländern (16 aus Deutschland), deren
+Wikidata-Objekt eine Koordinate trägt. Die Videos gehen unter neutralen Namen (`datum-001.mp4`)
+in den Knoten; der Ort wird erst nach der Ortung zum Vergleich dazugelegt. Galerie: 6 393
+Referenzbilder von Wikidata-Objekten mit Koordinate. Je Video sechs Bilder. Die Schwellen der
+Ortung wurden nur an der einen Hälfte der Videos eingestellt (Abstimmungshälfte); die andere
+Hälfte (Prüfhälfte) wurde nur gemessen. Gemessen am 18. November 2026 mit `pnpm datum:evaluate`,
+Einzelwerte in `docs/measurements/datum-geolocation.json`.
+
+| Fall | Hälfte | Median | ≤ 1 km | ≤ 25 km | ≤ 200 km | ≤ 750 km | ≤ 2 500 km | Land richtig |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Referenzbild des Ortes in der Galerie | Prüfhälfte (30) | 233 km | 40 % | 47 % | 50 % | 60 % | 80 % | 43 % |
+| Referenzbild des Ortes in der Galerie | alle (60) | 310 km | 27 % | 37 % | 45 % | 57 % | 77 % | 38 % |
+| Ort ohne Referenzbild (unbekannt) | Prüfhälfte (30) | 751 km | 0 % | 17 % | 27 % | 47 % | 70 % | 37 % |
+| Ort ohne Referenzbild (unbekannt) | alle (60) | 735 km | 0 % | 17 % | 28 % | 50 % | 70 % | 35 % |
+| Nur Länderschätzung, ohne Galerie | Prüfhälfte (30) | 1 253 km | 0 % | 0 % | 13 % | 43 % | 60 % | 37 % |
+
+Einordnung:
+- Die Wiedererkennung trägt. Liegt ein Bild desselben Bauwerks in der Galerie, ortet DATUM
+  vier von zehn Videos der Prüfhälfte auf einen Kilometer genau. Fehlt es, bleibt eine Schätzung
+  auf Land- und Kontinentebene, die besser ist als die Länderschätzung allein.
+- Die Länderschätzung allein trifft das Land in 38 % der Fälle (unter den ersten fünf Ländern in
+  65 %).
+- Die Zuverlässigkeitsangabe ist ehrlich, aber grob: Bei unbekannten Orten lag die Wahrheit in
+  18 % der Fälle im angegebenen Kreis (angegeben im Mittel 27 %), bei bekannten in 43 %.
+- 30 Videos je Hälfte sind wenig; die Anteile schwanken um rund neun Prozentpunkte.
+- Zum Vergleich ohne Anspruch auf Gleichwertigkeit: Veröffentlichte Verfahren mit großen
+  Galerien und eigens trainierten Modellen erreichen auf öffentlichen Prüfsätzen deutlich
+  höhere Werte. DATUM arbeitet mit einem allgemeinen Bild-Text-Modell und 6 393 Referenzbildern.
+- Rechenzeit: 1,3 s je Video für die Ortung (Bilder und Vergleich), mit Raum, Horizont und Zeit
+  rund 2 s; die Galerie wird einmal eingerechnet und lädt danach in 0,4 s.
+- Die Uhrzeit hat keine Grundwahrheit: Die Videos aus Commons tragen nach der Umwandlung keine
+  Aufnahmezeit mehr. Geprüft ist die Rechnung (Sonnenstand gegen veröffentlichte Werte auf die
+  Minute, Zeitzonen, Fenster aus der Sonnenhöhe), nicht die Treffsicherheit bei echten Videos.
+  Tag und Nacht unterscheidet die Lichtschätzung zuverlässig, die Sonnenhöhe nur grob.
+- Geprüft und verworfen: die Lichtrichtung aus der Schattierung der rekonstruierten Flächen. Auf
+  künstlichen Szenen trifft sie die Richtung auf 12°, auf echten Bildern meldete sie bei bedecktem
+  Himmel in 16 von 28 Fällen Sonne. Sie fließt deshalb nicht in die Uhrzeit ein
+  (`apps/server/src/datum/shading.ts` bleibt mit seinen Tests als Versuch im Repository).
 
 ## Grenzen
 

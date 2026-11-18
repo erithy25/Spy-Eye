@@ -152,7 +152,7 @@ async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (lin
   // The state reached here is kept, so that a rehearsal can be undone with "pnpm demo:reset"
   // without analysing the footage again.
   if (failed === 0) for (const node of nodes) await snapshotPreparedState(node.cfg.dataDir);
-  say(`\n  Vorbereitet in ${Math.round((Date.now() - started) / 1000)} s${failed > 0 ? `, ${failed} Aufnahme(n) mit Fehler` : ''}. Start der Vorführung: pnpm demo`);
+  say(`\n  Vorbereitet in ${Math.round((Date.now() - started) / 1000)} s${failed > 0 ? `, ${failed} Aufnahme(n) mit Fehler` : ''}. Start: ${nodes.some((n) => n.cfg.exercise === false) ? 'pnpm datum' : 'pnpm demo'}`);
   process.exit(failed > 0 ? 1 : 0);
 }
 

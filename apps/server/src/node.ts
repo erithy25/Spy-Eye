@@ -241,7 +241,7 @@ export class PlatformNode {
       hub: this.hub,
       gallery: () => sharedGallery(shared.model, shared.ready, (line) => this.log(line.trim())),
       log: (msg) => this.log(msg),
-      holdout: process.env['DATUM_HOLDOUT'] !== '0',
+      holdout: process.env['DATUM_HOLDOUT'] === '1',
     });
 
     this.live = new LiveIngest({

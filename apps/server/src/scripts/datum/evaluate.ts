@@ -26,6 +26,7 @@ const { EmbeddingModel } = await import('../../ml/model.js');
 const { Gallery, modelSlug } = await import('../../datum/gallery.js');
 const { World, greatCircleKm } = await import('../../datum/world.js');
 const { readMetadata, filenameHints } = await import('../../datum/metadata.js');
+const { decodeFrame, writeTile } = await import('../../ml/preprocess.js');
 const { DEFAULT_LOCATE_PARAMS, decideLocation, sampleAndEmbedFrames, weightNeighbours } = await import(
   '../../datum/locate.js'
 );
@@ -395,6 +396,28 @@ say(
 const reload = await new Gallery(model, { datasetDir, cacheDir }).load();
 say(`Neustart der Galerie aus dem Cache: ${reload.loadMs.toFixed(0)} ms.`);
 
+/** Embedding throughput on gallery thumbnails, measured afresh (the cache would hide it). */
+async function measureThroughput(count: number): Promise<number> {
+  const list = gallery.list().slice(0, count);
+  const size = model.imageSize;
+  const plane = 3 * size * size;
+  const t0 = performance.now();
+  for (let i = 0; i < list.length; i += config.batchSize) {
+    const batch = list.slice(i, i + config.batchSize);
+    const pixels = new Float32Array(batch.length * plane);
+    await Promise.all(
+      batch.map(async (img, j) => {
+        const decoded = await decodeFrame(path.join(datasetDir, img.file));
+        await writeTile(decoded, { left: 0, top: 0, width: decoded.width, height: decoded.height }, size, model.imageMean, model.imageStd, pixels, j * plane);
+      }),
+    );
+    await model.embedPixels(pixels, batch.length);
+  }
+  return list.length / ((performance.now() - t0) / 1000);
+}
+const throughput = await measureThroughput(96);
+say(`Durchsatz beim Einbetten (96 Galeriebilder, frisch gemessen): ${throughput.toFixed(1)} Bilder/s.`);
+
 const embedTexts = (texts: string[]): Promise<Float32Array> => model.embedTexts(texts);
 const tText = performance.now();
 await world.countryTextVectors(embedTexts);
@@ -457,13 +480,32 @@ const train = prepared.filter((p) => p.split === 'train');
 const test = prepared.filter((p) => p.split === 'test');
 
 // ---- tuning on the training half only
-const prior = tunePrior(world, train, DEFAULT_LOCATE_PARAMS);
-let params: LocateParams = {
+// The search always starts from the same hand-set values (not from the current defaults, which
+// are the result of the last run), so that a rerun reproduces the tuning.
+const START: LocateParams = {
   ...DEFAULT_LOCATE_PARAMS,
-  prior: { ...DEFAULT_LOCATE_PARAMS.prior, temperature: prior.temperature, populationExponent: prior.populationExponent },
+  k: 15,
+  simTemperature: 0.03,
+  kernelMix: [0.5, 0.3, 0.2],
+  priorExponent: 0.5,
+  regionThreshold: 0.55,
+  gapThreshold: 0,
+  recognitionGap: 0.06,
+  landmarkSimilarity: 0.75,
+  countryVoteWeight: 1,
+  regionAnchor: 'neighbours',
+  countryMinP: 0.3,
+  continentMinP: 0.4,
+  prior: { temperature: 0.01, uniformMix: 0.01, populationExponent: 1 },
+  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1 },
+};
+const prior = tunePrior(world, train, START);
+let params: LocateParams = {
+  ...START,
+  prior: { ...START.prior, temperature: prior.temperature, populationExponent: prior.populationExponent },
 };
 const zeroShot = {
-  untuned: { all: zeroShotAccuracy(world, prepared, DEFAULT_LOCATE_PARAMS.prior) },
+  untuned: { all: zeroShotAccuracy(world, prepared, START.prior) },
   tuned: {
     train: zeroShotAccuracy(world, train, params.prior),
     test: zeroShotAccuracy(world, test, params.prior),
@@ -545,6 +587,8 @@ const report = {
   },
   timing: {
     galleryEmbedImagesPerSec: round(galleryReport.imagesPerSec, 1),
+    embedThroughputImagesPerSec: round(throughput, 1),
+    embedThroughputNote: 'gallery thumbnails (~330 px), batch ' + config.batchSize + ', ' + config.threads + ' threads; machine shared with other jobs while measured',
     galleryEmbeddedThisRun: galleryReport.embedded,
     galleryRestartMs: round(reload.loadMs, 0),
     countryTextVectorsMs: round(countryTextMs, 0),

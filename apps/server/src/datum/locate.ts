@@ -49,7 +49,7 @@ export interface LocateParams {
    * over the kernel vote (a known landmark must not be outvoted by many look-alikes elsewhere).
    */
   recognitionGap: number;
-  /** Best similarity from which a single reference counts as a recognised landmark. */
+  /** Best similarity from which the evidence text calls a reference a recognition. */
   landmarkSimilarity: number;
   /** Weight of the retrieval votes in the country posterior (0: zero-shot prior only). */
   countryVoteWeight: number;
@@ -85,24 +85,24 @@ export interface LocateParams {
  * half was only used to report the result. See docs/measurements/datum-geolocation.json.
  */
 export const DEFAULT_LOCATE_PARAMS: LocateParams = {
-  k: 15,
+  k: 30,
   simOffset: 0.6,
-  simTemperature: 0.03,
+  simTemperature: 0.05,
   kernelsKm: [2, 25, 250],
-  kernelMix: [0.5, 0.3, 0.2],
+  kernelMix: [0.2, 0.3, 0.5],
   mergeKm: 5,
   priorExponent: 0.5,
   regionThreshold: 0.55,
-  gapThreshold: 0,
+  gapThreshold: 0.02,
   recognitionGap: 0.06,
   landmarkSimilarity: 0.75,
-  countryVoteWeight: 1,
+  countryVoteWeight: 0.5,
   regionAnchor: 'neighbours',
-  countryMinP: 0.3,
-  continentMinP: 0.4,
+  countryMinP: 0.25,
+  continentMinP: 0.05,
   maxCandidates: 8,
   prior: DEFAULT_PRIOR_PARAMS,
-  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1 },
+  confidence: { bias: -1.832, topSim: 0.304, gap: 0.188, margin: -0.24, share: 0.534, region: 0.881, continent: 0, countryP: 0.921 },
 };
 
 export interface LocateInput {
@@ -532,9 +532,12 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       first.mode.lon,
       params.mergeKm,
     );
+    // With SigLIP 2 nearly every picture of a built place scores 0.7-0.85 against some
+    // reference, so the absolute similarity does not mean recognition; only a match that stands
+    // out from its neighbours (the gap) earns a landmark-sized radius. Everything else is a
+    // regional guess and says so: at least 25 km, or the spread of the supporting references.
     let radiusKm: number;
-    if (recognised || (topSimilarity >= params.landmarkSimilarity && share >= 0.5)) radiusKm = Math.max(0.5, local);
-    else if (topSimilarity >= params.landmarkSimilarity) radiusKm = Math.max(2, local, support * 0.5);
+    if (recognised) radiusKm = Math.max(0.5, local);
     else radiusKm = Math.max(25, support);
     visual = {
       lat: first.mode.lat,

@@ -5,32 +5,44 @@ import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '
 import { kmText } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
-interface EvalMode {
-  accuracy?: Record<string, number>;
-  medianKm?: number;
-  median_km?: number;
-  n?: number;
+interface EvalRow {
+  name: string;
+  n: number | null;
+  median: number | null;
+  within: { km: number; share: number }[];
+  country: number | null;
+  inside: number | null;
 }
 
-/** Reads the summary block of the stored offline evaluation without trusting its exact shape. */
-function evalModes(evaluation: unknown): { name: string; median: number | null; within: { km: number; share: number }[]; n: number | null }[] {
+const MODE_LABEL: Record<string, string> = {
+  open: 'Galerie mit Referenzbild des Ortes',
+  unknown: 'Ort ohne Referenzbild (unbekannt)',
+};
+const SPLIT_LABEL: Record<string, string> = { all: 'alle', test: 'Prüfhälfte', train: 'Abstimmungshälfte' };
+
+/** Reads the summary of the stored evaluation (docs/measurements/datum-geolocation.json). */
+function evalRows(evaluation: unknown, t: (s: string) => string): EvalRow[] {
   if (!evaluation || typeof evaluation !== 'object') return [];
-  const root = evaluation as Record<string, unknown>;
-  const summary = (root['summary'] ?? root) as Record<string, unknown>;
-  const out: { name: string; median: number | null; within: { km: number; share: number }[]; n: number | null }[] = [];
-  for (const [name, value] of Object.entries(summary)) {
-    if (!value || typeof value !== 'object') continue;
-    const mode = value as EvalMode & Record<string, unknown>;
-    const acc = (mode.accuracy ?? mode['within'] ?? null) as Record<string, number> | null;
-    if (!acc || typeof acc !== 'object') continue;
-    const within = Object.entries(acc)
-      .map(([k, v]) => ({ km: Number(String(k).replace(/[^0-9.]/g, '')), share: typeof v === 'number' ? (v > 1 ? v / 100 : v) : NaN }))
-      .filter((w) => Number.isFinite(w.km) && Number.isFinite(w.share))
-      .sort((a, b) => a.km - b.km);
-    const median = typeof mode.medianKm === 'number' ? mode.medianKm : typeof mode.median_km === 'number' ? mode.median_km : null;
-    out.push({ name, median, within, n: typeof mode.n === 'number' ? mode.n : null });
+  const summary = (evaluation as Record<string, unknown>)['summary'];
+  if (!summary || typeof summary !== 'object') return [];
+  const rows: EvalRow[] = [];
+  for (const [mode, splits] of Object.entries(summary as Record<string, unknown>)) {
+    if (!splits || typeof splits !== 'object') continue;
+    for (const split of ['all', 'test']) {
+      const s = (splits as Record<string, Record<string, unknown>>)[split];
+      if (!s) continue;
+      const num = (k: string): number | null => (typeof s[k] === 'number' ? (s[k] as number) : null);
+      rows.push({
+        name: `${t(MODE_LABEL[mode] ?? mode)} · ${t(SPLIT_LABEL[split] ?? split)}`,
+        n: num('n'),
+        median: num('medianKm'),
+        within: [1, 25, 200, 750, 2500].map((km) => ({ km, share: num(`acc${km}km`) ?? NaN })),
+        country: num('countryAcc'),
+        inside: num('withinRadius'),
+      });
+    }
   }
-  return out;
+  return rows;
 }
 
 export function Messung({ node, select, go }: DatumViewProps) {
@@ -54,7 +66,7 @@ export function Messung({ node, select, go }: DatumViewProps) {
     return () => ctrl.abort();
   }, [version]);
 
-  const modes = evalModes(summary?.evaluation);
+  const modes = evalRows(summary?.evaluation, t);
   const pct = (v: number | null | undefined): string => (v == null ? '–' : `${Math.round(v * 100)} %`);
 
   return (
@@ -107,17 +119,22 @@ export function Messung({ node, select, go }: DatumViewProps) {
         )}
 
         {modes.length > 0 && (
-          <section className="section-gap">
+          <section className="section-gap" style={{ marginTop: 26 }}>
             <h3 className="label">{t('Gespeicherte Auswertung')}</h3>
+            <p className="hint">
+              {t('Mit pnpm datum:evaluate gemessen. Die Schwellen der Ortung wurden nur an der Abstimmungshälfte eingestellt; die Prüfhälfte zeigt, was ohne Anpassung herauskommt.')}
+            </p>
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>{t('Fall')}</th>
+                  <th style={{ width: 330 }}>{t('Fall')}</th>
                   <th>n</th>
                   <th>{t('Median')}</th>
                   {modes[0]!.within.map((w) => (
                     <th key={w.km}>≤ {w.km.toLocaleString(locale)} km</th>
                   ))}
+                  <th>{t('Land richtig')}</th>
+                  <th>{t('im Kreis')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,8 +144,10 @@ export function Messung({ node, select, go }: DatumViewProps) {
                     <td>{m.n ?? '–'}</td>
                     <td>{m.median == null ? '–' : kmText(m.median, locale)}</td>
                     {m.within.map((w) => (
-                      <td key={w.km}>{pct(w.share)}</td>
+                      <td key={w.km}>{Number.isFinite(w.share) ? pct(w.share) : '–'}</td>
                     ))}
+                    <td>{pct(m.country)}</td>
+                    <td>{pct(m.inside)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -136,7 +155,7 @@ export function Messung({ node, select, go }: DatumViewProps) {
           </section>
         )}
 
-        <section className="section-gap">
+        <section className="section-gap" style={{ marginTop: 26 }}>
           <h3 className="label">
             {t('Einzelfälle')} <span className="count">{rows.length}</span>
           </h3>

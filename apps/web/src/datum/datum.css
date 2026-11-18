@@ -97,7 +97,7 @@
 .dt-hud {
   position: absolute;
   top: 18px;
-  right: 20px;
+  right: 64px;
   min-width: 300px;
   padding: 14px 16px 12px;
   background: rgba(5, 5, 5, 0.86);

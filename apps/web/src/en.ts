@@ -688,4 +688,11 @@ export const EN: Record<string, string> = {
   'Kein Höhenmodell für diesen Ort vorhanden.': 'No elevation model is available for this location.',
   'Gelände nicht verfügbar': 'Terrain unavailable',
   'Der Grafikkontext ist verloren gegangen. Das Gelände wird neu aufgebaut …': 'The graphics context was lost. Rebuilding the terrain …',
+  'Galerie mit Referenzbild des Ortes': 'Gallery with a reference picture of the place',
+  'Ort ohne Referenzbild (unbekannt)': 'Place without a reference picture (unknown)',
+  'Prüfhälfte': 'test half',
+  'Abstimmungshälfte': 'tuning half',
+  'Land richtig': 'Country right',
+  'im Kreis': 'inside circle',
+  'Mit pnpm datum:evaluate gemessen. Die Schwellen der Ortung wurden nur an der Abstimmungshälfte eingestellt; die Prüfhälfte zeigt, was ohne Anpassung herauskommt.': 'Measured with pnpm datum:evaluate. The thresholds of the engine were set on the tuning half only; the test half shows what comes out without adjustment.',
 };

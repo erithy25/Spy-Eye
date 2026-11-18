@@ -637,6 +637,89 @@ export function clockWindows(dates: ReadonlyArray<{ date: string; weight: number
     .sort((a, b) => b.probability - a.probability || a.startMin - b.startMin);
 }
 
+/** Share of the probability mass the core windows hold (highest-density region of the clock). */
+export const CORE_MASS = 0.6;
+const CORE_STEP_MIN = 5;
+
+/**
+ * Core clock windows: the light classes are read as a density over sun elevation (each class
+ * spreads its probability evenly over its band), mapped through the sun's course on the possible
+ * dates into a density over the local clock, and the smallest set of minutes holding CORE_MASS of
+ * it is returned as windows. Narrower than the union of the bands, and still an honest statement:
+ * "with about 60 % probability between …".
+ */
+export function coreWindows(
+  dates: ReadonlyArray<{ date: string; weight: number }>,
+  place: Place,
+  probs: Record<LightClass['id'], number>,
+): { windows: TimeWindow[]; modeMin: number | null } {
+  const steps = 1440 / CORE_STEP_MIN;
+  const dens = new Float64Array(steps);
+  const classes = LIGHT_CLASSES.filter((c) => c.band !== null && (probs[c.id] ?? 0) > 0.01);
+  if (classes.length === 0) return { windows: [], modeMin: null };
+  for (const { date, weight } of dates) {
+    for (let i = 0; i < steps; i++) {
+      const at = localToUtc(date, i * CORE_STEP_MIN + CORE_STEP_MIN / 2, place.timeZone);
+      const el = solarPosition(at, place.lat, place.lon).elevationDeg;
+      let d = 0;
+      for (const c of classes) {
+        const [lo, hi] = c.band as [number, number];
+        if (el >= lo && el <= hi) d += (probs[c.id] ?? 0) / Math.max(6, hi - lo);
+      }
+      dens[i] = (dens[i] ?? 0) + weight * d;
+    }
+  }
+  const total = dens.reduce((a, b) => a + b, 0);
+  if (!(total > 0)) return { windows: [], modeMin: null };
+  const order = Array.from({ length: steps }, (_, i) => i).sort((a, b) => dens[b]! - dens[a]!);
+  // Density level at which the mass reaches CORE_MASS; every minute at least that dense is taken,
+  // so equally likely minutes (a plateau) are never split arbitrarily.
+  let acc = 0;
+  let level = 0;
+  for (const i of order) {
+    acc += dens[i]!;
+    level = dens[i]!;
+    if (acc >= CORE_MASS * total) break;
+  }
+  const chosen = new Uint8Array(steps);
+  for (let i = 0; i < steps; i++) if (dens[i]! > 0 && dens[i]! >= level * (1 - 1e-9)) chosen[i] = 1;
+  // Close gaps up to 20 minutes, then collect runs (a run may wrap around midnight).
+  const gap = Math.round(20 / CORE_STEP_MIN);
+  for (let i = 0; i < steps; i++) {
+    if (chosen[i]) continue;
+    let l = 1;
+    while (l <= gap && !chosen[(i - l + steps) % steps]) l++;
+    let r = 1;
+    while (r <= gap && !chosen[(i + r) % steps]) r++;
+    if (l <= gap && r <= gap && l + r - 1 <= gap) chosen[i] = 2;
+  }
+  const start = chosen.findIndex((c) => c === 0);
+  if (start < 0) return { windows: [{ startMin: 0, endMin: 1439, label: 'ganztägig', probability: 1 }], modeMin: order[0]! * CORE_STEP_MIN };
+  const runs: Array<{ from: number; len: number; mass: number; peak: number }> = [];
+  for (let k = 1; k <= steps; k++) {
+    const i = (start + k) % steps;
+    if (!chosen[i]) continue;
+    const prev = runs[runs.length - 1];
+    const j = (i - 1 + steps) % steps;
+    if (prev && chosen[j]) {
+      prev.len++;
+      prev.mass += dens[i]!;
+      if (dens[i]! > dens[prev.peak]!) prev.peak = i;
+    } else runs.push({ from: i, len: 1, mass: dens[i]!, peak: i });
+  }
+  const bestDate = dates[Math.floor((dates.length - 1) / 2)]?.date ?? dates[0]!.date;
+  const windows = runs
+    .filter((r) => r.mass / total >= 0.04)
+    .map((r) => {
+      const startMin = r.from * CORE_STEP_MIN;
+      const endMin = ((r.from + r.len) * CORE_STEP_MIN) % 1440;
+      const mid = r.peak * CORE_STEP_MIN + CORE_STEP_MIN / 2;
+      return { startMin, endMin: endMin === 0 ? 1439 : endMin, label: labelAt(localToUtc(bestDate, mid, place.timeZone), place), probability: r.mass / total };
+    })
+    .sort((a, b) => b.probability - a.probability);
+  return { windows, modeMin: order[0]! * CORE_STEP_MIN + CORE_STEP_MIN / 2 };
+}
+
 // ---------------------------------------------------------------------------------------------
 // Formatting helpers (German)
 // ---------------------------------------------------------------------------------------------
@@ -820,7 +903,9 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
     return { time, sun: place ? sunReportFor(bestDate, place, null) : null };
   }
 
-  const windows = clockWindows(dates, reasonPlace, band);
+  const possible = clockWindows(dates, reasonPlace, band);
+  const core = coreWindows(dates, reasonPlace, light.probs);
+  const windows = core.windows.length > 0 ? core.windows : possible;
   const lightNote =
     light.top.id === 'night' || light.top.id === 'twilight'
       ? `Sonnenhöhe aus dem Licht: ${bandText(band)} – ${light.top.name} (${pct(light.probs[light.top.id])}).`
@@ -830,6 +915,11 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
   const am = windows.find((w) => w.label === 'Morgen' || w.label === 'Vormittag');
   const pm = windows.find((w) => w.label === 'Nachmittag' || w.label === 'Abend');
   if (am && pm) out.push(`${am.label} und ${pm.label} sind aus der Sonnenhöhe allein nicht zu unterscheiden.`);
+  if (core.windows.length > 0 && possible.length > 0) {
+    const from = Math.min(...possible.map((w) => w.startMin));
+    const to = Math.max(...possible.map((w) => w.endMin));
+    out.push(`Gezeigt sind die Zeitfenster mit zusammen ${pct(CORE_MASS)} Wahrscheinlichkeit; möglich ist ${clock(from)} bis ${clock(to)} Uhr.`);
+  }
   if (!place) out.push('Ort unbekannt: Uhrzeiten als Sonnenzeit für 45° nördlicher Breite geschätzt.');
   if (windows.length === 0) out.push('An diesem Ort und Datum erreicht die Sonne diese Höhe nicht; Licht oder Datum prüfen.');
 
@@ -842,9 +932,9 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
     let at: number | null = null;
     const best = windows[0];
     if (best) {
-      const pieces = labelledPieces(bestDate, place, band).filter((p) => p.label === best.label);
-      const piece = pieces.sort((a, b) => b.end - b.start - (a.end - a.start))[0];
-      at = piece ? (piece.start + piece.end) / 2 : localToUtc(bestDate, (best.startMin + best.endMin) / 2, place.timeZone);
+      // The middle of the best window (which may run past midnight).
+      const span = (best.endMin - best.startMin + 1440) % 1440;
+      at = localToUtc(bestDate, (best.startMin + span / 2) % 1440, place.timeZone);
     }
     sun = sunReportFor(bestDate, place, at);
   }
