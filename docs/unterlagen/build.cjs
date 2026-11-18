@@ -1,10 +1,10 @@
 /**
- * Erzeugt die Unterlagenmappe: die neun Unterlagen aus docs/ als druckfertige PDF-Dateien im
+ * Erzeugt die Unterlagenmappe: die zehn Unterlagen aus docs/ als druckfertige PDF-Dateien im
  * Erscheinungsbild von Sicht, zum Weitergeben ohne das Repository.
  *
- *   node docs/unterlagen/build.cjs                       alle neun
+ *   node docs/unterlagen/build.cjs                       alle zehn
  *   node docs/unterlagen/build.cjs strategy faq          einzelne: strategy, compliance, faq, evaluation, brand,
- *                                                        architecture, security, bom, accessibility
+ *                                                        architecture, security, bom, accessibility, operation
  *   node docs/unterlagen/build.cjs --stand "2. Dezember 2026"
  *   node docs/unterlagen/build.cjs brand --html          lässt die Zwischendatei docs/unterlagen/.brand.html liegen
  *   node docs/unterlagen/build.cjs --tabellen            nennt je Tabelle die gewählte Form und die Spaltenbreiten
@@ -55,6 +55,7 @@ const DOCUMENTS = {
   security: { source: 'docs/SICHERHEIT.md', target: 'Sicht-Sicherheitsdurchsicht.pdf', title: 'Sicherheitsdurchsicht' },
   bom: { source: 'docs/STUECKLISTE.md', target: 'Sicht-Stueckliste.pdf', title: 'Stückliste' },
   accessibility: { source: 'docs/BARRIEREFREIHEIT.md', target: 'Sicht-Barrierefreiheit.pdf', title: 'Barrierefreiheit' },
+  operation: { source: 'docs/BETRIEB.md', target: 'Sicht-Betrieb.pdf', title: 'Betrieb' },
 };
 const DEFAULT_STAND = '18. November 2026';
 

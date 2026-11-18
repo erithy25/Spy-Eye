@@ -17,11 +17,12 @@ Unterlagen.
 | Einseiter, deutsch und englisch | [`deliverables/Sicht-Einseiter.pdf`](deliverables/Sicht-Einseiter.pdf), [`deliverables/Sicht-One-Pager-EN.pdf`](deliverables/Sicht-One-Pager-EN.pdf) | fertig |
 | Finanzmodell, drei Szenarien | [`deliverables/Sicht-Finanzmodell.xlsx`](deliverables/Sicht-Finanzmodell.xlsx) | fertig; alle Werte sind Annahmen |
 | Filme: Markenfilm (40 s und 67 s), englische Fassung (40 s), Produktfilm (137 s, Bildschirmaufnahme der Konsole im jetzigen Stand), Hochkant-Teaser (20 s, deutsch und englisch) | `deliverables/film/` (liegt nicht im Repository, wurde im Gespräch übergeben); Schnittwerkzeug und Drehbuch in [`media/brand/`](media/brand/) | fertig; Ton nur gemessen, nicht angehört |
-| Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht, Stückliste, Barrierefreiheit | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
+| Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht, Stückliste, Barrierefreiheit, Betrieb | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
 | Architektur und Sicherheitsdurchsicht | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md), [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) | fertig; 21 Befunde einer unabhängigen Durchsicht, die schweren behoben |
 | Vertriebsvorlagen: Anschreiben, Angebot zur Erprobung | [`docs/vertrieb/`](docs/vertrieb/) | Vorlagen; eckige Klammern und Preis vor dem Versand füllen |
 | Stückliste: jedes Paket, jedes Modell und alle Daten mit Fassung, Prüfsumme und Lizenz | [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md), maschinenlesbar [`docs/stueckliste/sicht.cdx.json`](docs/stueckliste/sicht.cdx.json), `pnpm sbom` | fertig; kein bekannter Befund in den ausgelieferten Paketen (Abgleich vom 18. November 2026) |
 | Barrierefreiheit: automatische Prüfung nach WCAG 2.1 A und AA, Gang nur mit der Tastatur | [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md), Werkzeuge in [`tools/barrierefreiheit/`](tools/barrierefreiheit/) | keine verletzte Regel in 18 Zuständen, 24 von 24 Schritten ohne Maus; kein BITV-Test, kein Test mit Bildschirmleser |
+| Betriebsblatt für die IT: Bedarf, Einrichten, Sichern und Wiederherstellen, Aktualisieren, Überwachen, Störungen | [`docs/BETRIEB.md`](docs/BETRIEB.md) | fertig; Sicherung, Umstieg und ein Dauerlauf von 19 Minuten sind nachgestellt, ein Dauerbetrieb über Tage nicht |
 | Prüfprogramme für das Protokoll, unabhängig von Sicht | [`tools/pruefen/`](tools/pruefen/), `pnpm ledger:verify <Datei>` | fertig; je eines in Node und Python |
 | Wortmarke als Datei | [`brand/`](brand/) | fertig; Name markenrechtlich nicht geprüft |
 | Messbericht mit Bedingungen und Einschränkungen | [`docs/EVALUATION.md`](docs/EVALUATION.md) | fertig; nachmessbar |
@@ -29,8 +30,10 @@ Unterlagen.
 ## 2. In Gang bringen (Windows, PowerShell)
 
 Voraussetzungen: Node ab 20.11, pnpm, ffmpeg (`winget install Gyan.FFmpeg`, danach ein neues
-Terminal öffnen). Beim ersten Mal werden rund 950 MB Modelle und rund 300 MB Übungsmaterial
-geladen; danach braucht nichts mehr ein Netz.
+Terminal öffnen), 8 GB Arbeitsspeicher. Beim ersten Mal werden rund 950 MB Modelle und rund
+300 MB Übungsmaterial geladen; danach braucht nichts mehr ein Netz. Die drei Knoten belegen beim
+Start rund 3 GB Arbeitsspeicher und im Betrieb rund 1,7 GB; ein Dauerlauf über 19 Minuten mit
+sieben Übungsläufen blieb dabei stabil (`docs/EVALUATION.md`, Abschnitt 7).
 
 **Der kurze Weg.** Im Ordner des Repositorys den Stand dieses Zweigs holen und starten:
 
@@ -73,6 +76,8 @@ ohne zu starten. Derselbe Befehl läuft auf einem Windows-Rechner von GitHub in 
 - Meldet der Befehl, die Anschlüsse seien belegt und dort antworte kein Knoten von Sicht, läuft
   noch die erste Fassung (Spy-Eye) oder ein anderes Programm auf Anschluss 8787: dessen Fenster
   mit Strg+C beenden und den Befehl wiederholen.
+- Browser: Chrome oder Edge. Alle Durchgänge liefen in Chromium; in Firefox und Safari ist die
+  Konsole nicht geprüft.
 - Bildschirm: geprüft von 1280 × 720 bis 1920 × 1080. Bei 1280 Breite kürzt die rechte Spalte der
   Lage lange Titel; für die Vorführung sind 1440 Breite oder mehr besser (Zoom des Browsers auf
   100 Prozent, Vollbild mit F11).
@@ -143,6 +148,7 @@ ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 | Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen, auch über HTTPS mit selbst ausgestelltem Zertifikat | Verbund über ein echtes Netz, mehr als drei Knoten |
 | Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |
 | 88 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
+| Dauerlauf über 19 Minuten mit sieben Übungsläufen: Speicher stabil, kein Fehler, Protokoll unversehrt; Kopie eines Datenordners startet und sucht | Dauerbetrieb über Tage und unter Last |
 | Konsole und Website verletzen keine automatisch prüfbare Regel der WCAG 2.1 A und AA; die Konsole lässt sich ohne Maus bedienen (`docs/BARRIEREFREIHEIT.md`) | Barrierefreiheit nach BITV: kein Test einer Prüfstelle, kein Test mit Bildschirmleser, Marken der Karte nur mit der Maus |
 
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den

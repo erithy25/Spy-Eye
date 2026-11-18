@@ -32,7 +32,8 @@ einrichtet (Nachbarknoten im Verbund, angeschlossene Direktbilder).
 
 ## Vorführung mit drei Knoten
 
-Voraussetzungen: Node ab 20.11, pnpm, `ffmpeg` im Suchpfad
+Voraussetzungen: Node ab 20.11, pnpm, `ffmpeg` im Suchpfad, 8 GB Arbeitsspeicher (der Prozess
+belegt beim Start rund 3 GB, im Betrieb rund 1,7 GB)
 (Windows: `winget install Gyan.FFmpeg`, macOS: `brew install ffmpeg`, Linux: `apt install ffmpeg`).
 Die Befehle sind in PowerShell, bash und zsh dieselben. Unter Windows fasst `.\vorfuehrung.cmd`
 alle Schritte dieses Abschnitts zusammen: prüfen, einrichten, vorbereiten oder zurücksetzen,
@@ -298,6 +299,9 @@ media/brand/    Filme: Drehbuch und Schnittwerkzeug
   Verbund, Schnittstelle
 - [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) – unabhängige Durchsicht des Quelltexts: 21 Befunde,
   ihr Stand, was offen bleibt
+- [`docs/BETRIEB.md`](docs/BETRIEB.md) – Bedarf, Einrichten, Sichern, Aktualisieren, Überwachen, Störungen
+- [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md) – jedes Paket, Modell und alle Daten mit Fassung und Lizenz
+- [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md) – was auf Barrierefreiheit geprüft ist und was nicht
 - [`docs/FAQ.md`](docs/FAQ.md) – harte Fragen, kurze Antworten
 - [`docs/EVALUATION.md`](docs/EVALUATION.md) – Messbericht
 - [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung; zum Ausdrucken

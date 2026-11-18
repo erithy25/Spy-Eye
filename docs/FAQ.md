@@ -241,6 +241,16 @@ Vergrößerung auf 200 Prozent, die Unterlagen. Die Marken der Karte lassen sich
 Maus wählen; ihr Inhalt steht daneben als Liste. Ein BITV-Test durch eine Prüfstelle steht aus. Einzelheiten
 in `docs/BARRIEREFREIHEIT.md`.
 
+### Was braucht der Rechner, und wie wird gesichert?
+
+Vier Rechenkerne, 8 GB Arbeitsspeicher (der Knoten belegt beim Start rund 3 GB, im Betrieb rund
+1,7 GB), rund 950 MB für die Modelle und je Minute Material rund 3,3 MB zusätzlich zur
+Aufzeichnung selbst. Gesichert wird, indem der Knoten beendet und sein Datenordner kopiert wird;
+die Kopie eines Knotens wurde an anderem Ort gestartet, das Protokoll war unversehrt, die Suche
+arbeitete. Ein Dauerlauf über 19 Minuten mit sieben Übungsläufen blieb im Speicher stabil. Ein
+Dauerbetrieb über Tage ist nicht gemessen, und einen Dienst mit selbsttätigem Neustart gibt es
+noch nicht. Einzelheiten in `docs/BETRIEB.md`.
+
 ### Woraus besteht die Software, und unter welchen Lizenzen?
 
 Aus 143 Paketen, drei Modellen, einer Schrift und Kartendaten; jedes Teil steht mit Fassung,
