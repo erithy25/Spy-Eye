@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatCoordinate, fromUtm, metresPerPixel, project, toMgrs, toUtm, unproject, worldSize } from './geo';
 import { useLang } from '../i18n';
-import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile } from './tiles';
+import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile, type TileLayers } from './tiles';
+import {
+  angleBetween,
+  cellOutline,
+  drawGraticule,
+  globeRadius,
+  makeGlobe,
+  onRim,
+  projectGlobe,
+  projectTileLayers,
+  tileAffine,
+  tileToGeo,
+  unprojectGlobe,
+  visibleCells,
+  wrapLon,
+  type Globe,
+} from './globe';
 import { fetchCountries } from '../datum/api';
 
 export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident' | 'fix' | 'truth';
@@ -72,6 +88,8 @@ export interface MapView {
   lat: number;
   lon: number;
   zoom: number;
+  /** Globe only: size the whole Earth to fit the map area instead of using `zoom`. */
+  fit?: boolean;
 }
 
 interface MapCanvasProps {
@@ -92,6 +110,19 @@ interface MapCanvasProps {
   children?: ReactNode;
   /** Fly to a new view (zoom out, travel, zoom in) instead of jumping. */
   fly?: boolean;
+  /**
+   * Draw the Earth as a globe (orthographic) instead of a flat map: same tiles, colours and
+   * labels; dragging turns the globe. Zoom levels of `view` mean the same ground scale as on the
+   * flat map at that latitude.
+   */
+  globe?: boolean;
+}
+
+/** A screen position; `v` is false for a point on the far side of the globe (always true flat). */
+interface ScreenPoint {
+  x: number;
+  y: number;
+  v: boolean;
 }
 
 const BG = '#050505';
@@ -119,7 +150,7 @@ function setSpacing(ctx: CanvasRenderingContext2D, value: string): void {
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = value;
 }
 
-function drawTile(ctx: CanvasRenderingContext2D, tile: Tile, zoom: number, k: number): void {
+function drawTile(ctx: CanvasRenderingContext2D, tile: TileLayers, zoom: number, k: number): void {
   // `k` is CSS pixels per tile unit; line widths are given in CSS pixels.
   const w = (px: number): number => px / k;
   if (tile.wood && zoom >= 9) {
@@ -215,21 +246,21 @@ function placeFont(cls: string, zoom: number): { size: number; weight: number; c
  */
 function drawGrid(
   ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
   zoom: number,
   width: number,
   height: number,
   occupied: { x0: number; y0: number; x1: number; y1: number }[],
+  at: (px: number, py: number) => { lat: number; lon: number } | null,
+  toPixel: (lat: number, lon: number) => { x: number; y: number },
 ): void {
   if (zoom < 9.5) return;
   const step = zoom >= 12.2 ? 1000 : 10_000;
-  const world = worldSize(zoom);
-  const at = (px: number, py: number): { lat: number; lon: number } => unproject(cx + (px - width / 2) / world, cy + (py - height / 2) / world);
   const centre = at(width / 2, height / 2);
+  const edges = [at(0, 0), at(width, 0), at(0, height), at(width, height)];
+  if (!centre || edges.some((c) => c === null)) return;
   const zone = toUtm(centre.lat, centre.lon).zone;
   // Bounds in grid coordinates of the centre's zone; the corners are enough at these scales.
-  const corners = [at(0, 0), at(width, 0), at(0, height), at(width, height)].map((c) => {
+  const corners = (edges as { lat: number; lon: number }[]).map((c) => {
     const lambda0 = (zone - 1) * 6 - 180 + 3;
     // Positions slightly outside the zone are still projected into it so that lines stay continuous.
     const u = toUtm(c.lat, Math.max(lambda0 - 3.2, Math.min(lambda0 + 3.2, c.lon)));
@@ -242,8 +273,7 @@ function drawGrid(
   if ((e1 - e0) / step > 80 || (n1 - n0) / step > 80) return;
   const toScreen = (easting: number, northing: number): { x: number; y: number } => {
     const g = fromUtm(zone, easting, northing);
-    const p = project(g.lat, g.lon);
-    return { x: (p.x - cx) * world + width / 2, y: (p.y - cy) * world + height / 2 };
+    return toPixel(g.lat, g.lon);
   };
   ctx.lineWidth = 1;
   ctx.font = `400 9px ${FONT}`;
@@ -330,10 +360,11 @@ function strokeStyleFor(ctx: CanvasRenderingContext2D, style: ShapeStyle | undef
 function drawShapes(
   ctx: CanvasRenderingContext2D,
   shapes: MapShape[],
-  toScreen: (lat: number, lon: number) => { x: number; y: number },
+  toScreen: (lat: number, lon: number) => ScreenPoint,
   zoom: number,
   width: number,
   height: number,
+  globe: Globe | null,
 ): void {
   if (shapes.length === 0) return;
   // toScreen works in CSS pixels; width and height are the CSS size of the view.
@@ -354,6 +385,21 @@ function drawShapes(
   };
   // Long lines are split so that they follow the projection (great circles look curved on the map).
   const geoPath = (pts: [number, number][]): void => {
+    if (globe) {
+      // On the globe a line is drawn on the near side only and broken where it passes the rim.
+      let open = false;
+      for (const [lat, lon] of pts) {
+        const p = toScreen(lat, lon);
+        if (!p.v) {
+          open = false;
+          continue;
+        }
+        if (open) ctx.lineTo(p.x, p.y);
+        else ctx.moveTo(p.x, p.y);
+        open = true;
+      }
+      return;
+    }
     let prev: { x: number; y: number } | null = null;
     for (const [lat, lon] of pts) {
       const p = toScreen(lat, lon);
@@ -375,8 +421,11 @@ function drawShapes(
     if (s.kind !== 'area') continue;
     ctx.beginPath();
     for (const ring of s.rings) {
+      if (globe && !ring.some(([lon, lat]) => toScreen(lat, lon).v)) continue;
       ring.forEach(([lon, lat], i) => {
-        const p = toScreen(lat, lon);
+        const raw = toScreen(lat, lon);
+        // Far-side points of an area lie on the rim of the globe, so the fill ends at the edge.
+        const p = globe ? onRim(globe, raw) : raw;
         if (i === 0) ctx.moveTo(p.x, p.y);
         else ctx.lineTo(p.x, p.y);
       });
@@ -390,7 +439,7 @@ function drawShapes(
     ctx.stroke();
     if (s.label && s.labelAt && zoom < 6.5) {
       const p = toScreen(s.labelAt[1], s.labelAt[0]);
-      if (p.x > 0 && p.y > 0 && p.x < width && p.y < height) label(s.label, p.x, p.y, 'center');
+      if (p.v && p.x > 0 && p.y > 0 && p.x < width && p.y < height) label(s.label, p.x, p.y, 'center');
     }
   }
   for (const s of shapes) {
@@ -405,7 +454,7 @@ function drawShapes(
         if (s.label) {
           const [la, lo] = destination(s.lat, s.lon, 45, s.radiusKm);
           const p = toScreen(la, lo);
-          label(s.label, p.x + 6, p.y - 6);
+          if (p.v) label(s.label, p.x + 6, p.y - 6);
         }
         break;
       }
@@ -417,10 +466,11 @@ function drawShapes(
         strokeStyleFor(ctx, s.style);
         ctx.stroke();
         const end = toScreen(pts[24]![0], pts[24]![1]);
+        if (!end.v) break;
         if (s.arrow) {
           const before = toScreen(pts[22]![0], pts[22]![1]);
           // A ray ending just past ±180° has its last points at opposite edges of the world.
-          const bx = Math.abs(end.x - before.x) > world / 2 ? before.x + (end.x > before.x ? world : -world) : before.x;
+          const bx = !globe && Math.abs(end.x - before.x) > world / 2 ? before.x + (end.x > before.x ? world : -world) : before.x;
           const ang = Math.atan2(end.y - before.y, end.x - bx);
           ctx.setLineDash([]);
           ctx.beginPath();
@@ -537,17 +587,39 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number,
   }
 }
 
-export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children, fly = false }: MapCanvasProps) {
+export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children, fly = false, globe = false }: MapCanvasProps) {
   const gridRef = useRef(grid);
   gridRef.current = grid;
+  const globeRef = useRef(globe);
+  globeRef.current = globe;
+  /**
+   * Zoom of a requested view as this map uses it. The flat map enlarges high latitudes by
+   * 1 / cos(latitude); the globe does not, so a view meant for the flat map is zoomed in by that
+   * factor to show the same ground at the same size.
+   */
+  const size = useRef({ width: 0, height: 0, dpr: 1 });
+  /** Zoom at which the whole globe fills most of the shorter side of the map area. */
+  const fitZoom = (): number | null => {
+    const { width, height } = size.current;
+    if (width === 0 || height === 0) return null;
+    return Math.log2((0.44 * Math.min(width, height) * 2 * Math.PI) / 256);
+  };
+  /** Whether the current view still is the fitted whole-Earth view (until the user zooms). */
+  const fitted = useRef(globe && view.fit === true);
+  const viewZoom = (v: MapView): number => {
+    if (!globe) return v.zoom;
+    const fit = v.fit ? fitZoom() : null;
+    if (fit !== null) return Math.max(minZoom, Math.min(maxZoom, fit));
+    const c = Math.cos((Math.max(-80, Math.min(80, v.lat)) * Math.PI) / 180);
+    return Math.max(minZoom, Math.min(maxZoom, v.zoom - Math.log2(c)));
+  };
   const container = useRef<HTMLDivElement>(null);
   const baseCanvas = useRef<HTMLCanvasElement>(null);
   const overlayCanvas = useRef<HTMLCanvasElement>(null);
   // The crosshair has a layer of its own: moving the pointer redraws two hairlines, not every
   // circle, country area and contour line of the overlay.
   const cursorCanvas = useRef<HTMLCanvasElement>(null);
-  const state = useRef<ViewState>({ ...project(view.lat, view.lon), zoom: view.zoom });
-  const size = useRef({ width: 0, height: 0, dpr: 1 });
+  const state = useRef<ViewState>({ ...project(view.lat, view.lon), zoom: viewZoom(view) });
   const markersRef = useRef(markers);
   /** German country name -> name in the console language; null while the console is German. */
   const countryNamesRef = useRef<Map<string, string> | null>(null);
@@ -559,21 +631,58 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const frame = useRef<number | null>(null);
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const [cursor, setCursor] = useState<{ lat: number; lon: number } | null>(null);
-  const [zoomShown, setZoomShown] = useState(view.zoom);
+  const [zoomShown, setZoomShown] = useState(() => viewZoom(view));
   const [attribution, setAttribution] = useState('');
 
   markersRef.current = markers;
   linksRef.current = links ?? [];
   shapesRef.current = shapes ?? [];
 
-  const toScreen = useCallback((lat: number, lon: number): { x: number; y: number } => {
-    const p = project(lat, lon);
-    const world = worldSize(state.current.zoom);
-    return {
-      x: (p.x - state.current.x) * world + size.current.width / 2,
-      y: (p.y - state.current.y) * world + size.current.height / 2,
-    };
+  /** The globe for the current view (centre, zoom, size). */
+  const currentGlobe = useCallback((): Globe => {
+    const c = unproject(state.current.x, state.current.y);
+    return makeGlobe(c.lat, c.lon, state.current.zoom, size.current.width, size.current.height);
   }, []);
+
+  const toScreen = useCallback(
+    (lat: number, lon: number): ScreenPoint => {
+      if (globeRef.current) return projectGlobe(currentGlobe(), lat, lon);
+      const p = project(lat, lon);
+      const world = worldSize(state.current.zoom);
+      return {
+        x: (p.x - state.current.x) * world + size.current.width / 2,
+        y: (p.y - state.current.y) * world + size.current.height / 2,
+        v: true,
+      };
+    },
+    [currentGlobe],
+  );
+
+  /** Latitude/longitude under a screen point; null off the globe. */
+  const geoAt = useCallback(
+    (px: number, py: number): { lat: number; lon: number } | null => {
+      if (globeRef.current) return unprojectGlobe(currentGlobe(), px, py);
+      const world = worldSize(state.current.zoom);
+      return unproject(state.current.x + (px - size.current.width / 2) / world, state.current.y + (py - size.current.height / 2) / world);
+    },
+    [currentGlobe],
+  );
+
+  /** Moves the centre of the view to a latitude/longitude (kept in the flat map's coordinates). */
+  const centreOn = (lat: number, lon: number): void => {
+    const p = project(Math.max(-85, Math.min(85, lat)), wrapLon(lon));
+    state.current.x = p.x;
+    state.current.y = p.y;
+  };
+
+  /** Turns the globe as if the ground under the pointer was dragged by (dx, dy) CSS pixels. */
+  const turnGlobe = (dx: number, dy: number): void => {
+    const c = unproject(state.current.x, state.current.y);
+    const r = globeRadius(state.current.zoom);
+    const lat = c.lat + ((dy / r) * 180) / Math.PI;
+    const lon = c.lon - ((dx / (r * Math.max(0.2, Math.cos((c.lat * Math.PI) / 180)))) * 180) / Math.PI;
+    centreOn(lat, lon);
+  };
 
   const drawBase = useCallback(() => {
     const canvas = baseCanvas.current;
@@ -588,55 +697,110 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     const info = source.info;
     if (!info || width === 0) return;
 
-    const world = worldSize(zoom);
     const zt = Math.max(info.minZoom, Math.min(info.maxZoom, Math.floor(zoom + 0.35)));
     const n = 2 ** zt;
-    const cell = world / n;
-    const left = cx * world - width / 2;
-    const top = cy * world - height / 2;
-    const x0 = Math.floor(left / cell);
-    const x1 = Math.floor((left + width) / cell);
-    const y0 = Math.max(0, Math.floor(top / cell));
-    const y1 = Math.min(n - 1, Math.floor((top + height) / cell));
+    /** Screen position of a point given in a tile's units; null when it is on the far side. */
+    const used = new Map<Tile, (u: number, v: number) => { x: number; y: number } | null>();
+    const g = globeRef.current ? currentGlobe() : null;
 
-    const used = new Map<Tile, { ox: number; oy: number; k: number }>();
-    for (let ty = y0; ty <= y1; ty++) {
-      for (let tx = x0; tx <= x1; tx++) {
-        if (tx < 0 || tx >= n) continue;
-        const tile = source.resolve(zt, tx, ty);
+    if (g) {
+      // Cells grouped by the tile that is drawn for them (a coarser ancestor stands in for several
+      // cells while their own tiles load): each tile is projected once and clipped to its cells.
+      const groups = new Map<Tile, { x: number; y: number }[][]>();
+      for (const c of visibleCells(g, zt, width, height)) {
+        const outline = cellOutline(g, zt, c.x, c.y);
+        if (!outline.visible) continue;
+        const xs = outline.points.map((p) => p.x);
+        const ys = outline.points.map((p) => p.y);
+        if (Math.max(...xs) < 0 || Math.min(...xs) > width || Math.max(...ys) < 0 || Math.min(...ys) > height) continue;
+        const tile = source.resolve(zt, c.x, c.y);
         if (!tile) continue;
-        // Position of the resolved tile (which may be a coarser ancestor of this cell).
-        const tileCell = world / 2 ** tile.z;
-        const ox = tile.x * tileCell - left;
-        const oy = tile.y * tileCell - top;
-        const k = tileCell / EXTENT;
-        used.set(tile, { ox, oy, k });
+        const list = groups.get(tile) ?? [];
+        list.push(outline.points);
+        groups.set(tile, list);
+      }
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(g.cx, g.cy, g.r, 0, Math.PI * 2);
+      ctx.clip();
+      for (const [tile, cells] of groups) {
         ctx.save();
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.beginPath();
-        ctx.rect(tx * cell - left, ty * cell - top, cell + 0.5, cell + 0.5);
+        for (const pts of cells) {
+          pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+          ctx.closePath();
+        }
         ctx.clip();
-        ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * ox, dpr * oy);
-        drawTile(ctx, tile, zoom, k);
+        const affine = tileAffine(g, tile);
+        if (affine) {
+          // Fine tiles: one transform per tile, as on the flat map.
+          ctx.setTransform(dpr * affine.a, dpr * affine.b, dpr * affine.c, dpr * affine.d, dpr * affine.e, dpr * affine.f);
+          drawTile(ctx, tile, zoom, affine.k);
+        } else {
+          drawTile(ctx, projectTileLayers(g, tile), zoom, 1);
+        }
         ctx.restore();
+        used.set(tile, (u, v) => {
+          const geo = tileToGeo(tile, u, v);
+          const p = projectGlobe(g, geo.lat, geo.lon);
+          return p.v ? p : null;
+        });
+      }
+      ctx.restore();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawGraticule(ctx, g, zoom);
+    } else {
+      const world = worldSize(zoom);
+      const cell = world / n;
+      const left = cx * world - width / 2;
+      const top = cy * world - height / 2;
+      const x0 = Math.floor(left / cell);
+      const x1 = Math.floor((left + width) / cell);
+      const y0 = Math.max(0, Math.floor(top / cell));
+      const y1 = Math.min(n - 1, Math.floor((top + height) / cell));
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+          if (tx < 0 || tx >= n) continue;
+          const tile = source.resolve(zt, tx, ty);
+          if (!tile) continue;
+          // Position of the resolved tile (which may be a coarser ancestor of this cell).
+          const tileCell = world / 2 ** tile.z;
+          const ox = tile.x * tileCell - left;
+          const oy = tile.y * tileCell - top;
+          const k = tileCell / EXTENT;
+          used.set(tile, (u, v) => ({ x: ox + u * k, y: oy + v * k }));
+          ctx.save();
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.beginPath();
+          ctx.rect(tx * cell - left, ty * cell - top, cell + 0.5, cell + 0.5);
+          ctx.clip();
+          ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * ox, dpr * oy);
+          drawTile(ctx, tile, zoom, k);
+          ctx.restore();
+        }
       }
     }
+    /** Scale of a tile at the screen (CSS pixels per tile unit), for label spacing along rivers. */
+    const unitScale = (tile: Tile): number => (g ? (2 * Math.PI * g.r) / 2 ** tile.z / EXTENT : worldSize(zoom) / 2 ** tile.z / EXTENT);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // Labels are placed after all geometry, most important first, without overlaps.
     const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
-    if (gridRef.current) drawGrid(ctx, cx, cy, zoom, width, height, boxes);
+    if (gridRef.current) {
+      drawGrid(ctx, zoom, width, height, boxes, geoAt, (lat, lon) => toScreen(lat, lon));
+    }
     const free = (b: { x0: number; y0: number; x1: number; y1: number }): boolean =>
       !boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
 
     const places: { p: PlaceLabel; x: number; y: number }[] = [];
     const seen = new Set<string>();
     const rivers: { l: LineLabel; x: number; y: number }[] = [];
-    for (const [tile, t] of used) {
+    for (const [tile, at] of used) {
       for (const p of tile.places) {
         if (!placeVisible(p.cls, zoom)) continue;
-        const x = t.ox + p.x * t.k;
-        const y = t.oy + p.y * t.k;
+        const q = at(p.x, p.y);
+        if (!q) continue;
+        const { x, y } = q;
         if (x < -40 || y < -10 || x > width + 40 || y > height + 10) continue;
         const id = `${p.name}:${Math.round(x / 24)}:${Math.round(y / 24)}`;
         if (seen.has(id)) continue;
@@ -645,10 +809,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       }
       if (zoom >= 9.5) {
         for (const l of tile.riverLabels) {
-          const x = t.ox + l.x * t.k;
-          const y = t.oy + l.y * t.k;
+          const q = at(l.x, l.y);
+          if (!q) continue;
+          const { x, y } = q;
           if (x < 40 || y < 20 || x > width - 40 || y > height - 20) continue;
-          if (l.length * t.k < 110) continue;
+          if (l.length * unitScale(tile) < 110) continue;
           rivers.push({ l, x, y });
         }
       }
@@ -702,10 +867,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
 
     if (zoom >= 12.5) {
       ctx.font = `500 8px ${FONT}`;
-      for (const [tile, t] of used) {
+      for (const [tile, at] of used) {
         for (const poi of tile.pois) {
-          const x = t.ox + poi.x * t.k;
-          const y = t.oy + poi.y * t.k;
+          const q = at(poi.x, poi.y);
+          if (!q) continue;
+          const { x, y } = q;
           if (x < 0 || y < 0 || x > width || y > height) continue;
           const box = { x0: x - 7, y0: y - 7, x1: x + 7, y1: y + 7 };
           if (!free(box)) continue;
@@ -719,8 +885,9 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
           ctx.fillText(poi.kind.toUpperCase(), x, y + 0.5);
         }
         for (const peak of tile.peaks) {
-          const x = t.ox + peak.x * t.k;
-          const y = t.oy + peak.y * t.k;
+          const q = at(peak.x, peak.y);
+          if (!q) continue;
+          const { x, y } = q;
           if (x < 0 || y < 0 || x > width || y > height) continue;
           const box = { x0: x - 18, y0: y - 6, x1: x + 18, y1: y + 14 };
           if (!free(box)) continue;
@@ -737,7 +904,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         }
       }
     }
-  }, []);
+  }, [currentGlobe, geoAt, toScreen]);
 
   const drawOverlay = useCallback(
     (now: number) => {
@@ -747,10 +914,14 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const { width, height, dpr } = size.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom, width, height);
+      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom, width, height, globeRef.current ? currentGlobe() : null);
       const list = markersRef.current;
       const positions = new Map<string, { x: number; y: number }>();
-      for (const m of list) positions.set(m.id, toScreen(m.lat, m.lon));
+      // Markers on the far side of the globe are not drawn (their positions stay unset).
+      for (const m of list) {
+        const p = toScreen(m.lat, m.lon);
+        if (p.v) positions.set(m.id, p);
+      }
 
       for (const link of linksRef.current) {
         const a = positions.get(link.from);
@@ -845,7 +1016,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         setSpacing(ctx, '0px');
       }
     },
-    [toScreen],
+    [toScreen, currentGlobe],
   );
 
   const drawCursor = useCallback(() => {
@@ -908,6 +1079,14 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const rect = el.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       size.current = { width: rect.width, height: rect.height, dpr };
+      if (globeRef.current && fitted.current) {
+        // The fitted globe follows the size of the map area (the first size arrives only now).
+        const z = fitZoom();
+        if (z !== null) {
+          state.current.zoom = Math.max(minZoom, Math.min(maxZoom, z));
+          setZoomShown(state.current.zoom);
+        }
+      }
       for (const canvas of [baseCanvas.current, overlayCanvas.current, cursorCanvas.current]) {
         if (!canvas) continue;
         canvas.width = Math.round(rect.width * dpr);
@@ -961,25 +1140,32 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const flight = useRef<number | null>(null);
   const firstView = useRef(true);
   useEffect(() => {
-    const target = { ...project(view.lat, view.lon), zoom: view.zoom };
+    fitted.current = globe && view.fit === true;
+    const target = { ...project(view.lat, view.lon), zoom: viewZoom(view) };
     if (flight.current !== null) cancelAnimationFrame(flight.current);
     flight.current = null;
     const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!fly || firstView.current || reduce || size.current.width === 0) {
       firstView.current = false;
       state.current = target;
-      setZoomShown(view.zoom);
+      setZoomShown(target.zoom);
       schedule('both');
       return;
     }
     const from = { ...state.current };
+    if (globe) {
+      // On the globe the short way round is the natural one, also over ±180°.
+      from.x = target.x + ((((from.x - target.x) % 1) + 1.5) % 1) - 0.5;
+    }
     // Straight across the map, never the short way over ±180°: the map draws one copy of the
     // world, so a flight over its edge would show empty space and then cut to the other side.
     // The centre is interpolated without wrapping, so a flight that starts outside [0, 1), where
     // dragging or the arrow keys may leave it, does not jump either; it still ends on the target.
     const dx = target.x - from.x;
     const dy = target.y - from.y;
-    const dist = Math.hypot(dx, dy);
+    const fromGeo = unproject(from.x, from.y);
+    // On the globe the distance is the arc between the two centres, as a share of the equator.
+    const dist = globe ? angleBetween(fromGeo.lat, fromGeo.lon, view.lat, view.lon) / (2 * Math.PI) : Math.hypot(dx, dy);
     const fit = Math.log2((size.current.width * 0.7) / Math.max(1e-9, dist * worldSize(0)));
     const mid = Math.max(minZoom, Math.min(from.zoom, target.zoom, fit));
     const ease = (u: number): number => (u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2);
@@ -1010,18 +1196,31 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const s = state.current;
       const next = Math.max(minZoom, Math.min(maxZoom, s.zoom + delta));
       if (next === s.zoom) return;
-      const before = worldSize(s.zoom);
-      const after = worldSize(next);
-      const dx = px - size.current.width / 2;
-      const dy = py - size.current.height / 2;
-      // Keep the point under the cursor where it is.
-      s.x += dx / before - dx / after;
-      s.y += dy / before - dy / after;
-      s.zoom = next;
+      fitted.current = false;
+      if (globeRef.current) {
+        // Keep the place under the pointer where it is: zoom, then turn the globe back under it.
+        const before = geoAt(px, py);
+        s.zoom = next;
+        const after = before ? geoAt(px, py) : null;
+        if (before && after) {
+          const c = unproject(s.x, s.y);
+          centreOn(c.lat + before.lat - after.lat, c.lon + wrapLon(before.lon - after.lon));
+        }
+      } else {
+        const before = worldSize(s.zoom);
+        const after = worldSize(next);
+        const dx = px - size.current.width / 2;
+        const dy = py - size.current.height / 2;
+        // Keep the point under the cursor where it is.
+        s.x += dx / before - dx / after;
+        s.y += dy / before - dy / after;
+        s.zoom = next;
+      }
       setZoomShown(next);
       schedule('both');
     },
-    [maxZoom, minZoom, schedule],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [maxZoom, minZoom, schedule, geoAt],
   );
 
   useEffect(() => {
@@ -1043,6 +1242,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     let bestDist = 16;
     for (const m of markersRef.current) {
       const p = toScreen(m.lat, m.lon);
+      if (!p.v) continue;
       const d = Math.hypot(p.x - px, p.y - py);
       if (d < bestDist) {
         bestDist = d;
@@ -1065,7 +1265,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
         const step = 96 / worldSize(state.current.zoom);
-        if (e.key === 'ArrowLeft') state.current.x -= step;
+        if (globeRef.current && e.key.startsWith('Arrow')) {
+          const d = { ArrowLeft: [96, 0], ArrowRight: [-96, 0], ArrowUp: [0, 96], ArrowDown: [0, -96] }[e.key];
+          if (!d) return;
+          turnGlobe(d[0] as number, d[1] as number);
+        } else if (e.key === 'ArrowLeft') state.current.x -= step;
         else if (e.key === 'ArrowRight') state.current.x += step;
         else if (e.key === 'ArrowUp') state.current.y = Math.max(0, state.current.y - step);
         else if (e.key === 'ArrowDown') state.current.y = Math.min(1, state.current.y + step);
@@ -1089,7 +1293,12 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
           const dx = e.clientX - d.x;
           const dy = e.clientY - d.y;
           if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
-          if (d.moved) {
+          if (d.moved && globeRef.current) {
+            turnGlobe(dx, dy);
+            d.x = e.clientX;
+            d.y = e.clientY;
+            schedule('both');
+          } else if (d.moved) {
             const world = worldSize(state.current.zoom);
             state.current.x -= dx / world;
             state.current.y = Math.min(1, Math.max(0, state.current.y - dy / world));
@@ -1099,8 +1308,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
           }
         }
         cursorRef.current = { x: px, y: py };
-        const world = worldSize(state.current.zoom);
-        cursorGeo.current = unproject(state.current.x + (px - rect.width / 2) / world, state.current.y + (py - rect.height / 2) / world);
+        cursorGeo.current = geoAt(px, py);
         e.currentTarget.style.cursor = d?.moved ? 'grabbing' : hit(px, py) ? 'pointer' : 'crosshair';
         schedule('cursor');
       }}
@@ -1147,7 +1355,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
             )}
           </div>
           <div className="geo-readout geo-br">
-            <ScaleBar lat={unproject(state.current.x, state.current.y).lat} zoom={zoomShown} />
+            <ScaleBar lat={globe ? 0 : unproject(state.current.x, state.current.y).lat} zoom={zoomShown} />
             <span className="geo-dim">Z {zoomShown.toFixed(1)}</span>
           </div>
           {attribution !== '' && <div className="geo-attribution">{t(attribution)}</div>}

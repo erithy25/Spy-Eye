@@ -26,7 +26,8 @@ export interface DatumViewProps {
   go: (tab: 'ortung' | 'befund' | 'raum') => void;
 }
 
-const WORLD = { lat: 24, lon: 12, zoom: 2.25 };
+// The whole Earth: the globe is sized to fit the map area (`fit`), centred on Europe and Africa.
+const WORLD = { lat: 24, lon: 12, zoom: 2.25, fit: true };
 
 /**
  * Own recordings go into the inbox source, sampled and described as BESTAND does by default; the
@@ -455,7 +456,7 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
       </aside>
 
       <section className="dt-map">
-        <MapCanvas view={view} viewKey={viewKey} markers={markers} shapes={shapes} minZoom={1} maxZoom={16} fly onSelect={onMapSelect} />
+        <MapCanvas view={view} viewKey={viewKey} markers={markers} shapes={shapes} minZoom={1} maxZoom={16} fly globe onSelect={onMapSelect} />
         {!current && total > 0 && (
           <div className="dt-hud">
             <div className="dt-hud-clock">

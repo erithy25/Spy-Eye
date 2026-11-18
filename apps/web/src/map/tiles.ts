@@ -47,10 +47,27 @@ export interface LineLabel {
   length: number;
 }
 
-export interface Tile {
-  z: number;
-  x: number;
-  y: number;
+/**
+ * The vertices behind the paths of a tile, absolute tile units (0..EXTENT), one flat [x0, y0, x1,
+ * y1, ...] array per ring or line. The flat map draws the Path2D objects under an affine transform;
+ * the globe has to project every vertex itself, which needs the numbers.
+ */
+export interface TileGeometry {
+  water: number[][];
+  urban: number[][];
+  wood: number[][];
+  buildings: number[][];
+  rivers: number[][];
+  streams: number[][];
+  roads: Record<string, number[][]>;
+  bridges: number[][];
+  boundaries: Record<string, number[][]>;
+  contours: number[][];
+  contoursIndex: number[][];
+}
+
+/** The drawable layers of a tile; the globe builds the same set from projected vertices. */
+export interface TileLayers {
   water: Path2D | null;
   urban: Path2D | null;
   wood: Path2D | null;
@@ -62,6 +79,13 @@ export interface Tile {
   boundaries: Record<string, Path2D>;
   contours: Path2D | null;
   contoursIndex: Path2D | null;
+}
+
+export interface Tile extends TileLayers {
+  z: number;
+  x: number;
+  y: number;
+  geom: TileGeometry;
   places: PlaceLabel[];
   peaks: { name: string; height: number; x: number; y: number }[];
   pois: { kind: string; name: string; x: number; y: number }[];
@@ -84,10 +108,10 @@ function trace(path: Path2D, packed: number[], close: boolean): number[] {
   return out;
 }
 
-function pathOf(list: number[][] | undefined, close: boolean): Path2D | null {
+function pathOf(list: number[][] | undefined, close: boolean, rings: number[][]): Path2D | null {
   if (!list || list.length === 0) return null;
   const path = new Path2D();
-  for (const packed of list) trace(path, packed, close);
+  for (const packed of list) rings.push(trace(path, packed, close));
   return path;
 }
 
@@ -121,15 +145,36 @@ function labelSpot(vertices: number[], name: string): LineLabel | null {
 }
 
 function build(z: number, x: number, y: number, raw: RawTile): Tile {
+  const geom: TileGeometry = {
+    water: [],
+    urban: [],
+    wood: [],
+    buildings: [],
+    rivers: [],
+    streams: [],
+    roads: {},
+    bridges: [],
+    boundaries: {},
+    contours: [],
+    contoursIndex: [],
+  };
   const roads: Record<string, Path2D> = {};
   for (const [key, list] of Object.entries(raw.rd ?? {})) {
-    const path = pathOf(list, false);
-    if (path) roads[key] = path;
+    const rings: number[][] = [];
+    const path = pathOf(list, false, rings);
+    if (path) {
+      roads[key] = path;
+      geom.roads[key] = rings;
+    }
   }
   const boundaries: Record<string, Path2D> = {};
   for (const [key, list] of Object.entries(raw.bd ?? {})) {
-    const path = pathOf(list, false);
-    if (path) boundaries[key] = path;
+    const rings: number[][] = [];
+    const path = pathOf(list, false, rings);
+    if (path) {
+      boundaries[key] = path;
+      geom.boundaries[key] = rings;
+    }
   }
 
   let rivers: Path2D | null = null;
@@ -137,8 +182,10 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
   const riverLabels: LineLabel[] = [];
   for (const [key, list] of Object.entries(raw.ww ?? {})) {
     for (const item of list) {
-      const target = key === 's' ? (streams ??= new Path2D()) : (rivers ??= new Path2D());
+      const isStream = key === 's';
+      const target = isStream ? (streams ??= new Path2D()) : (rivers ??= new Path2D());
       const vertices = trace(target, item.l, false);
+      (isStream ? geom.streams : geom.rivers).push(vertices);
       if (item.n) {
         const spot = labelSpot(vertices, item.n);
         if (spot) riverLabels.push(spot);
@@ -152,7 +199,8 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
     const interval = z <= 9 ? 100 : z <= 11 ? 50 : z <= 13 ? 20 : 10;
     for (const line of raw.ct) {
       const isIndex = Math.round(line.h / interval) % 5 === 0;
-      trace(isIndex ? (contoursIndex ??= new Path2D()) : (contours ??= new Path2D()), line.l, false);
+      const vertices = trace(isIndex ? (contoursIndex ??= new Path2D()) : (contours ??= new Path2D()), line.l, false);
+      (isIndex ? geom.contoursIndex : geom.contours).push(vertices);
     }
   }
 
@@ -160,14 +208,15 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
     z,
     x,
     y,
-    water: pathOf(raw.water, true),
-    urban: pathOf(raw.urban, true),
-    wood: pathOf(raw.wood, true),
-    buildings: pathOf(raw.bld, true),
+    geom,
+    water: pathOf(raw.water, true, geom.water),
+    urban: pathOf(raw.urban, true, geom.urban),
+    wood: pathOf(raw.wood, true, geom.wood),
+    buildings: pathOf(raw.bld, true, geom.buildings),
     rivers,
     streams,
     roads,
-    bridges: pathOf(raw.br, false),
+    bridges: pathOf(raw.br, false, geom.bridges),
     boundaries,
     contours,
     contoursIndex,

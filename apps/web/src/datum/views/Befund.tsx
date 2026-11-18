@@ -196,6 +196,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
                   minZoom={1}
                   maxZoom={16}
                   readouts={false}
+                  globe
                 />
               ) : (
                 <div className="dt-empty-view">{t('Ort unbestimmt')}</div>
