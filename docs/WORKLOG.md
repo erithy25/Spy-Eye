@@ -199,3 +199,18 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   request in the ledgers of both neighbours, operator and auditor walks, four-eyes release,
   both ledger verifiers.
 
+## 10:50 UTC · T+637 min
+
+- No program code has changed since the last Windows run that passed (commit 02b7adc); what
+  followed are papers, the website and films.
+- Rehearsal at the speed the run-of-show names (4x): false alert dismissed, true alert
+  confirmed, watch retrained, federated search with the inbound request in the ledgers of Trier
+  and Mainz, case secured and sealed, four-eyes release with its ledger entry, operator and
+  auditor walks.
+- English console walked from sign-in to the last tab; English hard questions
+  (`docs/vertrieb/FAQ-EN.md`); English cue card; product film with English cards and captions.
+- Website shows brand film and product film in the language of the page; the rule check still
+  finds nothing in its three states.
+- An interrupted model download heals at the next start (the library writes under a temporary
+  name and renames when complete); the operations paper says so.
+
