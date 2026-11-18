@@ -1127,6 +1127,20 @@
   var heroMap = initHero();
   if (heroMap) onLanguage.push(heroMap.setLanguage);
 
+  // A film that exists in both languages shows the edition of the chosen language.
+  onLanguage.push(function (next) {
+    var films = doc.querySelectorAll('video[data-src-de][data-src-en]');
+    for (var i = 0; i < films.length; i++) {
+      var film = films[i];
+      var wanted = film.getAttribute(next === 'en' ? 'data-src-en' : 'data-src-de');
+      if (film.getAttribute('src') !== wanted) {
+        film.pause();
+        film.setAttribute('src', wanted);
+        film.load();
+      }
+    }
+  });
+
   var first = initialLanguage();
   if (first !== 'de') applyLanguage(first);
 })();

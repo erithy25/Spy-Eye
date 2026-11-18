@@ -40,6 +40,13 @@ window.SICHT_EN = {
   'map.attrib': '© OpenStreetMap contributors (ODbL) · OpenMapTiles · Elevation: Mapzen',
 
   // ---------------------------------------------------------------- film
+  'pfilm.rail': 'Film · 137 s',
+  'pfilm.h2': 'Product film',
+  'pfilm.aria': 'Product film, 137 seconds, screen recording of the console, with sound, no voice-over',
+  'pfilm.fallback': 'Open the film as a file (MP4, 6.9 MB)',
+  'pfilm.caption': 'Product film · screen recording of the console · exercise footage',
+  'pfilm.note':
+    '137 seconds, with sound, no voice-over; English cards over the German console. The recording shows the exercise with the clock at eight times speed; the figures measured in real time are in the section “Measured”.',
   'film.rail': 'Film · 40 s',
   'film.h2': 'Brand film',
   'film.aria': 'Brand film, 40 seconds, with sound, no voice-over',

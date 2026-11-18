@@ -11,6 +11,7 @@ Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` ne
 | `sicht-markenfilm-lang.mp4` | Langfassung mit drei Ausschnitten aus der Konsole, 66,8 s, 37 MB |
 | `sicht-produktfilm.mp4` | Produktfilm aus dem Mitschnitt der Konsole, 136,6 s, 28 MB |
 | `sicht-productfilm-en.mp4` | Derselbe Produktfilm mit englischen Tafeln und Einblendungen; die Konsole im Bild bleibt deutsch, 136,6 s, 28 MB |
+| `sicht-produktfilm-web.mp4`, `sicht-productfilm-en-web.mp4` | leichte Fassungen des Produktfilms für die Website (1280×720, je 6,9 MB); sie liegen als `site/assets/film/sicht-produktfilm.mp4` und `sicht-productfilm-en.mp4` bei der Seite, die je nach Sprache die passende zeigt |
 | `sicht-teaser-hochkant.mp4` | Teaser im Hochformat, 19,5 s, 1080×1920, 7,2 MB |
 | `sicht-teaser-vertical-en.mp4` | Derselbe Teaser mit englischen Tafeln, 19,5 s, 7,2 MB |
 | `*-web.mp4` | Zu jeder Fassung eine leichte Datei zum Einbetten (1280×720, im Hochformat 720×1280): 2,8 · 2,8 · 4,2 · 6,8 · 0,8 · 0,8 MB |
