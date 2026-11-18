@@ -1,0 +1,7291 @@
+{
+  "generatedAt": "2026-11-18T18:13:38.823Z",
+  "model": {
+    "id": "Xenova/geoclip-large-patch14",
+    "licence": "MIT (code and weights)",
+    "logitScale": 39.687441529941275,
+    "galleryPoints": 100000
+  },
+  "machine": {
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "cores": 4,
+    "threads": 3,
+    "loadAverageAtEnd": [
+      5.1,
+      6.02,
+      7.15
+    ],
+    "note": "machine shared with other jobs while measured"
+  },
+  "protocol": {
+    "frames": "12 frames at the middle of equal segments, max 640 px wide, JPEG q 3 (sampleAndEmbedFrames of datum/locate.ts, replicated); CLIPImageProcessor preprocessing (shortest side 224 bicubic, centre crop 224, CLIP mean/std)",
+    "split": "manifest videos sorted by id; even index = train (every choice), odd index = test (report only)",
+    "existing": "decideLocation with DEFAULT_LOCATE_PARAMS of the current engine, from the SigLIP vectors cached by datum:evaluate; open = whole gallery, unknown = own Wikidata item left out; GPS in the file not used",
+    "aggregations": "sum = summed per-frame logits (identical to summed per-frame log-probabilities); mean = mean logit; embedding = renormalised mean embedding; mixture = mean of per-frame probabilities",
+    "answers": "top1 = best gallery point; modePeak / modeCentre = best point / weighted centre of the mode (gallery points within 25 km) with the most mass; refined = best point of a 0.05° then 0.01° local grid around the 3 best modes scored with the location encoder",
+    "countryAcc": "top country of the method's distribution (GeoCLIP: gallery mass per country; existing: its country posterior; fusion: as the recipe sets it); answerCountryAcc: country the answer point lies in",
+    "objective": "mean of the five accuracies (1, 25, 200, 750, 2500 km); for fusion averaged over open and unknown, train half only",
+    "trainIds": [
+      "al-skanderbeg-square",
+      "au-wellington-point",
+      "br-praia-do-grumari",
+      "ch-schloss-der-grafen-von-greyerz",
+      "cz-kolin-train-station",
+      "de-berliner-fernsehturm",
+      "de-dorfkirche-rieben",
+      "de-hof-hauptbahnhof",
+      "de-kirche-hanshagen",
+      "de-molenfeuer-warnemuende",
+      "de-quellbrunnen",
+      "de-spitterfall",
+      "de-zoobruecke",
+      "ee-tartu-railway-station",
+      "fr-arc-de-triomphe",
+      "fr-new-gatteville-lighthouse",
+      "gb-grytviken",
+      "id-borobudur-temple",
+      "ie-charles-fort",
+      "ie-the-elysian",
+      "jp-tokyo-station",
+      "mn-ulaanbaatar-railway-station",
+      "mx-mexico-city-metropolitan",
+      "pe-cusco-cathedral",
+      "ru-crimean-bridge",
+      "tr-1915-canakkale-bridge",
+      "ua-buhaz",
+      "us-corona-del-mar-state-beach",
+      "us-oriole-park-at-camden-yards",
+      "ve-estadio-olimpico"
+    ],
+    "testIds": [
+      "au-malmsbury-viaduct",
+      "bj-dantokpa-market",
+      "ca-clarence-st-bridge",
+      "cl-palacio-de-la-moneda",
+      "de-bahnhof-berlin-lichterfelde",
+      "de-bhf-eschborn",
+      "de-elstertalbruecke",
+      "de-kammergutweg",
+      "de-kyffhaeuserdenkmal",
+      "de-palmengartenwehr",
+      "de-rheinbruecke-leverkusen",
+      "de-st-lambertus",
+      "dz-el-mechouar-mosque",
+      "eg-al-fattah-al-alim-mosque",
+      "fr-eiffel-tower",
+      "gb-glenfinnan-viaduct",
+      "gb-rhuddlan-castle",
+      "id-lovina-beach",
+      "ie-church-of-st-anne",
+      "it-alghero-railway-station",
+      "kr-busan-harbor-bridge",
+      "mx-chapultepec-castle",
+      "no-fj-l-y-lighthouse",
+      "ru-cathedral-of-christ-the",
+      "ru-russky-bridge",
+      "tr-istiklal-avenue",
+      "ua-kyiv-pechersk-lavra",
+      "us-francis-scott-key-bridge",
+      "us-vessel",
+      "za-nelson-mandela-square"
+    ]
+  },
+  "downloadsBytes": {
+    "visionFp32": 1220407251,
+    "visionInt8": 306961304,
+    "location": 37808863,
+    "gallery": 800000,
+    "galleryEmbeddingCache": 102400012
+  },
+  "setup": {
+    "galleryEmbeddingMs": null,
+    "galleryCacheReadMs": 635,
+    "galleryCountriesMs": 3
+  },
+  "timing": {
+    "fp32": {
+      "inferMsPerFrameMedian": 1017,
+      "preprocessMsPerFrameMedian": 3.7,
+      "galleryScoreMsPerVideoMedian": 1109,
+      "refineMsPerVideoMedian": 156,
+      "embedding": {
+        "precision": "fp32",
+        "threads": 3,
+        "sessionLoadMs": 5730.799761,
+        "rssBeforeMb": 86.4256,
+        "rssAfterLoadMb": 2161.999872,
+        "maxRssMb": 2229.08,
+        "loadAverage": [
+          5.63,
+          7.35,
+          8.1
+        ],
+        "computedVideos": 60
+      }
+    },
+    "int8": {
+      "inferMsPerFrameMedian": 345,
+      "preprocessMsPerFrameMedian": 3.9,
+      "galleryScoreMsPerVideoMedian": 1195,
+      "refineMsPerVideoMedian": 172,
+      "embedding": {
+        "precision": "int8",
+        "threads": 3,
+        "sessionLoadMs": 1699.2884720000002,
+        "rssBeforeMb": 90.39872,
+        "rssAfterLoadMb": 694.636544,
+        "maxRssMb": 795.364,
+        "loadAverage": [
+          8.52,
+          8.93,
+          6.67
+        ],
+        "computedVideos": 60
+      }
+    }
+  },
+  "existingDecision": {
+    "open": {
+      "train": {
+        "n": 30,
+        "medianKm": 267.6,
+        "acc1km": 0.233,
+        "acc25km": 0.367,
+        "acc200km": 0.433,
+        "acc750km": 0.633,
+        "acc2500km": 0.7,
+        "countryAcc": 0.433,
+        "answerCountryAcc": 0.5,
+        "withinRadius": 0.767
+      },
+      "test": {
+        "n": 30,
+        "medianKm": 433.6,
+        "acc1km": 0.267,
+        "acc25km": 0.433,
+        "acc200km": 0.467,
+        "acc750km": 0.533,
+        "acc2500km": 0.667,
+        "countryAcc": 0.367,
+        "answerCountryAcc": 0.5,
+        "withinRadius": 0.667
+      },
+      "all": {
+        "n": 60,
+        "medianKm": 283.3,
+        "acc1km": 0.25,
+        "acc25km": 0.4,
+        "acc200km": 0.45,
+        "acc750km": 0.583,
+        "acc2500km": 0.683,
+        "countryAcc": 0.4,
+        "answerCountryAcc": 0.5,
+        "withinRadius": 0.717
+      }
+    },
+    "unknown": {
+      "train": {
+        "n": 30,
+        "medianKm": 739.8,
+        "acc1km": 0,
+        "acc25km": 0.167,
+        "acc200km": 0.267,
+        "acc750km": 0.5,
+        "acc2500km": 0.6,
+        "countryAcc": 0.433,
+        "answerCountryAcc": 0.333,
+        "withinRadius": 0.7
+      },
+      "test": {
+        "n": 30,
+        "medianKm": 936.9,
+        "acc1km": 0,
+        "acc25km": 0.133,
+        "acc200km": 0.233,
+        "acc750km": 0.433,
+        "acc2500km": 0.6,
+        "countryAcc": 0.333,
+        "answerCountryAcc": 0.367,
+        "withinRadius": 0.6
+      },
+      "all": {
+        "n": 60,
+        "medianKm": 936.9,
+        "acc1km": 0,
+        "acc25km": 0.15,
+        "acc200km": 0.25,
+        "acc750km": 0.467,
+        "acc2500km": 0.6,
+        "countryAcc": 0.383,
+        "answerCountryAcc": 0.35,
+        "withinRadius": 0.65
+      }
+    }
+  },
+  "geoclipAlone": {
+    "selectedOnTrain": {
+      "fp32": {
+        "aggregation": "mixture",
+        "answer": "refined",
+        "trainObjective": 0.4733
+      },
+      "int8": {
+        "aggregation": "mixture",
+        "answer": "refined",
+        "trainObjective": 0.4933
+      }
+    },
+    "radiusTiersOnTrain": {
+      "fp32": {
+        "minConcentration": [
+          0.5,
+          0.2,
+          0
+        ],
+        "radiusKm": [
+          1500,
+          1500,
+          1500
+        ],
+        "trainCases": [
+          3,
+          3,
+          24
+        ],
+        "testWithinRadius": 0.9
+      },
+      "int8": {
+        "minConcentration": [
+          0.5,
+          0.2,
+          0
+        ],
+        "radiusKm": [
+          1000,
+          1000,
+          1000
+        ],
+        "trainCases": [
+          3,
+          4,
+          23
+        ],
+        "testWithinRadius": 0.767
+      }
+    },
+    "variants": [
+      {
+        "precision": "fp32",
+        "aggregation": "sum",
+        "answer": "top1",
+        "trainObjective": 0.4533,
+        "train": {
+          "n": 30,
+          "medianKm": 344.8,
+          "acc1km": 0.2,
+          "acc25km": 0.2,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.533,
+          "answerCountryAcc": 0.533,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 359.8,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "sum",
+        "answer": "modePeak",
+        "trainObjective": 0.4533,
+        "train": {
+          "n": 30,
+          "medianKm": 344.8,
+          "acc1km": 0.2,
+          "acc25km": 0.2,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.533,
+          "answerCountryAcc": 0.533,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 359.8,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.933,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "sum",
+        "answer": "modeCentre",
+        "trainObjective": 0.4533,
+        "train": {
+          "n": 30,
+          "medianKm": 344.8,
+          "acc1km": 0.2,
+          "acc25km": 0.2,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.533,
+          "answerCountryAcc": 0.533,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 359.8,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.933,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "sum",
+        "answer": "refined",
+        "trainObjective": 0.4533,
+        "train": {
+          "n": 30,
+          "medianKm": 340.7,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.767,
+          "countryAcc": 0.533,
+          "answerCountryAcc": 0.433,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 308.1,
+          "acc1km": 0.133,
+          "acc25km": 0.3,
+          "acc200km": 0.4,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mean",
+        "answer": "top1",
+        "trainObjective": 0.4533,
+        "train": {
+          "n": 30,
+          "medianKm": 344.8,
+          "acc1km": 0.2,
+          "acc25km": 0.2,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.433,
+          "answerCountryAcc": 0.533,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 359.8,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mean",
+        "answer": "modePeak",
+        "trainObjective": 0.38,
+        "train": {
+          "n": 30,
+          "medianKm": 401.7,
+          "acc1km": 0.133,
+          "acc25km": 0.167,
+          "acc200km": 0.333,
+          "acc750km": 0.567,
+          "acc2500km": 0.7,
+          "countryAcc": 0.433,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 268.9,
+          "acc1km": 0.167,
+          "acc25km": 0.4,
+          "acc200km": 0.433,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.7,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mean",
+        "answer": "modeCentre",
+        "trainObjective": 0.38,
+        "train": {
+          "n": 30,
+          "medianKm": 400.5,
+          "acc1km": 0.1,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.567,
+          "acc2500km": 0.7,
+          "countryAcc": 0.433,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 270,
+          "acc1km": 0.2,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.7,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mean",
+        "answer": "refined",
+        "trainObjective": 0.44,
+        "train": {
+          "n": 30,
+          "medianKm": 340.7,
+          "acc1km": 0.2,
+          "acc25km": 0.233,
+          "acc200km": 0.433,
+          "acc750km": 0.633,
+          "acc2500km": 0.7,
+          "countryAcc": 0.433,
+          "answerCountryAcc": 0.467,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 381.2,
+          "acc1km": 0.133,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "embedding",
+        "answer": "top1",
+        "trainObjective": 0.4533,
+        "train": {
+          "n": 30,
+          "medianKm": 344.8,
+          "acc1km": 0.2,
+          "acc25km": 0.2,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.533,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 359.8,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "embedding",
+        "answer": "modePeak",
+        "trainObjective": 0.3933,
+        "train": {
+          "n": 30,
+          "medianKm": 401.7,
+          "acc1km": 0.133,
+          "acc25km": 0.167,
+          "acc200km": 0.333,
+          "acc750km": 0.6,
+          "acc2500km": 0.733,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.433,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 268.9,
+          "acc1km": 0.167,
+          "acc25km": 0.4,
+          "acc200km": 0.433,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.7,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "embedding",
+        "answer": "modeCentre",
+        "trainObjective": 0.3933,
+        "train": {
+          "n": 30,
+          "medianKm": 400.5,
+          "acc1km": 0.1,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.6,
+          "acc2500km": 0.733,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.433,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 270,
+          "acc1km": 0.2,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.7,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "embedding",
+        "answer": "refined",
+        "trainObjective": 0.46,
+        "train": {
+          "n": 30,
+          "medianKm": 304.7,
+          "acc1km": 0.2,
+          "acc25km": 0.233,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.5,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 381,
+          "acc1km": 0.133,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.933,
+          "countryAcc": 0.767,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mixture",
+        "answer": "top1",
+        "trainObjective": 0.44,
+        "train": {
+          "n": 30,
+          "medianKm": 357.9,
+          "acc1km": 0.233,
+          "acc25km": 0.233,
+          "acc200km": 0.4,
+          "acc750km": 0.633,
+          "acc2500km": 0.7,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.467,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 299.1,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.833,
+          "countryAcc": 0.733,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mixture",
+        "answer": "modePeak",
+        "trainObjective": 0.3933,
+        "train": {
+          "n": 30,
+          "medianKm": 921.2,
+          "acc1km": 0.233,
+          "acc25km": 0.267,
+          "acc200km": 0.3,
+          "acc750km": 0.467,
+          "acc2500km": 0.7,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.333,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 268.9,
+          "acc1km": 0.167,
+          "acc25km": 0.4,
+          "acc200km": 0.433,
+          "acc750km": 0.733,
+          "acc2500km": 0.867,
+          "countryAcc": 0.733,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mixture",
+        "answer": "modeCentre",
+        "trainObjective": 0.3867,
+        "train": {
+          "n": 30,
+          "medianKm": 921.7,
+          "acc1km": 0.2,
+          "acc25km": 0.267,
+          "acc200km": 0.3,
+          "acc750km": 0.467,
+          "acc2500km": 0.7,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.333,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 269.8,
+          "acc1km": 0.2,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.733,
+          "acc2500km": 0.867,
+          "countryAcc": 0.733,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "fp32",
+        "aggregation": "mixture",
+        "answer": "refined",
+        "trainObjective": 0.4733,
+        "train": {
+          "n": 30,
+          "medianKm": 304.7,
+          "acc1km": 0.233,
+          "acc25km": 0.267,
+          "acc200km": 0.467,
+          "acc750km": 0.667,
+          "acc2500km": 0.733,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.467,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 267.8,
+          "acc1km": 0.133,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.8,
+          "acc2500km": 0.9,
+          "countryAcc": 0.733,
+          "answerCountryAcc": 0.667,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "sum",
+        "answer": "top1",
+        "trainObjective": 0.4,
+        "train": {
+          "n": 30,
+          "medianKm": 405,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.533,
+          "acc2500km": 0.767,
+          "countryAcc": 0.4,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 335.9,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.7,
+          "acc2500km": 0.9,
+          "countryAcc": 0.6,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "sum",
+        "answer": "modePeak",
+        "trainObjective": 0.4,
+        "train": {
+          "n": 30,
+          "medianKm": 405,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.533,
+          "acc2500km": 0.767,
+          "countryAcc": 0.4,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 335.9,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.7,
+          "acc2500km": 0.9,
+          "countryAcc": 0.6,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "sum",
+        "answer": "modeCentre",
+        "trainObjective": 0.4,
+        "train": {
+          "n": 30,
+          "medianKm": 404.9,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.533,
+          "acc2500km": 0.767,
+          "countryAcc": 0.4,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 335.9,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.7,
+          "acc2500km": 0.9,
+          "countryAcc": 0.6,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "sum",
+        "answer": "refined",
+        "trainObjective": 0.4133,
+        "train": {
+          "n": 30,
+          "medianKm": 393,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.4,
+          "acc750km": 0.533,
+          "acc2500km": 0.767,
+          "countryAcc": 0.4,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 298.4,
+          "acc1km": 0.133,
+          "acc25km": 0.333,
+          "acc200km": 0.4,
+          "acc750km": 0.733,
+          "acc2500km": 0.9,
+          "countryAcc": 0.6,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mean",
+        "answer": "top1",
+        "trainObjective": 0.4,
+        "train": {
+          "n": 30,
+          "medianKm": 405,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.533,
+          "acc2500km": 0.767,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 335.9,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.7,
+          "acc2500km": 0.9,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mean",
+        "answer": "modePeak",
+        "trainObjective": 0.34,
+        "train": {
+          "n": 30,
+          "medianKm": 921.3,
+          "acc1km": 0.133,
+          "acc25km": 0.2,
+          "acc200km": 0.267,
+          "acc750km": 0.467,
+          "acc2500km": 0.633,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.367,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 268.9,
+          "acc1km": 0.167,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.7,
+          "acc2500km": 0.8,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mean",
+        "answer": "modeCentre",
+        "trainObjective": 0.3333,
+        "train": {
+          "n": 30,
+          "medianKm": 921.8,
+          "acc1km": 0.1,
+          "acc25km": 0.2,
+          "acc200km": 0.267,
+          "acc750km": 0.467,
+          "acc2500km": 0.633,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.367,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 270.4,
+          "acc1km": 0.2,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.7,
+          "acc2500km": 0.8,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mean",
+        "answer": "refined",
+        "trainObjective": 0.3933,
+        "train": {
+          "n": 30,
+          "medianKm": 662.9,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.367,
+          "acc750km": 0.5,
+          "acc2500km": 0.733,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.367,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 298.4,
+          "acc1km": 0.167,
+          "acc25km": 0.367,
+          "acc200km": 0.367,
+          "acc750km": 0.667,
+          "acc2500km": 0.833,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "embedding",
+        "answer": "top1",
+        "trainObjective": 0.4,
+        "train": {
+          "n": 30,
+          "medianKm": 405,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.333,
+          "acc750km": 0.533,
+          "acc2500km": 0.767,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.4,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 335.9,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.367,
+          "acc750km": 0.7,
+          "acc2500km": 0.9,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "embedding",
+        "answer": "modePeak",
+        "trainObjective": 0.34,
+        "train": {
+          "n": 30,
+          "medianKm": 921.3,
+          "acc1km": 0.133,
+          "acc25km": 0.2,
+          "acc200km": 0.267,
+          "acc750km": 0.467,
+          "acc2500km": 0.633,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.367,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 268.9,
+          "acc1km": 0.167,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.7,
+          "acc2500km": 0.8,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "embedding",
+        "answer": "modeCentre",
+        "trainObjective": 0.3333,
+        "train": {
+          "n": 30,
+          "medianKm": 921.8,
+          "acc1km": 0.1,
+          "acc25km": 0.2,
+          "acc200km": 0.267,
+          "acc750km": 0.467,
+          "acc2500km": 0.633,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.367,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 270.4,
+          "acc1km": 0.167,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.7,
+          "acc2500km": 0.8,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.633,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "embedding",
+        "answer": "refined",
+        "trainObjective": 0.3933,
+        "train": {
+          "n": 30,
+          "medianKm": 662.9,
+          "acc1km": 0.167,
+          "acc25km": 0.2,
+          "acc200km": 0.367,
+          "acc750km": 0.5,
+          "acc2500km": 0.733,
+          "countryAcc": 0.367,
+          "answerCountryAcc": 0.367,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 298.4,
+          "acc1km": 0.167,
+          "acc25km": 0.367,
+          "acc200km": 0.367,
+          "acc750km": 0.667,
+          "acc2500km": 0.833,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mixture",
+        "answer": "top1",
+        "trainObjective": 0.4733,
+        "train": {
+          "n": 30,
+          "medianKm": 331.3,
+          "acc1km": 0.2,
+          "acc25km": 0.267,
+          "acc200km": 0.433,
+          "acc750km": 0.6,
+          "acc2500km": 0.867,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.533,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 295.1,
+          "acc1km": 0.167,
+          "acc25km": 0.367,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.833,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.567,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mixture",
+        "answer": "modePeak",
+        "trainObjective": 0.36,
+        "train": {
+          "n": 30,
+          "medianKm": 686,
+          "acc1km": 0.133,
+          "acc25km": 0.2,
+          "acc200km": 0.3,
+          "acc750km": 0.5,
+          "acc2500km": 0.667,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.433,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 288.1,
+          "acc1km": 0.167,
+          "acc25km": 0.333,
+          "acc200km": 0.433,
+          "acc750km": 0.667,
+          "acc2500km": 0.767,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.567,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mixture",
+        "answer": "modeCentre",
+        "trainObjective": 0.3533,
+        "train": {
+          "n": 30,
+          "medianKm": 687.5,
+          "acc1km": 0.1,
+          "acc25km": 0.2,
+          "acc200km": 0.3,
+          "acc750km": 0.5,
+          "acc2500km": 0.667,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.433,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 290.2,
+          "acc1km": 0.2,
+          "acc25km": 0.333,
+          "acc200km": 0.433,
+          "acc750km": 0.667,
+          "acc2500km": 0.767,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.567,
+          "geoclipAnswers": 30
+        }
+      },
+      {
+        "precision": "int8",
+        "aggregation": "mixture",
+        "answer": "refined",
+        "trainObjective": 0.4933,
+        "train": {
+          "n": 30,
+          "medianKm": 289.5,
+          "acc1km": 0.233,
+          "acc25km": 0.3,
+          "acc200km": 0.467,
+          "acc750km": 0.6,
+          "acc2500km": 0.867,
+          "countryAcc": 0.467,
+          "answerCountryAcc": 0.5,
+          "geoclipAnswers": 30
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 300.2,
+          "acc1km": 0.133,
+          "acc25km": 0.367,
+          "acc200km": 0.367,
+          "acc750km": 0.733,
+          "acc2500km": 0.867,
+          "countryAcc": 0.633,
+          "answerCountryAcc": 0.6,
+          "geoclipAnswers": 30
+        }
+      }
+    ],
+    "fewerFrames": {
+      "fp32": {
+        "variant": {
+          "aggregation": "mixture",
+          "answer": "refined",
+          "trainObjective": 0.47333333333333333
+        },
+        "frames6": {
+          "train": {
+            "n": 30,
+            "medianKm": 420.4,
+            "acc1km": 0.233,
+            "acc25km": 0.267,
+            "acc200km": 0.367,
+            "acc750km": 0.567,
+            "acc2500km": 0.633,
+            "countryAcc": 0.4,
+            "answerCountryAcc": 0.4,
+            "geoclipAnswers": 30
+          },
+          "test": {
+            "n": 30,
+            "medianKm": 267.8,
+            "acc1km": 0.133,
+            "acc25km": 0.367,
+            "acc200km": 0.433,
+            "acc750km": 0.767,
+            "acc2500km": 0.9,
+            "countryAcc": 0.733,
+            "answerCountryAcc": 0.667,
+            "geoclipAnswers": 30
+          }
+        },
+        "frames3": {
+          "train": {
+            "n": 30,
+            "medianKm": 386.5,
+            "acc1km": 0.233,
+            "acc25km": 0.267,
+            "acc200km": 0.433,
+            "acc750km": 0.6,
+            "acc2500km": 0.7,
+            "countryAcc": 0.333,
+            "answerCountryAcc": 0.433,
+            "geoclipAnswers": 30
+          },
+          "test": {
+            "n": 30,
+            "medianKm": 427.6,
+            "acc1km": 0.133,
+            "acc25km": 0.333,
+            "acc200km": 0.333,
+            "acc750km": 0.667,
+            "acc2500km": 0.833,
+            "countryAcc": 0.7,
+            "answerCountryAcc": 0.533,
+            "geoclipAnswers": 30
+          }
+        }
+      },
+      "int8": {
+        "variant": {
+          "aggregation": "mixture",
+          "answer": "refined",
+          "trainObjective": 0.49333333333333335
+        },
+        "frames6": {
+          "train": {
+            "n": 30,
+            "medianKm": 393,
+            "acc1km": 0.2,
+            "acc25km": 0.2,
+            "acc200km": 0.4,
+            "acc750km": 0.567,
+            "acc2500km": 0.8,
+            "countryAcc": 0.3,
+            "answerCountryAcc": 0.433,
+            "geoclipAnswers": 30
+          },
+          "test": {
+            "n": 30,
+            "medianKm": 308.1,
+            "acc1km": 0.1,
+            "acc25km": 0.367,
+            "acc200km": 0.367,
+            "acc750km": 0.733,
+            "acc2500km": 0.867,
+            "countryAcc": 0.6,
+            "answerCountryAcc": 0.567,
+            "geoclipAnswers": 30
+          }
+        },
+        "frames3": {
+          "train": {
+            "n": 30,
+            "medianKm": 553.7,
+            "acc1km": 0.3,
+            "acc25km": 0.333,
+            "acc200km": 0.4,
+            "acc750km": 0.533,
+            "acc2500km": 0.767,
+            "countryAcc": 0.367,
+            "answerCountryAcc": 0.467,
+            "geoclipAnswers": 30
+          },
+          "test": {
+            "n": 30,
+            "medianKm": 680.7,
+            "acc1km": 0.1,
+            "acc25km": 0.233,
+            "acc200km": 0.233,
+            "acc750km": 0.533,
+            "acc2500km": 0.767,
+            "countryAcc": 0.6,
+            "answerCountryAcc": 0.467,
+            "geoclipAnswers": 30
+          }
+        }
+      }
+    }
+  },
+  "precisionAgreement": {
+    "videos": 60,
+    "medianTop1DistanceKm": 0,
+    "within1km": 0.567,
+    "within25km": 0.617,
+    "over750km": 17
+  },
+  "fusion": {
+    "fp32": {
+      "baselineTrainObjective": 0.39,
+      "bestPerRecipe": {
+        "rescore": {
+          "config": {
+            "recipe": "rescore",
+            "aggregation": "sum",
+            "answer": "refined",
+            "beta": 0.5,
+            "sigmaKm": 25,
+            "trainObjective": 0.4
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 267.6,
+              "acc1km": 0.233,
+              "acc25km": 0.333,
+              "acc200km": 0.433,
+              "acc750km": 0.633,
+              "acc2500km": 0.733,
+              "countryAcc": 0.433,
+              "answerCountryAcc": 0.5,
+              "withinRadius": 0.733
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 560.4,
+              "acc1km": 0.167,
+              "acc25km": 0.333,
+              "acc200km": 0.4,
+              "acc750km": 0.567,
+              "acc2500km": 0.7,
+              "countryAcc": 0.367,
+              "answerCountryAcc": 0.467,
+              "withinRadius": 0.667
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 283.3,
+              "acc1km": 0.2,
+              "acc25km": 0.333,
+              "acc200km": 0.417,
+              "acc750km": 0.6,
+              "acc2500km": 0.717,
+              "countryAcc": 0.4,
+              "answerCountryAcc": 0.483,
+              "withinRadius": 0.7
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 739.8,
+              "acc1km": 0.033,
+              "acc25km": 0.167,
+              "acc200km": 0.3,
+              "acc750km": 0.5,
+              "acc2500km": 0.633,
+              "countryAcc": 0.433,
+              "answerCountryAcc": 0.333,
+              "withinRadius": 0.7
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 812.4,
+              "acc1km": 0,
+              "acc25km": 0.167,
+              "acc200km": 0.267,
+              "acc750km": 0.467,
+              "acc2500km": 0.633,
+              "countryAcc": 0.333,
+              "answerCountryAcc": 0.367,
+              "withinRadius": 0.6
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 812.4,
+              "acc1km": 0.017,
+              "acc25km": 0.167,
+              "acc200km": 0.283,
+              "acc750km": 0.483,
+              "acc2500km": 0.633,
+              "countryAcc": 0.383,
+              "answerCountryAcc": 0.35,
+              "withinRadius": 0.65
+            }
+          }
+        },
+        "override": {
+          "config": {
+            "recipe": "override",
+            "aggregation": "mixture",
+            "answer": "refined",
+            "tiers": [
+              "strong",
+              "recognised",
+              "similar",
+              "country",
+              "continent"
+            ],
+            "minMass": 0.1,
+            "trainObjective": 0.52,
+            "geoRadius": {
+              "minConcentration": [
+                0.5,
+                0.2,
+                0
+              ],
+              "radiusKm": [
+                1,
+                1,
+                500
+              ],
+              "trainCases": [
+                6,
+                6,
+                22
+              ]
+            }
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 114.5,
+              "acc1km": 0.333,
+              "acc25km": 0.4,
+              "acc200km": 0.533,
+              "acc750km": 0.733,
+              "acc2500km": 0.8,
+              "countryAcc": 0.5,
+              "answerCountryAcc": 0.567,
+              "geoclipAnswers": 17,
+              "withinRadius": 0.833
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 193.1,
+              "acc1km": 0.2,
+              "acc25km": 0.433,
+              "acc200km": 0.5,
+              "acc750km": 0.7,
+              "acc2500km": 0.733,
+              "countryAcc": 0.633,
+              "answerCountryAcc": 0.567,
+              "geoclipAnswers": 18,
+              "withinRadius": 0.467
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 165,
+              "acc1km": 0.267,
+              "acc25km": 0.417,
+              "acc200km": 0.517,
+              "acc750km": 0.717,
+              "acc2500km": 0.767,
+              "countryAcc": 0.567,
+              "answerCountryAcc": 0.567,
+              "geoclipAnswers": 35,
+              "withinRadius": 0.65
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 283.3,
+              "acc1km": 0.233,
+              "acc25km": 0.3,
+              "acc200km": 0.467,
+              "acc750km": 0.667,
+              "acc2500km": 0.733,
+              "countryAcc": 0.5,
+              "answerCountryAcc": 0.467,
+              "geoclipAnswers": 17,
+              "withinRadius": 0.8
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 255,
+              "acc1km": 0.133,
+              "acc25km": 0.367,
+              "acc200km": 0.433,
+              "acc750km": 0.667,
+              "acc2500km": 0.7,
+              "countryAcc": 0.633,
+              "answerCountryAcc": 0.533,
+              "geoclipAnswers": 18,
+              "withinRadius": 0.433
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 263.4,
+              "acc1km": 0.183,
+              "acc25km": 0.333,
+              "acc200km": 0.45,
+              "acc750km": 0.667,
+              "acc2500km": 0.717,
+              "countryAcc": 0.567,
+              "answerCountryAcc": 0.5,
+              "geoclipAnswers": 35,
+              "withinRadius": 0.617
+            }
+          }
+        },
+        "agree": {
+          "config": {
+            "recipe": "agree",
+            "aggregation": "mixture",
+            "answer": "refined",
+            "tiers": [
+              "recognised",
+              "similar",
+              "country",
+              "continent"
+            ],
+            "agreeKm": 200,
+            "minAgree": 0.05,
+            "trainObjective": 0.5066666666666666,
+            "geoRadius": {
+              "minConcentration": [
+                0.5,
+                0.2,
+                0
+              ],
+              "radiusKm": [
+                1500,
+                1500,
+                1500
+              ],
+              "trainCases": [
+                0,
+                3,
+                29
+              ]
+            }
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 59.9,
+              "acc1km": 0.267,
+              "acc25km": 0.4,
+              "acc200km": 0.533,
+              "acc750km": 0.733,
+              "acc2500km": 0.8,
+              "countryAcc": 0.533,
+              "answerCountryAcc": 0.6,
+              "geoclipAnswers": 14,
+              "withinRadius": 0.8
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 18.7,
+              "acc1km": 0.3,
+              "acc25km": 0.567,
+              "acc200km": 0.6,
+              "acc750km": 0.8,
+              "acc2500km": 0.9,
+              "countryAcc": 0.6,
+              "answerCountryAcc": 0.667,
+              "geoclipAnswers": 12,
+              "withinRadius": 0.867
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 29.3,
+              "acc1km": 0.283,
+              "acc25km": 0.483,
+              "acc200km": 0.567,
+              "acc750km": 0.767,
+              "acc2500km": 0.85,
+              "countryAcc": 0.567,
+              "answerCountryAcc": 0.633,
+              "geoclipAnswers": 26,
+              "withinRadius": 0.833
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 199.9,
+              "acc1km": 0.1,
+              "acc25km": 0.267,
+              "acc200km": 0.5,
+              "acc750km": 0.7,
+              "acc2500km": 0.767,
+              "countryAcc": 0.533,
+              "answerCountryAcc": 0.567,
+              "geoclipAnswers": 18,
+              "withinRadius": 0.767
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 255,
+              "acc1km": 0.1,
+              "acc25km": 0.333,
+              "acc200km": 0.467,
+              "acc750km": 0.8,
+              "acc2500km": 0.9,
+              "countryAcc": 0.667,
+              "answerCountryAcc": 0.667,
+              "geoclipAnswers": 14,
+              "withinRadius": 0.867
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 233.4,
+              "acc1km": 0.1,
+              "acc25km": 0.3,
+              "acc200km": 0.483,
+              "acc750km": 0.75,
+              "acc2500km": 0.833,
+              "countryAcc": 0.6,
+              "answerCountryAcc": 0.617,
+              "geoclipAnswers": 32,
+              "withinRadius": 0.817
+            }
+          }
+        },
+        "countryProduct": {
+          "config": {
+            "recipe": "countryProduct",
+            "aggregation": "sum",
+            "answer": "refined",
+            "a": 0.5,
+            "b": 0.5,
+            "tiers": [
+              "recognised",
+              "similar",
+              "country",
+              "continent"
+            ],
+            "trainObjective": 0.45333333333333337,
+            "geoRadius": {
+              "minConcentration": [
+                0.5,
+                0.2,
+                0
+              ],
+              "radiusKm": [
+                750,
+                1500,
+                1500
+              ],
+              "trainCases": [
+                48,
+                4,
+                0
+              ]
+            }
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 244.1,
+              "acc1km": 0.2,
+              "acc25km": 0.233,
+              "acc200km": 0.5,
+              "acc750km": 0.667,
+              "acc2500km": 0.733,
+              "countryAcc": 0.533,
+              "answerCountryAcc": 0.533,
+              "geoclipAnswers": 25,
+              "withinRadius": 0.667
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 359.8,
+              "acc1km": 0.167,
+              "acc25km": 0.367,
+              "acc200km": 0.4,
+              "acc750km": 0.767,
+              "acc2500km": 0.9,
+              "countryAcc": 0.7,
+              "answerCountryAcc": 0.667,
+              "geoclipAnswers": 24,
+              "withinRadius": 0.733
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 328.4,
+              "acc1km": 0.183,
+              "acc25km": 0.3,
+              "acc200km": 0.45,
+              "acc750km": 0.717,
+              "acc2500km": 0.817,
+              "countryAcc": 0.617,
+              "answerCountryAcc": 0.6,
+              "geoclipAnswers": 49,
+              "withinRadius": 0.7
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 344.8,
+              "acc1km": 0.133,
+              "acc25km": 0.2,
+              "acc200km": 0.467,
+              "acc750km": 0.667,
+              "acc2500km": 0.733,
+              "countryAcc": 0.533,
+              "answerCountryAcc": 0.533,
+              "geoclipAnswers": 27,
+              "withinRadius": 0.667
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 359.8,
+              "acc1km": 0.167,
+              "acc25km": 0.333,
+              "acc200km": 0.367,
+              "acc750km": 0.767,
+              "acc2500km": 0.9,
+              "countryAcc": 0.667,
+              "answerCountryAcc": 0.667,
+              "geoclipAnswers": 28,
+              "withinRadius": 0.733
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 344.8,
+              "acc1km": 0.15,
+              "acc25km": 0.267,
+              "acc200km": 0.417,
+              "acc750km": 0.717,
+              "acc2500km": 0.817,
+              "countryAcc": 0.6,
+              "answerCountryAcc": 0.6,
+              "geoclipAnswers": 55,
+              "withinRadius": 0.7
+            }
+          }
+        }
+      },
+      "selected": {
+        "recipe": "override",
+        "trainObjective": 0.52
+      }
+    },
+    "int8": {
+      "baselineTrainObjective": 0.39,
+      "bestPerRecipe": {
+        "rescore": {
+          "config": {
+            "recipe": "rescore",
+            "aggregation": "sum",
+            "answer": "refined",
+            "beta": 0.5,
+            "sigmaKm": 25,
+            "trainObjective": 0.38333333333333336
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 306.7,
+              "acc1km": 0.2,
+              "acc25km": 0.3,
+              "acc200km": 0.4,
+              "acc750km": 0.6,
+              "acc2500km": 0.7,
+              "countryAcc": 0.433,
+              "answerCountryAcc": 0.467,
+              "withinRadius": 0.7
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 560.4,
+              "acc1km": 0.133,
+              "acc25km": 0.333,
+              "acc200km": 0.4,
+              "acc750km": 0.567,
+              "acc2500km": 0.7,
+              "countryAcc": 0.367,
+              "answerCountryAcc": 0.467,
+              "withinRadius": 0.667
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 330.2,
+              "acc1km": 0.167,
+              "acc25km": 0.317,
+              "acc200km": 0.4,
+              "acc750km": 0.583,
+              "acc2500km": 0.7,
+              "countryAcc": 0.4,
+              "answerCountryAcc": 0.467,
+              "withinRadius": 0.683
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 739.8,
+              "acc1km": 0.033,
+              "acc25km": 0.167,
+              "acc200km": 0.3,
+              "acc750km": 0.5,
+              "acc2500km": 0.633,
+              "countryAcc": 0.433,
+              "answerCountryAcc": 0.367,
+              "withinRadius": 0.7
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 812.4,
+              "acc1km": 0,
+              "acc25km": 0.2,
+              "acc200km": 0.267,
+              "acc750km": 0.467,
+              "acc2500km": 0.633,
+              "countryAcc": 0.333,
+              "answerCountryAcc": 0.367,
+              "withinRadius": 0.6
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 812.4,
+              "acc1km": 0.017,
+              "acc25km": 0.183,
+              "acc200km": 0.283,
+              "acc750km": 0.483,
+              "acc2500km": 0.633,
+              "countryAcc": 0.383,
+              "answerCountryAcc": 0.367,
+              "withinRadius": 0.65
+            }
+          }
+        },
+        "override": {
+          "config": {
+            "recipe": "override",
+            "aggregation": "mixture",
+            "answer": "refined",
+            "tiers": [
+              "strong",
+              "recognised",
+              "similar",
+              "country",
+              "continent"
+            ],
+            "minMass": 0,
+            "trainObjective": 0.49333333333333335,
+            "geoRadius": {
+              "minConcentration": [
+                0.5,
+                0.2,
+                0
+              ],
+              "radiusKm": [
+                1,
+                1000,
+                1000
+              ],
+              "trainCases": [
+                6,
+                8,
+                46
+              ]
+            }
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 289.5,
+              "acc1km": 0.233,
+              "acc25km": 0.3,
+              "acc200km": 0.467,
+              "acc750km": 0.6,
+              "acc2500km": 0.867,
+              "countryAcc": 0.467,
+              "answerCountryAcc": 0.5,
+              "geoclipAnswers": 30,
+              "withinRadius": 0.7
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 300.2,
+              "acc1km": 0.133,
+              "acc25km": 0.367,
+              "acc200km": 0.367,
+              "acc750km": 0.733,
+              "acc2500km": 0.867,
+              "countryAcc": 0.633,
+              "answerCountryAcc": 0.6,
+              "geoclipAnswers": 30,
+              "withinRadius": 0.633
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 300.2,
+              "acc1km": 0.183,
+              "acc25km": 0.333,
+              "acc200km": 0.417,
+              "acc750km": 0.667,
+              "acc2500km": 0.867,
+              "countryAcc": 0.55,
+              "answerCountryAcc": 0.55,
+              "geoclipAnswers": 60,
+              "withinRadius": 0.667
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 289.5,
+              "acc1km": 0.233,
+              "acc25km": 0.3,
+              "acc200km": 0.467,
+              "acc750km": 0.6,
+              "acc2500km": 0.867,
+              "countryAcc": 0.467,
+              "answerCountryAcc": 0.5,
+              "geoclipAnswers": 30,
+              "withinRadius": 0.7
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 300.2,
+              "acc1km": 0.133,
+              "acc25km": 0.367,
+              "acc200km": 0.367,
+              "acc750km": 0.733,
+              "acc2500km": 0.867,
+              "countryAcc": 0.633,
+              "answerCountryAcc": 0.6,
+              "geoclipAnswers": 30,
+              "withinRadius": 0.633
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 300.2,
+              "acc1km": 0.183,
+              "acc25km": 0.333,
+              "acc200km": 0.417,
+              "acc750km": 0.667,
+              "acc2500km": 0.867,
+              "countryAcc": 0.55,
+              "answerCountryAcc": 0.55,
+              "geoclipAnswers": 60,
+              "withinRadius": 0.667
+            }
+          }
+        },
+        "agree": {
+          "config": {
+            "recipe": "agree",
+            "aggregation": "mixture",
+            "answer": "refined",
+            "tiers": [
+              "strong",
+              "recognised",
+              "similar",
+              "country",
+              "continent"
+            ],
+            "agreeKm": 200,
+            "minAgree": 0.05,
+            "trainObjective": 0.52,
+            "geoRadius": {
+              "minConcentration": [
+                0.5,
+                0.2,
+                0
+              ],
+              "radiusKm": [
+                1,
+                1,
+                1500
+              ],
+              "trainCases": [
+                1,
+                4,
+                31
+              ]
+            }
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 116.7,
+              "acc1km": 0.233,
+              "acc25km": 0.4,
+              "acc200km": 0.533,
+              "acc750km": 0.667,
+              "acc2500km": 0.867,
+              "countryAcc": 0.533,
+              "answerCountryAcc": 0.633,
+              "geoclipAnswers": 16,
+              "withinRadius": 0.8
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 20.5,
+              "acc1km": 0.267,
+              "acc25km": 0.533,
+              "acc200km": 0.567,
+              "acc750km": 0.767,
+              "acc2500km": 0.933,
+              "countryAcc": 0.567,
+              "answerCountryAcc": 0.7,
+              "geoclipAnswers": 15,
+              "withinRadius": 0.867
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 60.5,
+              "acc1km": 0.25,
+              "acc25km": 0.467,
+              "acc200km": 0.55,
+              "acc750km": 0.717,
+              "acc2500km": 0.9,
+              "countryAcc": 0.55,
+              "answerCountryAcc": 0.667,
+              "geoclipAnswers": 31,
+              "withinRadius": 0.833
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 164.6,
+              "acc1km": 0.133,
+              "acc25km": 0.333,
+              "acc200km": 0.533,
+              "acc750km": 0.633,
+              "acc2500km": 0.867,
+              "countryAcc": 0.533,
+              "answerCountryAcc": 0.6,
+              "geoclipAnswers": 20,
+              "withinRadius": 0.767
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 267.8,
+              "acc1km": 0.1,
+              "acc25km": 0.333,
+              "acc200km": 0.433,
+              "acc750km": 0.767,
+              "acc2500km": 0.933,
+              "countryAcc": 0.6,
+              "answerCountryAcc": 0.7,
+              "geoclipAnswers": 16,
+              "withinRadius": 0.867
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 233.4,
+              "acc1km": 0.117,
+              "acc25km": 0.333,
+              "acc200km": 0.483,
+              "acc750km": 0.7,
+              "acc2500km": 0.9,
+              "countryAcc": 0.567,
+              "answerCountryAcc": 0.65,
+              "geoclipAnswers": 36,
+              "withinRadius": 0.817
+            }
+          }
+        },
+        "countryProduct": {
+          "config": {
+            "recipe": "countryProduct",
+            "aggregation": "mixture",
+            "answer": "refined",
+            "a": 1,
+            "b": 0.5,
+            "tiers": [
+              "similar",
+              "country",
+              "continent"
+            ],
+            "trainObjective": 0.42666666666666664,
+            "geoRadius": {
+              "minConcentration": [
+                0.5,
+                0.2,
+                0
+              ],
+              "radiusKm": [
+                50,
+                50,
+                1000
+              ],
+              "trainCases": [
+                1,
+                4,
+                37
+              ]
+            }
+          },
+          "open": {
+            "train": {
+              "n": 30,
+              "medianKm": 202.4,
+              "acc1km": 0.233,
+              "acc25km": 0.3,
+              "acc200km": 0.5,
+              "acc750km": 0.633,
+              "acc2500km": 0.7,
+              "countryAcc": 0.433,
+              "answerCountryAcc": 0.5,
+              "geoclipAnswers": 20,
+              "withinRadius": 0.733
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 526.2,
+              "acc1km": 0.167,
+              "acc25km": 0.367,
+              "acc200km": 0.4,
+              "acc750km": 0.567,
+              "acc2500km": 0.633,
+              "countryAcc": 0.5,
+              "answerCountryAcc": 0.533,
+              "geoclipAnswers": 16,
+              "withinRadius": 0.633
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 383.6,
+              "acc1km": 0.2,
+              "acc25km": 0.333,
+              "acc200km": 0.45,
+              "acc750km": 0.6,
+              "acc2500km": 0.667,
+              "countryAcc": 0.467,
+              "answerCountryAcc": 0.517,
+              "geoclipAnswers": 36,
+              "withinRadius": 0.683
+            }
+          },
+          "unknown": {
+            "train": {
+              "n": 30,
+              "medianKm": 513.3,
+              "acc1km": 0.1,
+              "acc25km": 0.2,
+              "acc200km": 0.4,
+              "acc750km": 0.567,
+              "acc2500km": 0.633,
+              "countryAcc": 0.433,
+              "answerCountryAcc": 0.433,
+              "geoclipAnswers": 22,
+              "withinRadius": 0.7
+            },
+            "test": {
+              "n": 30,
+              "medianKm": 736.3,
+              "acc1km": 0.1,
+              "acc25km": 0.267,
+              "acc200km": 0.3,
+              "acc750km": 0.5,
+              "acc2500km": 0.6,
+              "countryAcc": 0.467,
+              "answerCountryAcc": 0.4,
+              "geoclipAnswers": 22,
+              "withinRadius": 0.567
+            },
+            "all": {
+              "n": 60,
+              "medianKm": 675.5,
+              "acc1km": 0.1,
+              "acc25km": 0.233,
+              "acc200km": 0.35,
+              "acc750km": 0.533,
+              "acc2500km": 0.617,
+              "countryAcc": 0.45,
+              "answerCountryAcc": 0.417,
+              "geoclipAnswers": 44,
+              "withinRadius": 0.633
+            }
+          }
+        }
+      },
+      "selected": {
+        "recipe": "agree",
+        "trainObjective": 0.52
+      }
+    }
+  },
+  "videos": [
+    {
+      "id": "al-skanderbeg-square",
+      "label": "Skanderbeg Square",
+      "split": "train",
+      "truth": {
+        "lat": 41.327906,
+        "lon": 19.818458,
+        "countries": [
+          "AL"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 41.11306,
+        "lon": 20.08178,
+        "errorKm": 32.5,
+        "country": "AL",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 41.11306,
+        "lon": 20.08178,
+        "errorKm": 32.5,
+        "country": "AL",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 41.38243,
+        "lon": 20.08893,
+        "errorKm": 23.4,
+        "country": "TR",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.228
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 41.38243,
+          "lon": 20.08893,
+          "errorKm": 23.4,
+          "country": "TR",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 41.38243,
+          "lon": 20.08893,
+          "errorKm": 23.4,
+          "country": "TR",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 36.88353,
+        "lon": 30.70425,
+        "errorKm": 1060.2,
+        "country": "GR",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.246
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 41.11306,
+          "lon": 20.08178,
+          "errorKm": 32.5,
+          "country": "AL",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 41.11306,
+          "lon": 20.08178,
+          "errorKm": 32.5,
+          "country": "AL",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "au-malmsbury-viaduct",
+      "label": "Malmsbury Viaduct",
+      "split": "test",
+      "truth": {
+        "lat": -37.1921,
+        "lon": 144.381,
+        "countries": [
+          "AU"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 41.475,
+        "lon": 1.93778,
+        "errorKm": 16775.9,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": -37.1921,
+        "lon": 144.381,
+        "errorKm": 0,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": -37.72635,
+        "lon": 144.53383,
+        "errorKm": 60.9,
+        "country": "AU",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.031
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 41.475,
+          "lon": 1.93778,
+          "errorKm": 16775.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": -37.1921,
+          "lon": 144.381,
+          "errorKm": 0,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 43.28645,
+        "lon": 3.1069,
+        "errorKm": 16689.9,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.021
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 43.28645,
+          "lon": 3.1069,
+          "errorKm": 16689.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 43.28645,
+          "lon": 3.1069,
+          "errorKm": 16689.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "au-wellington-point",
+      "label": "Wellington Point",
+      "split": "train",
+      "truth": {
+        "lat": -27.487,
+        "lon": 153.239,
+        "countries": [
+          "AU"
+        ]
+      },
+      "existingUnknown": {
+        "lat": -27.46667,
+        "lon": 153.26667,
+        "errorKm": 3.5,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": -27.47442,
+        "lon": 153.25612,
+        "errorKm": 2.2,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 37.53114,
+        "lon": -122.10102,
+        "errorKm": 11392.7,
+        "country": "AU",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.117
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 37.53114,
+          "lon": -122.10102,
+          "errorKm": 11392.7,
+          "country": "AU",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 37.53114,
+          "lon": -122.10102,
+          "errorKm": 11392.7,
+          "country": "AU",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -27.46469,
+        "lon": 153.24025,
+        "errorKm": 2.5,
+        "country": "AU",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.074
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -27.46667,
+          "lon": 153.26667,
+          "errorKm": 3.5,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": -27.47442,
+          "lon": 153.25612,
+          "errorKm": 2.2,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "bj-dantokpa-market",
+      "label": "Dantokpa Market",
+      "split": "test",
+      "truth": {
+        "lat": 6.372048,
+        "lon": 2.434158,
+        "countries": [
+          "BJ"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 23.84278,
+        "lon": 90.40056,
+        "errorKm": 9515.7,
+        "country": "NG",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 23.84278,
+        "lon": 90.40056,
+        "errorKm": 9515.7,
+        "country": "NG",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 5.32054,
+        "lon": -3.98922,
+        "errorKm": 720.1,
+        "country": "CM",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.065
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 23.84278,
+          "lon": 90.40056,
+          "errorKm": 9515.7,
+          "country": "NG",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 23.84278,
+          "lon": 90.40056,
+          "errorKm": 9515.7,
+          "country": "NG",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 4.05099,
+        "lon": 9.7102,
+        "errorKm": 846,
+        "country": "IN",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.062
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 4.05099,
+          "lon": 9.7102,
+          "errorKm": 846,
+          "country": "IN",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 4.05099,
+          "lon": 9.7102,
+          "errorKm": 846,
+          "country": "IN",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "br-praia-do-grumari",
+      "label": "Praia do Grumari",
+      "split": "train",
+      "truth": {
+        "lat": -23.04713,
+        "lon": -43.52639,
+        "countries": [
+          "BR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 33.67405,
+        "lon": -92.37965,
+        "errorKm": 8154.3,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": 33.67405,
+        "lon": -92.37965,
+        "errorKm": 8154.3,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "geoclip_fp32": {
+        "lat": -27.19905,
+        "lon": -48.37502,
+        "errorKm": 671.7,
+        "country": "BR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.071
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 33.67405,
+          "lon": -92.37965,
+          "errorKm": 8154.3,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 33.67405,
+          "lon": -92.37965,
+          "errorKm": 8154.3,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -23.0403,
+        "lon": -43.5043,
+        "errorKm": 2.4,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.072
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -23.0403,
+          "lon": -43.5043,
+          "errorKm": 2.4,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -23.0403,
+          "lon": -43.5043,
+          "errorKm": 2.4,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ca-clarence-st-bridge",
+      "label": "Clarence St. Bridge",
+      "split": "test",
+      "truth": {
+        "lat": 42.8864,
+        "lon": -79.2486,
+        "countries": [
+          "CA"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 47.1238,
+        "lon": -88.5747,
+        "errorKm": 870.7,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 42.8864,
+        "lon": -79.2486,
+        "errorKm": 0,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 42.99942,
+        "lon": -82.42443,
+        "errorKm": 258.8,
+        "country": "CA",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.252
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 42.99942,
+          "lon": -82.42443,
+          "errorKm": 258.8,
+          "country": "CA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 42.99942,
+          "lon": -82.42443,
+          "errorKm": 258.8,
+          "country": "CA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 42.99942,
+        "lon": -82.42443,
+        "errorKm": 258.8,
+        "country": "CA",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.23
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 42.99942,
+          "lon": -82.42443,
+          "errorKm": 258.8,
+          "country": "CA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 42.8864,
+          "lon": -79.2486,
+          "errorKm": 0,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "ch-schloss-der-grafen-von-greyerz",
+      "label": "Schloss der Grafen von Greyerz",
+      "split": "train",
+      "truth": {
+        "lat": 46.584658,
+        "lon": 7.08399,
+        "countries": [
+          "CH"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.15482,
+        "lon": 7.74031,
+        "errorKm": 399.9,
+        "country": "RO",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 50.15482,
+        "lon": 7.74031,
+        "errorKm": 399.9,
+        "country": "RO",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 45.5144,
+        "lon": 25.36966,
+        "errorKm": 1413,
+        "country": "CH",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.176
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 45.5144,
+          "lon": 25.36966,
+          "errorKm": 1413,
+          "country": "CH",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 45.5144,
+          "lon": 25.36966,
+          "errorKm": 1413,
+          "country": "CH",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 45.5144,
+        "lon": 25.36966,
+        "errorKm": 1413,
+        "country": "CH",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.175
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 45.5144,
+          "lon": 25.36966,
+          "errorKm": 1413,
+          "country": "CH",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 45.5144,
+          "lon": 25.36966,
+          "errorKm": 1413,
+          "country": "CH",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "cl-palacio-de-la-moneda",
+      "label": "Palacio de La Moneda",
+      "split": "test",
+      "truth": {
+        "lat": -33.443018,
+        "lon": -70.65387,
+        "countries": [
+          "CL"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 18584.1,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 18584.1,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "geoclip_fp32": {
+        "lat": -33.4429,
+        "lon": -70.65308,
+        "errorKm": 0.1,
+        "country": "CL",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.322
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": -33.4429,
+          "lon": -70.65308,
+          "errorKm": 0.1,
+          "country": "CL",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -33.4429,
+          "lon": -70.65308,
+          "errorKm": 0.1,
+          "country": "CL",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -33.4429,
+        "lon": -70.65308,
+        "errorKm": 0.1,
+        "country": "ES",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.206
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -33.4429,
+          "lon": -70.65308,
+          "errorKm": 0.1,
+          "country": "ES",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -33.4429,
+          "lon": -70.65308,
+          "errorKm": 0.1,
+          "country": "ES",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "cz-kolin-train-station",
+      "label": "Kolín train station",
+      "split": "train",
+      "truth": {
+        "lat": 50.025,
+        "lon": 15.213611,
+        "countries": [
+          "CZ"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 52.43206,
+        "lon": 13.31086,
+        "errorKm": 298.6,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 52.43206,
+        "lon": 13.31086,
+        "errorKm": 298.6,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 49.89561,
+        "lon": 16.41804,
+        "errorKm": 87.3,
+        "country": "PL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.027
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 52.43206,
+          "lon": 13.31086,
+          "errorKm": 298.6,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.43206,
+          "lon": 13.31086,
+          "errorKm": 298.6,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 49.89561,
+        "lon": 16.43356,
+        "errorKm": 88.4,
+        "country": "PL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.029
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 49.89561,
+          "lon": 16.43356,
+          "errorKm": 88.4,
+          "country": "PL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 49.89561,
+          "lon": 16.43356,
+          "errorKm": 88.4,
+          "country": "PL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-bahnhof-berlin-lichterfelde",
+      "label": "Bahnhof Berlin-Lichterfelde Ost",
+      "split": "test",
+      "truth": {
+        "lat": 52.43,
+        "lon": 13.3289,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 52.3715,
+        "lon": 13.6152,
+        "errorKm": 20.5,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 52.3715,
+        "lon": 13.6152,
+        "errorKm": 20.5,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 52.39107,
+        "lon": 13.51267,
+        "errorKm": 13.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.137
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 52.39107,
+          "lon": 13.51267,
+          "errorKm": 13.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 52.39107,
+          "lon": 13.51267,
+          "errorKm": 13.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 52.39107,
+        "lon": 13.51267,
+        "errorKm": 13.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.133
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 52.3715,
+          "lon": 13.6152,
+          "errorKm": 20.5,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.3715,
+          "lon": 13.6152,
+          "errorKm": 20.5,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-berliner-fernsehturm",
+      "label": "Berliner Fernsehturm",
+      "split": "train",
+      "truth": {
+        "lat": 52.520833,
+        "lon": 13.409444,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 52.51856,
+        "lon": 13.39204,
+        "errorKm": 1.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "existingOpen": {
+        "lat": 52.51708,
+        "lon": 13.39614,
+        "errorKm": 1,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 52.51876,
+        "lon": 13.40011,
+        "errorKm": 0.7,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.994
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 52.51876,
+          "lon": 13.40011,
+          "errorKm": 0.7,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 52.51876,
+          "lon": 13.40011,
+          "errorKm": 0.7,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 52.51876,
+        "lon": 13.40011,
+        "errorKm": 0.7,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.992
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 52.51856,
+          "lon": 13.39204,
+          "errorKm": 1.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.51708,
+          "lon": 13.39614,
+          "errorKm": 1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-bhf-eschborn",
+      "label": "Bhf. Eschborn",
+      "split": "test",
+      "truth": {
+        "lat": 50.14372,
+        "lon": 8.56074,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 53.70778,
+        "lon": 9.99222,
+        "errorKm": 408.3,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "existingOpen": {
+        "lat": 53.70778,
+        "lon": 9.99222,
+        "errorKm": 408.3,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 47.91333,
+        "lon": 12.06958,
+        "errorKm": 356.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.075
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 53.70778,
+          "lon": 9.99222,
+          "errorKm": 408.3,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 53.70778,
+          "lon": 9.99222,
+          "errorKm": 408.3,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 47.91361,
+        "lon": 12.06958,
+        "errorKm": 356.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.071
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 47.91361,
+          "lon": 12.06958,
+          "errorKm": 356.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 47.91361,
+          "lon": 12.06958,
+          "errorKm": 356.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-dorfkirche-rieben",
+      "label": "Dorfkirche Rieben",
+      "split": "train",
+      "truth": {
+        "lat": 52.190611,
+        "lon": 13.038917,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 52.52788,
+        "lon": 11.51937,
+        "errorKm": 109.8,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 52.52788,
+        "lon": 11.51937,
+        "errorKm": 109.8,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 46.30917,
+        "lon": 16.13358,
+        "errorKm": 691.3,
+        "country": "RO",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.022
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 52.52788,
+          "lon": 11.51937,
+          "errorKm": 109.8,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.52788,
+          "lon": 11.51937,
+          "errorKm": 109.8,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 46.97783,
+        "lon": 24.2736,
+        "errorKm": 994.2,
+        "country": "RO",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.031
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 46.97783,
+          "lon": 24.2736,
+          "errorKm": 994.2,
+          "country": "RO",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 46.97783,
+          "lon": 24.2736,
+          "errorKm": 994.2,
+          "country": "RO",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-elstertalbruecke",
+      "label": "Elstertalbrücke",
+      "split": "test",
+      "truth": {
+        "lat": 50.553163,
+        "lon": 12.167632,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.10716,
+        "lon": 8.69706,
+        "errorKm": 251.3,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 50.55316,
+        "lon": 12.16763,
+        "errorKm": 0,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 51.08571,
+        "lon": 7.40785,
+        "errorKm": 339.5,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.07
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.10716,
+          "lon": 8.69706,
+          "errorKm": 251.3,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.55316,
+          "lon": 12.16763,
+          "errorKm": 0,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 49.46455,
+        "lon": 7.96709,
+        "errorKm": 323.6,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.042
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 50.10716,
+          "lon": 8.69706,
+          "errorKm": 251.3,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.55316,
+          "lon": 12.16763,
+          "errorKm": 0,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-hof-hauptbahnhof",
+      "label": "Hof Hauptbahnhof",
+      "split": "train",
+      "truth": {
+        "lat": 50.308056,
+        "lon": 11.923333,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.31452,
+        "lon": 11.91124,
+        "errorKm": 1.1,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 50.31452,
+        "lon": 11.91124,
+        "errorKm": 1.1,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 50.7215,
+        "lon": 14.04036,
+        "errorKm": 156.6,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.049
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.31452,
+          "lon": 11.91124,
+          "errorKm": 1.1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.31452,
+          "lon": 11.91124,
+          "errorKm": 1.1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 50.72301,
+        "lon": 14.0507,
+        "errorKm": 157.3,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.045
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 50.31452,
+          "lon": 11.91124,
+          "errorKm": 1.1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.31452,
+          "lon": 11.91124,
+          "errorKm": 1.1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-kammergutweg",
+      "label": "Kammergutweg",
+      "split": "test",
+      "truth": {
+        "lat": 50.295828,
+        "lon": 11.900197,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.31281,
+        "lon": 11.91589,
+        "errorKm": 2.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 50.31222,
+        "lon": 11.91534,
+        "errorKm": 2.1,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 48.23421,
+        "lon": 9.57094,
+        "errorKm": 284.8,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.06
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.31281,
+          "lon": 11.91589,
+          "errorKm": 2.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.31222,
+          "lon": 11.91534,
+          "errorKm": 2.1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 47.4233,
+        "lon": 9.3776,
+        "errorKm": 368.8,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.05
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 50.31281,
+          "lon": 11.91589,
+          "errorKm": 2.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.31222,
+          "lon": 11.91534,
+          "errorKm": 2.1,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-kirche-hanshagen",
+      "label": "Kirche Hanshagen",
+      "split": "train",
+      "truth": {
+        "lat": 54.043,
+        "lon": 13.5385,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 52.52737,
+        "lon": 11.51706,
+        "errorKm": 215.5,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 52.52737,
+        "lon": 11.51706,
+        "errorKm": 215.5,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 53.89672,
+        "lon": 18.62904,
+        "errorKm": 333.3,
+        "country": "PL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.125
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 53.89672,
+          "lon": 18.62904,
+          "errorKm": 333.3,
+          "country": "PL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 53.89672,
+          "lon": 18.62904,
+          "errorKm": 333.3,
+          "country": "PL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 53.89672,
+        "lon": 18.62904,
+        "errorKm": 333.3,
+        "country": "PL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.134
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 52.52737,
+          "lon": 11.51706,
+          "errorKm": 215.5,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.52737,
+          "lon": 11.51706,
+          "errorKm": 215.5,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-kyffhaeuserdenkmal",
+      "label": "Kyffhäuserdenkmal",
+      "split": "test",
+      "truth": {
+        "lat": 51.413056,
+        "lon": 11.109722,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 40.66975,
+        "lon": 114.41588,
+        "errorKm": 7382.1,
+        "country": "UA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 40.66975,
+        "lon": 114.41588,
+        "errorKm": 7382.1,
+        "country": "UA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": -36.85971,
+        "lon": 143.28873,
+        "errorKm": 15957.6,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.019
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 40.66975,
+          "lon": 114.41588,
+          "errorKm": 7382.1,
+          "country": "UA",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 40.66975,
+          "lon": 114.41588,
+          "errorKm": 7382.1,
+          "country": "UA",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 56.55825,
+        "lon": -2.85594,
+        "errorKm": 1074.5,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.021
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 56.55825,
+          "lon": -2.85594,
+          "errorKm": 1074.5,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 56.55825,
+          "lon": -2.85594,
+          "errorKm": 1074.5,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-molenfeuer-warnemuende",
+      "label": "Molenfeuer Warnemünde",
+      "split": "train",
+      "truth": {
+        "lat": 54.187,
+        "lon": 12.089,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 40.04639,
+        "lon": -75.0575,
+        "errorKm": 6342.5,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "country"
+      },
+      "existingOpen": {
+        "lat": 40.04639,
+        "lon": -75.0575,
+        "errorKm": 6342.5,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "country"
+      },
+      "geoclip_fp32": {
+        "lat": 45.21573,
+        "lon": -65.94507,
+        "errorKm": 5406.5,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.02
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 40.04639,
+          "lon": -75.0575,
+          "errorKm": 6342.5,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 40.04639,
+          "lon": -75.0575,
+          "errorKm": 6342.5,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 39.48814,
+        "lon": 13.53241,
+        "errorKm": 1638,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.011
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 39.48814,
+          "lon": 13.53241,
+          "errorKm": 1638,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 39.48814,
+          "lon": 13.53241,
+          "errorKm": 1638,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-palmengartenwehr",
+      "label": "Palmengartenwehr",
+      "split": "test",
+      "truth": {
+        "lat": 51.33524,
+        "lon": 12.34956,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 6882,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 6882,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "geoclip_fp32": {
+        "lat": 60.63742,
+        "lon": 16.95401,
+        "errorKm": 1072.6,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.04
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 30.63433,
+          "lon": 94.51558,
+          "errorKm": 6882,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 30.63433,
+          "lon": 94.51558,
+          "errorKm": 6882,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 55.73487,
+        "lon": 9.12629,
+        "errorKm": 533.4,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.022
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 55.73487,
+          "lon": 9.12629,
+          "errorKm": 533.4,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 55.73487,
+          "lon": 9.12629,
+          "errorKm": 533.4,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-quellbrunnen",
+      "label": "Quellbrunnen",
+      "split": "train",
+      "truth": {
+        "lat": 52.678492,
+        "lon": 13.591476,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 51.2175,
+        "lon": 12.32417,
+        "errorKm": 184.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "country"
+      },
+      "existingOpen": {
+        "lat": 52.67849,
+        "lon": 13.59148,
+        "errorKm": 0,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 50.77695,
+        "lon": 11.01023,
+        "errorKm": 276.2,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.057
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 51.2175,
+          "lon": 12.32417,
+          "errorKm": 184.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.67849,
+          "lon": 13.59148,
+          "errorKm": 0,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 50.789,
+        "lon": 11.74274,
+        "errorKm": 245.6,
+        "country": "DE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.07
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 51.2175,
+          "lon": 12.32417,
+          "errorKm": 184.2,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 52.67849,
+          "lon": 13.59148,
+          "errorKm": 0,
+          "country": "DE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-rheinbruecke-leverkusen",
+      "label": "Rheinbrücke Leverkusen",
+      "split": "test",
+      "truth": {
+        "lat": 51.034389,
+        "lon": 6.961306,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.10734,
+        "lon": 8.69431,
+        "errorKm": 160,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 50.10734,
+        "lon": 8.69431,
+        "errorKm": 160,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 54.29361,
+        "lon": 9.68261,
+        "errorKm": 406.2,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.099
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.10734,
+          "lon": 8.69431,
+          "errorKm": 160,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.10734,
+          "lon": 8.69431,
+          "errorKm": 160,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 40.65232,
+        "lon": -74.15688,
+        "errorKm": 6064.1,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.172
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 50.10734,
+          "lon": 8.69431,
+          "errorKm": 160,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 50.10734,
+          "lon": 8.69431,
+          "errorKm": 160,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-spitterfall",
+      "label": "Spitterfall",
+      "split": "train",
+      "truth": {
+        "lat": 50.788256,
+        "lon": 10.543102,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 48.27154,
+        "lon": 25.01912,
+        "errorKm": 1079.6,
+        "country": "UA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 48.27154,
+        "lon": 25.01915,
+        "errorKm": 1079.6,
+        "country": "UA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 35.89476,
+        "lon": 139.09943,
+        "errorKm": 9144.4,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.04
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 48.27154,
+          "lon": 25.01912,
+          "errorKm": 1079.6,
+          "country": "UA",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 48.27154,
+          "lon": 25.01915,
+          "errorKm": 1079.6,
+          "country": "UA",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 36.56025,
+        "lon": 139.17621,
+        "errorKm": 9083.7,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.043
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 36.56025,
+          "lon": 139.17621,
+          "errorKm": 9083.7,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 36.56025,
+          "lon": 139.17621,
+          "errorKm": 9083.7,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "de-st-lambertus",
+      "label": "St. Lambertus",
+      "split": "test",
+      "truth": {
+        "lat": 51.051111,
+        "lon": 6.437222,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 51.51287,
+        "lon": -0.12208,
+        "errorKm": 458.9,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 51.51287,
+        "lon": -0.12208,
+        "errorKm": 458.9,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 53.54184,
+        "lon": -2.10731,
+        "errorKm": 643.1,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.075
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 51.51287,
+          "lon": -0.12208,
+          "errorKm": 458.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 51.51287,
+          "lon": -0.12208,
+          "errorKm": 458.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 53.54184,
+        "lon": -2.10731,
+        "errorKm": 643.1,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.07
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 51.51287,
+          "lon": -0.12208,
+          "errorKm": 458.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 51.51287,
+          "lon": -0.12208,
+          "errorKm": 458.9,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "de-zoobruecke",
+      "label": "Zoobrücke",
+      "split": "train",
+      "truth": {
+        "lat": 50.954556,
+        "lon": 6.975389,
+        "countries": [
+          "DE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 30.5522,
+        "lon": 114.28279,
+        "errorKm": 8506.7,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 30.5522,
+        "lon": 114.28279,
+        "errorKm": 8506.7,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 50.70774,
+        "lon": 7.16738,
+        "errorKm": 30.6,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.176
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.70774,
+          "lon": 7.16738,
+          "errorKm": 30.6,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 50.70774,
+          "lon": 7.16738,
+          "errorKm": 30.6,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 50.71774,
+        "lon": 7.16738,
+        "errorKm": 29.6,
+        "country": "HU",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.26
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 50.71774,
+          "lon": 7.16738,
+          "errorKm": 29.6,
+          "country": "HU",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 50.71774,
+          "lon": 7.16738,
+          "errorKm": 29.6,
+          "country": "HU",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "dz-el-mechouar-mosque",
+      "label": "El Mechouar Mosque",
+      "split": "test",
+      "truth": {
+        "lat": 34.880556,
+        "lon": -1.30946,
+        "countries": [
+          "DZ"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 31.62105,
+        "lon": -7.99218,
+        "errorKm": 719.1,
+        "country": "MA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 34.87992,
+        "lon": -1.30493,
+        "errorKm": 0.4,
+        "country": "MA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 31.52684,
+        "lon": -7.97533,
+        "errorKm": 723.4,
+        "country": "MA",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.823
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 31.52684,
+          "lon": -7.97533,
+          "errorKm": 723.4,
+          "country": "MA",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 31.52684,
+          "lon": -7.97533,
+          "errorKm": 723.4,
+          "country": "MA",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 31.62684,
+        "lon": -7.98706,
+        "errorKm": 718.4,
+        "country": "MA",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.825
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 31.62105,
+          "lon": -7.99218,
+          "errorKm": 719.1,
+          "country": "MA",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 31.62684,
+          "lon": -7.98706,
+          "errorKm": 718.4,
+          "country": "MA",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ee-tartu-railway-station",
+      "label": "Tartu railway station",
+      "split": "train",
+      "truth": {
+        "lat": 58.373822,
+        "lon": 26.706836,
+        "countries": [
+          "EE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 59.93644,
+        "lon": 30.28673,
+        "errorKm": 268,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "country"
+      },
+      "existingOpen": {
+        "lat": 59.93644,
+        "lon": 30.28673,
+        "errorKm": 268,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "country"
+      },
+      "geoclip_fp32": {
+        "lat": 40.33784,
+        "lon": -8.43149,
+        "errorKm": 3179.6,
+        "country": "CL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.076
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 59.93644,
+          "lon": 30.28673,
+          "errorKm": 268,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 59.93644,
+          "lon": 30.28673,
+          "errorKm": 268,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -34.16622,
+        "lon": -70.74577,
+        "errorKm": 13600,
+        "country": "CL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.103
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -34.16622,
+          "lon": -70.74577,
+          "errorKm": 13600,
+          "country": "CL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -34.16622,
+          "lon": -70.74577,
+          "errorKm": 13600,
+          "country": "CL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "eg-al-fattah-al-alim-mosque",
+      "label": "Al-Fattah al-Alim mosque",
+      "split": "test",
+      "truth": {
+        "lat": 30.019645,
+        "lon": 31.602305,
+        "countries": [
+          "EG"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 24.46363,
+        "lon": 39.60456,
+        "errorKm": 1003.2,
+        "country": "SA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 24.46363,
+        "lon": 39.60456,
+        "errorKm": 1003.2,
+        "country": "SA",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 24.38415,
+        "lon": 39.44697,
+        "errorKm": 996.7,
+        "country": "AE",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.231
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 24.38415,
+          "lon": 39.44697,
+          "errorKm": 996.7,
+          "country": "AE",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 24.38415,
+          "lon": 39.44697,
+          "errorKm": 996.7,
+          "country": "AE",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 24.44415,
+        "lon": 39.64478,
+        "errorKm": 1007.7,
+        "country": "AE",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.241
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 24.46363,
+          "lon": 39.60456,
+          "errorKm": 1003.2,
+          "country": "SA",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 24.46363,
+          "lon": 39.60456,
+          "errorKm": 1003.2,
+          "country": "SA",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "fr-arc-de-triomphe",
+      "label": "Arc de Triomphe",
+      "split": "train",
+      "truth": {
+        "lat": 48.87378,
+        "lon": 2.29504,
+        "countries": [
+          "FR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 48.86449,
+        "lon": 2.32503,
+        "errorKm": 2.4,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "existingOpen": {
+        "lat": 48.86694,
+        "lon": 2.31698,
+        "errorKm": 1.8,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 48.874,
+        "lon": 2.29582,
+        "errorKm": 0.1,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.996
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 48.874,
+          "lon": 2.29582,
+          "errorKm": 0.1,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 48.874,
+          "lon": 2.29582,
+          "errorKm": 0.1,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 48.87428,
+        "lon": 2.29507,
+        "errorKm": 0.1,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.994
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 48.86449,
+          "lon": 2.32503,
+          "errorKm": 2.4,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 48.86694,
+          "lon": 2.31698,
+          "errorKm": 1.8,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "fr-eiffel-tower",
+      "label": "Eiffel Tower",
+      "split": "test",
+      "truth": {
+        "lat": 48.858296,
+        "lon": 2.294479,
+        "countries": [
+          "FR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 48.86431,
+        "lon": 2.30984,
+        "errorKm": 1.3,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "country"
+      },
+      "existingOpen": {
+        "lat": 48.86042,
+        "lon": 2.31939,
+        "errorKm": 1.8,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 48.85924,
+        "lon": 2.29322,
+        "errorKm": 0.1,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.999
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 48.85924,
+          "lon": 2.29322,
+          "errorKm": 0.1,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 48.85924,
+          "lon": 2.29322,
+          "errorKm": 0.1,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 48.85868,
+        "lon": 2.29402,
+        "errorKm": 0.1,
+        "country": "FR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.998
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 48.86431,
+          "lon": 2.30984,
+          "errorKm": 1.3,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 48.86042,
+          "lon": 2.31939,
+          "errorKm": 1.8,
+          "country": "FR",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "fr-new-gatteville-lighthouse",
+      "label": "new Gatteville Lighthouse",
+      "split": "train",
+      "truth": {
+        "lat": 49.696422,
+        "lon": -1.265914,
+        "countries": [
+          "FR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.24249,
+        "lon": -5.40022,
+        "errorKm": 301.8,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 48.63889,
+        "lon": -4.56694,
+        "errorKm": 267.2,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": -52.80276,
+        "lon": -59.85352,
+        "errorKm": 12654.8,
+        "country": "ES",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.1
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.24249,
+          "lon": -5.40022,
+          "errorKm": 301.8,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 48.63889,
+          "lon": -4.56694,
+          "errorKm": 267.2,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 43.38618,
+        "lon": -8.40614,
+        "errorKm": 888.3,
+        "country": "ES",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.32
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 43.38618,
+          "lon": -8.40614,
+          "errorKm": 888.3,
+          "country": "ES",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 48.63889,
+          "lon": -4.56694,
+          "errorKm": 267.2,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "gb-glenfinnan-viaduct",
+      "label": "Glenfinnan Viaduct",
+      "split": "test",
+      "truth": {
+        "lat": 56.876303,
+        "lon": -5.431656,
+        "countries": [
+          "GB"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 53.12393,
+        "lon": -3.86487,
+        "errorKm": 429,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "country"
+      },
+      "existingOpen": {
+        "lat": 56.8763,
+        "lon": -5.43166,
+        "errorKm": 0,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 56.89131,
+        "lon": -5.40361,
+        "errorKm": 2.4,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.431
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 56.89131,
+          "lon": -5.40361,
+          "errorKm": 2.4,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 56.89131,
+          "lon": -5.40361,
+          "errorKm": 2.4,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 56.88131,
+        "lon": -5.40361,
+        "errorKm": 1.8,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.492
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 53.12393,
+          "lon": -3.86487,
+          "errorKm": 429,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 56.8763,
+          "lon": -5.43166,
+          "errorKm": 0,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "gb-grytviken",
+      "label": "Grytviken",
+      "split": "train",
+      "truth": {
+        "lat": -54.281472,
+        "lon": -36.508028,
+        "countries": [
+          "GS",
+          "GB"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 60.15028,
+        "lon": -44.285,
+        "errorKm": 12743,
+        "country": "GS",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": -54.28088,
+        "lon": -36.50782,
+        "errorKm": 0.1,
+        "country": "GS",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 65.4425,
+        "lon": -13.9535,
+        "errorKm": 13449.7,
+        "country": "IS",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.099
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 60.15028,
+          "lon": -44.285,
+          "errorKm": 12743,
+          "country": "GS",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": -54.28088,
+          "lon": -36.50782,
+          "errorKm": 0.1,
+          "country": "GS",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 65.41251,
+        "lon": -13.9535,
+        "errorKm": 13446.5,
+        "country": "IS",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.106
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 65.41251,
+          "lon": -13.9535,
+          "errorKm": 13446.5,
+          "country": "IS",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 65.41251,
+          "lon": -13.9535,
+          "errorKm": 13446.5,
+          "country": "IS",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "gb-rhuddlan-castle",
+      "label": "Rhuddlan Castle",
+      "split": "test",
+      "truth": {
+        "lat": 53.2892,
+        "lon": -3.46425,
+        "countries": [
+          "GB"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 53.0312,
+        "lon": -3.26413,
+        "errorKm": 31.6,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 53.28559,
+        "lon": -3.47017,
+        "errorKm": 0.6,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 51.80949,
+        "lon": -2.83745,
+        "errorKm": 169.9,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.149
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 51.80949,
+          "lon": -2.83745,
+          "errorKm": 169.9,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.80949,
+          "lon": -2.83745,
+          "errorKm": 169.9,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 55.34398,
+        "lon": -1.47225,
+        "errorKm": 262.5,
+        "country": "GB",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.147
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 53.0312,
+          "lon": -3.26413,
+          "errorKm": 31.6,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 53.28559,
+          "lon": -3.47017,
+          "errorKm": 0.6,
+          "country": "GB",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "id-borobudur-temple",
+      "label": "Borobudur Temple",
+      "split": "train",
+      "truth": {
+        "lat": -7.60793,
+        "lon": 110.20384,
+        "countries": [
+          "ID"
+        ]
+      },
+      "existingUnknown": {
+        "lat": -7.60608,
+        "lon": 110.21869,
+        "errorKm": 1.6,
+        "country": "ID",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": -7.60664,
+        "lon": 110.21422,
+        "errorKm": 1.2,
+        "country": "ID",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": -7.609,
+        "lon": 110.20924,
+        "errorKm": 0.6,
+        "country": "ID",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.34
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": -7.609,
+          "lon": 110.20924,
+          "errorKm": 0.6,
+          "country": "ID",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -7.609,
+          "lon": 110.20924,
+          "errorKm": 0.6,
+          "country": "ID",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -7.609,
+        "lon": 110.20924,
+        "errorKm": 0.6,
+        "country": "ID",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.468
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -7.60608,
+          "lon": 110.21869,
+          "errorKm": 1.6,
+          "country": "ID",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": -7.60664,
+          "lon": 110.21422,
+          "errorKm": 1.2,
+          "country": "ID",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "id-lovina-beach",
+      "label": "Lovina Beach",
+      "split": "test",
+      "truth": {
+        "lat": -8.162503,
+        "lon": 115.025661,
+        "countries": [
+          "ID"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 33.67405,
+        "lon": -92.37965,
+        "errorKm": 16023.3,
+        "country": "NI",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": 33.67405,
+        "lon": -92.37965,
+        "errorKm": 16023.3,
+        "country": "NI",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "geoclip_fp32": {
+        "lat": -8.19313,
+        "lon": 114.84148,
+        "errorKm": 20.6,
+        "country": "ID",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.087
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 33.67405,
+          "lon": -92.37965,
+          "errorKm": 16023.3,
+          "country": "NI",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 33.67405,
+          "lon": -92.37965,
+          "errorKm": 16023.3,
+          "country": "NI",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -8.19313,
+        "lon": 114.84148,
+        "errorKm": 20.6,
+        "country": "ID",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.062
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -8.19313,
+          "lon": 114.84148,
+          "errorKm": 20.6,
+          "country": "ID",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -8.19313,
+          "lon": 114.84148,
+          "errorKm": 20.6,
+          "country": "ID",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ie-charles-fort",
+      "label": "Charles Fort",
+      "split": "train",
+      "truth": {
+        "lat": 51.6965,
+        "lon": -8.499,
+        "countries": [
+          "IE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 53.01974,
+        "lon": -3.28015,
+        "errorKm": 383.6,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 53.01974,
+        "lon": -3.28015,
+        "errorKm": 383.6,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 54.02417,
+        "lon": -5.02752,
+        "errorKm": 348.2,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.088
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 53.01974,
+          "lon": -3.28015,
+          "errorKm": 383.6,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 53.01974,
+          "lon": -3.28015,
+          "errorKm": 383.6,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 54.02718,
+        "lon": -5.02915,
+        "errorKm": 348.4,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.162
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 53.01974,
+          "lon": -3.28015,
+          "errorKm": 383.6,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 53.01974,
+          "lon": -3.28015,
+          "errorKm": 383.6,
+          "country": "GB",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "ie-church-of-st-anne",
+      "label": "Church of St Anne",
+      "split": "test",
+      "truth": {
+        "lat": 51.903333,
+        "lon": -8.476111,
+        "countries": [
+          "IE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.0825,
+        "lon": 8.24,
+        "errorKm": 1184.6,
+        "country": "DE",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 50.0825,
+        "lon": 8.24,
+        "errorKm": 1184.6,
+        "country": "DE",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 51.84919,
+        "lon": -8.30051,
+        "errorKm": 13.5,
+        "country": "IE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.563
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 51.84919,
+          "lon": -8.30051,
+          "errorKm": 13.5,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.84919,
+          "lon": -8.30051,
+          "errorKm": 13.5,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 51.84919,
+        "lon": -8.30051,
+        "errorKm": 13.5,
+        "country": "IE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.531
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 51.84919,
+          "lon": -8.30051,
+          "errorKm": 13.5,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.84919,
+          "lon": -8.30051,
+          "errorKm": 13.5,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ie-the-elysian",
+      "label": "The Elysian",
+      "split": "train",
+      "truth": {
+        "lat": 51.8967,
+        "lon": -8.46337,
+        "countries": [
+          "IE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.11116,
+        "lon": 8.66952,
+        "errorKm": 1212.2,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 50.11116,
+        "lon": 8.66952,
+        "errorKm": 1212.2,
+        "country": "GB",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 51.89842,
+        "lon": -8.46874,
+        "errorKm": 0.4,
+        "country": "IE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.327
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 51.89842,
+          "lon": -8.46874,
+          "errorKm": 0.4,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.89842,
+          "lon": -8.46874,
+          "errorKm": 0.4,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 51.89842,
+        "lon": -8.46874,
+        "errorKm": 0.4,
+        "country": "IE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.346
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 51.89842,
+          "lon": -8.46874,
+          "errorKm": 0.4,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.89842,
+          "lon": -8.46874,
+          "errorKm": 0.4,
+          "country": "IE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "it-alghero-railway-station",
+      "label": "Alghero railway station",
+      "split": "test",
+      "truth": {
+        "lat": 40.575,
+        "lon": 8.32222,
+        "countries": [
+          "IT"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 40.65511,
+        "lon": -4.69697,
+        "errorKm": 1098,
+        "country": "ES",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 40.65511,
+        "lon": -4.69697,
+        "errorKm": 1098,
+        "country": "ES",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 43.81926,
+        "lon": 13.7915,
+        "errorKm": 576.9,
+        "country": "IT",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.14
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 43.81926,
+          "lon": 13.7915,
+          "errorKm": 576.9,
+          "country": "IT",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 43.81926,
+          "lon": 13.7915,
+          "errorKm": 576.9,
+          "country": "IT",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 43.81926,
+        "lon": 13.7915,
+        "errorKm": 576.9,
+        "country": "IT",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.111
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 43.81926,
+          "lon": 13.7915,
+          "errorKm": 576.9,
+          "country": "IT",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 43.81926,
+          "lon": 13.7915,
+          "errorKm": 576.9,
+          "country": "IT",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "jp-tokyo-station",
+      "label": "Tokyo Station",
+      "split": "train",
+      "truth": {
+        "lat": 35.680833,
+        "lon": 139.766944,
+        "countries": [
+          "JP"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 52.51644,
+        "lon": 13.40195,
+        "errorKm": 8920.8,
+        "country": "DE",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 52.51644,
+        "lon": 13.40195,
+        "errorKm": 8920.8,
+        "country": "DE",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 35.44971,
+        "lon": 139.64342,
+        "errorKm": 28,
+        "country": "JP",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.18
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 35.44971,
+          "lon": 139.64342,
+          "errorKm": 28,
+          "country": "JP",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 35.44971,
+          "lon": 139.64342,
+          "errorKm": 28,
+          "country": "JP",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 33.08622,
+        "lon": 129.78728,
+        "errorKm": 959.6,
+        "country": "JP",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.154
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 33.08622,
+          "lon": 129.78728,
+          "errorKm": 959.6,
+          "country": "JP",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 33.08622,
+          "lon": 129.78728,
+          "errorKm": 959.6,
+          "country": "JP",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "kr-busan-harbor-bridge",
+      "label": "Busan Harbor Bridge",
+      "split": "test",
+      "truth": {
+        "lat": 35.105556,
+        "lon": 129.065,
+        "countries": [
+          "KR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 34.90583,
+        "lon": 127.70528,
+        "errorKm": 125.8,
+        "country": "KR",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 35.10556,
+        "lon": 129.065,
+        "errorKm": 0,
+        "country": "KR",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 33.94852,
+        "lon": 130.96416,
+        "errorKm": 216.4,
+        "country": "KR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.16
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 33.94852,
+          "lon": 130.96416,
+          "errorKm": 216.4,
+          "country": "KR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 33.94852,
+          "lon": 130.96416,
+          "errorKm": 216.4,
+          "country": "KR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 33.94852,
+        "lon": 130.96416,
+        "errorKm": 216.4,
+        "country": "ES",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.116
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 34.90583,
+          "lon": 127.70528,
+          "errorKm": 125.8,
+          "country": "KR",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 35.10556,
+          "lon": 129.065,
+          "errorKm": 0,
+          "country": "KR",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "mn-ulaanbaatar-railway-station",
+      "label": "Ulaanbaatar railway station",
+      "split": "train",
+      "truth": {
+        "lat": 47.9083,
+        "lon": 106.884,
+        "countries": [
+          "MN"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 49.99931,
+        "lon": 8.26636,
+        "errorKm": 6643,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 49.99931,
+        "lon": 8.26636,
+        "errorKm": 6643,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 51.54674,
+        "lon": 107.45261,
+        "errorKm": 406.6,
+        "country": "MN",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.236
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 51.54674,
+          "lon": 107.45261,
+          "errorKm": 406.6,
+          "country": "MN",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.54674,
+          "lon": 107.45261,
+          "errorKm": 406.6,
+          "country": "MN",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 51.81674,
+        "lon": 107.59798,
+        "errorKm": 437.6,
+        "country": "MN",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.245
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 51.81674,
+          "lon": 107.59798,
+          "errorKm": 437.6,
+          "country": "MN",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 51.81674,
+          "lon": 107.59798,
+          "errorKm": 437.6,
+          "country": "MN",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "mx-chapultepec-castle",
+      "label": "Chapultepec Castle",
+      "split": "test",
+      "truth": {
+        "lat": 19.420556,
+        "lon": -99.181667,
+        "countries": [
+          "MX"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 14259.8,
+        "country": "IN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": 19.42056,
+        "lon": -99.18167,
+        "errorKm": 0,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 19.42171,
+        "lon": -99.18438,
+        "errorKm": 0.3,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.72
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 19.42171,
+          "lon": -99.18438,
+          "errorKm": 0.3,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 19.42171,
+          "lon": -99.18438,
+          "errorKm": 0.3,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 19.42171,
+        "lon": -99.18438,
+        "errorKm": 0.3,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.717
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 19.42171,
+          "lon": -99.18438,
+          "errorKm": 0.3,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 19.42056,
+          "lon": -99.18167,
+          "errorKm": 0,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "mx-mexico-city-metropolitan",
+      "label": "Mexico City Metropolitan Cathedral",
+      "split": "train",
+      "truth": {
+        "lat": 19.434167,
+        "lon": -99.133056,
+        "countries": [
+          "MX"
+        ]
+      },
+      "existingUnknown": {
+        "lat": -13.51658,
+        "lon": -71.97832,
+        "errorKm": 4718.3,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 19.43417,
+        "lon": -99.13306,
+        "errorKm": 0,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 19.00342,
+        "lon": -98.09355,
+        "errorKm": 119.2,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.195
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 19.00342,
+          "lon": -98.09355,
+          "errorKm": 119.2,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 19.00342,
+          "lon": -98.09355,
+          "errorKm": 119.2,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 19.00342,
+        "lon": -98.09355,
+        "errorKm": 119.2,
+        "country": "MX",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.213
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 19.00342,
+          "lon": -98.09355,
+          "errorKm": 119.2,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 19.43417,
+          "lon": -99.13306,
+          "errorKm": 0,
+          "country": "MX",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "no-fj-l-y-lighthouse",
+      "label": "Fjøløy Lighthouse",
+      "split": "test",
+      "truth": {
+        "lat": 59.088889,
+        "lon": 5.568889,
+        "countries": [
+          "NO"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 36.5322,
+        "lon": -121.9269,
+        "errorKm": 8335.4,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 36.5322,
+        "lon": -121.9269,
+        "errorKm": 8335.4,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 59.05545,
+        "lon": 10.41259,
+        "errorKm": 276.8,
+        "country": "NO",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.093
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 36.5322,
+          "lon": -121.9269,
+          "errorKm": 8335.4,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 36.5322,
+          "lon": -121.9269,
+          "errorKm": 8335.4,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 59.05545,
+        "lon": 10.41259,
+        "errorKm": 276.8,
+        "country": "NO",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.064
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 59.05545,
+          "lon": 10.41259,
+          "errorKm": 276.8,
+          "country": "NO",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 59.05545,
+          "lon": 10.41259,
+          "errorKm": 276.8,
+          "country": "NO",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "pe-cusco-cathedral",
+      "label": "Cusco Cathedral",
+      "split": "train",
+      "truth": {
+        "lat": -13.5163,
+        "lon": -71.9781,
+        "countries": [
+          "PE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": -15.02226,
+        "lon": -58.41601,
+        "errorKm": 1470.8,
+        "country": "PE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": -13.51662,
+        "lon": -71.97835,
+        "errorKm": 0,
+        "country": "PE",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "country"
+      },
+      "geoclip_fp32": {
+        "lat": -13.51668,
+        "lon": -71.97878,
+        "errorKm": 0.1,
+        "country": "PE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.392
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": -13.51668,
+          "lon": -71.97878,
+          "errorKm": 0.1,
+          "country": "PE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -13.51668,
+          "lon": -71.97878,
+          "errorKm": 0.1,
+          "country": "PE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -13.51668,
+        "lon": -71.97878,
+        "errorKm": 0.1,
+        "country": "PE",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.325
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -13.51668,
+          "lon": -71.97878,
+          "errorKm": 0.1,
+          "country": "PE",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -13.51662,
+          "lon": -71.97835,
+          "errorKm": 0,
+          "country": "PE",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "ru-cathedral-of-christ-the",
+      "label": "Cathedral of Christ the Saviour",
+      "split": "test",
+      "truth": {
+        "lat": 55.744444,
+        "lon": 37.605556,
+        "countries": [
+          "RU"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 59.94312,
+        "lon": 30.33536,
+        "errorKm": 634.2,
+        "country": "RU",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 55.75288,
+        "lon": 37.61397,
+        "errorKm": 1.1,
+        "country": "RU",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 55.75344,
+        "lon": 37.62156,
+        "errorKm": 1.4,
+        "country": "RU",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.54
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 55.75344,
+          "lon": 37.62156,
+          "errorKm": 1.4,
+          "country": "RU",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 55.75344,
+          "lon": 37.62156,
+          "errorKm": 1.4,
+          "country": "RU",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 55.75344,
+        "lon": 37.62156,
+        "errorKm": 1.4,
+        "country": "RU",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.533
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 59.94312,
+          "lon": 30.33536,
+          "errorKm": 634.2,
+          "country": "RU",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 55.75288,
+          "lon": 37.61397,
+          "errorKm": 1.1,
+          "country": "RU",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "ru-crimean-bridge",
+      "label": "Crimean Bridge",
+      "split": "train",
+      "truth": {
+        "lat": 45.3086,
+        "lon": 36.5061,
+        "countries": [
+          "RU"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 23.54194,
+        "lon": 110.34694,
+        "errorKm": 6937.9,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 45.3086,
+        "lon": 36.5061,
+        "errorKm": 0,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 44.60353,
+        "lon": 38.01272,
+        "errorKm": 142.1,
+        "country": "JP",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.069
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 23.54194,
+          "lon": 110.34694,
+          "errorKm": 6937.9,
+          "country": "CN",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 45.3086,
+          "lon": 36.5061,
+          "errorKm": 0,
+          "country": "CN",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 44.57353,
+        "lon": 38.02677,
+        "errorKm": 144.9,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.087
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 44.57353,
+          "lon": 38.02677,
+          "errorKm": 144.9,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 44.57353,
+          "lon": 38.02677,
+          "errorKm": 144.9,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ru-russky-bridge",
+      "label": "Russky Bridge",
+      "split": "test",
+      "truth": {
+        "lat": 43.063611,
+        "lon": 131.908056,
+        "countries": [
+          "RU"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 39.21673,
+        "lon": -76.52865,
+        "errorKm": 10428.5,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 39.21673,
+        "lon": -76.52865,
+        "errorKm": 10428.5,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 58.32513,
+        "lon": 11.84515,
+        "errorKm": 7462.6,
+        "country": "NO",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.101
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 58.32513,
+          "lon": 11.84515,
+          "errorKm": 7462.6,
+          "country": "NO",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 58.32513,
+          "lon": 11.84515,
+          "errorKm": 7462.6,
+          "country": "NO",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 44.67075,
+        "lon": 37.86734,
+        "errorKm": 7080.6,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.08
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 44.67075,
+          "lon": 37.86734,
+          "errorKm": 7080.6,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 44.67075,
+          "lon": 37.86734,
+          "errorKm": 7080.6,
+          "country": "US",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "tr-1915-canakkale-bridge",
+      "label": "1915 Çanakkale Bridge",
+      "split": "train",
+      "truth": {
+        "lat": 40.339889,
+        "lon": 26.636694,
+        "countries": [
+          "TR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 25.69583,
+        "lon": 119.62778,
+        "errorKm": 8431.7,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "existingOpen": {
+        "lat": 25.69583,
+        "lon": 119.62778,
+        "errorKm": 8431.7,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 22.44817,
+        "lon": 113.54818,
+        "errorKm": 8165.4,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.132
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 22.44817,
+          "lon": 113.54818,
+          "errorKm": 8165.4,
+          "country": "CN",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 22.44817,
+          "lon": 113.54818,
+          "errorKm": 8165.4,
+          "country": "CN",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 60.11417,
+        "lon": 31.08333,
+        "errorKm": 2220.2,
+        "country": "TR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.121
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 60.11417,
+          "lon": 31.08333,
+          "errorKm": 2220.2,
+          "country": "TR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 60.11417,
+          "lon": 31.08333,
+          "errorKm": 2220.2,
+          "country": "TR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "tr-istiklal-avenue",
+      "label": "İstiklal Avenue",
+      "split": "test",
+      "truth": {
+        "lat": 41.034167,
+        "lon": 28.978889,
+        "countries": [
+          "TR"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 40.74062,
+        "lon": -73.98915,
+        "errorKm": 8065,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 40.74062,
+        "lon": -73.98915,
+        "errorKm": 8065,
+        "country": "US",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 41.04085,
+        "lon": 28.98618,
+        "errorKm": 1,
+        "country": "TR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.677
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 41.04085,
+          "lon": 28.98618,
+          "errorKm": 1,
+          "country": "TR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 41.04085,
+          "lon": 28.98618,
+          "errorKm": 1,
+          "country": "TR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 41.04085,
+        "lon": 28.98618,
+        "errorKm": 1,
+        "country": "TR",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.711
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 41.04085,
+          "lon": 28.98618,
+          "errorKm": 1,
+          "country": "TR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 41.04085,
+          "lon": 28.98618,
+          "errorKm": 1,
+          "country": "TR",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ua-buhaz",
+      "label": "Buhaz",
+      "split": "train",
+      "truth": {
+        "lat": 46.064333,
+        "lon": 30.449333,
+        "countries": [
+          "UA"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 38.60994,
+        "lon": 112.74065,
+        "errorKm": 6508,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 38.60994,
+        "lon": 112.74065,
+        "errorKm": 6508,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 52.32586,
+        "lon": 16.55253,
+        "errorKm": 1223.3,
+        "country": "PL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.047
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 38.60994,
+          "lon": 112.74065,
+          "errorKm": 6508,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 38.60994,
+          "lon": 112.74065,
+          "errorKm": 6508,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 55.45226,
+        "lon": 37.56766,
+        "errorKm": 1156.3,
+        "country": "PL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.065
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 55.45226,
+          "lon": 37.56766,
+          "errorKm": 1156.3,
+          "country": "PL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 55.45226,
+          "lon": 37.56766,
+          "errorKm": 1156.3,
+          "country": "PL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "ua-kyiv-pechersk-lavra",
+      "label": "Kyiv Pechersk Lavra",
+      "split": "test",
+      "truth": {
+        "lat": 50.434148,
+        "lon": 30.558323,
+        "countries": [
+          "UA"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 55.74507,
+        "lon": 37.60183,
+        "errorKm": 754.2,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 55.74507,
+        "lon": 37.60183,
+        "errorKm": 754.2,
+        "country": "RU",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 50.45875,
+        "lon": 30.52526,
+        "errorKm": 3.6,
+        "country": "UA",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.586
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 50.45875,
+          "lon": 30.52526,
+          "errorKm": 3.6,
+          "country": "UA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 50.45875,
+          "lon": 30.52526,
+          "errorKm": 3.6,
+          "country": "UA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 50.45561,
+        "lon": 30.52272,
+        "errorKm": 3.5,
+        "country": "UA",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.602
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 55.74507,
+          "lon": 37.60183,
+          "errorKm": 754.2,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 55.74507,
+          "lon": 37.60183,
+          "errorKm": 754.2,
+          "country": "RU",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "us-corona-del-mar-state-beach",
+      "label": "Corona del Mar State Beach",
+      "split": "train",
+      "truth": {
+        "lat": 33.5936,
+        "lon": -117.875,
+        "countries": [
+          "US"
+        ]
+      },
+      "existingUnknown": {
+        "lat": -38.65032,
+        "lon": 143.07158,
+        "errorKm": 12966.6,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": -38.65032,
+        "lon": 143.07158,
+        "errorKm": 12966.6,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": -33.44965,
+        "lon": 151.45154,
+        "errorKm": 12036.8,
+        "country": "AU",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.122
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": -33.44965,
+          "lon": 151.45154,
+          "errorKm": 12036.8,
+          "country": "AU",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -33.44965,
+          "lon": 151.45154,
+          "errorKm": 12036.8,
+          "country": "AU",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -33.44965,
+        "lon": 151.45154,
+        "errorKm": 12036.8,
+        "country": "AU",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.098
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -38.65032,
+          "lon": 143.07158,
+          "errorKm": 12966.6,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": -38.65032,
+          "lon": 143.07158,
+          "errorKm": 12966.6,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "us-francis-scott-key-bridge",
+      "label": "Francis Scott Key Bridge",
+      "split": "test",
+      "truth": {
+        "lat": 39.216944,
+        "lon": -76.528333,
+        "countries": [
+          "US"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 25.69583,
+        "lon": 119.62778,
+        "errorKm": 12604.5,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "existingOpen": {
+        "lat": 25.69583,
+        "lon": 119.62778,
+        "errorKm": 12604.5,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 35.16111,
+        "lon": -90.05289,
+        "errorKm": 1278.5,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.089
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 25.69583,
+          "lon": 119.62778,
+          "errorKm": 12604.5,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 25.69583,
+          "lon": 119.62778,
+          "errorKm": 12604.5,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 35.16111,
+        "lon": -90.05289,
+        "errorKm": 1278.5,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.15
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 35.16111,
+          "lon": -90.05289,
+          "errorKm": 1278.5,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 35.16111,
+          "lon": -90.05289,
+          "errorKm": 1278.5,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "us-oriole-park-at-camden-yards",
+      "label": "Oriole Park at Camden Yards",
+      "split": "train",
+      "truth": {
+        "lat": 39.283889,
+        "lon": -76.621667,
+        "countries": [
+          "US"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 40.81361,
+        "lon": -74.07444,
+        "errorKm": 275.6,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 39.28389,
+        "lon": -76.62167,
+        "errorKm": 0,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "existing",
+        "tier": "strong"
+      },
+      "geoclip_fp32": {
+        "lat": 39.28363,
+        "lon": -76.62224,
+        "errorKm": 0.1,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.75
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 39.28363,
+          "lon": -76.62224,
+          "errorKm": 0.1,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 39.28363,
+          "lon": -76.62224,
+          "errorKm": 0.1,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 39.28363,
+        "lon": -76.62224,
+        "errorKm": 0.1,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.695
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 39.28363,
+          "lon": -76.62224,
+          "errorKm": 0.1,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 39.28389,
+          "lon": -76.62167,
+          "errorKm": 0,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "us-vessel",
+      "label": "Vessel",
+      "split": "test",
+      "truth": {
+        "lat": 40.753806,
+        "lon": -74.002167,
+        "countries": [
+          "US"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 40.75796,
+        "lon": -73.98304,
+        "errorKm": 1.7,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "existingOpen": {
+        "lat": 40.75751,
+        "lon": -73.98555,
+        "errorKm": 1.5,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "similar"
+      },
+      "geoclip_fp32": {
+        "lat": 25.19677,
+        "lon": 55.27518,
+        "errorKm": 11005.6,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.214
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 25.19677,
+          "lon": 55.27518,
+          "errorKm": 11005.6,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 25.19677,
+          "lon": 55.27518,
+          "errorKm": 11005.6,
+          "country": "US",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 25.19677,
+        "lon": 55.27518,
+        "errorKm": 11005.6,
+        "country": "US",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.268
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 40.75796,
+          "lon": -73.98304,
+          "errorKm": 1.7,
+          "country": "CN",
+          "countryCorrect": false,
+          "source": "existing"
+        },
+        "open": {
+          "lat": 40.75751,
+          "lon": -73.98555,
+          "errorKm": 1.5,
+          "country": "CN",
+          "countryCorrect": false,
+          "source": "existing"
+        }
+      }
+    },
+    {
+      "id": "ve-estadio-olimpico",
+      "label": "Estadio Olímpico",
+      "split": "train",
+      "truth": {
+        "lat": 10.491278,
+        "lon": -66.885492,
+        "countries": [
+          "VE"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 50.89571,
+        "lon": 4.33408,
+        "errorKm": 7790.8,
+        "country": "BR",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "existingOpen": {
+        "lat": 50.89571,
+        "lon": 4.33408,
+        "errorKm": 7790.8,
+        "country": "BR",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "recognised"
+      },
+      "geoclip_fp32": {
+        "lat": 10.49163,
+        "lon": -66.88947,
+        "errorKm": 0.4,
+        "country": "BR",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.109
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": 10.49163,
+          "lon": -66.88947,
+          "errorKm": 0.4,
+          "country": "BR",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 10.49163,
+          "lon": -66.88947,
+          "errorKm": 0.4,
+          "country": "BR",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": 10.49163,
+        "lon": -66.88947,
+        "errorKm": 0.4,
+        "country": "CL",
+        "countryCorrect": false,
+        "source": "geoclip",
+        "topModeMass": 0.089
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": 10.49163,
+          "lon": -66.88947,
+          "errorKm": 0.4,
+          "country": "CL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": 10.49163,
+          "lon": -66.88947,
+          "errorKm": 0.4,
+          "country": "CL",
+          "countryCorrect": false,
+          "source": "geoclip"
+        }
+      }
+    },
+    {
+      "id": "za-nelson-mandela-square",
+      "label": "Nelson Mandela Square",
+      "split": "test",
+      "truth": {
+        "lat": -26.1074,
+        "lon": 28.0546,
+        "countries": [
+          "ZA"
+        ]
+      },
+      "existingUnknown": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 9469.6,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "existingOpen": {
+        "lat": 30.63433,
+        "lon": 94.51558,
+        "errorKm": 9469.6,
+        "country": "CN",
+        "countryCorrect": false,
+        "source": "existing",
+        "tier": "continent"
+      },
+      "geoclip_fp32": {
+        "lat": -26.14626,
+        "lon": 28.21856,
+        "errorKm": 16.9,
+        "country": "ZA",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.155
+      },
+      "fused_fp32": {
+        "unknown": {
+          "lat": -26.14626,
+          "lon": 28.21856,
+          "errorKm": 16.9,
+          "country": "ZA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -26.14626,
+          "lon": 28.21856,
+          "errorKm": 16.9,
+          "country": "ZA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      },
+      "geoclip_int8": {
+        "lat": -26.20626,
+        "lon": 28.04024,
+        "errorKm": 11.1,
+        "country": "ZA",
+        "countryCorrect": true,
+        "source": "geoclip",
+        "topModeMass": 0.15
+      },
+      "fused_int8": {
+        "unknown": {
+          "lat": -26.20626,
+          "lon": 28.04024,
+          "errorKm": 11.1,
+          "country": "ZA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        },
+        "open": {
+          "lat": -26.20626,
+          "lon": 28.04024,
+          "errorKm": 11.1,
+          "country": "ZA",
+          "countryCorrect": true,
+          "source": "geoclip"
+        }
+      }
+    }
+  ]
+}

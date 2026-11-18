@@ -107,7 +107,7 @@ export interface GeoclipPrediction {
   modes: GeoclipMode[];
   /** Best point of the local refinement and its log-score gain over the best gallery point. */
   refined: (GeoPoint & { gain: number }) | null;
-  /** The answer: the refined point if refinement ran and found a better one, else the top mode's peak. */
+  /** The answer: the refined point if refinement ran and found a better one, else the best gallery point. */
   best: GeoPoint;
   /** Probability per country (gallery mass per country, renormalised); empty without world. */
   countries: CountryProb[];
@@ -799,7 +799,9 @@ export class GeoClip {
       const { countryOf, isos } = await this.galleryCountries(opts.world);
       countries = countryDistribution(opts.world, probs, countryOf, isos);
     }
-    const peak = modes[0]?.peak ?? top[0] ?? { lat: 0, lon: 0 };
+    // Without a refinement gain the answer is the best gallery point (the 'refined' answer of
+    // scripts/datum/evaluateGeoclip.ts, which the fusion weights were tuned with).
+    const first0 = top[0] ?? { lat: 0, lon: 0 };
     return {
       frames,
       aggregation,
@@ -809,7 +811,7 @@ export class GeoClip {
       top,
       modes,
       refined,
-      best: refined && refined.gain > 0 ? { lat: refined.lat, lon: refined.lon } : { lat: peak.lat, lon: peak.lon },
+      best: refined && refined.gain > 0 ? { lat: refined.lat, lon: refined.lon } : { lat: first0.lat, lon: first0.lon },
       countries,
       timing: { embedMs: 0, scoreMs, refineMs },
     };
