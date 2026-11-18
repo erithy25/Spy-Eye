@@ -247,6 +247,8 @@ interface SpaceScene {
   /** Triangles across depth jumps: shown only from the start pose, where they close the seams. */
   seams: Uint32Array;
   backdrop: Uint32Array;
+  /** Triangles touching the sky: drawn at infinity, so the sky of the frame stays in place. */
+  sky: Uint32Array;
   points: Uint32Array;
   edges: LineSet;
   skyline: LineSet;
@@ -302,6 +304,7 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
   const tris: number[] = [];
   const seams: number[] = [];
   const back: number[] = [];
+  const skyTris: number[] = [];
   const hCount = new Uint8Array((w - 1) * h);
   const vCount = new Uint8Array(w * (h - 1));
   const dCount = new Uint8Array((w - 1) * (h - 1));
@@ -336,6 +339,8 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
     } else if (ka === 1 && kb === 1 && kc === 1) seams.push(a, b, c);
     // Far scenery, and the cells between it and measured surfaces, go to the backdrop.
     else if (ka !== 0 && kb !== 0 && kc !== 0) back.push(a, b, c);
+    // Sky, including the cells along the skyline, becomes a dome at infinity.
+    else skyTris.push(a, b, c);
   };
   for (let j = 0; j < h - 1; j++) {
     for (let i = 0; i < w - 1; i++) {
@@ -407,6 +412,7 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
     triangles: new Uint32Array(tris),
     seams: new Uint32Array(seams),
     backdrop: new Uint32Array(back),
+    sky: new Uint32Array(skyTris),
     points: new Uint32Array(pointList),
     edges: toSet(edges),
     skyline: toSet(skyline),
@@ -501,6 +507,7 @@ class SpaceEngine {
   private readonly texture: WebGLTexture;
   private readonly surface: Mesh;
   private readonly backdrop: Mesh;
+  private readonly skyDome: Mesh;
   private readonly seams: Mesh;
   private readonly cloud: Mesh;
   private readonly plane: Mesh;
@@ -557,6 +564,7 @@ class SpaceEngine {
       { location: 1, size: 2, buffer: this.surface.buffers[1]! },
     ];
     this.backdrop = this.res.mesh(shared, scene.backdrop);
+    this.skyDome = this.res.mesh(shared, scene.sky);
     this.seams = this.res.mesh(shared, scene.seams);
     this.cloud = this.res.mesh(shared, scene.points);
     this.plane = this.res.mesh([{ location: 0, size: 2, data: new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]) }]);
@@ -735,14 +743,21 @@ class SpaceEngine {
     const cellAngle = (2 * this.scene.tx) / (this.scene.grid.width - 1);
     gl.uniform1f(m.u['uPointScale'] ?? null, cellAngle * focal * this.dpr * 0.92);
 
-    // Far scenery (beyond the measured range) as a backdrop at infinity, dimmed.
+    // The sky of the frame and far scenery (beyond the measured range) as a backdrop at
+    // infinity, dimmed: they keep their direction while the viewer walks, as distant things do.
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.uniform1f(m.u['uInfinity'] ?? null, Math.max(400, far * 4) * 0.8);
+    gl.uniform2f(m.u['uFog'] ?? null, 0, 0);
+    gl.uniform1i(m.u['uMode'] ?? null, modeIndex === 2 ? 2 : 0);
+    if (this.skyDome.count > 0 && modeIndex !== 1) {
+      // Full brightness at the start pose (the first view equals the frame), dimmed once the
+      // viewer steps away, so the backdrop reads as such.
+      gl.uniform1f(m.u['uDim'] ?? null, 1 - 0.45 * smoothstep(0.03, 0.45, vec3.length(eye)));
+      this.drawIndexed(this.skyDome, gl.TRIANGLES);
+    }
     if (this.backdrop.count > 0) {
-      gl.disable(gl.DEPTH_TEST);
-      gl.depthMask(false);
-      gl.uniform1f(m.u['uInfinity'] ?? null, Math.max(400, far * 4) * 0.8);
       gl.uniform1f(m.u['uDim'] ?? null, 0.42);
-      gl.uniform2f(m.u['uFog'] ?? null, 0, 0);
-      gl.uniform1i(m.u['uMode'] ?? null, modeIndex === 2 ? 2 : 0);
       this.drawIndexed(this.backdrop, gl.TRIANGLES);
     }
     gl.enable(gl.DEPTH_TEST);
