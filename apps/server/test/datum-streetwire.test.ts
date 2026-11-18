@@ -73,6 +73,10 @@ const LANDMARK = { lat: 50.3644, lon: 7.6062 };
 /** Every query row finds the Deutsches Eck far ahead of two look-alikes: tier 'strong'. */
 const gallery = {
   size: 3,
+  // The localisation calls the gallery through its search thread; the stand-in answers directly.
+  searchAsync(vectors: Float32Array, k: number): Promise<GalleryNeighbour[][]> {
+    return Promise.resolve(this.search(vectors, k));
+  },
   search: (vectors: Float32Array, k: number): GalleryNeighbour[][] => {
     const rows = vectors.length / DIM;
     const row: GalleryNeighbour[] = [

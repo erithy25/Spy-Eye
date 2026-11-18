@@ -1128,8 +1128,9 @@ function withWorldModelCandidates(world: World, gallery: FixCandidate[], geo: Ge
 }
 
 /**
- * Lets the event loop answer waiting requests. The gallery search and the vote are synchronous
- * and take a few hundred milliseconds each; the node serves the console from the same thread.
+ * Lets the event loop answer waiting requests between the synchronous steps of a localisation
+ * (the vote takes a few milliseconds; the gallery search runs in its own thread, see
+ * gallerySearch.ts); the node serves the console from the same thread.
  */
 export const breathe = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
@@ -1149,7 +1150,7 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
   // costs the fix the world model, never the fix.
   const prediction = async (): Promise<GeoclipPrediction | null> => (input.geoclip ? await Promise.resolve(input.geoclip).catch(() => null) : null);
   if (tiles && tiles.frameRow.length > 0) {
-    const neighbours = input.gallery.search(tiles.vectors, params.k, search);
+    const neighbours = await input.gallery.searchAsync(tiles.vectors, params.k, search);
     await breathe();
     const geoclip = await prediction();
     return decideLocation(
@@ -1158,7 +1159,7 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
       params,
     );
   }
-  const neighbours = input.gallery.search(input.frameVectors, params.k, search);
+  const neighbours = await input.gallery.searchAsync(input.frameVectors, params.k, search);
   await breathe();
   const geoclip = await prediction();
   return decideLocation(world, { neighbours, countryCosines, frameNumbers: input.frameNumbers, metadata, hints, geoclip }, params);
