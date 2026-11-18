@@ -48,6 +48,9 @@ export interface Evidence {
   label: string;
   /** One sentence on what was measured and how strongly it counts. */
   detail: string;
+  /** English versions of label and detail; the console shows them when its language is English. */
+  labelEn?: string;
+  detailEn?: string;
   /** Contribution to the decision, 0..1. */
   weight: number;
   /** Frame number in the video this evidence was read from, if any. */
@@ -103,6 +106,8 @@ export interface TimeEstimate {
   confidence: number;
   /** Short reasoning lines shown in the console. */
   notes: string[];
+  /** English versions of notes, same order. */
+  notesEn?: string[];
 }
 
 export interface SunState {
@@ -210,6 +215,8 @@ export interface TraceStep {
   /** Wall time of the step (ms). */
   ms: number;
   detail?: string;
+  /** English version of detail (the label is a fixed phrase the console translates itself). */
+  detailEn?: string;
 }
 
 export interface FixLocation extends GeoPoint {
@@ -240,7 +247,16 @@ export interface Fix {
   keyframes: Keyframe[];
   /** The steps of the analysis with their times; grows while the fix is running. */
   trace?: TraceStep[];
-  /** Ground truth, present only for videos of the reference dataset (evaluation). */
+  /**
+   * 'quick': located from frames sampled straight from the file, right after the upload, before
+   * the full analysis (no walkable spaces yet). 'full': after the full analysis, with spaces.
+   * Missing on fixes of older engine versions (= 'full').
+   */
+  stage?: 'quick' | 'full';
+  /**
+   * Ground truth, present for videos of the reference dataset (source 'referenz') and for uploaded
+   * videos whose true place was given with the upload (source 'eigene').
+   */
   truth: (GeoPoint & { label: string; errorKm: number | null; source: string }) | null;
 }
 

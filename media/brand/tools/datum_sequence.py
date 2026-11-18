@@ -68,7 +68,7 @@ lines = [
     clip('welt', 'turm', 'ORTUNG · JEDES VIDEO AUF DER KARTE', lead=0.2),
     clip('turm', 'befund', 'ORTUNG · ORT, UHRZEIT, SONNE UND SCHATTEN'),
     'card|d03-beleg|2.4||JEDE AUSSAGE MIT BELEG.',
-    clip('befund', 'raum', 'BEFUND · REFERENZBILDER, UHR, ABLAUF DER ORTUNG'),
+    clip('befund', 'raum', 'BEFUND · REFERENZBILDER, UHR, ABLAUF DER ORTUNG', skip=1.4),
     'card|d04-raum|2.8||AUS EINEM BILD WIRD EIN RAUM.',
     clip('raum', 'gehen', 'RAUM · AUS EINEM EINZIGEN BILD DES VIDEOS', skip=1.1),
     fast('gehen', 'glen', 'gehen', 'RAUM · BEGEHBAR, NUR AUS DEM VIDEO'),
