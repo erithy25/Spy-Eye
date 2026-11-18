@@ -150,9 +150,9 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     return ctx as RequestContext & { mandate: NonNullable<RequestContext['mandate']> };
   };
 
-  /** Older mandates were written without the field; they keep the permissive behaviour they had. */
+  /** Describing persons by sex, age group or clothing needs a mandate that says so explicitly. */
   const guardOptions = (ctx: RequestContext): { personDescriptions: boolean } => ({
-    personDescriptions: ctx.mandate?.personDescriptions !== false,
+    personDescriptions: ctx.mandate?.personDescriptions === true,
   });
 
   // Registered before the routes so that every route inherits them.
@@ -697,26 +697,26 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   });
 
   const readWatchInput = (body: Body): { input: Parameters<typeof watches.create>[0] | null; problem: string | null } => {
-    const kind = body.text('kind', 10) === 'hazard' ? 'hazard' : 'text';
     const name = body.text('name', 80);
     const prompt = body.text('prompt', 200);
     const exclude = body.texts('exclude', 6, 120);
-    const hazardClass = kind === 'hazard' ? body.text('hazardClass', 30) : null;
-    if (name.length < 2) return { input: null, problem: 'Name fehlt.' };
-    if (kind === 'text' && prompt.length < 3) return { input: null, problem: 'Beschreibung fehlt.' };
-    if (kind === 'hazard' && (!node.shared.hazard || node.shared.hazard.classIndex(hazardClass ?? '') < 0)) {
-      return { input: null, problem: 'Unbekannte Gefahrenklasse.' };
+    // The trained hazard model misjudges footage it was not trained on; it comments on alerts as a
+    // second opinion and does not raise any of its own.
+    if (body.text('kind', 10) === 'hazard') {
+      return { input: null, problem: 'Das Gefahrenmodell steht nur als Zweitmeinung zu Meldungen zur Verfügung, nicht als eigene Wache.' };
     }
+    if (name.length < 2) return { input: null, problem: 'Name fehlt.' };
+    if (prompt.length < 3) return { input: null, problem: 'Beschreibung fehlt.' };
     const kinds = body.texts('sourceKinds', 8, 20).filter((k): k is SourceKind => (SOURCE_KINDS as readonly string[]).includes(k));
     return {
       input: {
         name,
-        kind,
+        kind: 'text',
         prompt,
         exclude,
-        hazardClass,
+        hazardClass: null,
         severity: Math.round(body.number('severity', 2, 1, 3)) as Severity,
-        threshold: body.number('threshold', kind === 'hazard' ? 0.85 : 0.6, 0.05, 0.99),
+        threshold: body.number('threshold', 0.6, 0.05, 0.99),
         persistence: Math.round(body.number('persistence', 2, 1, 20)),
         cooldownSec: Math.round(body.number('cooldownSec', 30, 5, 3600)),
         sourceKinds: kinds,
@@ -1165,8 +1165,9 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     }
     if (typeof incoming.head === 'string' && /^[0-9a-f]{64}$/.test(incoming.head)) federation.witness(peer, incoming.head);
 
-    // The answering node applies its own rules, whatever the asking node allowed.
-    const verdict = screenPrompt(query);
+    // The answering node applies its own rules, whatever the asking node allowed. Descriptions of
+    // persons are answered only if the mandate of the asking node permits them explicitly.
+    const verdict = screenPrompt(query, { personDescriptions: mandate.personDescriptions === true });
     const actor = `node:${peer.id}`;
     if (!verdict.allowed) {
       await ledger.append({

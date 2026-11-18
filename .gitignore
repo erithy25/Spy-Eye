@@ -27,3 +27,6 @@ media/brand/audio/
 media/brand/cards/
 media/brand/*.mp4
 media/product/
+
+# Films are built with media/brand/build.sh and handed over as files
+deliverables/film/

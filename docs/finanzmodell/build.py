@@ -243,7 +243,7 @@ a_single("gehalt", "Gehaltssteigerung je Jahr", "Quote", 0.03, PCT, "Annahme.")
 
 a_section("Stellenplan im Basisfall (Stellen im Jahresmittel; der Teamfaktor des Szenarios wirkt auf alle Zeilen außer der ersten)")
 a_years("st_gf", "Geschäftsführung", "Stellen", [1, 1, 1, 1, 1], N1, "Annahme. Der Gründer; im ersten Jahr auch Vertrieb.")
-a_years("st_dev", "Entwicklung", "Stellen", [2, 3, 4, 5, 6], N1, "Annahme. Erste Aufgaben: laufende Bildströme anbinden, Kopplung an Bestandssysteme, Härtung.")
+a_years("st_dev", "Entwicklung", "Stellen", [2, 3, 4, 5, 6], N1, "Annahme. Erste Aufgaben: Direktbilder mit echten Kameras erproben, Kopplung an Bestandssysteme, Härtung.")
 a_years("st_einf", "Einführung und Betreuung", "Stellen", [0, 1, 2, 3, 4], N1, "Annahme. Wächst mit der Zahl der Knoten.")
 a_years("st_vertrieb", "Vertrieb öffentlicher Sektor", "Stellen", [0, 1, 1, 2, 2], N1, "Annahme.")
 a_years("st_recht", "Datenschutz und Regulierung", "Stellen", [0, 0.5, 1, 1, 1], N1, "Annahme. Bis dahin extern (Zeile Rechtsberatung).")

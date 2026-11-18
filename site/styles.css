@@ -167,6 +167,19 @@ sup a:focus-visible {
   color: var(--mid);
 }
 
+/* present for screen readers and the document outline, not on screen */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip {
   position: absolute;
   left: var(--pad);
@@ -536,6 +549,42 @@ h2 {
   max-width: 46ch;
 }
 
+.head-hint {
+  margin-top: clamp(18px, 2vw, 26px);
+}
+
+/* ------------------------------------------------------------------ film */
+
+.section-film {
+  padding-block: clamp(56px, 7.4vw, 112px);
+}
+
+/* the film is 16 : 9; the frames of the screenshots further down are 16 : 10 */
+.film .film-frame {
+  aspect-ratio: 16 / 9;
+}
+
+/* the film carries its own corner marks; a second set around it would be one too many */
+.film .film-frame::before {
+  content: none;
+}
+
+.film video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.film-note {
+  margin-top: 14px;
+  max-width: 62ch;
+  font-size: 13px;
+  color: var(--mid);
+}
+
 /* ------------------------------------------------------------------ 01 problem */
 
 .facts {
@@ -759,15 +808,82 @@ h3 {
   color: var(--fg);
 }
 
-.module .shot {
+.module .shots {
   grid-column: 5 / -1;
+}
+
+/* the pictures of one module: the whole tab, then a detail with its note beside it */
+.shots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--gap);
+  row-gap: clamp(30px, 3.6vw, 52px);
+  min-width: 0;
+}
+
+.shots > .shot {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.shots > .shot-detail {
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: start;
+}
+
+.shot-detail figcaption {
+  margin-top: 0;
+  border-top: 1px solid var(--line-2);
+  padding-top: 12px;
+}
+
+.shot-detail .cap b {
+  display: block;
+  margin: 0 0 8px;
+}
+
+.shots-trio {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* room for the corner marks of neighbouring frames */
+  column-gap: max(var(--gap), 26px);
+}
+
+.shots-trio > .shot {
+  grid-column: auto;
+}
+
+.shot-step .shot-frame {
+  aspect-ratio: 4 / 3;
+}
+
+.shot-step figcaption b {
+  color: var(--fg);
+  margin-right: 0.7em;
 }
 
 .shot-frame {
   position: relative;
+  display: block;
   aspect-ratio: 16 / 10;
   border: 1px solid var(--line);
   background: #000;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* a frame that opens the larger view */
+a.shot-frame {
+  cursor: zoom-in;
+}
+
+a.shot-frame:hover,
+a.shot-frame:focus-visible {
+  border-color: var(--mid);
+}
+
+a.shot-frame:focus-visible {
+  outline-offset: 2px;
 }
 
 /* corner marks just outside the frame */
@@ -862,45 +978,34 @@ figcaption {
   color: var(--mid);
 }
 
-.mask {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+/* a caption that describes what is seen: a short lead in capitals, then a sentence */
+.cap,
+.zoom-cap {
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-.mask-narrow {
-  display: none;
+.cap {
+  max-width: 78ch;
 }
 
-.mask-frame * {
-  fill: none;
-  stroke: var(--line-2);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+.cap b,
+.zoom-cap b {
+  margin-right: 0.8em;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg);
 }
 
-.mask-reticle,
-.mask-leader,
-.mask-rule {
-  fill: none;
-  stroke: var(--fg);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.mask-rule {
-  stroke: var(--line-2);
-}
-
-.mask text,
 .fed-svg text {
   font-family: var(--mono);
   font-size: 12px;
   fill: var(--mid);
 }
 
-.mask .t-strong,
 .fed-svg .t-strong {
   fill: var(--fg);
   font-weight: 500;
@@ -1272,6 +1377,15 @@ figcaption {
   margin-top: clamp(26px, 3vw, 40px);
 }
 
+.shot-strip {
+  margin-top: clamp(30px, 3.6vw, 48px);
+  max-width: 880px;
+}
+
+.shot-strip .shot-frame {
+  aspect-ratio: 18 / 5;
+}
+
 .refusal-note {
   margin-top: 22px;
   max-width: 880px;
@@ -1347,6 +1461,10 @@ figcaption {
   margin-right: 0.6em;
 }
 
+.caveat-plain {
+  margin-top: 12px;
+}
+
 .shot-wide {
   margin-top: clamp(56px, 7vw, 112px);
 }
@@ -1383,6 +1501,69 @@ figcaption {
 }
 
 /* ------------------------------------------------------------------ 08 status */
+
+.open .rows {
+  margin-top: 16px;
+}
+
+.open .rows dt {
+  padding-right: 1em;
+}
+
+.demo,
+.trial {
+  margin-top: clamp(56px, 7vw, 112px);
+}
+
+.demo {
+  scroll-margin-top: calc(var(--bar) + 24px);
+}
+
+.demo-intro {
+  margin-top: 16px;
+  max-width: 62ch;
+  font-size: 14px;
+  color: var(--mid);
+}
+
+.demo-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--gap);
+  row-gap: clamp(30px, 3.4vw, 46px);
+  margin-top: clamp(24px, 2.8vw, 38px);
+  counter-reset: demo;
+}
+
+.demo-steps li {
+  counter-increment: demo;
+  border-top: 1px solid var(--line-2);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--mid);
+}
+
+.demo-steps li:nth-child(-n + 4) {
+  border-top-color: var(--fg);
+}
+
+.demo-steps li::before {
+  content: counter(demo);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--mid);
+}
+
+.demo-steps h3 {
+  margin: 14px 0 8px;
+  font-size: clamp(1.05rem, 1.35vw, 1.25rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: var(--fg);
+}
 
 .trial-steps {
   display: grid;
@@ -1460,7 +1641,7 @@ figcaption {
 
 .foot-notes {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   column-gap: var(--gap);
   row-gap: 22px;
   border-top: 1px solid var(--line);
@@ -1479,6 +1660,142 @@ figcaption {
 
 .foot-notes dd {
   color: var(--mid);
+}
+
+/* ------------------------------------------------------------------ larger view of a picture */
+
+.zoom {
+  --zoom-chrome: 172px;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+}
+
+.zoom[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.zoom::backdrop {
+  background: var(--bg);
+}
+
+.zoom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--bar);
+  padding-inline: var(--pad);
+  border-bottom: 1px solid var(--line);
+}
+
+.zoom-count {
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.zoom-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoom-nav button {
+  min-width: 40px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.zoom-nav button:hover {
+  color: var(--fg);
+}
+
+.zoom-nav button[data-zoom-prev],
+.zoom-nav button[data-zoom-next] {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.zoom-close {
+  margin-left: 10px;
+  margin-right: -10px;
+  border-left: 1px solid var(--line-2);
+  padding-left: 20px !important;
+}
+
+.zoom-stage {
+  min-height: 0;
+  display: flex;
+  overflow: auto;
+  padding: 22px var(--pad) 14px;
+  cursor: zoom-out;
+}
+
+.zoom-frame {
+  position: relative;
+  flex: none;
+  margin: auto;
+  border: 1px solid var(--line-2);
+  /* while the full picture loads, main.js sets the one from the page as background */
+  background: #000 center / 100% 100% no-repeat;
+  cursor: default;
+}
+
+.zoom-frame::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  pointer-events: none;
+  --c: var(--fg);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--corner) 1px,
+    linear-gradient(var(--c), var(--c)) top left / 1px var(--corner),
+    linear-gradient(var(--c), var(--c)) top right / var(--corner) 1px,
+    linear-gradient(var(--c), var(--c)) top right / 1px var(--corner),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--corner) 1px,
+    linear-gradient(var(--c), var(--c)) bottom left / 1px var(--corner),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--corner) 1px,
+    linear-gradient(var(--c), var(--c)) bottom right / 1px var(--corner);
+  background-repeat: no-repeat;
+}
+
+/* every enlarged picture is a whole screen of the console, 16 : 10 */
+.zoom-frame img {
+  width: min(calc(100vw - 2 * var(--pad) - 2px), calc((100vh - var(--zoom-chrome)) * 1.6));
+  width: min(calc(100vw - 2 * var(--pad) - 2px), calc((100dvh - var(--zoom-chrome)) * 1.6));
+  height: auto;
+  aspect-ratio: 16 / 10;
+}
+
+.zoom-cap {
+  min-height: 66px;
+  max-width: 118ch;
+  width: 100%;
+  margin-inline: auto;
+  padding: 0 var(--pad) 18px;
+  color: var(--mid);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* the page behind the larger view does not scroll */
+.zoom-open {
+  overflow: hidden;
 }
 
 /* ------------------------------------------------------------------ motion */
@@ -1510,6 +1827,18 @@ figcaption {
   }
 }
 
+/* on paper nothing waits for the scroll, and the bar does not follow the pages */
+@media print {
+  .reveal.is-pending {
+    opacity: 1;
+    transform: none;
+  }
+
+  .bar {
+    position: static;
+  }
+}
+
 /* ------------------------------------------------------------------ narrower screens */
 
 @media (max-width: 1239px) {
@@ -1519,6 +1848,14 @@ figcaption {
 
   .bar-menu {
     display: block;
+  }
+
+  .demo-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .demo-steps li:nth-child(n + 3) {
+    border-top-color: var(--line-2);
   }
 }
 
@@ -1565,7 +1902,7 @@ figcaption {
     grid-column: 2 / span 4;
   }
 
-  .module .shot {
+  .module .shots {
     grid-column: 6 / -1;
   }
 }
@@ -1621,8 +1958,22 @@ figcaption {
     grid-column: 2;
   }
 
-  .module .shot {
+  .module .shots {
     grid-column: 1 / -1;
+  }
+
+  /* on a small screen the larger view is wider than the screen and scrolls sideways */
+  .zoom-stage {
+    padding-top: 18px;
+  }
+
+  .zoom-frame img {
+    width: max(calc(100vw - 2 * var(--pad) - 2px), calc((100vh - var(--zoom-chrome)) * 1.6));
+    width: max(calc(100vw - 2 * var(--pad) - 2px), calc((100dvh - var(--zoom-chrome)) * 1.6));
+  }
+
+  .zoom-cap {
+    text-align: left;
   }
 
   .hero-readout > div {
@@ -1687,20 +2038,34 @@ figcaption {
     flex-direction: column;
   }
 
-  .shot-diagram .shot-frame {
-    aspect-ratio: auto;
+  .shots,
+  .shots-trio {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .mask-wide {
-    display: none;
-  }
-
-  .mask-narrow {
+  .shots > .shot-detail {
     display: block;
-    position: static;
-    height: auto;
-    max-width: 420px;
-    margin-inline: auto;
+  }
+
+  .shot-detail figcaption {
+    margin-top: 14px;
+  }
+
+  .shots-trio {
+    row-gap: 26px;
+  }
+
+  /* the refusal stands in the left half of its strip: on a phone that half is shown, twice as large */
+  .shot-strip .shot-frame {
+    aspect-ratio: 9 / 5;
+  }
+
+  .demo-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .demo-steps li:nth-child(n + 2) {
+    border-top-color: var(--line-2);
   }
 
   .fed-wide {
@@ -1745,6 +2110,7 @@ figcaption {
   }
 
   .measures tbody th {
+    width: auto;
     margin-top: 12px;
   }
 

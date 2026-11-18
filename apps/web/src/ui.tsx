@@ -149,14 +149,18 @@ interface DialogProps {
 
 export function Dialog({ title, onClose, children }: DialogProps) {
   const ref = useRef<HTMLDivElement>(null);
+  // The parent re-renders with every event from the node; the handler must not re-run the effect,
+  // or the focus would jump back to the first field while someone is typing.
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') close.current();
     };
     window.addEventListener('keydown', onKey);
     ref.current?.querySelector<HTMLElement>('input, textarea, select, button')?.focus();
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
   return (
     <div className="overlay overlay-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog" role="dialog" aria-modal="true" aria-label={title} ref={ref}>

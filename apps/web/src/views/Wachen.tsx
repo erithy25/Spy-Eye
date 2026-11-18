@@ -4,7 +4,6 @@ import {
   SOURCE_KINDS,
   createWatch,
   deleteWatch,
-  fetchMetrics,
   fetchWatches,
   previewWatch,
   resetWatch,
@@ -24,13 +23,11 @@ import { alertTarget } from './Lage';
 
 const HAZARD_LABEL: Record<string, string> = { flood: 'Überflutung', fire: 'Brand', collapse: 'Einsturz' };
 
-function Editor({ node, hazardClasses, onCreated }: { node: NodeConnection; hazardClasses: string[]; onCreated: (watch: Watch) => void }) {
+function Editor({ node, onCreated }: { node: NodeConnection; onCreated: (watch: Watch) => void }) {
   const { t, locale } = useLang();
-  const [kind, setKind] = useState<'text' | 'hazard'>('text');
   const [name, setName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [exclude, setExclude] = useState('');
-  const [hazardClass, setHazardClass] = useState(hazardClasses[0] ?? '');
   const [severity, setSeverity] = useState<Severity>(2);
   const [threshold, setThreshold] = useState(0.6);
   const [persistence, setPersistence] = useState(2);
@@ -39,10 +36,6 @@ function Editor({ node, hazardClasses, onCreated }: { node: NodeConnection; haza
   const previewAction = useAction();
   const createAction = useAction();
   const [refusal, setRefusal] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (hazardClass === '' && hazardClasses[0]) setHazardClass(hazardClasses[0]);
-  }, [hazardClasses, hazardClass]);
 
   const excludeList = exclude
     .split('\n')
@@ -71,15 +64,15 @@ function Editor({ node, hazardClasses, onCreated }: { node: NodeConnection; haza
       guard(async () => {
         const watch = await createWatch({
           name: name.trim(),
-          kind,
-          prompt: kind === 'text' ? prompt.trim() : '',
-          exclude: kind === 'text' ? excludeList : [],
-          hazardClass: kind === 'hazard' ? hazardClass : null,
+          kind: 'text',
+          prompt: prompt.trim(),
+          exclude: excludeList,
+          hazardClass: null,
           severity,
-          threshold: kind === 'hazard' ? Math.max(threshold, 0.8) : threshold,
+          threshold,
           persistence,
           cooldownSec: 30,
-          sourceKinds: kind === 'hazard' && kinds.length === 0 ? ['drone', 'helicopter', 'satellite'] : kinds,
+          sourceKinds: kinds,
         });
         onCreated(watch);
       }),
@@ -92,51 +85,22 @@ function Editor({ node, hazardClasses, onCreated }: { node: NodeConnection; haza
     <div className="section-gap" style={{ gap: 22 }}>
       <header className="panel-head">
         <h2 className="label">{t('Neue Wache')}</h2>
-        <span className="segments">
-          <button type="button" className={kind === 'text' ? 'segment segment-on' : 'segment'} onClick={() => setKind('text')}>
-            {t('frei formuliert')}
-          </button>
-          <button
-            type="button"
-            className={kind === 'hazard' ? 'segment segment-on' : 'segment'}
-            disabled={hazardClasses.length === 0}
-            onClick={() => setKind('hazard')}
-          >
-            {t('Gefahrenmodell')}
-          </button>
-        </span>
+        <span className="low">{t('frei formuliert')}</span>
       </header>
       {!hasMandate && <p className="note">{t('Kein Mandat gewählt: Wachen können nur unter einem Mandat aufgestellt werden.')}</p>}
       <div className="form">
         <Field label={t('Bezeichnung')}>
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={t('z. B. Wasser auf der Fahrbahn')} />
         </Field>
-        {kind === 'text' ? (
-          <>
-            <Field
-              label={t('Was gemeldet werden soll')}
-              hint={t('Eine Beschreibung dessen, was im Bild zu sehen ist, auf Deutsch oder Englisch; englische Beschreibungen trennen meist etwas schärfer. Keine Personenmerkmale, keine Namen.')}
-            >
-              <input value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={200} placeholder="a flooded underpass with a stuck car" spellCheck={false} />
-            </Field>
-            <Field label={t('Nicht gemeint (eine Zeile je Ausschluss)')} hint={t('Verwechslungen, die besser passen als die Beschreibung, unterdrücken die Meldung.')}>
-              <textarea value={exclude} onChange={(e) => setExclude(e.target.value)} rows={2} spellCheck={false} placeholder="a wet road in the rain" />
-            </Field>
-          </>
-        ) : (
-          <Field
-            label={t('Klasse des Gefahrenmodells')}
-            hint={t('Das Modell wurde auf Luftbildern trainiert und wird nur auf ganze Bilder von Luftbildquellen angewandt.')}
-          >
-            <select value={hazardClass} onChange={(e) => setHazardClass(e.target.value)}>
-              {hazardClasses.map((c) => (
-                <option key={c} value={c}>
-                  {t(HAZARD_LABEL[c] ?? c)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
+        <Field
+          label={t('Was gemeldet werden soll')}
+          hint={t('Eine Beschreibung dessen, was im Bild zu sehen ist, auf Deutsch oder Englisch; englische Beschreibungen trennen meist etwas schärfer. Keine Personenmerkmale, keine Namen.')}
+        >
+          <input value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={200} placeholder="a flooded underpass with a stuck car" spellCheck={false} />
+        </Field>
+        <Field label={t('Nicht gemeint (eine Zeile je Ausschluss)')} hint={t('Verwechslungen, die besser passen als die Beschreibung, unterdrücken die Meldung.')}>
+          <textarea value={exclude} onChange={(e) => setExclude(e.target.value)} rows={2} spellCheck={false} placeholder="a wet road in the rain" />
+        </Field>
         <div className="field-row">
           <Field label={t('Dringlichkeit')}>
             <span className="segments" style={{ paddingTop: 4 }}>
@@ -179,22 +143,20 @@ function Editor({ node, hazardClasses, onCreated }: { node: NodeConnection; haza
         {previewAction.error && <p className="note">{previewAction.error}</p>}
         {createAction.error && <p className="note">{createAction.error}</p>}
         <div className="btn-row">
-          {kind === 'text' && (
-            <button type="button" className="btn" disabled={!hasMandate || previewAction.busy || prompt.trim().length < 3} onClick={runPreview}>
-              {previewAction.busy ? t('prüfe …') : t('Am Bestand prüfen')}
-            </button>
-          )}
+          <button type="button" className="btn" disabled={!hasMandate || previewAction.busy || prompt.trim().length < 3} onClick={runPreview}>
+            {previewAction.busy ? t('prüfe …') : t('Am Bestand prüfen')}
+          </button>
           <button
             type="button"
             className="btn btn-solid"
-            disabled={!hasMandate || createAction.busy || name.trim().length < 2 || (kind === 'text' && prompt.trim().length < 3)}
+            disabled={!hasMandate || createAction.busy || name.trim().length < 2 || prompt.trim().length < 3}
             onClick={submit}
           >
             {t('Wache aufstellen')}
           </button>
         </div>
       </div>
-      {preview && kind === 'text' && (
+      {preview && (
         <div className="section-gap">
           <p className="dim">
             {t('{n} von {m} Bildern im Bestand hätten gemeldet.', { n: preview.matches, m: preview.framesChecked })}{' '}
@@ -392,10 +354,8 @@ export function Wachen({ node, openFrame }: ViewProps) {
   const { t, pick } = useLang();
   const [selected, setSelected] = useState<string | 'new' | null>(null);
   const own = useLoad(() => fetchWatches(), []);
-  const metrics = useLoad(() => fetchMetrics(), []);
   // Operators receive live updates through the intel stream; auditors only have the list.
   const watches = node.intel?.watches ?? own.data ?? [];
-  const hazardClasses = (metrics.data?.hazardModel?.classes ?? []).filter((c) => c !== 'normal');
   const may = node.can('watch.write');
   const current = selected !== null && selected !== 'new' ? (watches.find((w) => w.id === selected) ?? null) : null;
 
@@ -463,7 +423,6 @@ export function Wachen({ node, openFrame }: ViewProps) {
           {selected === 'new' && may ? (
             <Editor
               node={node}
-              hazardClasses={hazardClasses}
               onCreated={(w) => {
                 changed(w);
                 node.refreshIntel();

@@ -128,12 +128,21 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
     if (explain && focusCanvas.current) drawFocus(focusCanvas.current, explain);
   }, [explain, showFocus, mode]);
 
+  // The handlers change identity with every re-render of the shell (the node sends events several
+  // times a second). They are read through a ref so that this effect runs once: re-running it
+  // would move the focus back to the sheet and swallow what is being typed in a dialog.
+  const handlers = useRef({ onClose, onPrev, onNext, dialogOpen: dialog !== null });
+  handlers.current = { onClose, onPrev, onNext, dialogOpen: dialog !== null };
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (dialog !== null) return;
-      if (event.key === 'Escape') onClose();
-      else if (event.key === 'ArrowLeft' && onPrev) onPrev();
-      else if (event.key === 'ArrowRight' && onNext) onNext();
+      const h = handlers.current;
+      if (h.dialogOpen) return;
+      const target = event.target as HTMLElement | null;
+      const typing = target !== null && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+      if (event.key === 'Escape') h.onClose();
+      else if (typing) return;
+      else if (event.key === 'ArrowLeft' && h.onPrev) h.onPrev();
+      else if (event.key === 'ArrowRight' && h.onNext) h.onNext();
     };
     window.addEventListener('keydown', onKey);
     const previousOverflow = document.body.style.overflow;
@@ -143,7 +152,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [onClose, onPrev, onNext, dialog]);
+  }, []);
 
   const scene = details?.scene ?? null;
   const isOriginalFrame = frame.frameNumber === target.frameNumber;

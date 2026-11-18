@@ -436,4 +436,5 @@ export const EN: Record<string, string> = {
     'RTSP, HLS, RTMP, SRT or MPEG-TS. The stream is cut into short segments and analysed like a recording; alerts follow with a delay of about half a minute. Credentials in the address stay on the node.',
   verbindet: 'connecting',
   'Direktbild trennen': 'Disconnect live stream',
+  'Personenbeschreibung zulässig': 'person descriptions permitted',
 };

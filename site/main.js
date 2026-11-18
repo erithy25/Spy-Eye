@@ -2,7 +2,7 @@
  * Sicht — website behaviour. No dependencies, no network requests.
  *
  *   1. language switch (German is the original in index.html, English comes from i18n.js)
- *   2. contact link, screenshot frames, section menu, scroll reveal
+ *   2. contact link, screenshot frames and their larger view, section menu, scroll reveal
  *   3. the hero map: drawn on a canvas from OpenStreetMap vector data and contour lines
  *      (assets/map/hero.js), with a scan sweep, reticles and a live grid reference
  */
@@ -119,7 +119,12 @@
         };
         var failed = function () {
           figure.classList.add('is-empty');
-          if (img.parentNode) img.parentNode.removeChild(img);
+          var frame = img.parentNode;
+          if (!frame) return;
+          frame.removeChild(img);
+          // without its picture the frame has nothing to enlarge
+          frame.removeAttribute('href');
+          frame.removeAttribute('data-zoom');
         };
         if (img.complete && img.getAttribute('src')) {
           if (img.naturalWidth > 0) loaded();
@@ -129,6 +134,144 @@
         img.addEventListener('error', failed);
       })(shots[i]);
     }
+  })();
+
+  // ------------------------------------------------------------------ larger view of a picture
+
+  // A frame that links to its full picture opens it in a dialog instead. Arrow keys step through all
+  // pictures of the page, Escape or a click beside the picture closes, and focus returns to the frame.
+  // Where <dialog> is missing, or with a modifier key held, the link opens the file itself.
+  (function () {
+    var dialog = doc.querySelector('dialog.zoom');
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    var picture = dialog.querySelector('[data-zoom-img]');
+    var caption = dialog.querySelector('[data-zoom-cap]');
+    var count = dialog.querySelector('[data-zoom-count]');
+    var stage = dialog.querySelector('.zoom-stage');
+    var frame = dialog.querySelector('.zoom-frame');
+    var closer = dialog.querySelector('[data-zoom-close]');
+    if (!picture || !caption || !count || !stage || !frame) return;
+
+    var opener = null;
+    var index = 0;
+    var wanted = '';
+
+    // The full picture shows once it is decoded, so that it never appears half painted.
+    function reveal(href) {
+      if (href === wanted) picture.style.visibility = '';
+    }
+
+    function frames() {
+      return Array.prototype.slice.call(doc.querySelectorAll('a[data-zoom][href]'));
+    }
+
+    function two(n) {
+      return n < 10 ? '0' + n : String(n);
+    }
+
+    function warm(link) {
+      // the neighbours are fetched ahead, so that stepping does not wait
+      if (link) new Image().src = link.href;
+    }
+
+    function show(list, at) {
+      index = (at + list.length) % list.length;
+      var link = list[index];
+      var figure = link.closest('figure');
+      var thumb = link.querySelector('img');
+      var note = figure ? figure.querySelector('figcaption') : null;
+      var href = link.getAttribute('href');
+      wanted = href;
+      // Until then the frame shows the picture already on the page, where that is the same whole screen.
+      var same = thumb && thumb.naturalWidth > 0 && Math.abs(thumb.naturalWidth / thumb.naturalHeight - 1.6) < 0.01;
+      frame.style.backgroundImage = same ? 'url("' + (thumb.currentSrc || thumb.src) + '")' : '';
+      picture.style.visibility = 'hidden';
+      picture.setAttribute('alt', thumb ? thumb.getAttribute('alt') || '' : '');
+      picture.setAttribute('src', href);
+      if (typeof picture.decode === 'function') {
+        picture.decode().then(
+          function () {
+            reveal(href);
+          },
+          function () {
+            reveal(href);
+          },
+        );
+      }
+      // the caption is the page's own markup: a lead in <b>, then a sentence
+      caption.innerHTML = note ? note.innerHTML : '';
+      count.textContent = two(index + 1) + ' / ' + two(list.length);
+      stage.scrollLeft = 0;
+      stage.scrollTop = 0;
+      if (list.length > 1) {
+        warm(list[(index + 1) % list.length]);
+        warm(list[(index - 1 + list.length) % list.length]);
+      }
+    }
+
+    function step(by) {
+      var list = frames();
+      if (list.length) show(list, index + by);
+    }
+
+    picture.addEventListener('load', function () {
+      if (typeof picture.decode !== 'function') picture.style.visibility = '';
+    });
+
+    doc.addEventListener('click', function (event) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      var link = event.target && event.target.closest ? event.target.closest('a[data-zoom][href]') : null;
+      if (!link) return;
+      var list = frames();
+      var at = list.indexOf(link);
+      if (at < 0) return;
+      event.preventDefault();
+      opener = link;
+      show(list, at);
+      root.classList.add('zoom-open');
+      dialog.showModal();
+      if (closer) closer.focus();
+    });
+
+    dialog.addEventListener('keydown', function (event) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key === 'ArrowRight') step(1);
+      else if (event.key === 'ArrowLeft') step(-1);
+      else return;
+      event.preventDefault();
+    });
+
+    var prev = dialog.querySelector('[data-zoom-prev]');
+    var next = dialog.querySelector('[data-zoom-next]');
+    if (prev) {
+      prev.addEventListener('click', function () {
+        step(-1);
+      });
+    }
+    if (next) {
+      next.addEventListener('click', function () {
+        step(1);
+      });
+    }
+    if (closer) {
+      closer.addEventListener('click', function () {
+        dialog.close();
+      });
+    }
+    stage.addEventListener('click', function (event) {
+      if (event.target === stage) dialog.close();
+    });
+
+    dialog.addEventListener('close', function () {
+      root.classList.remove('zoom-open');
+      wanted = '';
+      picture.removeAttribute('src');
+      frame.style.backgroundImage = '';
+      var back = opener;
+      opener = null;
+      if (back && doc.contains(back)) back.focus({ preventScroll: true });
+    });
   })();
 
   // ------------------------------------------------------------------ section menu (narrow screens)

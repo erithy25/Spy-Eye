@@ -51,6 +51,9 @@ Maßgeblich sind der Server unter `apps/server/src` und die Konsole unter `apps/
 Messwerte und ihre Bedingungen stehen in `docs/EVALUATION.md`, die Grenzen dieses Stands im
 README. Pfade ohne Präfix liegen unter `apps/server/src`.
 
+Der Stand ist in drei Stufen geordnet: gebaut und gemessen oder im Browser durchgespielt (3.1);
+gebaut und im Labor geprüft, aber nicht im Feld erprobt (3.2); geplant, nicht gebaut (3.3).
+
 ### 3.1 Gebaut
 
 | Fähigkeit | Nachweis | Messwert | Quelltext |
@@ -64,6 +67,7 @@ README. Pfade ohne Präfix liegen unter `apps/server/src`.
 | Gesichtsmaskierung der angezeigten Bilder; Aufhebung nur mit Begründung und Freigabe einer zweiten Person für 15 Minuten | Durchlauf im Browser als Auswertung mit Freigabe durch die Leitung | 37 Gesichter in den 31 Übungsaufnahmen maskiert; Anteil übersehener Gesichter nicht gemessen | `ml/faces.ts`, `pipeline.ts`, `routes.ts` |
 | Mandat: Suche, Wachen und Vorgänge nur mit gültigem Zweck und Rechtsgrundlage | Durchlauf im Browser | — | `core/mandates.ts`, `routes.ts` |
 | Drei Rollen: Auswertung, Leitung, Aufsicht; die Aufsicht sieht Protokolle, aber keine Bilder | Durchlauf im Browser in allen drei Rollen | — | `core/auth.ts` |
+| Schutz der Anmeldung: Nach fünf Fehlversuchen in Folge sind Kennung und Absenderadresse für eine Minute gesperrt; abgelehnte Anmeldungen stehen im Protokoll. Jede Antwort des Knotens trägt Schutzkopfzeilen einschließlich einer Content Security Policy. Die Zugänge bleiben Vorführkonten (Abschnitt 3.3) | Quelltext | — | `routes.ts` |
 | Protokoll: mit SHA-256 verkettet, prüfbar, exportierbar, Zufallsstichprobe für die Aufsicht | 4 automatische Tests; Prüfung der Kette und Stichprobe im Browser | — | `core/ledger.ts`, `test/ledger.test.ts` |
 | Vorgänge: gesicherte Bilder mit Prüfsumme des Originals, Versiegelung, druckbarer Bericht | Durchlauf im Browser | — | `intel/cases.ts`, `intel/report.ts` |
 | Verbund: Es reist nur die Frage mit Mandat und anfragender Person; die Antwort sind maskierte Vorschaubilder mit Belegnummer; beide Seiten protokollieren und bezeugen gegenseitig ihren Protokollstand | Vorführung mit drei Knoten in einem Prozess (`pnpm demo`) | Verbundfrage an zwei Nachbarn 20 bis 400 ms, alle Knoten auf einem Rechner | `intel/federation.ts`, `routes.ts` |
@@ -81,25 +85,47 @@ Drei Einschränkungen gelten für alle Messwerte:
 2. Die Bilddaten sind Archivaufnahmen und ein öffentlicher Datensatz. Die Wachen der Übung wurden
    an ihrem Material formuliert; die Werte zeigen das Betriebsverhalten, nicht die Güte auf
    fremdem Einsatzmaterial. Der Verzug zählt ab dem Eintreffen des ausgewerteten Bildes; die
-   Rechenzeit der Auswertung, rund 0,3 s je Bild, kommt im Betrieb hinzu. AIDERv2 enthält
-   ähnliche Bilder in Trainings- und Testmenge.
+   Rechenzeit der Auswertung, rund 0,3 s je Bild, kommt im Betrieb hinzu, bei einem
+   angeschlossenen Direktbild außerdem der Nachlauf eines Abschnitts (Abschnitt 3.2). AIDERv2
+   enthält ähnliche Bilder in Trainings- und Testmenge.
 3. „Durchlauf im Browser“ heißt: in den drei Rollen von Hand durchgespielt, nicht durch einen
    automatischen Test abgesichert. Automatisch geprüft sind 15 Fälle (Prüfregeln, Protokoll,
    Geodäsie).
 
-### 3.2 Geplant, nicht gebaut
+### 3.2 Gebaut und im Labor geprüft, nicht im Feld erprobt
+
+| Fähigkeit | Nachweis | Messwert | Quelltext |
+| --- | --- | --- | --- |
+| Direktbild: Eine Quelle kann eine Stromadresse tragen (RTSP, HLS, RTMP, SRT, MPEG-TS). ffmpeg schneidet den Strom in Abschnitte von 20 Sekunden (einstellbar von 5 bis 120); jeder fertige Abschnitt geht denselben Weg wie eine hochgeladene Aufzeichnung: Maskierung, Verzeichnis, Wachen, Löschfrist. Eine laufende Meldung wird über Abschnitte hinweg fortgeschrieben. Anschließen und Trennen darf nur die Leitung, beides steht im Protokoll; Zugangsdaten in der Adresse bleiben auf dem Knoten | Simulierte Kamera: eine Aufnahme eines Gebäudebrands in Endlosschleife, als MPEG-TS über TCP gesendet; Abschnitte von 10 s; eine Wache „Brand“ | Verbunden innerhalb von 6 s; erstes ausgewertetes Bild nach 22 bis 29 s; erste Meldung 29 s nach dem Anschließen; eine Meldung für das durchgehende Ereignis, fortgeschrieben über sieben Abschnitte; nach Abbruch des Stroms neue Verbindungsversuche in wachsenden Abständen. Mit der Voreinstellung von 20 s liegt der Nachlauf bei etwa einer halben bis dreiviertel Minute | `intel/live.ts`, `intel/watches.ts`, `node.ts`, `routes.ts` |
+
+Was dieser Stand trägt und was nicht:
+
+- Ein angeschlossener Strom wird mit Nachlauf ausgewertet, nicht Bild für Bild beim Eintreffen.
+  Die Aussage „beobachtet selbständig“ gilt damit für eingespieltes Material und für
+  Direktbilder, dort bisher nur im Labor belegt.
+- Nicht geprüft sind echte Kameras und Drohnenübertragungen, RTSP mit Anmeldung, schlechte
+  Verbindungen und mehrere Ströme gleichzeitig.
+- Rechnerisch wertet ein Rechner mit vier Kernen etwa drei Ströme gleichzeitig aus; die Übung
+  mit elf Quellen spielt deshalb vorab ausgewertetes Material ab. Für elf gleichzeitige Quellen
+  mit einem Bild je Sekunde wäre etwa das Dreieinhalbfache seiner Rechenleistung oder eine
+  Grafikkarte nötig.
+- Das Anschließen verlangt die Rolle Leitung, aber kein Mandat. Die Adresse liegt mit ihren
+  Zugangsdaten unverschlüsselt in den Daten des Knotens; Konsole und Protokoll zeigen sie ohne
+  Zugangsdaten.
+
+### 3.3 Geplant, nicht gebaut
 
 | Lücke | Bedeutung |
 | --- | --- |
-| Anbindung laufender Bildströme (Kamerastrom, Drohnenübertragung) | Heute verarbeitet Sicht Dateien und spielt Übungsmaterial ab. Die Aussage „beobachtet selbständig“ gilt bis dahin nur für eingespieltes Material. Für elf gleichzeitige Quellen mit einem Bild je Sekunde reicht ein Rechner mit vier Kernen nicht; nötig wäre etwa das Dreieinhalbfache seiner Rechenleistung oder eine Grafikkarte. |
+| Erprobung mit echten Kameras und Drohnenübertragungen | Der Anschluss von Direktbildern ist gebaut und gegen eine simulierte Kamera geprüft (Abschnitt 3.2). Offen ist der Nachweis an Geräten im Feld: mit Anmeldung am Gerät, bei schlechter Verbindung und mit mehreren Strömen gleichzeitig. |
 | Getestete Kopplung an ELD-BS, CommandX oder ArcGIS | Vorhanden sind Ausgabeformate, keine erprobte Schnittstelle. Die Rolle als Bildschicht ist damit behauptet, nicht gezeigt. |
 | Gefahrenmodell, das auf fremdem Material trägt | Das trainierte Modell hält auf dem Übungsmaterial einen ruhigen Fluss für eine Überflutung. Bis es mit Einsatzmaterial trainiert und geprüft ist, bleibt es Zweitmeinung; frei formulierte Wachen sind der Regelfall. |
-| Benutzerverwaltung, Anbindung an Verzeichnisdienste, zweiter Anmeldefaktor | Heute gibt es drei Vorführkonten mit gemeinsamem Kennwort. |
+| Benutzerverwaltung, Anbindung an Verzeichnisdienste, zweiter Anmeldefaktor | Heute gibt es drei Vorführkonten mit gemeinsamem Kennwort. Die Sperre nach fünf Fehlversuchen und die Schutzkopfzeilen (Abschnitt 3.1) ersetzen keine Benutzerverwaltung. |
 | Technische Grenze des Suchraums je Mandat (Quellen, Gebiet, Zeitraum) | Die Anfrageprüfung ist eine Wortprüfung und lässt sich mit Umschreibungen umgehen. Unter einem Mandat, das Personenbeschreibungen zulässt, wirkt die Suche über alle Quellen. |
-| Verschlüsselung der Verbindung zwischen Knoten und der gespeicherten Daten | Die Signatur sichert Herkunft und Unversehrtheit einer Verbundanfrage, nicht ihre Vertraulichkeit. Der Verbund ist bisher nur mit drei Knoten auf einem Rechner gezeigt. |
+| Verschlüsselung der Verbindung zwischen Knoten und der gespeicherten Daten | Die Signatur sichert Herkunft und Unversehrtheit einer Verbundanfrage, nicht ihre Vertraulichkeit. Der Verbund ist bisher nur mit drei Knoten auf einem Rechner gezeigt. Auch die Adressen angeschlossener Direktbilder liegen mit ihren Zugangsdaten unverschlüsselt auf dem Knoten. |
 | Löschkonzept für das Protokoll, qualifizierte Zeitstempel, Anbindung an ein Archiv nach BSI TR-03125 | Das Protokoll wächst unbegrenzt; seine Beweiskraft beruht auf der Kette und den bezeugten Ständen. |
 | Ende einer Wache mit dem Mandat | Eine Wache läuft weiter, wenn ihr Mandat geschlossen wird. |
-| Messung an Einsatzmaterial und im Dauerbetrieb | Fehlmeldungen je Stunde und übersehene Ereignisse im Einsatz sind unbekannt; gemessen ist eine Übung mit Archivmaterial. |
+| Messung an Einsatzmaterial und im Dauerbetrieb | Fehlmeldungen je Stunde und übersehene Ereignisse im Einsatz sind unbekannt; gemessen ist eine Übung mit Archivmaterial, geprüft ein Direktbild von einer simulierten Kamera. |
 | Suche über große Bestände | Die Suche vergleicht jede Anfrage mit jedem Vektor im Arbeitsspeicher. Ausgelegt ist das für einige Millionen Vektoren je Knoten; gemessen sind 2 268. |
 
 ## 4. Abgrenzung und Wettbewerb
@@ -237,7 +263,7 @@ Drei Befunde:
 | --- | --- | --- |
 | Dezember 2026 | Erledigt am 18. November 2026: Bildkodierer auf SigLIP 2 unter Apache 2.0 umgestellt, Gefahrenmodell neu trainiert, alle Messwerte neu erhoben (`docs/EVALUATION.md`). Offen: Lizenzkette schriftlich bestätigen lassen (ONNX-Fassung des Kodierers, YuNet, AIDERv2). Markenrecherche für „Sicht“ beim DPMA und beim EUIPO beauftragen. Gesellschaft mit Sitz in Deutschland gründen. | Schriftliche Bestätigung der Lizenzkette; Rechercheergebnis; Handelsregistereintrag beantragt |
 | Dezember 2026 bis Januar 2027 | Fünf Klärungen aus der Recherche: Wer hat die Pilotanwendung des Bundes gebaut? Was enthält ELD-BS 4.0? Will eine Behörde Bildsuche im Lagebild? Gespräche mit zehn unteren Katastrophenschutzbehörden und zwei Landesämtern, zuerst in Rheinland-Pfalz, wo § 60 LBKG Drohnenaufzeichnungen ausdrücklich regelt. | Zwei schriftliche Zusagen für eine Erprobung in einer Übung |
-| Februar 2027 | Laufende Bildströme anbinden. Meldungen in ein Bestandssystem auf ArcGIS-Grundlage übergeben. Verbindung zwischen Knoten verschlüsseln. | Vorführung mit einer echten Drohnenübertragung und einer fremden Lagekarte |
+| Februar 2027 | Direktbilder mit echten Kameras und einer Drohnenübertragung erproben; der Anschluss ist gebaut und bisher nur gegen eine simulierte Kamera geprüft (Abschnitt 3.2). Meldungen in ein Bestandssystem auf ArcGIS-Grundlage übergeben. Verbindung zwischen Knoten verschlüsseln. | Vorführung mit einer echten Drohnenübertragung und einer fremden Lagekarte |
 | März 2027 | Unterlagen für die Datenschutz-Folgenabschätzung fertigstellen. Vorgespräch mit einer Landesdatenschutzaufsicht. Rechtsgutachten zur Rechtsgrundlage in Rheinland-Pfalz, Nordrhein-Westfalen und Baden-Württemberg. | Schriftliche Einschätzung der Aufsicht oder des Gutachtens |
 | April bis Juni 2027 | Erste Erprobung in einer Übung auf abgesperrtem Gelände ohne unbeteiligte Personen. | Messbericht: Erkennungsverzug, Fehlmeldungen, übersehene Ereignisse, Urteil des Stabs |
 | Juli bis September 2027 | Zweite und dritte Erprobung, eine davon in einem anderen Land. Gespräche mit Fraunhofer IOSB und Eurocommand über eine Zulieferrolle. Förderwege prüfen (Cyberagentur, SPRIND). | Zwei weitere Messberichte; eine Absichtserklärung eines Bestandsanbieters |
@@ -262,14 +288,14 @@ Abbruchkriterien:
 | 3 | Bestandsanbieter ergänzen die Funktion: Fraunhofer IOSB in ELD-BS, Esri in CommandX, Milestone ohne Netzverbindung ab Ende 2026. | hoch | hoch | Zulieferrolle anbieten statt verdrängen; Verbund und Aufsicht als Bauweise ausbauen; schneller messen und veröffentlichen als andere |
 | 4 | Vertriebszyklen von 9 bis 18 Monaten, Haushaltsjahre, Vergaberecht. | hoch | hoch | Erprobung als kleiner Festpreis; Rahmenvertrag erst nach Messberichten; Mittel für 24 Monate ohne Lizenzumsatz einplanen |
 | 5 | Keine belegte Nachfrage: Keine Ausschreibung, kein Strategiepapier und keine Behörde verlangt bisher Bildsuche im Lagebild. | hoch | hoch | Zehn Gespräche bis Januar 2027; Abbruchkriterium Ende März 2027 |
-| 6 | Bewertung nur an Archivmaterial und an einem Datensatz, dessen Test- und Trainingsbilder sich ähneln. Die Wachen der Übung wurden am Übungsmaterial formuliert. Das Gefahrenmodell irrt bereits auf diesem Material, trotz 99,1 % auf seinem Benchmark. | sicher | hoch | Erprobung in Übungen mit eigenem Material der Behörde; Messbericht mit Fehlmeldungen und übersehenen Ereignissen; Gefahrenmodell bleibt bis dahin Zweitmeinung |
+| 6 | Bewertung nur an Archivmaterial und an einem Datensatz, dessen Test- und Trainingsbilder sich ähneln. Die Wachen der Übung wurden am Übungsmaterial formuliert. Das Gefahrenmodell irrt bereits auf diesem Material, trotz 99,1 % auf seinem Benchmark. Direktbilder sind nur gegen eine simulierte Kamera geprüft, nicht gegen Geräte im Feld. | sicher | hoch | Erprobung in Übungen mit eigenem Material der Behörde; Messbericht mit Fehlmeldungen und übersehenen Ereignissen; Gefahrenmodell bleibt bis dahin Zweitmeinung |
 | 7 | Fehlmeldungen oder übersehene Lagen im Einsatz; ein Stab verlässt sich auf das System oder verliert das Vertrauen. In der eigenen Übung war eine von 15 Meldungen falsch. | mittel | hoch | Jede Meldung braucht eine Bestätigung; Ausgabe trägt den Hinweis auf nötige Bewertung; Schwellen je Wache; ausdrückliches Nachschärfen aus Urteilen (in der Übung gezeigt); veröffentlichte Fehlerraten |
 | 8 | Zweckentfremdung: Suche nach Personen über Kleidung quer durch alle Quellen; Wunsch der Polizei nach Fahndungsnutzung. | mittel | hoch | Polizeiliche Nutzung vertraglich ausschließen; Beschreibungen nach Geschlecht, Alter oder Kleidung nur unter einem Mandat, das sie zulässt, und im Protokoll gekennzeichnet; Wiederfinden und Verfolgen werden abgelehnt (alles vorhanden). Die Prüfung ist eine Wortprüfung und umgehbar; Suchraum je Mandat begrenzen (fehlt); Stichproben der Aufsicht |
 | 9 | Name nicht geprüft. Weder Markenregister noch Firmennamen wurden recherchiert. | mittel | mittel | Recherche vor jeder öffentlichen Verwendung; Ausweichnamen in `docs/BRAND.md` |
 | 10 | Ein Gründer: Schlüsselperson, keine Fachherkunft aus dem Bevölkerungsschutz, keine Referenz. | hoch | hoch | Mitgründerin oder Mitgründer aus Stabsarbeit oder Leitstelle; Beirat aus zwei Praktikern; Quelltext hinterlegen |
 | 11 | KI-Verordnung: Einstufung als Hochrisiko-System, wenn die Ausgabe Einsätze priorisiert (Anhang III Nr. 5 Buchst. d) oder als Sicherheitsbauteil kritischer Infrastruktur dient (Nr. 2). | mittel | mittel | Zweckbestimmung, die beides ausschließt; technische Unterlagen dennoch vorbereiten; Fristen vor Zitat prüfen (`docs/COMPLIANCE.md`) |
 | 12 | Kleiner Kernmarkt (Abschnitt 7). | sicher | hoch für eine Wagnisfinanzierung | Finanzierung an der Marktgröße ausrichten; Nachbarmärkte erst nach der ersten Referenz prüfen |
-| 13 | Sicherheitsnachweise fehlen: kein Grundschutz-Profil, keine Verschlüsselung, keine Benutzerverwaltung. | sicher | mittel | Abschnitt 3.2 abarbeiten, bevor echte Einsatzdaten verarbeitet werden |
+| 13 | Sicherheitsnachweise fehlen: kein Grundschutz-Profil, keine Verschlüsselung, keine Benutzerverwaltung. Vorhanden sind eine Sperre nach fünf Fehlversuchen bei der Anmeldung und Schutzkopfzeilen; die Zugänge bleiben Vorführkonten. Mit einem Direktbild baut der Knoten selbst Verbindungen zu Kameras auf und hält deren Zugangsdaten unverschlüsselt. | sicher | mittel | Abschnitt 3.3 abarbeiten, bevor echte Einsatzdaten verarbeitet werden |
 | 14 | Herkunft des Bildkodierers aus den USA (Google). Kein Datenabfluss, weil die Gewichte lokal laufen, aber eine Angriffsfläche in der Debatte um digitale Souveränität. | niedrig | mittel | Herkunft offenlegen; Austauschbarkeit des Modells zeigen (mehrere Kodierer sind im Quelltext wählbar; der Wechsel am 18. November 2026 ist vollzogen) |
 
 ## 10. Was wir bewusst nicht bauen
@@ -322,7 +348,8 @@ Abbruchkriterien:
 10. **Aussagen enger fassen.** Die vier Stellen, an denen `docs/BRAND.md` über die Belege
     hinausging, sind dort berichtigt: das Ahrtal nur mit dem belegten Wortlaut, die Kennzahlen
     wie die Konsole sie ausweist, die Personenverfolgung als Regel mit Protokoll, die Messwerte
-    mit Kodierer und Lizenz. Zwei Formulierungen sind noch enger, als der Stand trägt:
-    „beobachtet es selbständig“ gilt nur für eingespieltes Material, solange keine Bildströme
-    angebunden sind; „Gesichter sind in allen Bildern maskiert“ setzt voraus, dass der Erkenner
-    jedes Gesicht findet, und das ist nicht gemessen.
+    mit Kodierer und Lizenz. Zwei Formulierungen gehen noch weiter, als der Stand trägt:
+    „beobachtet es selbständig“ gilt für eingespieltes Material und für angeschlossene
+    Direktbilder, dort mit etwa einer halben Minute Nachlauf und bisher nur im Labor geprüft;
+    „Gesichter sind in allen Bildern maskiert“ setzt voraus, dass der Erkenner jedes Gesicht
+    findet, und das ist nicht gemessen.

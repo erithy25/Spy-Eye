@@ -29,7 +29,6 @@ const target = path.join(here, '..', 'assets', 'screens');
 /** Whole screenshots: name -> widths to write besides the full size. */
 const WHOLE = {
   lage: [1440],
-  'lage-en': [1440],
   suche: [1440],
   wachen: [1440],
   vorgaenge: [1440],

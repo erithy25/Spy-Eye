@@ -44,11 +44,13 @@ Mandate, drei Rollen, das verkettete Protokoll mit Prüfung und Stichprobe, Vorg
 Prüfsummen und Siegel, der Verbund zwischen drei Knoten auf einem Rechner, die Löschfrist, die
 Lagekarte mit UTM-Gitter und die Ausgabe als GeoJSON und CAP. Gemessen ist eine eigene Übung mit
 Archivmaterial: 13 von 13 Ereignissen gemeldet, Verzug 1,1 Sekunden im Median, eine Fehlmeldung
-unter 15 Meldungen. Nicht fertig sind die Anbindung laufender Bildströme, eine erprobte Kopplung
-an ELD-BS oder CommandX, Benutzerverwaltung und Anmeldung jenseits dreier Vorführkonten, die
-Verschlüsselung und ein Löschkonzept für das Protokoll. Nicht gemessen ist alles, was echtes
-Einsatzmaterial betrifft. Der Bildkodierer ist seit dem 18. November 2026 SigLIP 2 unter Apache
-2.0; die frühere Lizenzfrage ist damit für den Kodierer erledigt.
+unter 15 Meldungen. Gebaut, aber nur im Labor geprüft sind Direktbilder: Ein Kamerastrom lässt
+sich anschließen und wird mit etwa einer halben Minute Nachlauf ausgewertet; geprüft ist das
+gegen eine simulierte Kamera, nicht im Feld. Nicht fertig sind die Erprobung mit echten Kameras,
+eine erprobte Kopplung an ELD-BS oder CommandX, Benutzerverwaltung und Anmeldung jenseits dreier
+Vorführkonten, die Verschlüsselung und ein Löschkonzept für das Protokoll. Nicht gemessen ist
+alles, was echtes Einsatzmaterial betrifft. Der Bildkodierer ist seit dem 18. November 2026
+SigLIP 2 unter Apache 2.0; die frühere Lizenzfrage ist damit für den Kodierer erledigt.
 
 ### Wie passt das zu unserer Stabssoftware?
 
@@ -114,10 +116,11 @@ Protokolldatei löschen.
 
 Wenn Sie fragen: Ihre Frage, Ihr Mandat und der Name der fragenden Person. Wenn Sie gefragt
 werden: höchstens zwölf verkleinerte, maskierte Vorschaubilder mit Ort und Zeit und die Nummer
-Ihres Protokolleintrags als Beleg, und nur aus Quellen, die Sie einzeln freigegeben haben. Aufnahmen und Index bleiben bei Ihnen; Ihr Knoten
-prüft die fremde Frage nach Ihren eigenen Regeln und protokolliert sie. Auch ein Vorschaubild ist
-ein personenbezogenes Datum, die Übermittlung braucht also eine Grundlage. Die Verbindung
-zwischen Knoten ist bisher signiert, aber nicht verschlüsselt.
+Ihres Protokolleintrags als Beleg, und nur aus Quellen, die Sie einzeln freigegeben haben.
+Aufnahmen und Index bleiben bei Ihnen; Ihr Knoten prüft die fremde Frage nach Ihren eigenen
+Regeln und protokolliert sie. Auch ein Vorschaubild ist ein personenbezogenes Datum, die
+Übermittlung braucht also eine Grundlage. Die Verbindung zwischen Knoten ist bisher signiert,
+aber nicht verschlüsselt.
 
 ### Lernt das System aus unseren Daten?
 
@@ -156,9 +159,9 @@ die Wachen waren an diesem Material formuliert; über fremdes Material, Nacht, R
 verschmutzte Linse sagt das nichts. Das trainierte Gefahrenmodell erreicht an seinem öffentlichen
 Datensatz 99,1 Prozent und irrt trotzdem schon auf dem Übungsmaterial: Es hält einen ruhigen
 Fluss für eine Überflutung. Es löst deshalb in der Voreinstellung keine Meldungen aus, sondern
-steht als Zweitmeinung neben Meldungen aus Luftbildquellen. Sicht ist ein zusätzliches Augenpaar und kein Ersatz für die
-Erkundung. Eine ausbleibende Meldung ist keine Entwarnung, und so sollte es in Ihrer
-Dienstanweisung stehen.
+steht als Zweitmeinung neben Meldungen aus Luftbildquellen. Sicht ist ein zusätzliches Augenpaar
+und kein Ersatz für die Erkundung. Eine ausbleibende Meldung ist keine Entwarnung, und so sollte
+es in Ihrer Dienstanweisung stehen.
 
 ### Wer haftet?
 
@@ -173,16 +176,22 @@ Vertrag und vor Ihre Rechtsabteilung.
 Ja. Nach dem einmaligen Laden der Modellgewichte (rund 950 MB) arbeitet ein Knoten ohne
 Netzverbindung. Gemessen ist: Ein Rechner mit vier Prozessorkernen und ohne Grafikkarte wertet
 Aufzeichnungen bei einem Bild je Sekunde 3,3-mal so schnell aus, wie das Material entsteht, die
-Maskierung eingeschlossen; rechnerisch reicht das für drei Quellen zugleich. Für elf Quellen
-gleichzeitig bräuchte es etwa das Dreieinhalbfache dieser Rechenleistung oder eine Grafikkarte.
-Für den Verbund braucht es eine Verbindung zwischen den Knoten.
+Maskierung eingeschlossen; rechnerisch reicht das für etwa drei Ströme zugleich. Diese Zahl ist
+gerechnet, nicht gemessen: Geprüft ist ein einzelnes Direktbild von einer simulierten Kamera. Für
+elf Quellen gleichzeitig bräuchte es etwa das Dreieinhalbfache dieser Rechenleistung oder eine
+Grafikkarte. Für den Verbund braucht es eine Verbindung zwischen den Knoten, für ein Direktbild
+eine zur Kamera.
 
 ### Wie kommen unsere Drohnenbilder hinein?
 
-Heute als Videodatei, einzeln oder als Ordner. Im Test waren 44 Aufnahmen 14 Sekunden nach Beginn
-des Hochladens grob durchsuchbar; die genaue Auswertung lief im Hintergrund weiter und war nach
-gut zweieinhalb Minuten abgeschlossen. Die laufende Übertragung einer Drohne oder Kamera lässt
-sich noch nicht anbinden. Das ist der wichtigste fehlende Baustein und für Februar 2027 geplant.
+Als Videodatei, einzeln oder als Ordner, oder als Direktbild. Im Test waren 44 Aufnahmen 14
+Sekunden nach Beginn des Hochladens grob durchsuchbar; die genaue Auswertung lief im Hintergrund
+weiter und war nach gut zweieinhalb Minuten abgeschlossen. Für ein Direktbild trägt die Leitung
+die Adresse des Stroms ein (RTSP, HLS, RTMP, SRT oder MPEG-TS). Der Knoten schneidet den Strom in
+Abschnitte von 20 Sekunden und wertet jeden wie eine Aufzeichnung aus; Meldungen folgen etwa eine
+halbe Minute nach dem Ereignis. Geprüft ist das gegen eine simulierte Kamera, nicht gegen Geräte
+im Feld. Ob sich die Übertragung Ihrer Drohne so anschließen lässt, zeigt erst die Erprobung mit
+echten Kameras; sie ist für Februar 2027 vorgesehen.
 
 ## Aus der Presse
 
@@ -210,9 +219,10 @@ Polizei als Kunde. Über die Offenlegung des Quelltexts ist noch nicht entschied
 ### Wurde das je im Ernstfall erprobt?
 
 Nein. Es gibt keinen Behördenkunden, keine Erprobung mit einer Behörde und keinen Einsatz.
-Gemessen sind eine eigene Übung mit Archivaufnahmen aus dem Netz und ein öffentlicher Datensatz;
-der Messbericht nennt, was die Werte bedeuten und was nicht. Die erste Erprobung in einer Übung
-mit einer Behörde ist für das zweite Quartal 2027 vorgesehen, wenn eine Behörde zusagt.
+Gemessen sind eine eigene Übung mit Archivaufnahmen aus dem Netz und ein öffentlicher Datensatz,
+geprüft ist ein Direktbild von einer simulierten Kamera; der Messbericht nennt, was die Werte
+bedeuten und was nicht. Die erste Erprobung in einer Übung mit einer Behörde ist für das zweite
+Quartal 2027 vorgesehen, wenn eine Behörde zusagt.
 
 ### Sie verweisen auf das Ahrtal. Ist das redlich?
 

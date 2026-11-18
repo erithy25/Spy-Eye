@@ -2,6 +2,7 @@
  * English text of the page. The German text lives in index.html and is the original;
  * main.js swaps element contents by the key in their data-i18n attribute.
  * Values may contain markup. Footnote anchors must keep their ids (r1…r5, q1…q5).
+ * The screenshots show the German console; captions name its tabs as they appear there.
  */
 window.SICHT_EN = {
   'doc.title': 'Sicht — No sight without oversight.',
@@ -34,9 +35,18 @@ window.SICHT_EN = {
   'hero.r1v': 'Rhine / Moselle · Koblenz',
   'hero.r2k': 'MGRS',
   'hero.r3k': 'Footage',
-  'hero.r3v': 'Exercise · no live data',
+  'hero.r3v': 'Exercise · no operational data',
   'hero.r4k': 'Map',
   'map.attrib': '© OpenStreetMap contributors (ODbL) · OpenMapTiles · Elevation: Mapzen',
+
+  // ---------------------------------------------------------------- film
+  'film.rail': 'Film · 40 s',
+  'film.h2': 'Brand film',
+  'film.aria': 'Brand film, 40 seconds, with sound, no voice-over',
+  'film.fallback': 'Open the film as a file (MP4, 2.8 MB)',
+  'film.caption': 'Brand film · symbolic images, AI-generated',
+  'film.note':
+    '40 seconds, with sound, no voice-over; the text cards are in German. What the film says about the flood night in the Ahr valley is set out with sources in the next section.',
 
   // ---------------------------------------------------------------- 01 problem
   'problem.h2': 'The footage existed.<br>The picture did not.',
@@ -61,11 +71,12 @@ window.SICHT_EN = {
   'purpose.text':
     'Sicht measures exactly this distance: the seconds between the first image of an event and the alert on the map – in every exercise, per event, verifiable.',
   'kpi1.k': 'Detection delay',
-  'kpi1.v': 'Seconds from an event appearing in the image to the alert.',
-  'kpi2.k': 'Review rate',
-  'kpi2.v': 'Share of incoming footage that was analysed.',
-  'kpi3.k': 'Ledger coverage',
-  'kpi3.v': 'Share of queries with purpose, person and ledger entry. Target: 100&nbsp;%.',
+  'kpi1.v': 'Seconds from an event appearing in the image to the alert; measured per event in every exercise.',
+  'kpi2.k': 'Coverage',
+  'kpi2.v': 'Share of the recordings received that have been analysed in full.',
+  'kpi3.k': 'Recorded queries',
+  'kpi3.v':
+    'Number of queries and of refused queries. An answer is delivered only after the ledger entry has been written; by construction there are no queries without an entry.',
   'sources.label': 'Sources',
   'sources.back': 'Back to the text',
   src1: 'dpa, in: Volksstimme, 5 October 2022 (in German).',
@@ -79,50 +90,68 @@ window.SICHT_EN = {
   'produkt.h2': 'Knowing what your own footage shows.',
   'produkt.intro':
     'Sicht does not replace a command and control system. It supplies what is missing today – in seven parts that rest on the same principle.',
-  'shot.console': 'Console',
-  'shot.exercise': 'exercise material',
+  'produkt.hint': 'Screenshots of the console, German interface · exercise material · each opens enlarged',
   'mod1.gloss': 'overview',
   'mod1.tab': 'LAGE tab · situation map',
   'mod1.text':
-    'The situation map shows sources, alerts and incidents where they were recorded, each with its MGRS grid reference. It is drawn in-house from OpenStreetMap vector data and contour lines and needs no tile service.',
-  'mod1.alt': 'Console, LAGE tab: situation map with sources, alerts and incidents',
+    'The situation map shows sources, alerts and incidents where they were recorded, with an MGRS grid and the grid reference under the pointer. It is drawn in-house from OpenStreetMap vector data and contour lines and needs no tile service. Alerts of the same kind at the same place become one incident.',
+  'mod1.alt': 'Console, LAGE tab: situation map with eleven sources, running alerts, incidents and the frames of the sources',
+  'mod1.cap':
+    '<b>Console · LAGE</b> Exercise RHEIN-MOSEL at T+07:10: eleven sources on the map, six of 13 alerts still running, ten incidents.',
+  'mod1.dalt': 'Console: an alert of the watch “Brand” (fire) with frame, source, grid reference and the buttons to confirm or dismiss it',
+  'mod1.dcap':
+    '<b>Detail</b> A single alert: the watch “Brand” (fire) at Erkunder 3, with grid reference and confidence. Whether it is confirmed or dismissed is decided by a person.',
   'mod2.gloss': 'insight',
   'mod2.tab': 'SUCHE tab · search',
   'mod2.text':
-    'A description in plain words searches all incoming footage and returns one frame per scene with the matching region marked. Every search requires a mandate; queries about identifying or protected characteristics of persons are refused, and the refusal is logged.',
-  'mod2.alt': 'Console, SUCHE tab: results of a free-text search, one frame per scene',
+    'A description in plain words, in German or English, searches all incoming footage and returns one frame per scene with the matching region marked. Every search requires a mandate. Queries for names, faces, licence plates, or for protected and bodily features of persons are refused, and the refusal is recorded in the ledger.',
+  'mod2.alt':
+    'Console, SUCHE tab: six hits for the query “überflutete Wiese” (flooded meadow), a map of where they were found, and the answer of a peer node',
+  'mod2.cap':
+    '<b>Console · SUCHE</b> Query “überflutete Wiese” (flooded meadow): six hits in 33 scenes searched, three sources on the map; at the lower right the answer of the peer node Trier with its receipt.',
+  'mod2.dalt': 'Console: a single hit; the frame is darkened except for the place that matched',
+  'mod2.dcap': '<b>Detail</b> A single hit: whatever the query does not respond to is darkened.',
   'mod3.gloss': 'caution',
   'mod3.tab': 'WACHEN tab · watches',
   'mod3.text':
-    'A watch is a standing query: it checks new footage on its own and raises an alert once a description holds across several frames. Analyst feedback only takes effect when someone explicitly retrains the watch; every version is numbered.',
-  'mod3.alt': 'Console, WACHEN tab: standing queries with their alerts',
+    'A watch is a standing query in words: it checks new footage on its own and raises an alert once a description holds across several frames. Analysts’ verdicts take effect only when someone explicitly retrains the watch; every version is numbered.',
+  'mod3.alt': 'Console, WACHEN tab: nine watches; selected is “Umgestürzter Lastkraftwagen” (overturned lorry) in version 2',
+  'mod3.cap':
+    '<b>Console · WACHEN</b> The watch “Umgestürzter Lastkraftwagen” (overturned lorry) in version 2, retrained from one confirmed and one dismissed verdict.',
+  'mod3.dalt': 'Console: form for a new watch with a preview of the frames that would have raised an alert',
+  'mod3.dcap':
+    '<b>Detail</b> A new watch, checked against the stock before it is set: 57 of 567 frames would have raised an alert.',
   'mod4.gloss': 'review',
   'mod4.tab': 'VORGÄNGE tab · cases',
   'mod4.text':
-    'Frames are secured in a case with their SHA-256 checksum and are exempt from the deletion period for as long as the case exists. A sealed case can be issued as a printable report whose content can be checked against the ledger.',
-  'mod4.alt': 'Console, VORGÄNGE tab: case file with secured frames and checksums',
+    'Frames are secured in a case with the SHA-256 checksum of the unmasked original and are exempt from the deletion period for as long as the case exists. A sealed case cannot be changed and can be issued as a printable report whose seal is recorded in the ledger.',
+  'mod4.alt': 'Console, VORGÄNGE tab: a sealed case with one secured frame, its checksum and the seal',
+  'mod4.cap': '<b>Console · VORGÄNGE</b> A sealed case with one exhibit, its checksum and the seal.',
   'mod5.gloss': 'far sight',
   'mod5.tab': 'VERBUND tab · federation',
   'mod5.text':
-    'Nodes of different authorities answer each other’s queries without handing over recordings: what travels is the signed question, with its mandate and the person asking. What comes back are masked previews and the number of the ledger entry under which the answering node recorded the request.',
-  'mod5.alt': 'Console, VERBUND tab: neighbouring nodes and the answers to a federated query',
+    'Nodes of different authorities answer each other’s queries without handing over recordings: what travels is the signed question, with its mandate and the person asking. What comes back are at most twelve masked previews and the number of the ledger entry under which the answering node recorded the request.',
+  'mod5.alt': 'Console, VERBUND tab: map with the nodes Koblenz, Trier and Mainz and the list of peer nodes',
+  'mod5.cap': '<b>Console · VERBUND</b> Three nodes: Koblenz with its peers Trier and Mainz, both reachable.',
   'mod6.gloss': 'oversight',
   'mod6.tab': 'PROTOKOLL tab · ledger',
   'mod6.text':
     'Every sign-in, search, refusal, approval and export is written to a ledger whose entries are chained with SHA-256. Oversight verifies the chain in one step, draws random samples of the queries and exports the ledger in full.',
-  'mod6.alt': 'Console, PROTOKOLL tab: chained entries and the result of the verification',
+  'mod6.alt': 'Console, PROTOKOLL tab: chain verified and intact, below it the chained entries',
+  'mod6.cap':
+    '<b>Console · PROTOKOLL</b> Chain verified and intact; below it refusals, a seal and the retraining of a watch.',
+  'mod6.dalt': 'Console: a sample drawn from the recorded queries',
+  'mod6.dcap': '<b>Detail</b> Oversight’s sample: four queries drawn, three of them refusals.',
   'mod7.gloss': 'consideration',
   'mod7.tab': 'Throughout, in every tab',
   'mod7.text':
-    'Faces are made unrecognisable at ingest; the unmasked frame is available only with a stated reason and the approval of a second person, limited to 15 minutes. Without a mandate stating purpose and legal basis, no analysis is possible.',
-  'mask.title': 'Diagram: a face in the frame is replaced by a coarse grid at ingest; the original is kept under lock.',
-  'mask.a': 'MASKED AT INGEST',
-  'mask.b': 'original kept under lock',
-  'mask.c': 'APPROVAL',
-  'mask.d': 'stated reason · second person',
-  'mask.e': 'limited to 15 minutes',
-  'mask.f': 'entry in the ledger',
-  'mask.caption': 'Diagram · masking and approval',
+    'Faces are made unrecognisable at ingest; the unmasked frame is available only with a stated reason and the approval of a second person, limited to 15 minutes. Without a mandate stating purpose and legal basis, no analysis is possible. The three pictures show the same procedure in the console.',
+  'mod7.alt1': 'Detail of the console: a person at a collapsed road, the face pixelated',
+  'mod7.cap1': '<b>1</b> Masked at ingest',
+  'mod7.alt2': 'Detail of the console: dialog for lifting the masking, with the reason and the approving person',
+  'mod7.cap2': '<b>2</b> Reason, approval by a second person',
+  'mod7.alt3': 'Detail of the console: the same frame unmasked, marked as original with the approval active',
+  'mod7.cap3': '<b>3</b> Original, limited to 15 minutes',
 
   // ---------------------------------------------------------------- 03 method
   'flow.h2': 'From image to alert.',
@@ -132,11 +161,11 @@ window.SICHT_EN = {
   'flow2.k': 'Masking',
   'flow2.v': 'faces made unrecognisable, original kept under lock',
   'flow3.k': 'Embedding',
-  'flow3.v': 'frame and regions as vectors with 512 dimensions',
+  'flow3.v': 'frame and regions as vectors with 768 dimensions (SigLIP 2)',
   'flow4.k': 'Index',
   'flow4.v': 'vectors per recording, on the local machine',
   'flow5.k': 'Search · Watches',
-  'flow5.v': 'free description or standing query',
+  'flow5.v': 'free description, in German or English, or standing query',
   'flow6.k': 'Alert',
   'flow6.v': 'a match across several frames',
   'flow7.k': 'Incident',
@@ -172,85 +201,158 @@ window.SICHT_EN = {
 
   // ---------------------------------------------------------------- 05 limits
   'limits.h2': 'What Sicht cannot do –<br>and is not meant to.',
-  'limits.intro': 'These limits are not settings; they are how the system is built. What cannot be overseen, Sicht does not build.',
+  'limits.intro':
+    'Some of these limits are architecture: there is no face recognition model, no licence plate reader and no central data pool. The others are rules that the system enforces and records. What cannot be overseen, Sicht does not build.',
   'limit1.k': 'No face recognition, no matching against images of persons.',
-  'limit1.v': 'There is no model for it in the system. Faces are masked at ingest.',
-  'limit2.k': 'No licence plate recognition.',
-  'limit2.v': 'No character recognition on vehicles, no matching against registers.',
-  'limit3.k': 'No tracking of individuals across cameras.',
-  'limit3.v': 'Sicht knows scenes, not identities: no re-identification, no search by identifying features.',
-  'limit4.k': 'No search by origin, religion, health or other protected characteristics.',
-  'limit4.v': 'The system refuses such queries. The refusal is written to the ledger.',
+  'limit1.v': 'There is no model for it in the system; the face detector serves masking only. Faces are masked in every frame.',
+  'limit2.k': 'No licence plates: they are neither read nor searched.',
+  'limit2.v': 'There is no plate reader and no matching against registers. Queries that name a licence plate are refused.',
+  'limit3.k': 'No finding again and no tracking of particular persons.',
+  'limit3.v':
+    'Such queries are refused. Descriptions by sex, age group or clothing are possible only under a mandate that explicitly permits them, for instance a search for a missing person, and are flagged in the ledger. That is a rule with a ledger, not a technical impossibility.',
+  'limit4.k': 'No search by origin, religion, health or other protected attributes.',
+  'limit4.v':
+    'Nor by hair colour, tattoos or other bodily features. The system refuses such queries; the refusal is recorded in the ledger with the rule that fired.',
   'limit5.k': 'No central data pool: footage stays with the authority that recorded it.',
   'limit5.v': 'In the federation the question travels, not the footage.',
-  'limit6.k': 'No silent learning in operation: retraining is a separate, logged step.',
+  'limit6.k': 'No silent learning in operation: retraining is a separate, recorded step.',
   'limit6.v': 'Every version of a watch is numbered and can be reset.',
   'refusal.label': 'What a limit looks like in the console',
   'refusal.q1': 'water on the road',
   'refusal.ok': 'Permitted.',
-  'refusal.a1': 'The search runs under the selected mandate and is written to the ledger.',
-  'refusal.q2': 'man with a neck tattoo',
+  'refusal.a1': 'The search runs under the selected mandate and is recorded in the ledger.',
+  'refusal.q2': 'face of mr müller',
   'refusal.no': 'Refused.',
   'refusal.a2':
-    'The request describes a person by a bodily feature ("tattoo"). Such features count as biometric categories (AI Act, recital 16) and are excluded here. Clothing, equipment, posture and situation are permitted.',
+    'The request aims at recognising, finding again or tracking a particular person. This system describes situations; it identifies no one.',
+  'refusal.q3': 'person in a red jacket',
+  'refusal.dep': 'Depends on the mandate.',
+  'refusal.a3':
+    'If the mandate permits descriptions of persons, the search runs and is flagged in the ledger. Otherwise: “This mandate does not permit describing persons by sex, age group or clothing ("jacket"). Please use a neutral wording such as "person".”',
+  'refusal.alt':
+    'Console, SUCHE tab: the query “Kennzeichen KO AB 123” (a licence plate) is refused; the message names the rule “Kennzeichen”',
+  'refusal.cap':
+    '<b>Console · SUCHE</b> The query “Kennzeichen KO AB 123” (a licence plate) is refused: “The request concerns a licence plate. This system neither reads nor searches licence plates; they would lead to the keeper.” The refusal is recorded in the ledger.',
   'refusal.note':
-    'Wording of the console. Benchmarks for these limits: <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj" rel="noopener noreferrer" target="_blank">Regulation (EU) 2024/1689, Art.&nbsp;5</a> · <a href="https://www.bundesverfassungsgericht.de/e/rs20230216_1bvr154719.html" rel="noopener noreferrer" target="_blank">German Federal Constitutional Court, judgment of 16 February 2023 – 1 BvR 1547/19, 1 BvR 2634/20</a>.',
+    'The refusals are the wording of the console. Benchmarks for these limits: <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj" rel="noopener noreferrer" target="_blank">Regulation (EU) 2024/1689, Art.&nbsp;5</a> · <a href="https://www.bundesverfassungsgericht.de/e/rs20230216_1bvr154719.html" rel="noopener noreferrer" target="_blank">German Federal Constitutional Court, judgment of 16 February 2023 – 1 BvR 1547/19, 1 BvR 2634/20</a>.',
 
   // ---------------------------------------------------------------- 06 measured
   'measured.h2': 'Measured, not promised.',
-  'measured.intro': 'Five figures from the trial build, each with its basis. What is not listed here has not been measured.',
+  'measured.intro':
+    'Eight figures from the trial build, measured on 18 November 2026 on four processor cores without a graphics card. What is not listed here has not been measured.',
   'm.h1': 'Figure',
   'm.h2': 'Statement',
   'm.h3': 'Basis',
-  'm1.fig': '99.1&nbsp;%',
-  'm1.k': 'Accuracy of the hazard model',
-  'm1.v': 'Macro F1 0.990 on the AIDERv2 test set of 1,654 images (collapse, fire, flood, normal). The same image model without training: 92.2&nbsp;%.',
-  'm2.fig': '≈ 3×',
-  'm2.k': 'Analysis relative to real time',
-  'm2.v': 'At one frame per second, on four processor cores, without a graphics card.',
-  'm3.fig': '5.9&nbsp;s',
-  'm3.k': 'until 44 recordings are searchable',
-  'm3.v': 'Preview pass on the same machine; the dense analysis continues afterwards.',
-  'm4.fig': '20–40&nbsp;ms',
-  'm4.k': 'Face masking per frame',
-  'm4.v': 'YuNet face detector on the processor.',
-  'm5.fig': 'ms',
-  'm5.k': 'Ledger verification',
-  'm5.v': 'Milliseconds per thousand entries; SHA-256 chain.',
+  'm1.fig': '13 / 13',
+  'm1.k': 'Events of the exercise detected',
+  'm1.v':
+    'Exercise RHEIN-MOSEL: a script with 13 events, eleven sources, 31 recordings, clock in real time. An event counts as detected when the watch intended for it raises an alert at the source concerned.',
+  'm2.fig': '1.1&nbsp;s',
+  'm2.k': 'Median detection delay',
+  'm2.v':
+    'Counted from the arrival of the analysed frame; one frame per second, two hits before an alert. Range 1.0 to 1.2&nbsp;s. The computing time of the analysis, about 0.3&nbsp;s per frame, is not included.',
+  'm3.fig': '1 / 15',
+  'm3.k': 'False alerts',
+  'm3.v':
+    'A collapsed road was reported as an overturned lorry. After the alert was dismissed and the watch explicitly retrained, none in the following run.',
+  'm4.fig': '3.3&nbsp;×',
+  'm4.k': 'Analysis relative to real time',
+  'm4.v': '577&nbsp;s of footage in 176&nbsp;s, at one frame per second, four regions per frame and with face masking.',
+  'm5.fig': '14&nbsp;s',
+  'm5.k': 'until 44 recordings are searchable',
+  'm5.v': 'From the start of the upload, on the same machine; analysed in full after 156&nbsp;s.',
+  'm6.fig': '29&nbsp;s',
+  'm6.k': 'Live stream: first alert after connecting',
+  'm6.v':
+    'Against a simulated camera that sends a recording of a building fire in a loop (MPEG-TS over TCP), with segments of 10&nbsp;s. With the default of 20&nbsp;s the delay is half to three quarters of a minute. Not tested: real cameras, several streams at once.',
+  'm7.fig': '6&nbsp;ms',
+  'm7.k': 'Search within the node, median',
+  'm7.v': 'Across 2,268 vectors, after the exercise. A federated question to two peers on the same machine: 20 to 400&nbsp;ms.',
+  'm8.fig': '99.1&nbsp;%',
+  'm8.k': 'Hazard model on its benchmark',
+  'm8.v':
+    'Macro F1 0.991 on the AIDERv2 test set of 1,654 aerial images; without training 85.1&nbsp;%. On the exercise footage the model errs and therefore raises no alerts.',
   'measured.caveat':
-    '<b>Caveat.</b> AIDERv2 contains similar images in its training and test sets. The figure holds for that data, not for arbitrary operational footage.',
-  'measured.alt': 'Console, WIRKUNG tab: measurements of an exercise, per event',
+    '<b>Two caveats.</b> The watches of the exercise were worded on the exercise footage; the figures show how the system behaves in operation, not its quality on unseen operational footage. And the hazard model errs on the exercise footage despite its benchmark figure: it takes a calm river for a flood. It therefore raises no alerts, but stands as a second opinion next to alerts from aerial sources.',
+  'measured.encoder':
+    'Image encoder in all measurements: SigLIP 2 (Google, Apache-2.0), 34&nbsp;ms per frame on this machine. It runs offline and understands queries in German and English.',
+  'measured.alt': 'Console, WIRKUNG tab: detection delay, coverage, recorded queries and the events of the exercise with their delay',
+  'measured.cap':
+    '<b>Console · WIRKUNG</b> A different run from the one in the table: the same script with the exercise clock at eight times speed. Its figures differ – delay 2.3&nbsp;s instead of 1.1&nbsp;s, 16 alerts instead of 15, analysis at 3.7 instead of 3.3 times real time; the search time comes from a single federated question. The table follows the measurement report.',
 
   // ---------------------------------------------------------------- 07 operation
   'ops.h2': 'Runs at the authority.<br>Stays at the authority.',
   'ops1.k': 'Own hardware',
-  'ops1.v': 'Sicht runs on a machine owned by the authority. A processor is enough for the analysis; a graphics card speeds it up but is not required.',
+  'ops1.v':
+    'Sicht runs on a machine owned by the authority. A processor is enough to analyse recordings; by calculation, a machine with four cores analyses about three streams at once. More simultaneous sources need more computing power or a graphics card. At start-up the node compares the results of a graphics card with those of the processor; if they differ, it continues on the processor.',
   'ops2.k': 'Offline',
-  'ops2.v': 'After a one-time download of the model weights, the node works without an internet connection. Map, typeface and interface are stored locally.',
-  'ops3.k': 'Open weights',
-  'ops3.v': 'The image models are publicly available weights and can be exchanged. There is no remote service that could be switched off.',
+  'ops2.v':
+    'After a one-time download of the models (about 950&nbsp;MB) the node works without an internet connection. Map, typeface and interface are stored locally.',
+  'ops3.k': 'Freely licensed image model',
+  'ops3.v':
+    'The image encoder is SigLIP 2 by Google under the Apache 2.0 licence. It understands queries in German and English and can be exchanged. There is no remote service that could be switched off.',
   'ops4.k': 'No cloud',
   'ops4.v': 'Recordings and index never leave the node. Within the federation only the question goes out; masked previews come back.',
+  'ops9.k': 'Live streams, with a delay',
+  'ops9.v':
+    'A source can carry a stream address (RTSP, HLS, RTMP, SRT, MPEG-TS). The stream is cut into segments of 20 seconds and each segment is analysed like a recording; alerts follow about half a minute after the event. Only supervisors may connect a stream. This has been tested against a simulated camera, not against devices in the field.',
   'ops5.k': 'Interfaces',
-  'ops5.v': 'Incidents as GeoJSON and as CAP 1.2 messages, reports as printable documents. Sicht feeds existing situation-picture and warning systems instead of replacing them.',
+  'ops5.v':
+    'Incidents as GeoJSON and as CAP 1.2 messages, reports as printable documents. Sicht is meant to feed existing situation-picture and warning systems, not to replace them; a tested coupling does not exist yet.',
   'ops6.k': 'Roles',
   'ops6.v': 'Analysts, supervisors and oversight hold separate rights. Oversight sees the ledger, but no footage.',
-  'ops8.k': 'Self-check',
-  'ops8.v': 'At start-up the node compares the results of a graphics card with those of the processor. If they differ, it continues on the processor.',
   'ops7.k': 'Deletion period',
   'ops7.v': 'Recordings are deleted after a configurable period, 60 days by default. Exempt is whatever has been secured as evidence in a case.',
 
   // ---------------------------------------------------------------- 08 status
   'status.h2': 'Trial build.',
   'status.intro':
-    'Sicht is software at trial stage. Everything this page shows runs on exercise material. There are no government customers, no certification and no live operation.',
+    'Sicht is software at trial stage. Everything this page shows runs on exercise material. There are no government customers, no certification and no operational use. The name has not been checked against trademark registers.',
+  'open.label': 'Limits of this build',
+  'open1.k': 'Live streams only with a delay, and tested only in the lab',
+  'open1.v':
+    'A connected stream is cut into segments of 20 seconds and analysed like a recording; alerts follow about half a minute after the event. This has been tested against a simulated camera, not against devices in the field. By calculation, a machine with four cores analyses about three streams at once; the exercise with eleven sources therefore replays footage analysed in advance.',
+  'open2.k': 'No connection to a command and control system',
+  'open2.v': 'There are outputs as GeoJSON and CAP 1.2, but no tested coupling to an existing system.',
+  'open3.k': 'Sign-in built for the demonstration',
+  'open3.v':
+    'Three fixed accounts for analysis, supervision and oversight with one shared password. No connection to a directory service, no two-factor sign-in.',
+  'open4.k': 'Rules, not impossibilities',
+  'open4.v':
+    'The query check is a traceable check of words. It can be circumvented by paraphrase; that is what the ledger and the sample are for. Descriptions by sex, age or clothing are possible under a mandate that permits them.',
+  'open5.k': 'No legal opinion',
+  'open5.v':
+    'Whether an authority may analyse footage in this way is decided by its legal basis. The documentation of Sicht maps the requirements to the safeguards that have been built and names what is missing.',
+  'open6.k': 'Scale',
+  'open6.v': 'The search compares every query with every vector. It is designed for a few million vectors per node, not for more.',
+  'demo.label': 'A demonstration in 15 minutes',
+  'demo.intro':
+    'Everything shown runs on a single laptop, without a network connection. Three nodes – Koblenz, Trier and Mainz – talk to each other only through the federation protocol, as nodes on three machines would. The exercise replays recordings analysed in advance on a clock.',
+  'demo1.k': 'Mandate',
+  'demo1.v': 'Sign in and select the mandate of the exercise. Without purpose and legal basis, no analysis.',
+  'demo2.k': 'Situation',
+  'demo2.v': 'Start the exercise: eleven sources on the map. Seconds after the first frame of a flood, the alert stands at its place.',
+  'demo3.k': 'Review',
+  'demo3.v': 'Open an alert, see what the watch responds to, and confirm it. Alerts of the same kind at the same place become one incident.',
+  'demo4.k': 'Retrain',
+  'demo4.v': 'A false alert is shown, not hidden: dismiss it, explicitly retrain the watch, version 2.',
+  'demo5.k': 'Federation',
+  'demo5.v':
+    '“überflutete Wiese” (flooded meadow), asked across the federation: hits from the node’s own stock, and from the peers masked previews with a receipt.',
+  'demo6.k': 'Refusal',
+  'demo6.v': '“Gesicht von Herrn Müller” (face of Mr Müller), “Kennzeichen KO AB 123” (a licence plate): refused, with the rule, in the ledger.',
+  'demo7.k': 'Case',
+  'demo7.v': 'Secure a frame with the checksum of the original, seal the case, issue the report.',
+  'demo8.k': 'Oversight',
+  'demo8.v': 'Verify the ledger chain, draw a sample, read the measurements of the exercise.',
   'trial.label': 'A trial in three steps',
   'trial1.k': 'Set up',
   'trial1.v': 'A node is installed on a machine at the authority, without any connection to existing systems.',
   'trial2.k': 'Exercise',
   'trial2.v': 'The authority’s own footage from a past exercise or a closed operation is loaded. The analysts word the watches themselves.',
   'trial3.k': 'Measure',
-  'trial3.v': 'Detection delay, review rate and ledger coverage are reported per event. The authority decides on the basis of its own figures.',
+  'trial3.v':
+    'The detection delay is reported per event, along with coverage, false alerts and recorded queries. The authority decides on the basis of its own figures.',
   'trial.note': 'A trial with real footage is preceded by a data protection impact assessment. Sicht supplies the technical description for it.',
 
   // ---------------------------------------------------------------- footer
@@ -258,10 +360,20 @@ window.SICHT_EN = {
   'foot.k0': 'Word',
   'foot.v0': 'Sicht (German, f.) – sight; a clear view of a situation.',
   'foot.k1': 'Status',
-  'foot.v1': 'Trial build · exercise material · no live data',
+  'foot.v1': 'Trial build · exercise material · no operational data',
   'foot.k2': 'Map',
   'foot.k3': 'Typeface',
   'foot.v3': 'JetBrains Mono, bundled locally · <a href="assets/fonts/OFL.txt">SIL Open Font License 1.1</a>',
+  'foot.k4': 'Image model',
+  'foot.v4': 'SigLIP 2 (Google) · Apache 2.0 · runs offline',
+  'foot.k5': 'Footage',
+  'foot.v5':
+    'The screenshots show freely licensed stock footage (Mixkit) from an exercise, not the places named. The film shows AI-generated symbolic images.',
+
+  // ---------------------------------------------------------------- larger view
+  'zoom.prev': 'Previous picture',
+  'zoom.next': 'Next picture',
+  'zoom.close': 'Close',
 };
 
 /* Labels drawn on the hero map. Generic exercise wording; positions are set in main.js. */

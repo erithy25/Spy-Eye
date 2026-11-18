@@ -81,7 +81,7 @@ Wer mehr Zeit zum Erklären braucht, drückt PAUSE; die Uhr und alle Quellen hal
 | 9:00 | VORGÄNGE: VERSIEGELN, dann BERICHT. | „Ein versiegelter Vorgang ist unveränderlich. Der Bericht ist druckbar und nennt Siegel und Protokollstand.“ |
 | 10:00 | LAGE: an Erkunder 1 das Bild mit dem Fachberater öffnen. Gesicht ist verpixelt. ORIGINAL ANFORDERN und den Dialog zeigen. | „Gesichter sind in jedem Bild maskiert. Das Original gibt es nur mit Grund und mit Freigabe durch eine zweite Person, für 15 Minuten.“ |
 | 11:00 | PROTOKOLL: KETTE PRÜFEN. Dann STICHPROBE ZIEHEN. | „Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Die Aufsicht zieht Stichproben, ohne selbst Bilder sehen zu können.“ |
-| 12:00 | WIRKUNG. | „Der Zweck ist messbar: 13 Ereignisse im Drehbuch, 13 erkannt, im Median nach gut zwei Sekunden, eine Fehlmeldung. Diese Zahlen erzeugt das System selbst, bei jeder Übung.“ |
+| 12:00 | WIRKUNG. | „Der Zweck ist messbar: 13 Ereignisse im Drehbuch, 13 erkannt, eine Fehlmeldung. In Echtzeit liegt der Verzug im Median bei 1,1 Sekunden; mit der hier beschleunigten Uhr zeigt die Anzeige zwei bis drei. Diese Zahlen erzeugt das System selbst, bei jeder Übung.“ |
 | 13:00 | LAGE: LAGEBERICHT öffnen. | „Am Ende steht ein Lagebericht, der sich drucken oder als GeoJSON und CAP an bestehende Systeme übergeben lässt.“ |
 
 Die Freigabe vollständig zeigen: Niemand kann sich selbst freigeben. In einem zweiten

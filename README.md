@@ -14,7 +14,8 @@ ist nicht markenrechtlich geprüft. Was gebaut und gemessen ist, steht unten und
 
 Alles läuft auf eigener Hardware in einem Prozess: Bildmodell (ONNX Runtime), Verzeichnis, Suche,
 Wachen, Protokoll, Karte. Keine Schlüssel, keine Datenbank, keine Cloud. Nach dem einmaligen Laden
-der Modelle wird kein Netz gebraucht.
+der Modelle wird kein Netz gebraucht; Verbindungen entstehen nur dort, wo der Betreiber sie
+einrichtet (Nachbarknoten im Verbund, angeschlossene Direktbilder).
 
 ## Was das System tut
 
@@ -191,7 +192,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `SICHT_NODE_NAME`, `_OPERATOR`, `_REGION`, `_LAT`, `_LON` | Lagezentrum … | Angaben zum einzelnen Knoten |
 | `SICHT_DEMO_PASSWORD` | `lagebild` | Passwort der Vorführzugänge |
 | `SICHT_RETENTION_DAYS` | `60` | Löschfrist für Aufzeichnungen außerhalb von Vorgängen; `0` schaltet sie ab |
-| `SICHT_OFFLINE` | — | `1` unterbindet jeden Netzzugriff |
+| `SICHT_OFFLINE` | — | `1` unterbindet das Nachladen von Modellen aus dem Netz; Verbund und Direktbilder sind Verbindungen, die der Betreiber selbst einrichtet |
 | `SICHT_LIVE_SEGMENT_SEC` | `20` | Länge der Abschnitte, in die ein Direktbild geschnitten wird (5 bis 120) |
 | `MODEL_ID`, `MODEL_DTYPE`, `MODEL_TEXT_DTYPE` | SigLIP 2, `fp32`, `fp16` | Kodierer und Genauigkeit |
 | `ML_DEVICE` | `cpu` | `auto`, `dml` oder `cuda` versuchen eine Grafikkarte; sie wird nur verwendet, wenn sie das Ergebnis des Prozessors reproduziert |

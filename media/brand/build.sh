@@ -9,6 +9,8 @@
 #   ./build.sh web          aus der fertigen Datei eine leichte 720p-Fassung für die Website
 #   BED=synth ./build.sh    das Tonbett mit ffmpeg erzeugen statt audio/bed-elevenlabs.mp3 zu nehmen
 #   OUT=datei.mp4 ./build.sh
+#   END_NOTE='BILDSCHIRMAUFNAHME DER KONSOLE · ÜBUNGSDATEN · ERPROBUNGSSTAND' SEQ=ablauf-produktfilm.txt OUT=sicht-produktfilm.mp4 MUSIC=audio/bed-lang.mp3 CLIP_W=1728 CLIP_H=972 ./build.sh
+#                           Produktfilm aus der Bildschirmaufnahme der Konsole (media/product/take.mp4)
 #   SEQ=ablauf.txt OUT=sicht-markenfilm-lang.mp4 ./build.sh
 #                           anderer Ablauf aus einer Datei (eine Zeile je Eintrag, # = Kommentar);
 #                           Pfade gelten ab diesem Ordner
@@ -73,12 +75,12 @@ fi
 
 OUT=${OUT:-sicht-markenfilm-v1.mp4}
 BED=${BED:-auto}
-MUSIC=audio/bed-elevenlabs.mp3
-MUSIC_TURN=21.2   # Sekunde, in der im Musikstück der helle Klang einsetzt; wird auf "mark|turn" gelegt
+MUSIC=${MUSIC:-audio/bed-elevenlabs.mp3}
+MUSIC_TURN=${MUSIC_TURN:-21.2}   # Sekunde, in der im Musikstück der helle Klang einsetzt; wird auf "mark|turn" gelegt
 SHOT_LABEL='SYMBOLBILD · KI-GENERIERT'
 END_WORD='SICHT'
 END_LINE='KEINE SICHT OHNE AUFSICHT.'
-END_NOTE='SYMBOLBILDER, KI-GENERIERT · ERPROBUNGSSTAND'
+END_NOTE=${END_NOTE:-'SYMBOLBILDER, KI-GENERIERT · ERPROBUNGSSTAND'}
 
 # ------------------------------------------------------------------ Maße und Farben
 
@@ -106,7 +108,7 @@ TYPE_DT=0.02      # Sekunden je Zeichen
 TYPE_GAP=0.10     # Pause zwischen zwei Zeilen
 CUR_HOLD=0.36     # so lange steht die Schreibmarke nach dem letzten Zeichen
 
-CLIP_W=1600; CLIP_H=900   # Bildschirmaufnahmen stehen eingerückt in den Eckmarken
+CLIP_W=${CLIP_W:-1600}; CLIP_H=${CLIP_H:-900}   # Bildschirmaufnahmen stehen eingerückt in den Eckmarken
 GRAIN=6                   # Filmkorn auf den Aufnahmen (0 = keins)
 
 SEG_ENC=(-c:v libx264 -preset veryfast -crf 12 -pix_fmt yuv420p -r "$FPS" -an)

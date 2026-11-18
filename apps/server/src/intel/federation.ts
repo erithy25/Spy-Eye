@@ -39,7 +39,7 @@ export interface FederationRequest {
   query: string;
   limit: number;
   requester: { node: NodeInfo; user: { id: string; name: string; role: string; unit: string } };
-  mandate: { id: string; title: string; legalBasis: string; purpose: string; exercise: boolean };
+  mandate: { id: string; title: string; legalBasis: string; purpose: string; exercise: boolean; personDescriptions: boolean };
   /** Ledger head of the requesting node at the time of the request. */
   head: string;
 }
@@ -221,6 +221,7 @@ export class Federation {
         legalBasis: mandate.legalBasis,
         purpose: mandate.purpose,
         exercise: mandate.exercise,
+        personDescriptions: mandate.personDescriptions === true,
       },
       head: this.head(),
     };

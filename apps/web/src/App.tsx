@@ -270,6 +270,7 @@ function MandateList({ node, onChosen }: { node: NodeConnection; onChosen: () =>
             <span>{pick(m.title, m.titleEn)}</span>
             <span />
             {m.exercise && <span className="pill">{t('Übung')}</span>}
+            {m.personDescriptions && <span className="pill">{t('Personenbeschreibung zulässig')}</span>}
             {node.session?.mandate?.id === m.id && <span className="pill pill-solid">{t('aktiv')}</span>}
           </h4>
           <div className="alert-line">{m.legalBasis}</div>

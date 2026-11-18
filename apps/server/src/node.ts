@@ -314,7 +314,7 @@ export class PlatformNode {
           validFrom: Date.now(),
           validTo: null,
           exercise: true,
-          personDescriptions: true,
+          personDescriptions: false,
         },
         mandateId,
       );
@@ -574,11 +574,13 @@ export class PlatformNode {
           title: 'Erprobung',
           titleEn: 'Evaluation',
           legalBasis: 'Kein Echtbetrieb: Erprobung mit eigenem, frei verwendbarem Material',
-          purpose: 'Funktionsprüfung des Systems ohne personenbezogene Echtdaten.',
+          purpose:
+            'Funktionsprüfung des Systems mit eigenem, frei verwendbarem Material ohne personenbezogene Echtdaten. Beschreibungen von Personen nach Geschlecht, Altersgruppe oder Kleidung sind für diese Erprobung ausdrücklich zugelassen.',
           issuedBy: 'System',
           validFrom: Date.now(),
           validTo: null,
           exercise: true,
+          // The one built-in mandate that permits it, and says so in its purpose.
           personDescriptions: true,
         },
         'md_erprobung',
