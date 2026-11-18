@@ -179,3 +179,23 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   (`SICHT_STREAM_HOSTS`). 88 tests.
 - Website: bill of materials and keyboard use under operation, accessibility among the limits.
 
+## 10:35 UTC · T+622 min
+
+- Windows: the runs with the taken-port test and with the two new settings passed every step;
+  the final code state is the one of commit 02b7adc.
+- Endurance: three nodes for 19 minutes, the exercise six times at 8x and once in real time, a
+  browser on the situation view, a search every four to ten seconds. Each run 15 alerts and 11
+  incidents; memory 3.0 GB at start, then 1,725 to 1,734 MB; 38 open files throughout; search
+  5 to 8 ms at the median; no page error; ledger intact.
+- Backup and restore: the copies of two data folders were started elsewhere; the independent
+  verifier and the node report an intact chain, sign-in and search work on the copy.
+- Operations paper (`docs/BETRIEB.md`) with what a node needs, set-up, backup, update,
+  monitoring, faults and what is missing for real operation.
+- Presenter card on one page, German and English, built with a check that it fits.
+- English console walked from sign-in to the last tab: interface in English throughout; ledger
+  entries, event titles and source names in search hits stay German.
+- Final check on the final build: types, 88 tests, bill of materials, preflight, keyboard walk
+  24 of 24, no rule violated in 18 states, full walk at 8x, rehearsal at 4x with the inbound
+  request in the ledgers of both neighbours, operator and auditor walks, four-eyes release,
+  both ledger verifiers.
+
