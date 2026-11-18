@@ -2,6 +2,8 @@
 
 **Keine Sicht ohne Aufsicht.**
 
+English summary: [`README.en.md`](README.en.md).
+
 Sicht macht das Videomaterial, das Behörden im Einsatz ohnehin erzeugen (Drohnen, Hubschrauber,
 Pegel- und Verkehrskameras, Fahrzeuge, Erkundungstrupps), in Sekunden durchsuchbar und beobachtet
 es selbständig auf Gefahrenlagen. Es identifiziert niemanden, führt keine Daten zusammen und hält
