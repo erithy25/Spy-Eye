@@ -256,3 +256,19 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   "Beach" 0.77, "Man with a cup" 0.96 and 0.91, "Black Car" 0.69, "Hund" 0.77; "Green Bus" no
   scene above the threshold (there is no green bus in the footage). No page error.
 
+## 11:30 UTC · T+677 min · closing entry
+
+- English summary of the README (`README.en.md`).
+- The time until uploaded footage is searchable is now named with both measurements, 7.6 s
+  through the interface and 9.9 s through the browser, in the measurement paper, both cue cards,
+  the hand-over sheet, the README and the brand paper. Website and decks show the interface
+  figure together with its condition.
+- The repository is public on GitHub. That is recorded as an open decision in the hand-over
+  sheet and in the strategy paper: source, strategy, financial assumptions and the security
+  review with its open points can be read by anyone. Tracked files, the text and metadata of
+  every PDF, the workbook and the commit authors were searched for personal data: none found.
+- Checked at the last commit before this entry: types of both packages, 88 tests, bill of
+  materials against the lock file, preflight "bereit".
+- This commit asks for one more Windows run, so that the last commit of the branch is itself one
+  that ran there. Its result is in the final report of the session, not in this file.
+
