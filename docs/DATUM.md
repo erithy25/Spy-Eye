@@ -105,10 +105,16 @@ Einordnung:
 - Zum Vergleich ohne Anspruch auf Gleichwertigkeit: Veröffentlichte Verfahren mit großen
   Galerien und eigens trainierten Modellen erreichen auf öffentlichen Prüfsätzen deutlich
   höhere Werte. DATUM arbeitet mit einem allgemeinen Bild-Text-Modell und 6 393 Referenzbildern.
-- Rechenzeit: Im Knoten 0,6 s je Video für die Ortung; die Vektoren der Bilder und Ausschnitte
-  liegen aus der Analyse vor, der Vergleich der 48 Ausschnitte mit der Galerie dauert 0,4 s. Mit
-  Raum, Horizont und Zeit rund 2 s. Die Galerie wird einmal eingerechnet und lädt danach in
-  0,3 s.
+- Der Knoten ortet mit denselben Bildern wie die Messung: zwölf Bilder aus der Mitte gleich
+  langer Abschnitte, je als Ganzes und in drei Ausschnitten. Mit den Bildern der Analyse (ab
+  Sekunde 0 im Takt der Auswertung) wich er in 13 von 60 Fällen ab, im Median 754 statt 283 km;
+  in knappen Fällen entscheidet die Auswahl der Bilder (Krimbrücke: richtiges Bauwerk 0,840
+  gegen eine ähnliche Brücke 0,832). Seit der Umstellung stimmen Knoten und Messung in allen 60
+  Fällen überein (`pnpm datum:check`: Median 299 km, 24 von 60 innerhalb 25 km).
+- Rechenzeit im Knoten: im Median 5,4 s je Video (90 % unter 7,4 s) auf vier Kernen ohne
+  Grafikkarte. Davon 3,2 s für das Ziehen und Einrechnen der zwölf Bilder mit Ausschnitten,
+  0,6 s für den Vergleich der 48 Ausschnitte mit der Galerie, je 0,4 s für drei Räume. Die
+  Galerie liegt als mitgelieferte Vektoren bei und lädt in unter einer Sekunde.
 - Die Uhrzeit hat keine Grundwahrheit: Die Videos aus Commons tragen nach der Umwandlung keine
   Aufnahmezeit mehr. Geprüft ist die Rechnung (Sonnenstand gegen veröffentlichte Werte auf die
   Minute, Zeitzonen, Fenster aus der Sonnenhöhe), nicht die Treffsicherheit bei echten Videos.

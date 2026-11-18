@@ -217,7 +217,7 @@ product(
 # 7 Verfahren
 steps = [
     ("1", "Metadaten", "GPS und Aufnahmezeit aus der Datei, wenn vorhanden: exakt."),
-    ("2", "Wiedererkennung", "Bilder des Videos gegen 6 393 Referenzbilder mit Koordinaten."),
+    ("2", "Wiedererkennung", "12 Bilder mit je drei Ausschnitten gegen 6 393 Referenzbilder."),
     ("3", "Länderschätzung", "Das Bild-Text-Modell schätzt das Land ohne eigenes Training."),
     ("4", "Licht und Jahreszeit", "Tag, Dämmerung, Nacht, Sonnenhöhe; Vegetation und Schnee."),
     ("5", "Sonnenstand", "Sonnenbahn für Ort und Datum, Zeitfenster in Ortszeit."),
@@ -236,7 +236,7 @@ add("verfahren", "Sieben Schritte, alle auf dem eigenen Rechner", f"""
 {rows}
 </div>
 <div class="grow"></div>
-<p class="src">Modelle: SigLIP 2 (Apache-2.0), Depth Anything V2 Small (Apache-2.0). Sonnenstand nach NOAA. Karten- und Höhendaten: OpenStreetMap, Mapzen Terrain. Rund 2 s je Video auf vier Prozessorkernen ohne Grafikkarte.</p>
+<p class="src">Modelle: SigLIP 2 (Apache-2.0), Depth Anything V2 Small (Apache-2.0). Sonnenstand nach NOAA. Karten- und Höhendaten: OpenStreetMap, Mapzen Terrain. Rund 5 s je Video auf vier Prozessorkernen ohne Grafikkarte.</p>
 {foot("Verfahren")}
 <aside>{_n}</aside>
 </section>
