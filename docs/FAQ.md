@@ -184,9 +184,9 @@ eine zur Kamera.
 
 ### Wie kommen unsere Drohnenbilder hinein?
 
-Als Videodatei, einzeln oder als Ordner, oder als Direktbild. Im Test waren 44 Aufnahmen 14
+Als Videodatei, einzeln oder als Ordner, oder als Direktbild. Im Test waren 44 Aufnahmen 8
 Sekunden nach Beginn des Hochladens grob durchsuchbar; die genaue Auswertung lief im Hintergrund
-weiter und war nach gut zweieinhalb Minuten abgeschlossen. Für ein Direktbild trägt die Leitung
+weiter und war nach knapp drei Minuten abgeschlossen. Für ein Direktbild trägt die Leitung
 die Adresse des Stroms ein (RTSP, HLS, RTMP, SRT oder MPEG-TS). Der Knoten schneidet den Strom in
 Abschnitte von 20 Sekunden und wertet jeden wie eine Aufzeichnung aus; Meldungen folgen etwa eine
 halbe Minute nach dem Ereignis. Geprüft ist das gegen eine simulierte Kamera, nicht gegen Geräte

@@ -58,14 +58,44 @@ const PROTECTED_STEMS: readonly string[] = [
  */
 const ORIGIN_ADJECTIVES: readonly string[] = [
   'black', 'white', 'asian', 'african', 'arab', 'arabic', 'hispanic', 'latino', 'latina', 'caucasian', 'turkish',
-  'syrian', 'afghan', 'polish', 'russian', 'romanian', 'chinese', 'indian', 'foreign',
+  'syrian', 'afghan', 'polish', 'russian', 'romanian', 'chinese', 'indian', 'foreign', 'european', 'mediterranean',
+  'oriental', 'southern', 'eastern', 'kurdish', 'iraqi', 'iranian', 'moroccan', 'nigerian', 'somali', 'eritrean',
+  'albanian', 'bulgarian', 'ukrainian', 'vietnamese', 'pakistani', 'german', 'french', 'italian', 'greek',
+];
+/**
+ * The same in German, as word stems (after normalisation: no umlauts). "schwarz" and "weiss"
+ * are colours of things far more often than of people; like the English list they only count
+ * next to a person.
+ */
+const ORIGIN_STEMS_DE: readonly string[] = [
+  'turkisch', 'arabisch', 'syrisch', 'afghanisch', 'polnisch', 'russisch', 'rumanisch', 'bulgarisch', 'albanisch',
+  'kurdisch', 'irakisch', 'iranisch', 'marokkanisch', 'nigerianisch', 'somalisch', 'eritreisch', 'vietnamesisch',
+  'chinesisch', 'indisch', 'pakistanisch', 'ukrainisch', 'afrikanisch', 'asiatisch', 'orientalisch', 'europaisch',
+  'osteuropaisch', 'sudeuropaisch', 'sudosteuropaisch', 'nordafrikanisch', 'westafrikanisch', 'schwarzafrikanisch',
+  'deutsch', 'schwarz', 'weiss', 'farbig',
 ];
 const PERSON_NOUNS: readonly string[] = [
   'person', 'persons', 'people', 'man', 'men', 'woman', 'women', 'boy', 'boys', 'girl', 'girls', 'child', 'children',
   'kid', 'kids', 'guy', 'guys', 'male', 'males', 'female', 'females', 'youth', 'youths', 'teenager', 'teenagers',
-  'family', 'families', 'driver', 'suspect', 'individual', 'individuals', 'mann', 'manner', 'frau', 'frauen', 'leute',
-  'personen', 'jugendliche', 'kinder',
+  'family', 'families', 'driver', 'suspect', 'individual', 'individuals', 'mann', 'manner', 'mannern', 'frau', 'frauen',
+  'leute', 'personen', 'jugendliche', 'jugendlicher', 'jugendlichen', 'kinder', 'kind', 'familie', 'familien', 'junge',
+  'jungen', 'madchen', 'gruppe', 'menschen', 'mensch', 'fahrer', 'fahrerin', 'tater', 'verdachtiger', 'verdachtige',
 ];
+/** Words that turn any origin word into a statement about how a person looks or where they come from. */
+const APPEARANCE_WORDS: readonly string[] = [
+  'looking', 'appearance', 'descent', 'origin', 'background', 'heritage', 'aussehend', 'aussehende', 'aussehender',
+  'aussehenden', 'aussehen', 'wirkend', 'wirkende', 'wirkender', 'wirkenden', 'stammig', 'stammige', 'stammiger',
+  'stammigen', 'herkunft', 'abstammung',
+];
+/** Phrases that sort people by origin without naming one. */
+const ORIGIN_PHRASES: readonly string[] = [
+  'person of colour', 'person of color', 'people of colour', 'people of color', 'of colour', 'of color', 'non-white',
+  'mixed race', 'mixed-race', 'look foreign', 'looks foreign', 'looking foreign', 'foreign appearance',
+  'middle eastern', 'middle-eastern', 'migrationshintergrund', 'migration background', 'nicht deutsch aussehend',
+  'nichtdeutsch',
+];
+/** German colour words used as nouns for people: "ein Schwarzer", "zwei Farbige". */
+const COLOUR_NOUN_DE = /(^|\s)(ein|eine|einen|einem|einer|der|die|den|dem|zwei|drei|vier|mehrere|viele|einige|junge|junger|alte|alter)\s+(schwarzer|schwarze|schwarzen|weisser|weisse|weissen|farbiger|farbige|farbigen)(\s+(mit|in|auf|an|am|vor|bei|und|oder|der|die|das|den|dem|im|neben|hinter|unter)(\s|$)|\s*$)/;
 
 /**
  * Bodily features that single a person out. The AI Act (recital 16) counts hair colour, eye
@@ -212,6 +242,43 @@ const refuse = (rule: string, reason: string, reasonEn: string): GuardVerdict =>
 const containsTerm = (text: string, words: readonly string[], term: string): boolean =>
   term.includes(' ') ? text.includes(term) : words.includes(term);
 
+/** Colour words: they describe things far more often than people and count only next to a person. */
+const isColourWord = (word: string): boolean =>
+  word === 'black' || word === 'white' || word.startsWith('schwarz') || word.startsWith('weiss') || word.startsWith('farbig');
+
+/** What follows a colour when it describes clothing rather than a person ("schwarz gekleidete Person"). */
+const dressed = (word: string | undefined): boolean =>
+  word !== undefined && (word.includes('gekleidet') || word === 'dressed' || word === 'clad' || CLOTHING_TERMS.includes(word));
+
+/**
+ * An origin word that describes a person: next to a person noun ("black young man", "syrische
+ * Familie"), joined to "-looking" ("mediterranean-looking"), or next to a word about looks or
+ * descent ("arabisch aussehend", "of asian appearance"). Returns the word, or undefined.
+ */
+function originOfPerson(words: readonly string[]): string | undefined {
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i] as string;
+    const looking = /^(.+)-looking$/.exec(word)?.[1];
+    if (looking !== undefined && ORIGIN_ADJECTIVES.includes(looking) && !isColourWord(looking)) return word;
+    const origin = ORIGIN_ADJECTIVES.includes(word) || ORIGIN_STEMS_DE.some((stem) => word.startsWith(stem));
+    if (!origin) continue;
+    const next = words[i + 1];
+    if (isColourWord(word)) {
+      // "black jacket", "schwarz gekleidete Person": clothing, a matter for the mandate.
+      if (word.includes('gekleidet') || dressed(next)) continue;
+      if (words.slice(i + 1, i + 3).some((n) => PERSON_NOUNS.includes(n))) return word;
+      continue;
+    }
+    // A person within the next two words, or a word about looks or descent right beside it.
+    if (words.slice(i + 1, i + 3).some((n) => PERSON_NOUNS.includes(n))) return word;
+    if (APPEARANCE_WORDS.includes(next ?? '') || APPEARANCE_WORDS.includes(words[i - 1] ?? '')) return word;
+    // "of asian appearance", "look asian"
+    if (APPEARANCE_WORDS.includes(words[i + 2] ?? '') && ['of', 'von', 'mit'].includes(words[i - 1] ?? '')) return word;
+    if (['look', 'looks', 'looked'].includes(words[i - 1] ?? '')) return word;
+  }
+  return undefined;
+}
+
 export function screenPrompt(raw: string, options: GuardOptions = { personDescriptions: true }): GuardVerdict {
   const text = normalize(raw);
   const words = tokens(text);
@@ -236,10 +303,9 @@ export function screenPrompt(raw: string, options: GuardOptions = { personDescri
   const protectedTerm =
     PROTECTED_PATTERNS.find(({ pattern }) => pattern.test(text))?.term ??
     PROTECTED_STEMS.find((stem) => text.includes(stem)) ??
-    // "<origin adjective> <person noun>", with at most one word in between ("black young man").
-    ORIGIN_ADJECTIVES.find((adjective) =>
-      words.some((w, i) => w === adjective && words.slice(i + 1, i + 3).some((n) => PERSON_NOUNS.includes(n))),
-    );
+    ORIGIN_PHRASES.find((phrase) => text.includes(phrase)) ??
+    (COLOUR_NOUN_DE.test(text) ? (COLOUR_NOUN_DE.exec(text)?.[3] ?? 'Hautfarbe') : undefined) ??
+    originOfPerson(words);
   if (protectedTerm !== undefined) {
     return refuse(
       'protected-attribute',
@@ -278,7 +344,8 @@ export function screenPrompt(raw: string, options: GuardOptions = { personDescri
   // It is needed for some tasks (a missing child, a person reported in the water) and therefore
   // depends on the mandate; where it is allowed, the prompt is marked for the auditor.
   const sexAge = SEX_AGE_TERMS.find((term) => containsTerm(text, words, term));
-  const clothing = aboutPerson ? CLOTHING_TERMS.find((term) => containsTerm(text, words, term)) : undefined;
+  // Inflected German forms count as well: "schwarz gekleidete Person".
+  const clothing = aboutPerson ? (CLOTHING_TERMS.find((term) => containsTerm(text, words, term)) ?? words.find((w) => w.includes('gekleidet'))) : undefined;
   const describing = sexAge ?? clothing;
   if (describing !== undefined) {
     if (!options.personDescriptions) {

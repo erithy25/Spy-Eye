@@ -21,6 +21,7 @@ deliverables/*.zip
 
 # Generated film material: the cut is rebuilt with media/brand/build.sh
 media/brand/raw/
+media/brand/raw-hochkant/
 media/brand/shots/
 media/brand/work/
 media/brand/audio/

@@ -49,7 +49,7 @@ Gesichter werden beim Einspielen verpixelt. Wer das Original braucht, gibt den G
 
 ## 12 · Messwerte: eine Übung, zwei Einschränkungen
 
-Gemessen auf einem Rechner mit vier Kernen ohne Grafikkarte, nachmessbar mit einem Befehl. 13 von 13 Ereignissen des Drehbuchs wurden gemeldet, im Median 1,1 Sekunden nach Eintreffen des ausgewerteten Bildes, bei einer Fehlmeldung; mit einem Direktbild kommt etwa eine halbe Minute Nachlauf hinzu. Zwei Einschränkungen gehören zu jeder dieser Zahlen: Die Wachen wurden an diesem Material formuliert, und das Gefahrenmodell irrt darauf trotz 99 Prozent auf seinem Benchmark. Über die Güte auf echtem Einsatzmaterial sagen die Zahlen nichts. [Bei beschleunigter Übungsuhr weist der Reiter WIRKUNG höhere Werte aus, bei 8× rund 2,3 s; die 1,1 s stammen aus dem Messlauf in Echtzeit.]
+Gemessen auf einem Rechner mit vier Kernen ohne Grafikkarte, nachmessbar mit einem Befehl. 13 von 13 Ereignissen des Drehbuchs wurden gemeldet, im Median 1,1 Sekunden nach Eintreffen des ausgewerteten Bildes, bei einer Fehlmeldung; mit einem Direktbild kommt etwa eine halbe Minute Nachlauf hinzu. Zwei Einschränkungen gehören zu jeder dieser Zahlen: Die Wachen wurden an diesem Material formuliert, und das Gefahrenmodell irrt darauf trotz 99 Prozent auf seinem Benchmark. Über die Güte auf echtem Einsatzmaterial sagen die Zahlen nichts. [Bei beschleunigter Übungsuhr weist der Reiter WIRKUNG höhere Werte aus, bei 8× zwei bis drei Sekunden; die 1,1 s stammen aus dem Messlauf in Echtzeit.]
 
 ## 13 · Grenzen: was Sicht nicht können soll
 
@@ -77,7 +77,7 @@ Das größte Risiko ist rechtlich: Für die KI-Auswertung von Video im Bevölker
 
 ## 19 · Stand: was läuft, was fehlt, was gesucht wird
 
-Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; auf der Folie steht bewusst keine Summe.]
+Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]
 
 ## 20 · Schluss
 

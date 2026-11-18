@@ -283,7 +283,7 @@ window.SICHT_EN = {
     'Image encoder in all measurements: SigLIP 2 (Google, Apache-2.0), 34&nbsp;ms per frame on this machine. It runs offline and understands queries in German and English.',
   'measured.alt': 'Console, WIRKUNG tab: detection delay, coverage, recorded queries and the events of the exercise with their delay',
   'measured.cap':
-    '<b>Console · WIRKUNG</b> A run of the exercise in real time: 13 of 13 events detected, a median delay of 1.1&nbsp;s, one false alert, 15 alerts. Via MESSBERICHT the console issues the same figures as a printable document, with the conditions of the run and the state of the ledger. In this run the analysis ran at 3.7 times real time; the table gives the lower figure of the measurement run.',
+    '<b>Console · WIRKUNG</b> A run of the exercise in real time: 13 of 13 events detected, a median delay of 1.1&nbsp;s, one false alert, 15 alerts. Via MESSBERICHT the console issues the same figures as a printable document, with the conditions of the run and the state of the ledger. The line AUSWERTUNG gives the pure analysis time per recording, here 4.3 times real time; the table gives the lower figure for the whole run, including the first pass and waiting.',
 
   // ---------------------------------------------------------------- 07 operation
   'ops.h2': 'Runs at the authority.<br>Stays at the authority.',

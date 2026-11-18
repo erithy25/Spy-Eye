@@ -10,7 +10,7 @@ Unterlagen.
 | --- | --- | --- |
 | Konsole und Knoten (das Produkt) | dieses Repository; Start siehe Abschnitt 2 | läuft; unter Linux und Windows von Anfang bis Ende durchgespielt |
 | Ablauf der Vorführung, 13 Minuten, mit Sprechzeilen und Rückfallebenen | [`docs/DEMO.md`](docs/DEMO.md); zum Ausdrucken [`deliverables/Sicht-Vorfuehrung-Ablauf.pdf`](deliverables/Sicht-Vorfuehrung-Ablauf.pdf) | fertig |
-| Präsentation, 20 Folien | privates Dokument <https://claude.ai/artifact/NhPkBXmqP2jQbv2GZaDKyQ>; ohne Netz: [`deliverables/Sicht-Praesentation.pdf`](deliverables/Sicht-Praesentation.pdf); Sprechzettel daneben | fertig; Folie 19 nennt zur Finanzierung bewusst keine Summe |
+| Präsentation, 20 Folien | privates Dokument <https://claude.ai/artifact/NhPkBXmqP2jQbv2GZaDKyQ>; ohne Netz: [`deliverables/Sicht-Praesentation.pdf`](deliverables/Sicht-Praesentation.pdf); Sprechzettel daneben | fertig; Folie 19 nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe |
 | Website, deutsch und englisch | private Seite <https://claude.ai/artifact/JarVGwmtbRpmb321zGdU9B>; Quelle in [`site/`](site/) | fertig; nicht öffentlich, mit `noindex` |
 | Einseiter | [`deliverables/Sicht-Einseiter.pdf`](deliverables/Sicht-Einseiter.pdf) | fertig |
 | Finanzmodell, drei Szenarien | [`deliverables/Sicht-Finanzmodell.xlsx`](deliverables/Sicht-Finanzmodell.xlsx) | fertig; alle Werte sind Annahmen |
@@ -67,8 +67,8 @@ QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen.
 
 ## 3. Vor dem Termin entscheiden
 
-1. **Finanzierung.** Folie 19 lässt offen, ob und worum gebeten wird. Der Basisfall des
-   Finanzmodells braucht bis 2031 rund 3,2 Mio. € (Annahme).
+1. **Finanzierung.** Folie 19 nennt den Mittelbedarf des Basisfalls bis 2031, rund 3,2 Mio. €
+   (Annahme), lässt aber offen, ob und worum gebeten wird.
 2. **Kontakt.** Die Website zeigt den Aufruf „Vorführung anfragen“ erst, wenn in
    `site/index.html` am `<body>` eine Adresse eingetragen ist (`data-contact`).
 3. **Name.** „Sicht“ ist markenrechtlich nicht geprüft (DPMA, EUIPO). Bis dahin intern verwenden;

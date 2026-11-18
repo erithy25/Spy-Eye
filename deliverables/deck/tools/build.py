@@ -12,6 +12,10 @@ Output:
 Every figure comes from docs/EVALUATION.md, docs/BRAND.md, README.md, docs/STRATEGY.md or
 deliverables/Sicht-Finanzmodell.xlsx (scenario Basis). Change wording here, run the script, then
 send the changed files to the artifact and run tools/render.cjs for the PDF.
+
+This file is the German edition and the original. tools/build_en.py holds the English edition:
+the same slides in the same order, built with the CSS, the Edition class and the row helpers of
+this file. A change of content here has to be repeated there.
 """
 import json
 import pathlib
@@ -25,12 +29,12 @@ MINUS = "−"
 
 # Uploaded pictures of the artifact (the same table is in tools/blobs.json for the local render).
 IMG = {
-    "lage": "/_blob/4695bf63a4aa94f997c762478b6d778e",
-    "wachen": "/_blob/3cc7f70a3f86678e42a3ab5af711dec1",
-    "suche": "/_blob/71d0c0b7d262958db35bdf73ad700e7a",
-    "verbund": "/_blob/e3d9082f8209531f900ba623bd0395a4",
-    "aufsicht": "/_blob/e03a9dc598883e7aac4d0f29299e7300",
-    "ruecksicht": "/_blob/cf407bc079cfbaece77e35d8a56e92d1",
+    "lage": "/_blob/aecf6e3bb9b63cb5d0c1a6e531a82a05",
+    "wachen": "/_blob/2c270a1d9c95aed479d9ade2e51d18a0",
+    "suche": "/_blob/29897d68d63ba9734c6452ad24f0b489",
+    "verbund": "/_blob/884584f768773e791253265dbefec92b",
+    "aufsicht": "/_blob/81544bfaad1138c803db70e4a3f81012",
+    "ruecksicht": "/_blob/9cd1635d5b85e492feb7c057509e0720",
 }
 
 CSS = """/* Sicht. One typeface, black ground, hairlines, corner marks. No colour. */
@@ -135,19 +139,6 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 .above-m { padding-top: 28px; }
 """
 
-SLIDES = {}   # id -> html
-NOTES = {}    # id -> (title for the notes file, text)
-ORDER = []
-
-
-def add(sid, heading, html, notes):
-    assert sid not in SLIDES, sid
-    assert notes.count("<") == 0, f"notes of {sid} must be plain text"
-    SLIDES[sid] = html.strip() + "\n"
-    NOTES[sid] = (heading, notes)
-    ORDER.append(sid)
-
-
 def foot(section):
     return (
         '<div class="foot"><p class="foot-mark">SICHT</p>'
@@ -163,37 +154,75 @@ def pt(label, text):
     return f'<div class="pt"><p class="pt-k">{label}</p><p class="pt-v">{text}</p></div>'
 
 
-def shot(key, alt, tall=True):
-    if tall:
+class Edition:
+    """One language edition of the deck: its pictures, its slides in order and its speaker notes."""
+
+    def __init__(self, images, product_section):
+        self.images = images                    # key -> address of the uploaded picture
+        self.product_section = product_section  # footer label of the product slides
+        self.slides = {}                        # id -> html
+        self.notes = {}                         # id -> (title for the notes file, text)
+        self.order = []
+
+    def add(self, sid, heading, html, notes):
+        assert sid not in self.slides, sid
+        assert notes.count("<") == 0, f"notes of {sid} must be plain text"
+        self.slides[sid] = html.strip() + "\n"
+        self.notes[sid] = (heading, notes)
+        self.order.append(sid)
+
+    def shot(self, key, alt, tall=True):
+        if tall:
+            return (
+                f'<div class="shot"><img class="shot-img" src="{self.images[key]}" alt="{alt}">'
+                '<div class="c c-tl"></div><div class="c c-tr"></div><div class="c c-bl"></div><div class="c c-br"></div></div>'
+            )
         return (
-            f'<div class="shot"><img class="shot-img" src="{IMG[key]}" alt="{alt}">'
-            '<div class="c c-tl"></div><div class="c c-tr"></div><div class="c c-bl"></div><div class="c c-br"></div></div>'
+            f'<div class="shot-map"><img class="shot-img-map" src="{self.images[key]}" alt="{alt}">'
+            '<div class="c c-tl"></div><div class="c c-tr"></div><div class="c c-bl-map"></div><div class="c c-br-map"></div></div>'
         )
-    return (
-        f'<div class="shot-map"><img class="shot-img-map" src="{IMG[key]}" alt="{alt}">'
-        '<div class="c c-tl"></div><div class="c c-tr"></div><div class="c c-bl-map"></div><div class="c c-br-map"></div></div>'
-    )
 
-
-def product(sid, title, alt, points, caption, notes, tall=True, line=None):
-    extra = f'\n<p class="lede strong">{line}</p>' if line else ""
-    side = "\n".join(pt(k, v) for k, v in points)
-    add(sid, title, f"""
+    def product(self, sid, title, alt, points, caption, notes, tall=True, line=None):
+        extra = f'\n<p class="lede strong">{line}</p>' if line else ""
+        side = "\n".join(pt(k, v) for k, v in points)
+        self.add(sid, title, f"""
 <section id="{sid}" data-transition="fade">
 {head(title)}
 <div class="split">
 <div class="figure">
-{shot(sid, alt, tall)}
+{self.shot(sid, alt, tall)}
 <p class="cap">{caption}</p>{extra}
 </div>
 <div class="side-spread">
 {side}
 </div>
 </div>
-{foot("Produkt")}
+{foot(self.product_section)}
 <aside>{notes}</aside>
 </section>
 """, notes)
+
+    def write(self, root, index, notes_file, notes_intro):
+        """Writes index, CSS and slides below `root` and the speaker notes to `notes_file`."""
+        (root / "slides").mkdir(parents=True, exist_ok=True)
+        for old in (root / "slides").glob("*.html"):
+            if old.stem not in self.slides:
+                old.unlink()
+        (root / "deck.css").write_text(CSS, encoding="utf-8")
+        (root / "deck.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        for sid, html in self.slides.items():
+            (root / "slides" / f"{sid}.html").write_text(html, encoding="utf-8")
+        lines = list(notes_intro)
+        for i, sid in enumerate(self.order, start=1):
+            heading, text = self.notes[sid]
+            lines += [f"## {i:02d} · {heading}", "", text, ""]
+        notes_file.write_text("\n".join(lines), encoding="utf-8")
+
+
+# The German edition. The names below are what the slide definitions of this file use.
+DE = Edition(IMG, "Produkt")
+SLIDES, NOTES, ORDER = DE.slides, DE.notes, DE.order
+add, shot, product = DE.add, DE.shot, DE.product
 
 
 # ---------------------------------------------------------------------------------------------
@@ -349,13 +378,13 @@ product(
 product(
     "suche",
     "Einsicht: Suche in eigenen Worten",
-    "Konsole, Reiter Suche: sechs Treffer zur Anfrage überflutete Wiese, Karte der Fundorte und Antworten der Nachbarknoten",
+    "Konsole, Reiter Suche: vier Treffer zur Anfrage überflutete Wiese, Karte der Fundorte und die Antwort eines Nachbarknotens",
     [
         ("Freitext", "Deutsch oder englisch, in ganzen Wendungen. Kein Schlagwortkatalog."),
         ("Abgelehnt wird", "„Gesicht von Herrn Müller“<br>„Kennzeichen KO AB 123“<br>„südländischer Mann“"),
         ("Protokoll", "Jede Anfrage und jede Ablehnung steht mit Mandat und Person im Protokoll."),
     ],
-    "Reiter SUCHE: „überflutete Wiese“, mit Antworten aus dem Verbund.",
+    "Reiter SUCHE: „überflutete Wiese“, mit einer Antwort aus dem Verbund.",
     "Gesucht wird in ganzen Wendungen, auf Deutsch oder Englisch; das Bildmodell läuft ohne Netz auf dem Rechner der Behörde. Namen, Gesichter, Kennzeichen, Herkunft und körperliche Merkmale werden abgelehnt, und die Ablehnung wird protokolliert. Die Prüfung ist eine nachvollziehbare Wortprüfung und lässt sich umschreiben; deshalb gibt es Protokoll und Stichprobe.",
 )
 
@@ -377,7 +406,7 @@ product(
 product(
     "aufsicht",
     "Aufsicht: ein Protokoll, das sich prüfen lässt",
-    "Konsole, Reiter Protokoll: 37 Einträge, Kette unversehrt, darunter eine Stichprobe aus vier Abfragen mit drei Ablehnungen",
+    "Konsole, Reiter Protokoll: Kette unversehrt, darunter eine Stichprobe aus vier Abfragen mit drei Ablehnungen",
     [
         ("Verkettet", "Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Eine Änderung bricht die Kette."),
         ("Stichprobe", "Die Aufsicht zieht zufällige Abfragen und sieht dabei kein Bildmaterial."),
@@ -408,7 +437,7 @@ def kv(label, value, last=False):
     return f'<div class="{cls}"><p class="cell">{label}</p><p class="val">{value}</p></div>'
 
 
-_n = "Gemessen auf einem Rechner mit vier Kernen ohne Grafikkarte, nachmessbar mit einem Befehl. 13 von 13 Ereignissen des Drehbuchs wurden gemeldet, im Median 1,1 Sekunden nach Eintreffen des ausgewerteten Bildes, bei einer Fehlmeldung; mit einem Direktbild kommt etwa eine halbe Minute Nachlauf hinzu. Zwei Einschränkungen gehören zu jeder dieser Zahlen: Die Wachen wurden an diesem Material formuliert, und das Gefahrenmodell irrt darauf trotz 99 Prozent auf seinem Benchmark. Über die Güte auf echtem Einsatzmaterial sagen die Zahlen nichts. [Bei beschleunigter Übungsuhr weist der Reiter WIRKUNG höhere Werte aus, bei 8× rund 2,3 s; die 1,1 s stammen aus dem Messlauf in Echtzeit.]"
+_n = "Gemessen auf einem Rechner mit vier Kernen ohne Grafikkarte, nachmessbar mit einem Befehl. 13 von 13 Ereignissen des Drehbuchs wurden gemeldet, im Median 1,1 Sekunden nach Eintreffen des ausgewerteten Bildes, bei einer Fehlmeldung; mit einem Direktbild kommt etwa eine halbe Minute Nachlauf hinzu. Zwei Einschränkungen gehören zu jeder dieser Zahlen: Die Wachen wurden an diesem Material formuliert, und das Gefahrenmodell irrt darauf trotz 99 Prozent auf seinem Benchmark. Über die Güte auf echtem Einsatzmaterial sagen die Zahlen nichts. [Bei beschleunigter Übungsuhr weist der Reiter WIRKUNG höhere Werte aus, bei 8× zwei bis drei Sekunden; die 1,1 s stammen aus dem Messlauf in Echtzeit.]"
 add("gemessen", "Messwerte: eine Übung, zwei Einschränkungen", f"""
 <section id="gemessen" data-transition="fade">
 {head("Messwerte: eine Übung, zwei Einschränkungen")}
@@ -628,7 +657,7 @@ add("risiken", "Risiken: sechs Punkte und die Gegenmaßnahmen", f"""
 
 # 19 Stand
 
-_n = "Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; auf der Folie steht bewusst keine Summe.]"
+_n = "Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]"
 add("stand", "Stand: was läuft, was fehlt, was gesucht wird", f"""
 <section id="stand" data-transition="fade">
 {head("Stand: was läuft, was fehlt, was gesucht wird")}
@@ -694,26 +723,13 @@ INDEX = {
 
 
 def main():
-    (ROOT / "slides").mkdir(parents=True, exist_ok=True)
-    for old in (ROOT / "slides").glob("*.html"):
-        if old.stem not in SLIDES:
-            old.unlink()
-    (ROOT / "deck.css").write_text(CSS, encoding="utf-8")
-    (ROOT / "deck.json").write_text(json.dumps(INDEX, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    for sid, html in SLIDES.items():
-        (ROOT / "slides" / f"{sid}.html").write_text(html, encoding="utf-8")
-
-    lines = [
+    DE.write(ROOT, INDEX, NOTES_FILE, [
         "# Sicht – Sprechzettel zur Präsentation",
         "",
         "Zwei bis vier Sätze je Folie. Dieselben Texte stehen als Notizen in der Präsentation.",
         "Text in eckigen Klammern ist eine Erinnerung an den Vortragenden und wird nicht gesprochen.",
         "",
-    ]
-    for i, sid in enumerate(ORDER, start=1):
-        heading, text = NOTES[sid]
-        lines += [f"## {i:02d} · {heading}", "", text, ""]
-    NOTES_FILE.write_text("\n".join(lines), encoding="utf-8")
+    ])
     print(len(SLIDES), "slides,", NOTES_FILE.name)
 
 

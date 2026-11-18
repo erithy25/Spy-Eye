@@ -1,6 +1,6 @@
 # Messbericht
 
-Stand: 2026-11-18. Alle Werte stammen von dem Rechner, auf dem dieser Stand gebaut wurde:
+Stand: 18. November 2026. Alle Werte stammen von dem Rechner, auf dem dieser Stand gebaut wurde:
 Intel(R) Xeon(R) Processor @ 2.10GHz, 4 Kerne, keine Grafikkarte. Bildkodierer:
 `onnx-community/siglip2-base-patch32-256-ONNX` (SigLIP 2, Apache-2.0). Jeder Wert lässt sich mit den genannten Befehlen auf dem
 eigenen Rechner nachmessen; die Übung schreibt ihr Ergebnis nach `docs/measurements/exercise.json`.
@@ -46,7 +46,7 @@ vorgesehene Wache an der betroffenen Quelle meldet.
 **Die Fehlmeldung.** Die Wache „Umgestürzter Lastkraftwagen“ meldet bei T+04:24 an Erkunder 1 die
 abgerutschte Fahrbahn. Nach einem verworfenen und einem bestätigten Urteil und dem ausdrücklichen
 Nachschärfen der Wache (Version 2) tritt die Fehlmeldung im folgenden Lauf nicht mehr auf; der
-echte Unfall an Erkunder 2 wird weiter gemeldet (Sicherheit 0,98). Geprüft am 2026-11-18 über
+echte Unfall an Erkunder 2 wird weiter gemeldet (Sicherheit 0,98). Geprüft am 18. November 2026 über
 die Schnittstelle des laufenden Knotens.
 
 **Was der Verzug bedeutet und was nicht.**
@@ -78,8 +78,8 @@ die Schnittstelle des laufenden Knotens.
 Die Konsole und der Messbericht einer Übung nennen eine zweite Zahl: die reine Auswertezeit je
 Aufzeichnung, ohne den ersten Durchgang, das Speichern und die Wartezeit zwischen den
 Aufzeichnungen. Sie liegt höher als der Wert in der Tabelle, der von Anfang bis Ende gemessen
-ist: 4,8-fache Echtzeit im vorbereiteten Stand der Vorführung, in dem das Übungsmaterial für
-sich allein ausgewertet wird.
+ist: zuletzt 4,3-fache Echtzeit im vorbereiteten Stand der Vorführung, in dem das Übungsmaterial
+für sich allein ausgewertet wird.
 
 Zum Vergleich auf demselben Rechner: MobileCLIP-S2 62 ms je Bild, CLIP ViT-B/32 26 ms je Bild.
 MobileCLIP ist nur für Forschungszwecke lizenziert und deshalb nicht mehr voreingestellt.
@@ -174,13 +174,17 @@ einer Luftbildquelle, und frei formulierte Wachen sind der Regelfall.
 pnpm test
 ```
 
-27 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
-körperliche Merkmale, Wiederfinden und Verfolgen ab und lässt Lagebeschreibungen durch; die
-Protokollkette erkennt geänderte und entfernte Einträge; Koordinaten werden gegen bekannte
-UTMREF-Werte geprüft; Meldungen werden nur bei gleicher Art, Nähe und Zeit zu einer Lage; der
-Verbund weist veränderte, fremd signierte und veraltete Anfragen ab; als Direktbild gelten nur
-Netzadressen, und ihre Zugangsdaten erscheinen nie in der Anzeige. Im Browser geprüft (Abläufe als Leitung, Auswertung und Aufsicht):
-Maskierung, Vier-Augen-Freigabe, Beweissicherung mit Siegel, Verbundfrage mit Beleg, Stichprobe.
+52 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
+körperliche Merkmale, Herkunft und Aussehen von Personen, Wiederfinden und Verfolgen ab und lässt
+Lagebeschreibungen durch; die Protokollkette erkennt geänderte und entfernte Einträge; Koordinaten
+werden gegen bekannte UTMREF-Werte geprüft; Meldungen werden nur bei gleicher Art, Nähe und Zeit
+zu einer Lage; der Verbund weist veränderte, fremd signierte und veraltete Anfragen zurück;
+Stromadressen werden auf Netzprotokolle beschränkt und ohne Zugangsdaten angezeigt; die
+Schwellen der Suche und der Wachen bleiben in ihren Grenzen; das Schlagwortverzeichnis enthält
+keine Personenmerkmale und besteht selbst die Anfrageprüfung; der Messbericht nennt Ergebnis,
+Ereignisse und Protokollstand; der vorbereitete Stand einer Vorführung lässt sich
+wiederherstellen. Im Browser geprüft (Abläufe als Leitung, Auswertung und Aufsicht): Maskierung,
+Vier-Augen-Freigabe, Beweissicherung mit Siegel, Verbundfrage mit Beleg, Stichprobe.
 
 ## 6. Gegenprobe auf einem Windows-Rechner
 

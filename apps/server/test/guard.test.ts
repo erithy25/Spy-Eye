@@ -106,3 +106,36 @@ test('clothing descriptions of persons depend on the mandate', () => {
   assert.deepEqual(screenPrompt('a yellow jacket lying on the river bank', { personDescriptions: false }).flags, []);
   assert.equal(screenPrompt('firefighters wearing breathing apparatus', { personDescriptions: false }).allowed, true);
 });
+
+test('origin and looks of persons are refused whatever the mandate allows', () => {
+  const refused = [
+    'a southern-looking man', 'Mediterranean-looking man', 'a man of Middle Eastern appearance', 'eastern european men',
+    'a turkish man', 'türkischer Mann', 'arabisch aussehender Mann', 'syrische Familie', 'osteuropäische Männer',
+    'ein Mann mit ausländischem Aussehen', 'afrikanische Frau', 'asiatisch aussehende Person', 'person of colour',
+    'a north african youth', 'rumänische Jugendliche', 'ein Schwarzer', 'schwarzer Mann', 'dunkelhäutige Frau',
+    'orientalisch aussehender Mann', 'people who look foreign', 'nordafrikanisch aussehende Männer',
+    'Mann mit Migrationshintergrund', 'zwei Farbige am Bahnhof', 'a group of asian tourists and a white man',
+  ];
+  for (const query of refused) {
+    const verdict = screenPrompt(query, { personDescriptions: true });
+    assert.equal(verdict.allowed, false, query);
+    assert.equal(verdict.rule, 'protected-attribute', query);
+  }
+});
+
+test('the same words stay usable for things, places and clothing', () => {
+  const things = [
+    'german shepherd', 'chinese restaurant', 'schwarzer Rauch', 'weißer Lieferwagen', 'türkisches Restaurant',
+    'ein schwarzes Auto', 'asian food market', 'russian tank', 'polnischer Lastwagen', 'a modern-looking building',
+    'a sign on a black background', 'white smoke over a roof', 'black and white image', 'eine schwarze Katze',
+    'Deutsche Bahn Zug am Bahnsteig', 'southern bank of the river', 'eastern entrance of the tunnel',
+  ];
+  for (const query of things) assert.equal(screenPrompt(query, { personDescriptions: false }).allowed, true, query);
+  // Clothing is a description of a person: a matter for the mandate, not a protected attribute.
+  for (const query of ['schwarz gekleidete Person', 'a man in a black jacket', 'person in white dress']) {
+    assert.equal(screenPrompt(query, { personDescriptions: true }).allowed, true, query);
+    const strict = screenPrompt(query, { personDescriptions: false });
+    assert.equal(strict.allowed, false, query);
+    assert.equal(strict.rule, 'person-description', query);
+  }
+});

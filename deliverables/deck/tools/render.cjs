@@ -3,23 +3,35 @@
 //   NODE_PATH= NODE_OPTIONS= NODE_DISABLE_COMPILE_CACHE=1 node deliverables/deck/tools/render.cjs \
 //       --shots <folder for one PNG per slide> --pdf deliverables/Sicht-Praesentation.pdf
 //
+// The English edition: add --project project-en (and name the English PDF). The folder name
+// decides which table of pictures is read: project -> blobs.json, project-en -> blobs-en.json.
+//
 // The page is what the Slides type describes for a preview: its base rules, the deck's CSS and
 // each slide's <section> in order. Two additions make the result usable as a hand-out: the
 // typeface is loaded from the font files of the console, and the uploaded pictures are taken
 // from the repository (tools/blobs.json). A browser preview approximates the Slides viewer;
 // line breaks can differ a little. --loose lets hyphens break as a plain browser would,
-// --tight lists lines that nearly fill their box.
+// --tight lists lines that nearly fill their box, --stress <px> draws every letter that much
+// wider: a slide that still ends inside its limit then has room for a viewer that measures
+// text a little differently (0.25 is about 1.5 % at the size of running text).
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 
 const repo = path.resolve(__dirname, '..', '..', '..');
-const project = path.resolve(__dirname, '..', 'project');
-const fonts = path.join(repo, 'apps', 'web', 'public', 'fonts');
-const blobs = JSON.parse(fs.readFileSync(path.join(__dirname, 'blobs.json'), 'utf8'));
 const arg = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
+// One folder per language edition, beside this one: project (German), project-en (English).
+const edition = /^project(-[a-z]{2})?$/.exec(arg('--project') || 'project');
+if (!edition) throw new Error('--project takes the name of an edition folder: project or project-en');
+const project = path.resolve(__dirname, '..', edition[0]);
+const lang = edition[1] ? edition[1].slice(1) : 'de';
+const fonts = path.join(repo, 'apps', 'web', 'public', 'fonts');
+const blobs = JSON.parse(fs.readFileSync(path.join(__dirname, `blobs${edition[1] || ''}.json`), 'utf8'));
 const shotsDir = arg('--shots');
 const pdfFile = arg('--pdf');
+const stress = Number(arg('--stress') || 0);
+if (!Number.isFinite(stress) || stress < 0) throw new Error('--stress takes a width in pixels, for example 0.25');
+if (stress && pdfFile) throw new Error('--stress is for checking the layout, not for the hand-out: leave out --pdf');
 
 const base = `
 * { margin: 0 }
@@ -42,7 +54,7 @@ const print = '@page { size: 1920px 1080px; margin: 0 } html, body { background:
 
 const index = JSON.parse(fs.readFileSync(path.join(project, 'deck.json'), 'utf8'));
 const sections = index.order.map((id) => fs.readFileSync(path.join(project, 'slides', `${id}.html`), 'utf8'));
-const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${index.title}</title><style>${base}</style>`
+const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${index.title}</title><style>${base}</style>`
   + `<link rel="stylesheet" href="/project/deck.css"><style>${faces}\n${print}</style></head><body>${sections.join('\n')}</body></html>`;
 
 const types = { '.css': 'text/css', '.html': 'text/html', '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json' };
@@ -74,8 +86,15 @@ const inside = (root, file) => path.resolve(file).startsWith(path.resolve(root) 
     return route.fulfill({ contentType: types[path.extname(file)] || 'application/octet-stream', body: fs.readFileSync(file) });
   });
   await page.goto('http://deck.invalid/');
-  await page.evaluate(async (keepHyphens) => {
+  await page.evaluate(async ({ keepHyphens, widen }) => {
     for (const fragment of document.querySelectorAll('.fragment')) fragment.classList.add('visible');
+    if (widen) {
+      // Read every spacing before one is changed: the value is inherited.
+      const texts = [...document.querySelectorAll('body > section *')]
+        .filter((el) => !el.closest('aside') && [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()))
+        .map((el) => [el, parseFloat(getComputedStyle(el).letterSpacing) || 0]);
+      for (const [el, spacing] of texts) el.style.letterSpacing = `${spacing + widen}px`;
+    }
     // Slides breaks lines at spaces only. A browser also breaks after a hyphen, so hyphens inside
     // words are drawn as non-breaking ones here; the typeface has the glyph.
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -95,7 +114,7 @@ const inside = (root, file) => path.resolve(file).startsWith(path.resolve(root) 
       for (const child of box.children) if (parseFloat(getComputedStyle(child).flexGrow) > 0) child.style.minHeight = '0';
     }
     await document.fonts.ready;
-  }, !process.argv.includes('--loose'));
+  }, { keepHyphens: !process.argv.includes('--loose'), widen: stress });
   await page.waitForLoadState('networkidle');
 
   // What a reader of the pictures cannot measure by eye: where the content of each slide ends,
