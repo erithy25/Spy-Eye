@@ -379,6 +379,7 @@ export function Lage({ node, openFrame }: ViewProps) {
           view={view}
           viewKey={viewKey}
           markers={markers}
+          grid
           label={`${t('Übersicht')} · ${node.info?.node.region || node.info?.node.name || ''}`}
           onSelect={(id) => {
             if (id === null) {

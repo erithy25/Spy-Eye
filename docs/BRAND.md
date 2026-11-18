@@ -124,18 +124,23 @@ Zahlen stehen nur da, wo sie gemessen oder belegt sind.
 
 ## Was belegt ist — und nur das wird behauptet
 
-Gemessen in diesem Repository (Stand der Messung im jeweiligen Dokument):
+Gemessen in diesem Repository; Bedingungen und Einschränkungen stehen in `docs/EVALUATION.md`.
 
 | Aussage | Wert | Grundlage |
 | --- | --- | --- |
-| Gefahrenmodell, Trefferquote | 99,1 % (Makro-F1 0,990) | AIDERv2-Testmenge, 1 654 Bilder; ohne Training 92,2 % |
-| Auswertegeschwindigkeit | rund 3-fache Echtzeit | 1 Bild/s, vier Prozessorkerne, ohne Grafikkarte |
-| Erste Durchsuchbarkeit | 5,9 s für 44 Aufnahmen | Vorschaudurchgang, gleicher Rechner |
-| Gesichtsmaskierung | 20–40 ms je Bild | YuNet, Prozessor |
-| Protokollprüfung | Millisekunden je tausend Einträge | SHA-256-Kette |
+| Übung RHEIN-MOSEL, erkannte Ereignisse | 13 von 13 | Drehbuch mit 13 Ereignissen, elf Quellen, 31 Aufnahmen, Echtzeituhr |
+| Erkennungsverzug | 1,1 s im Median | ab Eintreffen des ausgewerteten Bildes; ein Bild je Sekunde, zwei Treffer bis zur Meldung |
+| Fehlmeldungen in der Übung | 1 von 15 Meldungen | nach Verwerfen und Nachschärfen im Folgelauf keine |
+| Auswertegeschwindigkeit | 3,3-fache Echtzeit | vier Prozessorkerne, ohne Grafikkarte, ein Bild je Sekunde, mit Maskierung |
+| Erste Durchsuchbarkeit | 14 s für 44 Aufnahmen | ab Beginn des Hochladens, gleicher Rechner |
+| Gefahrenmodell auf seinem Benchmark | 99,1 % (Makro-F1 0,991) | AIDERv2-Testmenge, 1 654 Bilder; ohne Training 85,1 % |
+| Suche im Knoten | 6 ms im Median | 2 268 Vektoren |
+| Bildkodierer | SigLIP 2, Apache-2.0, 34 ms je Bild | läuft ohne Netz; deutsche und englische Anfragen |
 
-Einschränkung zum Gefahrenmodell: AIDERv2 enthält ähnliche Bilder in Trainings- und Testmenge;
-der Wert gilt für diese Datenlage, nicht für beliebiges Einsatzmaterial.
+Zwei Einschränkungen gehören zu jeder Nennung dieser Zahlen. Erstens: Die Wachen der Übung
+wurden am Übungsmaterial formuliert; die Werte zeigen das Betriebsverhalten, nicht die Güte auf
+fremdem Material. Zweitens: Das Gefahrenmodell irrt auf dem Übungsmaterial trotz seines
+Benchmarkwerts und löst deshalb keine Meldungen aus, sondern steht als Zweitmeinung daneben.
 
 Nicht behaupten: Kunden, Pilotbehörden, Zertifizierungen, Partnerschaften, Teamgröße,
 Finanzierung, Marktanteile. Es gibt sie nicht. Marktzahlen stehen mit Quelle oder als Annahme

@@ -1,15 +1,39 @@
-# spy-eye
+# Sicht
 
-Lokale semantische Videosuche. Videos hochladen, sie werden in Szenen zerlegt und mit einem
-Vision-Language-Modell indexiert; danach findet eine Freitext-Suche (`man with a cup`, `black car`,
-`green bus`) pro passender Szene den besten Frame.
+**Keine Sicht ohne Aufsicht.**
 
-Alles läuft im eigenen Prozess: Modell-Inferenz (ONNX Runtime), Vektorindex, Szenenerkennung und Suche.
-Keine API-Keys, keine Datenbank, keine Cloud.
+Sicht macht das Videomaterial, das Behörden im Einsatz ohnehin erzeugen (Drohnen, Hubschrauber,
+Pegel- und Verkehrskameras, Fahrzeuge, Erkundungstrupps), in Sekunden durchsuchbar und beobachtet
+es selbständig auf Gefahrenlagen. Es identifiziert niemanden, führt keine Daten zusammen und hält
+jede Abfrage in einem verketteten Protokoll fest. Sicht ist die Bildschicht für das zivile
+Lagebild, kein Führungsinformationssystem.
 
-## Start
+Stand: Erprobung mit Übungsmaterial. Es gibt keine Behördenkunden, keine Zulassung, und der Name
+ist nicht markenrechtlich geprüft. Was gebaut und gemessen ist, steht unten und in
+[`docs/EVALUATION.md`](docs/EVALUATION.md); was fehlt, unter [Grenzen](#grenzen-dieses-stands).
 
-Voraussetzungen: Node ≥ 20.11, pnpm, `ffmpeg` im PATH (`brew install ffmpeg` / `apt install ffmpeg`).
+Alles läuft auf eigener Hardware in einem Prozess: Bildmodell (ONNX Runtime), Verzeichnis, Suche,
+Wachen, Protokoll, Karte. Keine Schlüssel, keine Datenbank, keine Cloud. Nach dem einmaligen Laden
+der Modelle wird kein Netz gebraucht.
+
+## Was das System tut
+
+| Bereich | Reiter | Aufgabe |
+| --- | --- | --- |
+| Übersicht | LAGE | Lagekarte aus eigenen Vektordaten mit UTMREF-Gitter, Quellen, Meldungen, Lagen, Übungsuhr, Lagebericht |
+| Einsicht | SUCHE | Freitextsuche über alles Bildmaterial, deutsch oder englisch, mit Fundstelle im Bild |
+| Vorsicht | WACHEN | Stehende Suchaufträge in Worten; melden, sobald ein Bild passt; ausdrückliches Nachschärfen aus Urteilen |
+| Durchsicht | VORGÄNGE | Beweissicherung mit Prüfsumme des Originals, Siegel, druckbarer Bericht |
+| Weitsicht | VERBUND | Abfrage über Behördengrenzen: nur die Frage reist, zurück kommen maskierte Vorschaubilder und ein Beleg |
+| Aufsicht | PROTOKOLL | Verkettetes Protokoll, Prüfung der Kette, Stichprobe für die Kontrolle, Export |
+| Rücksicht | durchgehend | Gesichtsmaskierung, Mandat mit Zweckbindung, Vier-Augen-Freigabe, Löschfrist, Anfrageprüfung |
+| — | QUELLEN, WIRKUNG | Sensoren und Einspielen; Messwerte des Knotens, Auswertung jeder Übung |
+
+## Vorführung mit drei Knoten
+
+Voraussetzungen: Node ab 20.11, pnpm, `ffmpeg` im Suchpfad
+(Windows: `winget install Gyan.FFmpeg`, macOS: `brew install ffmpeg`, Linux: `apt install ffmpeg`).
+Die Befehle sind in PowerShell, bash und zsh dieselben.
 
 ```bash
 pnpm install
@@ -20,86 +44,170 @@ pnpm build
 ```
 
 ```bash
+pnpm exercise:fetch
+```
+
+```bash
+pnpm demo:prepare
+```
+
+```bash
+pnpm demo
+```
+
+- `exercise:fetch` lädt 45 frei lizenzierte Aufnahmen (rund 300 MB) für die Übung und die beiden
+  Nachbarknoten. Sie liegen nicht im Repository, weil ihre Lizenz die Nutzung, aber nicht die
+  Weitergabe als Datei erlaubt.
+- `demo:prepare` lädt beim ersten Mal die Modelle (rund 950 MB) nach `.models/` und wertet das
+  gesamte Material aus (etwa zehn Minuten auf vier Kernen ohne Grafikkarte). Danach startet die
+  Vorführung ohne Wartezeit und ohne Netz.
+- `demo` startet drei Knoten: Koblenz <http://127.0.0.1:8787>, Trier <http://127.0.0.1:8788>,
+  Mainz <http://127.0.0.1:8789>.
+
+Zugänge (Passwort `lagebild`): `lage` (Auswertung), `leitung` (Leitung), `aufsicht` (Aufsicht).
+Der Ablauf einer Vorführung mit Sprechzeilen und Rückfallebenen steht in
+[`docs/DEMO.md`](docs/DEMO.md).
+
+## Ein einzelner Knoten mit eigenem Material
+
+```bash
 pnpm start
 ```
 
-Dann <http://127.0.0.1:8787> öffnen. Für die Entwicklung startet `pnpm dev` Server (8787) und Vite (5173)
-mit Hot Reload.
+<http://127.0.0.1:8787> öffnen, als `leitung` anmelden, das Mandat „Erprobung“ wählen, im Reiter
+QUELLEN Aufzeichnungen oder ganze Ordner ablegen. Neue Aufnahmen sind nach einem schnellen ersten
+Durchgang sofort durchsuchbar; die dichte Auswertung läuft dahinter weiter. Für die Entwicklung
+startet `pnpm dev` den Knoten (8787) und die Konsole mit Neuladen (5173).
 
-Beim ersten Start werden die Modellgewichte (~400 MB) einmalig von Hugging Face in `.models/` geladen.
-Danach ist kein Netzwerk mehr nötig; mit `SPY_EYE_OFFLINE=1` wird jeder Zugriff unterbunden.
-`pnpm models:download` lädt die Gewichte vorab.
+## Wie es arbeitet
 
-## Wie es funktioniert
+```
+Quelle ─► Bilder (ffmpeg) ─► Gesichter maskieren ─► Bildmerkmale (SigLIP 2) ─► Verzeichnis
+                                                                                 │
+                    Suche in Worten ◄──────────── Textmerkmale ◄─────────────────┤
+                    Wachen (stehende Suche) ─► Meldung ─► Lage ─► Vorgang        │
+                                                                                 ▼
+           Protokoll: jede Anmeldung, Abfrage, Ablehnung, Freigabe, jedes Urteil, verkettet
+```
 
-Die Analyse läuft in zwei Durchläufen, damit ein neues Dataset sofort benutzbar ist:
-
-1. **Grob-Durchlauf** für alle neuen Videos zuerst: ein bis drei Keyframes pro Video, je ein
-   Gesamtbild-Embedding, über Videogrenzen hinweg gebatcht. Dekodiert werden nur Keyframes, parallel auf
-   allen Kernen. Danach ist jedes Video durchsuchbar (Status `grob`).
-2. **Fein-Durchlauf**, ein Video nach dem anderen: dichte Abtastung, Bildausschnitte, Szenen, Tags. Sein
-   Ergebnis ersetzt den Grob-Index des Videos. Solange noch Uploads eintreffen, pausiert er zugunsten von
-   Durchlauf 1.
-
-Uploads laufen zu viert parallel und blockieren die Analyse nicht.
-
-| Schritt (Fein-Durchlauf) | Umsetzung |
-| --- | --- |
-| Frames | `ffmpeg` tastet das Video mit 0.5–4 fps ab (640 px breit). Die Analyse startet, während die Extraktion noch läuft. |
-| Statische Bilder | Ein 32×32-Signaturvergleich überspringt Frames, in denen sich nichts bewegt hat (spart bei Überwachungsmaterial den Großteil der Rechenzeit). |
-| Embeddings | Pro Frame das Gesamtbild plus überlappende quadratische Ausschnitte (`standard`: 4, `detail`: 12), damit auch kleine Objekte auffindbar sind. |
-| Szenen | Neuer Abschnitt bei Sprung im Embedding (Schnitt), bei Drift vom Szenenzentrum, nach einer Aktivitätspause oder nach 30 s. |
-| Tags | Zero-Shot gegen ein eingebautes Vokabular (332 Begriffe). Nur Anzeige; die Suche ist davon unabhängig. |
-| Suche | Text-Embedding (Prompt-Ensemble) gegen alle Vektoren, Maximum pro Frame, bester Frame pro Szene. Brute Force, da das bis in den Millionenbereich im Millisekundenbereich bleibt. |
-| Relevanz | Cut-off pro Query aus der Score-Verteilung des Datasets (Median + 2.5 σ robust), begrenzt auf ein festes Band. Der Regler verschiebt ihn. |
-| Fokus | Für einen Treffer werden dichte Bildfenster eingebettet und gegen die Query gemessen; das ergibt die Lokalisierung im Frame. |
-
-Daten liegen in `data/videos/<id>/`: Quelldatei, `frames/*.jpg`, `embeddings.f32`, `meta.json`.
+- **Einspielen.** Ein Bild je Sekunde (einstellbar), dazu Ausschnitte, damit kleine Dinge erkennbar
+  bleiben. Unveränderte Folgebilder werden übersprungen, Szenen an Schnitten und nach Ruhephasen
+  getrennt. Gesichter werden vor dem Speichern verpixelt; das Original bleibt verschlossen.
+- **Suche.** Die Anfrage wird in denselben Merkmalsraum übersetzt wie die Bilder und mit jedem
+  Vektor verglichen. Der Trennwert wird je Anfrage aus dem eigenen Bestand abgeleitet. Vor dem
+  Modell steht die Anfrageprüfung: Namen, Gesichter, Kennzeichen, Herkunft, Religion, körperliche
+  Merkmale, Wiederfinden und Verfolgen werden abgelehnt und protokolliert.
+- **Wachen.** Eine Wache ist eine gespeicherte Anfrage mit Ausschlüssen, Mindestsicherheit und
+  Quellenarten. Sie sieht jedes eintreffende Bild. Urteile der Auswertenden werden gesammelt; erst
+  das ausdrückliche Nachschärfen trainiert daraus eine neue, im Protokoll vermerkte Version.
+- **Lagen.** Meldungen gleicher Art am selben Ort werden zusammengefasst; mehrere Quellen für
+  dasselbe Ereignis werden als Bestätigung ausgewiesen.
+- **Verbund.** Knoten tauschen signierte Fragen aus. Der antwortende Knoten prüft nach eigenen
+  Regeln, protokolliert, und gibt höchstens zwölf maskierte Vorschaubilder mit einer Belegnummer
+  zurück. Aufnahmen, Verzeichnis und Protokoll verlassen ihn nicht. Beide Seiten bezeugen den
+  Protokollstand des anderen.
+- **Übung.** Ein Drehbuch verteilt Aufzeichnungen auf Quellen und setzt Ereignisse mit Zeitpunkt.
+  Das System spielt sie auf einer Uhr ab und misst je Ereignis die Zeit bis zur Meldung.
 
 ## Gemessen
 
-4 CPU-Kerne, ohne GPU. Dataset: 44 Clips, zusammen 9 Minuten, 87 MB, Detailgrad `standard`, 1 fps.
+Auf vier Prozessorkernen ohne Grafikkarte; Bedingungen und Einschränkungen in
+[`docs/EVALUATION.md`](docs/EVALUATION.md), nachmessbar mit `pnpm exercise:evaluate`.
 
-| Modell (`MODEL_ID`) | alle durchsuchbar | Feinanalyse fertig | Download | mittlere AP* |
-| --- | --- | --- | --- | --- |
-| `Xenova/mobileclip_s2` (Standard) | 5.9 s | 132 s | ~400 MB | 0.87 |
-| `Xenova/mobileclip_s0` | 4.2 s | 70 s | ~300 MB | 0.87 |
-| `Xenova/siglip-base-patch16-224` | 9.8 s | 307 s | ~800 MB | 0.88 |
+| Größe | Wert |
+| --- | --- |
+| Übung RHEIN-MOSEL: erkannte Ereignisse | 13 von 13 |
+| Erkennungsverzug | 1,1 s im Median, ab Eintreffen des ausgewerteten Bildes |
+| Fehlmeldungen | 1 von 15 Meldungen; nach Verwerfen und Nachschärfen im Folgelauf keine |
+| Auswertung von Aufzeichnungen | 3,3-fache Echtzeit, mit Maskierung |
+| Erste Durchsuchbarkeit | 14 s für 44 Aufnahmen ab Beginn des Hochladens |
+| Suche im Knoten | 6 ms im Median über 2 268 Vektoren |
+| Gefahrenmodell auf AIDERv2 | 99,1 % auf der Testmenge; auf dem Übungsmaterial irrt es und löst deshalb keine Meldungen aus |
 
-\* 16 Test-Queries auf 135 gelabelten COCO-Bildern, als Videos kodiert. Der SigLIP-Wert stammt aus einem
-früheren Lauf, in dem eines der drei Testvideos mit `detail` indexiert war; er ist also leicht begünstigt.
-Die Szenenerkennung trifft mit allen drei Modellen 135 von 135 Schnitten ohne Fehlalarm.
+Die Wachen der Übung wurden am Übungsmaterial formuliert. Die Werte zeigen das Betriebsverhalten,
+nicht die Güte auf fremdem Einsatzmaterial.
 
-Die Zeiten skalieren linear mit der Videomenge: Inferenz ist der Engpass und nutzt bereits alle Kerne.
-Der Grob-Durchlauf kostet auf dieser Maschine rund 0.1 s pro Video, der Fein-Durchlauf rund 0.25 s pro
-analysiertem Frame. Mehr Durchsatz gibt es nur über Hardware:
+## Grenzen dieses Stands
 
-```bash
-ML_DEVICE=auto pnpm start
+- **Keine Direktbilder.** Eingespielt werden Aufzeichnungen. Die Übung spielt ausgewertetes
+  Material auf einer Uhr ab. Für elf gleichzeitige Quellen in Echtzeit reicht ein Rechner mit vier
+  Kernen nicht.
+- **Keine Anbindung an ein vorhandenes Führungssystem.** Es gibt Ausgaben als GeoJSON und CAP 1.2,
+  aber keine erprobte Kopplung.
+- **Anmeldung und Rechte sind für die Vorführung gebaut.** Drei feste Zugänge mit einem
+  gemeinsamen Passwort; kein Anschluss an einen Verzeichnisdienst, keine Zwei-Faktor-Anmeldung.
+- **Regeln, keine Unmöglichkeiten.** Die Anfrageprüfung ist eine nachvollziehbare Wortprüfung. Sie
+  lässt sich mit Umschreibungen umgehen; dafür gibt es das Protokoll und die Stichprobe.
+  Beschreibungen nach Geschlecht, Alter oder Kleidung sind unter einem Mandat möglich, das sie
+  zulässt.
+- **Kein Rechtsgutachten.** Ob eine Behörde Bildmaterial so auswerten darf, entscheidet ihre
+  Rechtsgrundlage. [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) ordnet die Anforderungen den
+  gebauten Vorkehrungen zu und nennt, was fehlt.
+- **Größe.** Die Suche vergleicht mit jedem Vektor und ist für einige Millionen Vektoren je Knoten
+  ausgelegt, nicht für mehr.
+
+## Modelle, Daten, Lizenzen
+
+| Bestandteil | Herkunft | Lizenz |
+| --- | --- | --- |
+| Bildkodierer SigLIP 2 base patch32-256 | Google, ONNX-Fassung `onnx-community/siglip2-base-patch32-256-ONNX` | Apache-2.0 |
+| Gesichtserkenner YuNet (nur zum Maskieren) | OpenCV Zoo | MIT |
+| Gefahrenmodell | eigene Gewichte, trainiert auf AIDERv2 | Daten CC BY 4.0 |
+| Kartendaten | OpenStreetMap über OpenFreeMap, Schema OpenMapTiles | ODbL; CC BY 4.0 |
+| Höhenlinien | abgeleitet aus Mapzen Terrain Tiles | siehe deren Quellenliste |
+| Schrift JetBrains Mono | JetBrains | SIL OFL 1.1 |
+| Übungsaufnahmen | Mixkit | Mixkit Stock Video Free License; werden geladen, nicht mitgeliefert |
+
+Mit `MODEL_ID` lassen sich andere Kodierer wählen (`Xenova/clip-vit-base-patch32`, MIT;
+`Xenova/siglip-base-patch16-224`, Apache-2.0). `Xenova/mobileclip_s2` ist ebenfalls wählbar, aber
+nur für Forschungszwecke lizenziert und deshalb nicht voreingestellt. Ein Wechsel wertet den
+Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer abgestimmt.
+
+## Befehle
+
+| Befehl | Zweck |
+| --- | --- |
+| `pnpm demo` / `pnpm demo:prepare` | Vorführung mit drei Knoten starten / vorbereiten |
+| `pnpm start` / `pnpm dev` | einzelner Knoten / Entwicklung |
+| `pnpm exercise:fetch` | Übungsmaterial laden |
+| `pnpm exercise:evaluate` | Übung ohne Konsole abspielen und auswerten (`--speed 1\|2\|4\|8`) |
+| `pnpm models:download` | Modelle vorab laden |
+| `pnpm selftest` | Rechner, Modell und ffmpeg prüfen, Geschwindigkeit messen |
+| `pnpm test` / `pnpm typecheck` | Prüfungen |
+
+## Einstellungen
+
+| Variable | Voreinstellung | Bedeutung |
+| --- | --- | --- |
+| `PORT`, `HOST`, `DATA_DIR` | `8787`, `127.0.0.1`, `data` | einzelner Knoten |
+| `SICHT_NODES_FILE` | — | Knotendatei wie `nodes.demo.json`; mehrere Knoten in einem Prozess |
+| `SICHT_NODE_NAME`, `_OPERATOR`, `_REGION`, `_LAT`, `_LON` | Lagezentrum … | Angaben zum einzelnen Knoten |
+| `SICHT_DEMO_PASSWORD` | `lagebild` | Passwort der Vorführzugänge |
+| `SICHT_RETENTION_DAYS` | `60` | Löschfrist für Aufzeichnungen außerhalb von Vorgängen; `0` schaltet sie ab |
+| `SICHT_OFFLINE` | — | `1` unterbindet jeden Netzzugriff |
+| `MODEL_ID`, `MODEL_DTYPE`, `MODEL_TEXT_DTYPE` | SigLIP 2, `fp32`, `fp16` | Kodierer und Genauigkeit |
+| `ML_DEVICE` | `cpu` | `auto`, `dml` oder `cuda` versuchen eine Grafikkarte; sie wird nur verwendet, wenn sie das Ergebnis des Prozessors reproduziert |
+
+## Aufbau des Repositorys
+
+```
+apps/server     Knoten: Einspielen, Modell, Verzeichnis, Suche, Wachen, Lagen, Vorgänge,
+                Verbund, Protokoll, Schnittstelle (Fastify, TypeScript)
+apps/web        Konsole (React, Vite); Karte aus apps/web/public/map
+scenarios/      Drehbuch der Übung RHEIN-MOSEL
+seeds/          Bestände der Nachbarknoten für die Vorführung
+site/           Website (statisch, ohne Bauschritt)
+docs/           Strategie, Marke, Rechtszuordnung, Fragen, Messbericht, Vorführung
+deliverables/   Finanzmodell, Einseiter
+media/brand/    Markenfilm: Drehbuch und Schnittwerkzeug
 ```
 
-`auto` versucht unter Windows DirectML (jede DirectX-12-GPU) und unter Linux CUDA. Der Server übernimmt
-den GPU-Pfad nur, wenn er beim Start dieselben Vektoren liefert wie die CPU (Selbsttest mit Prüfbildern);
-sonst läuft er auf der CPU weiter und meldet das in der Statuszeile. Dieser Pfad ist experimentell und
-mangels GPU nicht gemessen. `pnpm selftest` prüft Umgebung, ffmpeg und Modell und gibt das Ergebnis aus.
+## Weitere Unterlagen
 
-Schwächen: zusammengesetzte Queries mit kleinen Objekten (`man with a cup` in einer Totalen) ranken
-plausibel, aber nicht zuverlässig; hier hilft `detail`. Treffer aus dem Grob-Index beruhen auf einem
-einzigen Keyframe und können danebenliegen, bis die Feinanalyse des Videos durch ist. Die Modelle
-verstehen Englisch. Sehr generische Wörter (`person`) liefern niedrige Scores.
-
-## Konfiguration
-
-Siehe `.env.example`. Die Variablen werden aus der Umgebung gelesen, z. B.:
-
-```bash
-MODEL_ID=Xenova/siglip-base-patch16-224 pnpm start
-```
-
-Ein Modellwechsel indexiert vorhandene Videos beim nächsten Start neu.
-
-## Hinweise
-
-- Der Server bindet an `127.0.0.1` und hat keine Authentifizierung. Nicht ungeschützt ins Netz stellen.
-- Abspielen im Browser hängt vom Codec ab (H.264/VP9/AV1 in mp4/webm/mov). Bei anderen Formaten bleibt
-  die Frame-Ansicht der Szene.
+- [`docs/STRATEGY.md`](docs/STRATEGY.md) – These, Belege, Wettbewerb, Käufer, Geschäftsmodell, Risiken
+- [`docs/BRAND.md`](docs/BRAND.md) – Name, Leitsatz, Wortschatz, Gestaltung, was behauptet werden darf
+- [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) – rechtliche Anforderungen und gebaute Vorkehrungen
+- [`docs/FAQ.md`](docs/FAQ.md) – harte Fragen, kurze Antworten
+- [`docs/EVALUATION.md`](docs/EVALUATION.md) – Messbericht
+- [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung
+- [`docs/research/`](docs/research) – Recherche mit Quellen

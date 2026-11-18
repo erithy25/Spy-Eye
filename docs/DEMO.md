@@ -1,0 +1,130 @@
+# Vorführung: Ablauf, Vorbereitung, Rückfallebenen
+
+Dauer der Vorführung am System: 12 bis 15 Minuten. Alles läuft auf einem Rechner, ohne
+Netzverbindung. Drei Knoten (Koblenz, Trier, Mainz) laufen in einem Prozess und sprechen nur über
+das Verbundprotokoll miteinander, so wie Knoten auf drei Rechnern es täten.
+
+## Am Vorabend (einmalig, mit Netz)
+
+```bash
+pnpm install
+```
+
+```bash
+pnpm build
+```
+
+```bash
+pnpm exercise:fetch
+```
+
+```bash
+pnpm demo:prepare
+```
+
+`exercise:fetch` lädt 45 frei lizenzierte Aufnahmen (rund 300 MB). `demo:prepare` lädt beim ersten
+Mal die Modelle (rund 950 MB) und wertet das gesamte Material aus; auf einem Rechner mit vier
+Kernen ohne Grafikkarte dauert das etwa zehn Minuten. Der Befehl endet mit „Vorbereitet“. Danach
+wird kein Netz mehr gebraucht.
+
+## Am Tag selbst
+
+```bash
+pnpm demo
+```
+
+| Knoten | Adresse | Zweck in der Vorführung |
+| --- | --- | --- |
+| Lagezentrum Koblenz | http://127.0.0.1:8787 | Hauptbildschirm |
+| Lagezentrum Trier | http://127.0.0.1:8788 | zweites Fenster: zeigt die Fremdanfrage in seinem Protokoll |
+| Lagezentrum Mainz | http://127.0.0.1:8789 | nur als Verbundpartner |
+
+Zugänge auf allen Knoten, Passwort `lagebild`:
+
+| Kennung | Rolle | darf |
+| --- | --- | --- |
+| `lage` | Auswertung | suchen, Wachen aufstellen, Meldungen sichten, Vorgänge führen |
+| `leitung` | Leitung | zusätzlich Mandate erteilen, Vorgänge versiegeln, Maskierung freigeben, Protokoll einsehen |
+| `aufsicht` | Aufsicht | Protokoll prüfen, Stichproben ziehen, Messwerte einsehen; kein Bildmaterial |
+
+Vor Beginn prüfen (zwei Minuten):
+
+1. Browser im Vollbild, Zoom 100 %, dunkles Fenster ohne Lesezeichenleiste.
+2. In Koblenz als `leitung` anmelden, Mandat „Übung RHEIN-MOSEL“ wählen. Unten steht
+   „31 Aufnahmen bereit“. Steht dort „Material wird ausgewertet“, ist `demo:prepare` nicht
+   durchgelaufen: abwarten.
+3. Zweites Browserfenster: Trier, als `leitung` angemeldet, Reiter PROTOKOLL.
+4. Falls vom Probelauf noch eine Übung läuft: ENDE drücken. Falls die Wache „Umgestürzter
+   Lastkraftwagen“ schon nachgeschärft ist (Version 2): im Reiter WACHEN „Gelerntes verwerfen“,
+   damit die Fehlmeldung in der Vorführung wieder auftritt.
+
+## Ablauf
+
+Die Übungsuhr läuft mit vierfacher Geschwindigkeit: zehn Minuten Übungszeit in zweieinhalb Minuten.
+Wer mehr Zeit zum Erklären braucht, drückt PAUSE; die Uhr und alle Quellen halten an.
+
+| Min. | Handlung | Kernaussage |
+| --- | --- | --- |
+| 0:00 | Anmeldemaske zeigen. Als `leitung` anmelden. | „Jede Anmeldung steht im Protokoll. Unten links läuft die Prüfsumme mit.“ |
+| 0:30 | Mandatswahl: „Übung RHEIN-MOSEL“. | „Ohne Zweck keine Auswertung. Das Mandat nennt Rechtsgrundlage und Zweck; jede Abfrage wird ihm zugeordnet.“ |
+| 1:00 | LAGE. Karte zeigen, mit dem Mauszeiger über die Stadt fahren. | „Die Karte ist selbst gezeichnet, aus OpenStreetMap-Daten, ohne Kartendienst. Unten links die UTMREF-Koordinate, wie auf jeder Einsatzkarte.“ |
+| 1:30 | „Übung starten“ bei 4×. | „Elf Quellen: vier Drohnen, drei Festkameras, drei Erkundungstrupps, ein Hinweisportal. Das Material ist frei lizenziertes Archivmaterial und zeigt nicht Koblenz.“ |
+| 2:00 | Bei T+01:22 erscheint „Überflutung“ an UAS 1. Auf die Meldung klicken. | „Niemand hat dieses Bild angesehen. Die Wache ‚Überflutung‘ ist ein Satz in Worten, kein trainiertes Modell. Zwei Sekunden nach dem ersten Bild steht die Meldung auf der Karte.“ |
+| 2:30 | Im Blatt: Fokus zeigt, worauf die Wache reagiert. BESTÄTIGEN. | „Das Urteil wird protokolliert. Es verändert die Wache nicht von selbst.“ |
+| 3:00 | Zurück zur Karte. Meldungen laufen ein (Sturzflut, Baum auf Fahrzeug, Unfall). Rechts unten bilden sich Lagen. | „Meldungen gleicher Art am selben Ort werden zu einer Lage. Zwei Quellen für dieselbe Überflutung: Das steht da als ‚2 Quellen‘.“ |
+| 4:00 | Bei T+04:24 meldet „Umgestürzter Lastkraftwagen“ an Erkunder 1. Bild öffnen: Es ist die abgerutschte Fahrbahn. VERWERFEN. | „Eine Fehlmeldung. Wir zeigen sie, statt sie zu verstecken.“ |
+| 4:30 | Bei T+05:22 echte Meldung „Umgestürzter Lastkraftwagen“ an Erkunder 2: BESTÄTIGEN. Dann WACHEN, diese Wache wählen, NACHSCHÄRFEN. | „Aus zwei Urteilen entsteht Version 2. Der Schritt ist ausdrücklich, steht im Protokoll und lässt sich zurücknehmen. Kein stilles Weiterlernen im Betrieb.“ |
+| 5:30 | SUCHE. Haken „im Verbund fragen“. Eingeben: `überflutete Wiese`. | „Freitext, auf Deutsch. Kein Schlagwortkatalog. Rechts antworten Trier und Mainz: mit maskierten Vorschaubildern und einer Belegnummer. Ihre Aufnahmen haben sie nicht herausgegeben.“ |
+| 6:30 | Zweites Fenster (Trier, PROTOKOLL): der Eintrag „Fremdanfrage von Lagezentrum Koblenz“. | „Der Nachbar hat die Frage nach seinen eigenen Regeln geprüft und protokolliert. Nur die Frage ist gereist.“ |
+| 7:00 | Zurück in Koblenz. Eingeben: `Gesicht von Herrn Müller`, dann `Kennzeichen KO AB 123`. | „Abgelehnt, mit Regel, im Protokoll. Das System sucht Lagen, keine Menschen.“ |
+| 8:00 | Ersten Treffer von `überflutete Wiese` öffnen, ZUM VORGANG, neuer Vorgang „Überflutung Moselbogen“, Vermerk, SICHERN. | „Das Bild wird mit der Prüfsumme des Originals gesichert und ist von der Löschfrist ausgenommen.“ |
+| 9:00 | VORGÄNGE: VERSIEGELN, dann BERICHT. | „Ein versiegelter Vorgang ist unveränderlich. Der Bericht ist druckbar und nennt Siegel und Protokollstand.“ |
+| 10:00 | LAGE: an Erkunder 1 das Bild mit dem Fachberater öffnen. Gesicht ist verpixelt. ORIGINAL ANFORDERN und den Dialog zeigen. | „Gesichter sind in jedem Bild maskiert. Das Original gibt es nur mit Grund und mit Freigabe durch eine zweite Person, für 15 Minuten.“ |
+| 11:00 | PROTOKOLL: KETTE PRÜFEN. Dann STICHPROBE ZIEHEN. | „Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Die Aufsicht zieht Stichproben, ohne selbst Bilder sehen zu können.“ |
+| 12:00 | WIRKUNG. | „Der Zweck ist messbar: 13 Ereignisse im Drehbuch, 13 erkannt, im Median nach gut zwei Sekunden, eine Fehlmeldung. Diese Zahlen erzeugt das System selbst, bei jeder Übung.“ |
+| 13:00 | LAGE: LAGEBERICHT öffnen. | „Am Ende steht ein Lagebericht, der sich drucken oder als GeoJSON und CAP an bestehende Systeme übergeben lässt.“ |
+
+Die Freigabe vollständig zeigen: Niemand kann sich selbst freigeben. In einem zweiten
+Browserprofil als `lage` anmelden, dort ORIGINAL ANFORDERN, als freigebende Person `leitung` mit
+deren Passwort eintragen. Das Bild erscheint unmaskiert, der Eintrag steht im Protokoll.
+
+## Was man nicht behaupten darf
+
+- Es gibt keine Behördenkunden, keine Pilotierung, keine Zertifizierung.
+- Die Messwerte stammen aus einer Übung mit Archivmaterial. Die Wachen der Übung wurden an diesem
+  Material formuliert. Die Zahlen beschreiben das Betriebsverhalten, nicht die Güte auf fremdem
+  Material.
+- Direktbilder (laufende Kamerastreams) werden nicht eingespielt; die Übung spielt ausgewertete
+  Aufzeichnungen auf einer Uhr ab. Das Einspielen von Aufzeichnungen ist vollständig.
+- Das trainierte Gefahrenmodell erreicht 99,1 % auf seinem Benchmark und irrt auf dem
+  Übungsmaterial. Deshalb löst es keine Meldungen aus, sondern steht als Zweitmeinung daneben.
+- „Kein Personen-Tracking“ ist eine Regel mit Protokoll, keine technische Unmöglichkeit.
+- Der Name Sicht ist nicht markenrechtlich geprüft.
+
+## Rückfallebenen
+
+| Störung | Abhilfe |
+| --- | --- |
+| Anmeldung schlägt fehl | Passwort ist `lagebild`. Nach einem Neustart sind alle Sitzungen beendet: neu anmelden. |
+| „Übungsmaterial fehlt“ | `pnpm exercise:fetch`, danach `pnpm demo:prepare`. |
+| Übung steht auf „Material wird ausgewertet“ | abwarten; der Balken zeigt den Stand. Ohne Vorbereitung dauert es rund zehn Minuten. |
+| Verbund zeigt „nicht erreichbar“ | Die Knoten melden sich alle paar Sekunden; kurz warten. Wurde mit `pnpm start` statt `pnpm demo` gestartet, gibt es keine Nachbarn. |
+| Port belegt | Ein alter Prozess läuft noch: beenden und `pnpm demo` neu starten. |
+| Keine Fehlmeldung beim Lastkraftwagen | Die Wache ist schon nachgeschärft: WACHEN, „Gelerntes verwerfen“, Übung neu starten. |
+| Rechner zu langsam für 4× | 2× wählen; die Uhr bestimmt nur das Tempo, nicht das Ergebnis. |
+| Alles steht | Der Film `sicht-produktfilm.mp4` zeigt denselben Ablauf in zwei Minuten. |
+
+## Fragen, die kommen werden
+
+Antworten stehen in `docs/FAQ.md`. Die drei häufigsten:
+
+1. **„Ist das Palantir in klein?“** Nein. Sicht führt keine Daten zusammen und erstellt keine
+   Profile. Es macht eigenes Bildmaterial durchsuchbar und lässt die Daten bei der Behörde, die sie
+   aufgenommen hat.
+2. **„Kann man damit Personen suchen?“** Namen, Gesichter, Kennzeichen, Herkunft und körperliche
+   Merkmale werden abgelehnt. Beschreibungen nach Geschlecht, Alter oder Kleidung sind nur unter
+   einem Mandat möglich, das sie ausdrücklich zulässt, etwa bei einer Vermisstensuche, und stehen
+   gekennzeichnet im Protokoll.
+3. **„Was ist fertig?“** Einspielen, Maskieren, Suchen, Wachen, Lagen, Vorgänge, Verbund,
+   Protokoll und Messung laufen. Nicht fertig: Direktbilder, Anbindung an ein vorhandenes
+   Führungssystem, Betrieb mit mehr als einigen zehn Stunden Material, Zulassung.

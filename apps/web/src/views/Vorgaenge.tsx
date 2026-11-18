@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
-import { addCaseNote, createCase, fetchCases, removeCaseItem, sealCase, type CaseFile } from '../api';
+import { addCaseNote, createCase, fetchCases, fetchMandates, removeCaseItem, sealCase, type CaseFile } from '../api';
 import type { ViewProps } from '../App';
 import { formatClock, formatDateTime, shortHash } from '../format';
 import { useLang } from '../i18n';
 import { Field, Frame, useAction, useLoad } from '../ui';
 
 export function Vorgaenge({ node, openFrame }: ViewProps) {
-  const { t, locale } = useLang();
+  const { t, pick, locale } = useLang();
   const cases = useLoad(() => fetchCases(), []);
+  const mandates = useLoad(() => fetchMandates(), []);
+  const mandateTitle = (id: string): string => {
+    const m = (mandates.data ?? []).find((x) => x.id === id);
+    return m ? pick(m.title, m.titleEn) : id;
+  };
   const [selected, setSelected] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
@@ -72,10 +77,10 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
             <thead>
               <tr>
                 <th>{t('Vorgang')}</th>
-                <th style={{ width: 40 }} className="num">
+                <th style={{ width: 56 }} className="num">
                   {t('Bilder')}
                 </th>
-                <th style={{ width: 76 }}>{t('Stand')}</th>
+                <th style={{ width: 92 }}>{t('Stand')}</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +147,7 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
                 </div>
                 <div>
                   <dt>{t('Mandat')}</dt>
-                  <dd>{current.mandateId}</dd>
+                  <dd>{mandateTitle(current.mandateId)}</dd>
                 </div>
                 {current.sealedAt !== null && (
                   <>

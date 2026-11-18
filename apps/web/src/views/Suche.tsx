@@ -294,7 +294,7 @@ export function Suche({ node, openFrame }: ViewProps) {
               </header>
               <div style={{ position: 'relative', height: 300 }}>
                 <MapCanvas
-                  view={center ?? { lat: info?.lat ?? 51, lon: info?.lon ?? 10, zoom: 12 }}
+                  view={center ? { ...center, zoom: center.zoom - 1.1 } : { lat: info?.lat ?? 51, lon: info?.lon ?? 10, zoom: 11 }}
                   viewKey={center ? 'scenario' : 'home'}
                   markers={markers}
                   readouts={false}

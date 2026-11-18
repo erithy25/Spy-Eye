@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-11-18T02:07:28.821Z",
+  "measuredAt": "2026-11-18T02:29:35.305Z",
   "machine": {
     "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
     "cores": 4,
@@ -11,7 +11,7 @@
     "id": "rhein-mosel",
     "title": "Übung RHEIN-MOSEL",
     "durationSec": 600,
-    "speed": 8
+    "speed": 1
   },
   "footage": {
     "clips": 31,
@@ -19,117 +19,120 @@
     "framesIndexed": 571,
     "facesMasked": 37
   },
-  "analysis": null,
+  "analysis": {
+    "seconds": 176,
+    "realtimeFactor": 3.3
+  },
   "evaluation": {
     "events": [
       {
         "label": "Mosel tritt über die Ufer, Wiesen überflutet",
         "sourceName": "UAS 1 · Moselbogen",
         "onsetSec": 80,
-        "detectedSec": 82.2,
-        "latencySec": 2.2,
+        "detectedSec": 81.1,
+        "latencySec": 1.1,
         "watchName": "Überflutung"
       },
       {
         "label": "Bachlauf führt Sturzflut",
         "sourceName": "Erkunder 1 · Güls",
         "onsetSec": 100,
-        "detectedSec": 102.2,
-        "latencySec": 2.2,
+        "detectedSec": 101.1,
+        "latencySec": 1.1,
         "watchName": "Überflutung"
       },
       {
         "label": "Rheinvorland überflutet",
         "sourceName": "UAS 2 · Rheinvorland",
         "onsetSec": 150,
-        "detectedSec": 152.2,
-        "latencySec": 2.2,
+        "detectedSec": 151.2,
+        "latencySec": 1.2,
         "watchName": "Überflutung"
       },
       {
         "label": "Baum auf Fahrzeug gestürzt",
         "sourceName": "Erkunder 2 · Lützel",
         "onsetSec": 160,
-        "detectedSec": 162.2,
-        "latencySec": 2.2,
+        "detectedSec": 161.2,
+        "latencySec": 1.2,
         "watchName": "Sturmschaden: umgestürzter Baum"
       },
       {
         "label": "Verkehrsunfall auf der B 9",
         "sourceName": "UAS 3 · B 9 Nord",
         "onsetSec": 240,
-        "detectedSec": 242.4,
-        "latencySec": 2.4,
+        "detectedSec": 241,
+        "latencySec": 1,
         "watchName": "Verkehrsunfall"
       },
       {
         "label": "Fahrbahn abgerutscht, Straße gesperrt",
         "sourceName": "Erkunder 1 · Güls",
         "onsetSec": 260,
-        "detectedSec": 262.4,
-        "latencySec": 2.4,
+        "detectedSec": 261,
+        "latencySec": 1,
         "watchName": "Fahrbahn zerstört"
       },
       {
         "label": "Unfall im Tunnel, Einsatzkräfte am Fahrzeug",
         "sourceName": "Tunnelkamera · Ostportal",
         "onsetSec": 280,
-        "detectedSec": 282.4,
-        "latencySec": 2.4,
+        "detectedSec": 281,
+        "latencySec": 1,
         "watchName": "Einsatzkräfte am Unfallfahrzeug"
       },
       {
         "label": "Lastkraftwagen umgestürzt",
         "sourceName": "Erkunder 2 · Lützel",
         "onsetSec": 320,
-        "detectedSec": 322.5,
-        "latencySec": 2.5,
+        "detectedSec": 321.1,
+        "latencySec": 1.1,
         "watchName": "Umgestürzter Lastkraftwagen"
       },
       {
         "label": "Baum auf Wohnhaus gestürzt",
         "sourceName": "Bürgerhinweise · Eingang",
         "onsetSec": 360,
-        "detectedSec": 362.6,
-        "latencySec": 2.6,
+        "detectedSec": 361.1,
+        "latencySec": 1.1,
         "watchName": "Sturmschaden: umgestürzter Baum"
       },
       {
         "label": "Gebäudebrand im Gewerbegebiet, starke Rauchentwicklung",
         "sourceName": "UAS 4 · Rheinhafen",
         "onsetSec": 400,
-        "detectedSec": 402.6,
-        "latencySec": 2.6,
+        "detectedSec": 401.2,
+        "latencySec": 1.2,
         "watchName": "Brand"
       },
       {
         "label": "Gebäude in Vollbrand",
         "sourceName": "Erkunder 3 · Wallersheim",
         "onsetSec": 420,
-        "detectedSec": 422.6,
-        "latencySec": 2.6,
+        "detectedSec": 421.2,
+        "latencySec": 1.2,
         "watchName": "Brand"
       },
       {
         "label": "Straße durch umgestürzten Baum blockiert",
         "sourceName": "Erkunder 2 · Lützel",
         "onsetSec": 440,
-        "detectedSec": 442.7,
-        "latencySec": 2.7,
+        "detectedSec": 441.2,
+        "latencySec": 1.2,
         "watchName": "Sturmschaden: umgestürzter Baum"
       },
       {
         "label": "Teileinsturz, Suche in Trümmern",
         "sourceName": "Bürgerhinweise · Eingang",
         "onsetSec": 480,
-        "detectedSec": 482.7,
-        "latencySec": 2.7,
+        "detectedSec": 481,
+        "latencySec": 1,
         "watchName": "Einsturz und Trümmer"
       }
     ],
     "total": 13,
     "detected": 13,
-    "medianLatencySec": 2.4,
+    "medianLatencySec": 1.1,
     "falseAlarms": 1,
     "alerts": 15
   },
@@ -214,61 +217,61 @@
   ],
   "alerts": [
     {
-      "at": 82.192,
+      "at": 81.103,
       "watch": "Überflutung",
       "source": "UAS 1 · Moselbogen",
       "confidence": 0.885,
       "score": 0.1442,
-      "frames": 76,
+      "frames": 80,
       "explained": true
     },
     {
-      "at": 102.208,
+      "at": 101.133,
       "watch": "Überflutung",
       "source": "Erkunder 1 · Güls",
       "confidence": 0.97,
       "score": 0.1586,
-      "frames": 144,
+      "frames": 159,
       "explained": true
     },
     {
-      "at": 152.24,
+      "at": 151.193,
       "watch": "Überflutung",
       "source": "UAS 2 · Rheinvorland",
       "confidence": 0.89,
       "score": 0.1447,
-      "frames": 160,
+      "frames": 178,
       "explained": true
     },
     {
-      "at": 162.24,
+      "at": 161.2,
       "watch": "Sturmschaden: umgestürzter Baum",
       "source": "Erkunder 2 · Lützel",
       "confidence": 0.994,
       "score": 0.175,
-      "frames": 145,
+      "frames": 147,
       "explained": true
     },
     {
-      "at": 242.376,
+      "at": 241.017,
       "watch": "Verkehrsunfall",
       "source": "UAS 3 · B 9 Nord",
       "confidence": 0.81,
       "score": 0.1383,
-      "frames": 95,
+      "frames": 97,
       "explained": true
     },
     {
-      "at": 262.432,
+      "at": 261.03,
       "watch": "Fahrbahn zerstört",
       "source": "Erkunder 1 · Güls",
       "confidence": 0.98,
       "score": 0.1628,
-      "frames": 161,
+      "frames": 174,
       "explained": true
     },
     {
-      "at": 264.432,
+      "at": 264.033,
       "watch": "Umgestürzter Lastkraftwagen",
       "source": "Erkunder 1 · Güls",
       "confidence": 0.954,
@@ -277,75 +280,75 @@
       "explained": false
     },
     {
-      "at": 282.448,
+      "at": 281.047,
       "watch": "Einsatzkräfte am Unfallfahrzeug",
       "source": "Tunnelkamera · Ostportal",
       "confidence": 0.984,
       "score": 0.1651,
-      "frames": 105,
+      "frames": 109,
       "explained": true
     },
     {
-      "at": 322.504,
+      "at": 321.081,
       "watch": "Umgestürzter Lastkraftwagen",
       "source": "Erkunder 2 · Lützel",
       "confidence": 0.991,
       "score": 0.1706,
-      "frames": 104,
+      "frames": 118,
       "explained": true
     },
     {
-      "at": 362.568,
+      "at": 361.121,
       "watch": "Sturmschaden: umgestürzter Baum",
       "source": "Bürgerhinweise · Eingang",
       "confidence": 0.979,
       "score": 0.1621,
-      "frames": 94,
+      "frames": 97,
       "explained": true
     },
     {
-      "at": 402.592,
+      "at": 401.167,
       "watch": "Brand",
       "source": "UAS 4 · Rheinhafen",
       "confidence": 0.748,
       "score": 0.1347,
-      "frames": 184,
+      "frames": 189,
       "explained": true
     },
     {
-      "at": 402.592,
+      "at": 401.167,
       "watch": "Starke Rauchentwicklung",
       "source": "UAS 4 · Rheinhafen",
       "confidence": 0.858,
       "score": 0.1418,
-      "frames": 190,
+      "frames": 195,
       "explained": true
     },
     {
-      "at": 422.648,
+      "at": 421.19,
       "watch": "Brand",
       "source": "Erkunder 3 · Wallersheim",
       "confidence": 0.88,
       "score": 0.1438,
-      "frames": 95,
+      "frames": 100,
       "explained": true
     },
     {
-      "at": 442.68,
+      "at": 441.211,
       "watch": "Sturmschaden: umgestürzter Baum",
       "source": "Erkunder 2 · Lützel",
       "confidence": 0.985,
       "score": 0.1657,
-      "frames": 154,
+      "frames": 161,
       "explained": true
     },
     {
-      "at": 482.736,
+      "at": 481.009,
       "watch": "Einsturz und Trümmer",
       "source": "Bürgerhinweise · Eingang",
       "confidence": 0.917,
       "score": 0.1478,
-      "frames": 98,
+      "frames": 103,
       "explained": true
     }
   ]

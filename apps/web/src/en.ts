@@ -339,7 +339,7 @@ export const EN: Record<string, string> = {
   Aktualisieren: 'Refresh',
   Erkennungsverzug: 'Detection delay',
   's im Median': 's median',
-  '{d} von {n} Ereignissen der laufenden Übung erkannt, {f} Fehlmeldungen.': '{d} of {n} events of the current exercise detected, {f} false alerts.',
+  '{d} von {n} Ereignissen der Übung erkannt. Fehlmeldungen: {f}.': '{d} of {n} events of the exercise detected. False alerts: {f}.',
   'Wird gemessen, sobald eine Übung läuft.': 'Measured as soon as an exercise runs.',
   Sichtungsquote: 'Coverage',
   'des Materials ausgewertet': 'of the footage analysed',

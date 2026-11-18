@@ -28,3 +28,28 @@ export function formatCoordinate(lat: number, lon: number): string {
   const ew = lon >= 0 ? 'E' : 'W';
   return `${Math.abs(lat).toFixed(5)}° ${ns}  ${Math.abs(lon).toFixed(5).padStart(9, '0')}° ${ew}`;
 }
+
+/** Inverse transverse Mercator (Krüger series): UTM grid coordinates to latitude / longitude, northern hemisphere. */
+export function fromUtm(zone: number, easting: number, northing: number): { lat: number; lon: number } {
+  const a = 6378137;
+  const f = 1 / 298.257223563;
+  const k0 = 0.9996;
+  const n = f / (2 - f);
+  const A = (a / (1 + n)) * (1 + n ** 2 / 4 + n ** 4 / 64);
+  const beta = [n / 2 - (2 / 3) * n ** 2 + (37 / 96) * n ** 3, (1 / 48) * n ** 2 + (1 / 15) * n ** 3, (17 / 480) * n ** 3];
+  const delta = [2 * n - (2 / 3) * n ** 2 - 2 * n ** 3, (7 / 3) * n ** 2 - (8 / 5) * n ** 3, (56 / 15) * n ** 3];
+  const xi = northing / (k0 * A);
+  const eta = (easting - 500000) / (k0 * A);
+  let xiP = xi;
+  let etaP = eta;
+  for (let j = 1; j <= 3; j++) {
+    xiP -= (beta[j - 1] as number) * Math.sin(2 * j * xi) * Math.cosh(2 * j * eta);
+    etaP -= (beta[j - 1] as number) * Math.cos(2 * j * xi) * Math.sinh(2 * j * eta);
+  }
+  const chi = Math.asin(Math.sin(xiP) / Math.cosh(etaP));
+  let phi = chi;
+  for (let j = 1; j <= 3; j++) phi += (delta[j - 1] as number) * Math.sin(2 * j * chi);
+  const lambda0 = ((zone - 1) * 6 - 180 + 3) * (Math.PI / 180);
+  const lambda = lambda0 + Math.atan(Math.sinh(etaP) / Math.cos(xiP));
+  return { lat: (phi * 180) / Math.PI, lon: (lambda * 180) / Math.PI };
+}

@@ -53,7 +53,7 @@ export function Wirkung({ node }: ViewProps) {
           </div>
           <p>
             {evaluation
-              ? t('{d} von {n} Ereignissen der laufenden Übung erkannt, {f} Fehlmeldungen.', { d: evaluation.detected, n: evaluation.total, f: evaluation.falseAlarms })
+              ? t('{d} von {n} Ereignissen der Übung erkannt. Fehlmeldungen: {f}.', { d: evaluation.detected, n: evaluation.total, f: evaluation.falseAlarms })
               : t('Wird gemessen, sobald eine Übung läuft.')}
           </p>
         </div>
@@ -145,8 +145,8 @@ export function Wirkung({ node }: ViewProps) {
               <div>
                 <dt>{t('Suchdauer')}</dt>
                 <dd>
-                  {m.searches.medianMs !== null ? `${m.searches.medianMs} ms ${t('im Median')}` : '–'}
-                  {m.searches.p95Ms !== null ? ` · ${m.searches.p95Ms} ms (95 %)` : ''}
+                  {m.searches.medianMs !== null ? `${Math.round(m.searches.medianMs)} ms ${t('im Median')}` : '–'}
+                  {m.searches.p95Ms !== null ? ` · ${Math.round(m.searches.p95Ms)} ms (95 %)` : ''}
                 </dd>
               </div>
               <div>

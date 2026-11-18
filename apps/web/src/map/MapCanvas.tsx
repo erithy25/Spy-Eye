@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { formatCoordinate, metresPerPixel, project, toMgrs, unproject, worldSize } from './geo';
+import { formatCoordinate, fromUtm, metresPerPixel, project, toMgrs, toUtm, unproject, worldSize } from './geo';
 import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile } from './tiles';
 
 export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident';
@@ -46,6 +46,8 @@ interface MapCanvasProps {
   maxZoom?: number;
   /** Shows cursor position, grid reference and scale. */
   readouts?: boolean;
+  /** Draws the UTM kilometre grid. */
+  grid?: boolean;
   label?: string;
   children?: ReactNode;
 }
@@ -161,6 +163,87 @@ function placeFont(cls: string, zoom: number): { size: number; weight: number; c
   return { size: 9, weight: 400, color: '#6a6a6a' };
 }
 
+/**
+ * UTM grid as on German operations maps: lines every kilometre (every ten at smaller scales),
+ * labelled with the two kilometre digits used in a UTMREF grid reference.
+ */
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  zoom: number,
+  width: number,
+  height: number,
+  occupied: { x0: number; y0: number; x1: number; y1: number }[],
+): void {
+  if (zoom < 9.5) return;
+  const step = zoom >= 12.2 ? 1000 : 10_000;
+  const world = worldSize(zoom);
+  const at = (px: number, py: number): { lat: number; lon: number } => unproject(cx + (px - width / 2) / world, cy + (py - height / 2) / world);
+  const centre = at(width / 2, height / 2);
+  const zone = toUtm(centre.lat, centre.lon).zone;
+  // Bounds in grid coordinates of the centre's zone; the corners are enough at these scales.
+  const corners = [at(0, 0), at(width, 0), at(0, height), at(width, height)].map((c) => {
+    const lambda0 = (zone - 1) * 6 - 180 + 3;
+    // Positions slightly outside the zone are still projected into it so that lines stay continuous.
+    const u = toUtm(c.lat, Math.max(lambda0 - 3.2, Math.min(lambda0 + 3.2, c.lon)));
+    return u.zone === zone ? u : toUtm(c.lat, lambda0 + (c.lon > lambda0 ? 2.999 : -2.999));
+  });
+  const e0 = Math.floor(Math.min(...corners.map((c) => c.easting)) / step) * step;
+  const e1 = Math.ceil(Math.max(...corners.map((c) => c.easting)) / step) * step;
+  const n0 = Math.floor(Math.min(...corners.map((c) => c.northing)) / step) * step;
+  const n1 = Math.ceil(Math.max(...corners.map((c) => c.northing)) / step) * step;
+  if ((e1 - e0) / step > 80 || (n1 - n0) / step > 80) return;
+  const toScreen = (easting: number, northing: number): { x: number; y: number } => {
+    const g = fromUtm(zone, easting, northing);
+    const p = project(g.lat, g.lon);
+    return { x: (p.x - cx) * world + width / 2, y: (p.y - cy) * world + height / 2 };
+  };
+  ctx.lineWidth = 1;
+  ctx.font = `400 9px ${FONT}`;
+  ctx.textBaseline = 'top';
+  const label = (value: number): string => String(Math.floor(value / 1000) % 100).padStart(2, '0');
+  for (let e = e0; e <= e1; e += step) {
+    const a = toScreen(e, n0);
+    const b = toScreen(e, n1);
+    const major = e % (step * 10) === 0;
+    ctx.strokeStyle = major ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.055)';
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    // Where the line meets the top edge of the view.
+    const t = (30 - a.y) / (b.y - a.y);
+    const x = a.x + (b.x - a.x) * t;
+    if (x > 40 && x < width - 60) {
+      ctx.fillStyle = '#4a4a4a';
+      ctx.textAlign = 'left';
+      ctx.fillText(label(e), x + 3, 30);
+      occupied.push({ x0: x - 2, y0: 26, x1: x + 20, y1: 42 });
+    }
+  }
+  for (let n = n0; n <= n1; n += step) {
+    const a = toScreen(e0, n);
+    const b = toScreen(e1, n);
+    const major = n % (step * 10) === 0;
+    ctx.strokeStyle = major ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.055)';
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    const t = (width - 20 - a.x) / (b.x - a.x);
+    const y = a.y + (b.y - a.y) * t;
+    if (y > 60 && y < height - 50) {
+      ctx.fillStyle = '#4a4a4a';
+      ctx.textAlign = 'right';
+      ctx.fillText(label(n), width - 6, y + 3);
+      occupied.push({ x0: width - 24, y0: y - 1, x1: width, y1: y + 15 });
+    }
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+}
+
 function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number, y: number, r: number): void {
   ctx.beginPath();
   switch (shape) {
@@ -221,7 +304,9 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number,
   }
 }
 
-export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, label, children }: MapCanvasProps) {
+export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children }: MapCanvasProps) {
+  const gridRef = useRef(grid);
+  gridRef.current = grid;
   const container = useRef<HTMLDivElement>(null);
   const baseCanvas = useRef<HTMLCanvasElement>(null);
   const overlayCanvas = useRef<HTMLCanvasElement>(null);
@@ -295,9 +380,10 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
       }
     }
 
-    // Labels are placed after all geometry, most important first, without overlaps.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Labels are placed after all geometry, most important first, without overlaps.
     const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    if (gridRef.current) drawGrid(ctx, cx, cy, zoom, width, height, boxes);
     const free = (b: { x0: number; y0: number; x1: number; y1: number }): boolean =>
       !boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
 
