@@ -242,10 +242,13 @@ media/brand/    Markenfilm: Drehbuch und Schnittwerkzeug
 
 ## Weitere Unterlagen
 
+- [`UEBERGABE.md`](UEBERGABE.md) – was vorliegt, Start unter Windows, offene Entscheidungen
 - [`docs/STRATEGY.md`](docs/STRATEGY.md) – These, Belege, Wettbewerb, Käufer, Geschäftsmodell, Risiken
 - [`docs/BRAND.md`](docs/BRAND.md) – Name, Leitsatz, Wortschatz, Gestaltung, was behauptet werden darf
 - [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) – rechtliche Anforderungen und gebaute Vorkehrungen
 - [`docs/FAQ.md`](docs/FAQ.md) – harte Fragen, kurze Antworten
 - [`docs/EVALUATION.md`](docs/EVALUATION.md) – Messbericht
-- [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung
+- [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung; zum Ausdrucken
+  [`deliverables/Sicht-Vorfuehrung-Ablauf.pdf`](deliverables/Sicht-Vorfuehrung-Ablauf.pdf)
+- [`deliverables/`](deliverables) – Präsentation, Einseiter, Finanzmodell
 - [`docs/research/`](docs/research) – Recherche mit Quellen

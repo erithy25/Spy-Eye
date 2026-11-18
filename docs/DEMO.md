@@ -124,8 +124,10 @@ deren Passwort eintragen. Das Bild erscheint unmaskiert, der Eintrag steht im Pr
 | „Übungsmaterial fehlt“ | `pnpm exercise:fetch`, danach `pnpm demo:prepare`. |
 | Übung steht auf „Material wird ausgewertet“ | abwarten; der Balken zeigt den Stand. Ohne Vorbereitung dauert es rund zehn Minuten. |
 | Verbund zeigt „nicht erreichbar“ | Die Knoten melden sich alle paar Sekunden; kurz warten. Wurde mit `pnpm start` statt `pnpm demo` gestartet, gibt es keine Nachbarn. |
-| Port belegt | Ein alter Prozess läuft noch: beenden und `pnpm demo` neu starten. |
-| Keine Fehlmeldung beim Lastkraftwagen | Die Wache ist schon nachgeschärft: WACHEN, „Gelerntes verwerfen“, Übung neu starten. |
+| „Anschluss … ist bereits belegt“ | Die Knoten laufen schon in einem anderen Fenster: dort weiterarbeiten oder es mit Strg+C beenden und `pnpm demo` neu starten. |
+| Keine Fehlmeldung beim Lastkraftwagen | Die Wache ist von einer Probe schon nachgeschärft: Knoten beenden, `pnpm demo:reset`, `pnpm demo`. |
+| Eine weitere Fehlmeldung | Kommt je nach Rechner vor, weil Videodekoder Bilder geringfügig verschieden liefern: öffnen, VERWERFEN, weiter. Der Messbericht weist sie aus. |
+| Unsicher, ob alles bereit ist | `pnpm demo:check` in einem zweiten Terminal; jede Zeile endet mit OK oder FEHLT. |
 | Rechner zu langsam für 4× | 2× wählen; die Uhr bestimmt nur das Tempo, nicht das Ergebnis. |
 | Alles steht | Der Film `sicht-produktfilm.mp4` zeigt denselben Ablauf in zwei Minuten. |
 

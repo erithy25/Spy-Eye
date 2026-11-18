@@ -176,7 +176,36 @@ Verbund weist veränderte, fremd signierte und veraltete Anfragen ab; als Direkt
 Netzadressen, und ihre Zugangsdaten erscheinen nie in der Anzeige. Im Browser geprüft (Abläufe als Leitung, Auswertung und Aufsicht):
 Maskierung, Vier-Augen-Freigabe, Beweissicherung mit Siegel, Verbundfrage mit Beleg, Stichprobe.
 
-## 6. Was nicht gemessen ist
+## 6. Gegenprobe auf einem Windows-Rechner
+
+Der Weg, den eine Vorführung nimmt, wird auf einem zweiten Rechner automatisch durchgespielt
+(`.github/workflows/windows.yml`): ein Windows-Rechner von GitHub mit vier Rechenkernen und
+16 GB, Windows PowerShell 5.1, Node 22, ffmpeg 9.0.2. Lauf vom 18. November 2026:
+
+| Schritt | Ergebnis |
+| --- | --- |
+| `pnpm install`, `typecheck`, `test`, `build` | bestanden |
+| `pnpm selftest` | Rechner, ffmpeg und Bildkodierer in Ordnung |
+| `pnpm exercise:fetch` | 45 Aufnahmen geladen |
+| `pnpm demo:prepare` | drei Knoten vorbereitet in 6 min 39 s |
+| `pnpm demo:check` | „Ergebnis: bereit“ |
+| `pnpm demo:reset`, danach `pnpm demo:check` | zurückgesetzt, wieder „bereit“ |
+| `pnpm exercise:evaluate --speed 8` | 13 von 13 Ereignissen, 15 Meldungen, 1 Fehlmeldung, Verzug im Median 3,1 s bei achtfacher Uhr |
+
+Die Erkennung stimmt mit dem Lauf auf dem Entwicklungsrechner überein (dort bei achtfacher Uhr
+2,4 s im Median; der Windows-Rechner ist langsamer).
+
+**Was die Gegenprobe gezeigt hat.** Die ersten beiden Läufe fielen anders aus: Eine Suche auf dem
+Knoten Mainz lag genau auf der Schwelle (Sicherheit 0,50 statt 0,53), und die Übung brachte drei
+Fehlmeldungen statt einer, die erste acht Sekunden nach Beginn. Ursache ist der Videodekoder: Ein
+neueres ffmpeg liefert die Bilder um Nuancen anders, die Ähnlichkeitswerte verschieben sich um
+wenige Tausendstel, und Schwellen, die knapp liegen, kippen. Die Wache „Verkehrsunfall“ (ein
+einziges Wort als Beschreibung, knapper Abstand) beobachtet deshalb nur noch Luftbildquellen, wo
+ihr Ereignis stattfindet; die Suche bekam getrennte Schwellen (Abschnitt 3). Für einen Betrieb
+heißt das: Schwellen gehören auf dem Rechner und am Material der Behörde eingestellt. Dafür gibt
+es die Vorschau „Am Bestand prüfen“ beim Aufstellen einer Wache und den Messbericht je Übung.
+
+## 7. Was nicht gemessen ist
 
 - Güte auf echtem Einsatzmaterial deutscher Behörden.
 - Verhalten bei Nacht, Regen auf der Linse, Wärmebild.

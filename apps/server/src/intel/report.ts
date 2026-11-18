@@ -274,7 +274,7 @@ export function measurementReport(input: {
     <tr><td>${de ? 'Stand' : 'State'}</td><td>${exerciseClock(scenario.elapsedSec)} ${de ? 'von' : 'of'} ${exerciseClock(scenario.durationSec).slice(2)} · ${state[scenario.status][de ? 0 : 1]} · ${de ? 'Übungsuhr' : 'exercise clock'} ${scenario.speed}×</td></tr>
     <tr><td>${de ? 'Mandat' : 'Mandate'}</td><td>${input.mandate ? `${esc(input.mandate.title)} — ${esc(input.mandate.legalBasis)}` : '—'}</td></tr>
     <tr><td>${de ? 'Erstellt von' : 'Prepared by'}</td><td>${esc(input.author)}</td></tr>
-    <tr><td>${de ? 'Rechner' : 'Machine'}</td><td>${esc(input.machine.cpu)} · ${input.machine.threads} ${de ? 'Rechenfäden' : 'threads'} · ${esc(input.machine.device)}</td></tr>
+    <tr><td>${de ? 'Rechner' : 'Machine'}</td><td>${esc(input.machine.cpu)} · ${input.machine.threads} Threads · ${esc(input.machine.device)}</td></tr>
     <tr><td>${de ? 'Bildkodierer' : 'Image encoder'}</td><td>${esc(input.machine.modelId)}</td></tr>
   </table>`);
 
@@ -291,8 +291,8 @@ export function measurementReport(input: {
       <tr><td>${de ? 'Urteile der Auswertenden' : 'Verdicts of the analysts'}</td><td>${metrics.alerts.confirmed} ${de ? 'bestätigt' : 'confirmed'} · ${metrics.alerts.dismissed} ${de ? 'verworfen' : 'dismissed'} · ${metrics.alerts.open} ${de ? 'offen' : 'open'}</td></tr>
       <tr><td>${de ? 'Sichtungsquote' : 'Coverage'}</td><td>${input.recordings.analysed} ${de ? 'von' : 'of'} ${input.recordings.total} ${de ? 'Aufzeichnungen vollständig ausgewertet' : 'recordings analysed in full'} · ${Math.round(metrics.footageSec / 60)} min · ${metrics.framesAnalysed.toLocaleString(de ? 'de-DE' : 'en-GB')} ${de ? 'Bilder im Verzeichnis' : 'frames indexed'}</td></tr>
       <tr><td>${de ? 'Auswertegeschwindigkeit' : 'Analysis speed'}</td><td>${metrics.analysisSpeed !== null ? `${num(metrics.analysisSpeed)}${de ? '-fache Echtzeit auf diesem Rechner' : ' times real time on this machine'}` : '—'}</td></tr>
-      <tr><td>${de ? 'Protokollierte Abfragen' : 'Logged queries'}</td><td>${metrics.searches.count} ${de ? 'Suchen, davon' : 'searches, of which'} ${metrics.searches.federated} ${de ? 'im Verbund' : 'federated'} · ${metrics.searches.blocked} ${de ? 'abgelehnt' : 'refused'}</td></tr>
-      <tr><td>${de ? 'Schutz' : 'Protection'}</td><td>${metrics.facesMasked} ${de ? 'Gesichter maskiert' : 'faces masked'} · ${metrics.unmaskEvents} ${de ? 'Freigaben des Originals' : 'releases of the original'}</td></tr>
+      <tr><td>${de ? 'Protokollierte Abfragen' : 'Logged queries'}</td><td>${metrics.searches.count} ${de ? (metrics.searches.count === 1 ? 'Suche' : 'Suchen') : metrics.searches.count === 1 ? 'search' : 'searches'}, ${de ? 'davon' : 'of which'} ${metrics.searches.federated} ${de ? 'im Verbund' : 'federated'} · ${metrics.searches.blocked} ${de ? 'abgelehnte Anfragen' : 'requests refused'}</td></tr>
+      <tr><td>${de ? 'Schutz' : 'Protection'}</td><td>${metrics.facesMasked} ${de ? 'Gesichter maskiert' : 'faces masked'} · ${metrics.unmaskEvents} ${de ? (metrics.unmaskEvents === 1 ? 'Freigabe' : 'Freigaben') : metrics.unmaskEvents === 1 ? 'release' : 'releases'} ${de ? 'des Originals' : 'of the original'}</td></tr>
     </table>`);
 
     parts.push(`<h2>${de ? 'Ereignisse des Drehbuchs' : 'Events of the script'}</h2>`);

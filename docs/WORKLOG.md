@@ -42,3 +42,32 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   descriptions of persons depend on the mandate.
 - Exercise result (8x clock): 13 of 13 events, median delay 2.4 s, one false alert; after one
   dismissal and explicit retraining the false alert does not recur.
+
+## 04:40 UTC · T+268 min
+
+- Website finished and published as a private page; pitch deck (20 slides) as a private Slides
+  document with an offline PDF. Both reviewed slide by slide and section by section.
+- Container image: both build stages verified in a test build up to the last layer; the runtime
+  layout verified outside a container. Stated as such in the Dockerfile and README.
+- `pnpm demo:check`: asks the three nodes what a presenter will ask them and prints OK / FEHLT per
+  line. `pnpm demo:reset`: restores the state left by `demo:prepare` after a rehearsal.
+- Windows: `.github/workflows/windows.yml` plays the whole demonstration path on a Windows runner
+  with Windows PowerShell 5.1 (install, build, ffmpeg, selftest, fetch, prepare, check, reset,
+  exercise). First run found a borderline search result on one peer; second run passed and showed
+  three false alerts instead of one (newer ffmpeg decodes minimally differently, the watch
+  "a car crash" crossed its cut-off on two ground-level sources). That watch now looks at aerial
+  sources only.
+- Search on general footage was the user's original failure ("Beach" showed nothing). Measured
+  with 91 labelled queries on the 44-clip dataset, then fixed: whole picture and tiles are judged
+  against separate cut-offs, and half of the mean text embedding is subtracted from the query.
+  First pass 37 -> 53 of 66 queries answered, complete analysis 50 -> 54, first result fitting
+  61 -> 64 of 66. Repeatable with `pnpm search:evaluate`. Watches keep their own cut-off; the
+  exercise still gives 13 of 13 with one false alert.
+- First pass reads the duration of MP4 files from the header instead of starting ffmpeg:
+  44 clips searchable after 7.6 s (was 11 to 14 s).
+- Peers greet each other once they listen; a peer that makes contact is greeted back at once.
+  One flood clip moved from the Trier archive to the Mainz archive so that both answer the
+  demonstration query clearly.
+- Measurement report per exercise as a printable document (WIRKUNG, MESSBERICHT), numbers in the
+  console's language (decimal comma in German), model download reports progress and stalls,
+  an occupied port is explained.

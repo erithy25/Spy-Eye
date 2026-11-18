@@ -106,9 +106,9 @@ window.SICHT_EN = {
   'mod2.text':
     'A description in plain words, in German or English, searches all incoming footage and returns one frame per scene with the matching region marked. Every search requires a mandate. Queries for names, faces, licence plates, or for protected and bodily features of persons are refused, and the refusal is recorded in the ledger.',
   'mod2.alt':
-    'Console, SUCHE tab: six hits for the query “überflutete Wiese” (flooded meadow), a map of where they were found, and the answer of a peer node',
+    'Console, SUCHE tab: four hits for the query “überflutete Wiese” (flooded meadow), a map of where they were found, and the answer of a peer node',
   'mod2.cap':
-    '<b>Console · SUCHE</b> Query “überflutete Wiese” (flooded meadow): six hits in 33 scenes searched, three sources on the map; at the lower right the answer of the peer node Trier with its receipt.',
+    '<b>Console · SUCHE</b> Query “überflutete Wiese” (flooded meadow): four hits in 33 scenes searched, two sources on the map; at the lower right the answer of the peer node Trier with its receipt.',
   'mod2.dalt': 'Console: a single hit; the frame is darkened except for the place that matched',
   'mod2.dcap': '<b>Detail</b> A single hit: whatever the query does not respond to is darkened.',
   'mod3.gloss': 'caution',
@@ -120,7 +120,7 @@ window.SICHT_EN = {
     '<b>Console · WACHEN</b> The watch “Umgestürzter Lastkraftwagen” (overturned lorry) in version 2, retrained from one confirmed and one dismissed verdict.',
   'mod3.dalt': 'Console: form for a new watch with a preview of the frames that would have raised an alert',
   'mod3.dcap':
-    '<b>Detail</b> A new watch, checked against the stock before it is set: 57 of 567 frames would have raised an alert.',
+    '<b>Detail</b> A new watch, checked against the stock before it is set: 58 of 571 frames would have raised an alert.',
   'mod4.gloss': 'review',
   'mod4.tab': 'VORGÄNGE tab · cases',
   'mod4.text':
@@ -283,7 +283,7 @@ window.SICHT_EN = {
     'Image encoder in all measurements: SigLIP 2 (Google, Apache-2.0), 34&nbsp;ms per frame on this machine. It runs offline and understands queries in German and English.',
   'measured.alt': 'Console, WIRKUNG tab: detection delay, coverage, recorded queries and the events of the exercise with their delay',
   'measured.cap':
-    '<b>Console · WIRKUNG</b> A different run from the one in the table: the same script with the exercise clock at eight times speed. Its figures differ – delay 2.3&nbsp;s instead of 1.1&nbsp;s, 16 alerts instead of 15, analysis at 3.7 instead of 3.3 times real time; the search time comes from a single federated question. The table follows the measurement report.',
+    '<b>Console · WIRKUNG</b> A run of the exercise in real time: 13 of 13 events detected, a median delay of 1.1&nbsp;s, one false alert, 15 alerts. Via MESSBERICHT the console issues the same figures as a printable document, with the conditions of the run and the state of the ledger. In this run the analysis ran at 3.7 times real time; the table gives the lower figure of the measurement run.',
 
   // ---------------------------------------------------------------- 07 operation
   'ops.h2': 'Runs at the authority.<br>Stays at the authority.',
