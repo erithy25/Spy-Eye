@@ -27,6 +27,14 @@ function line(text: string, ok: boolean, fix = ''): void {
   process.stdout.write(`  ${text.padEnd(62)} ${ok ? 'OK' : `FEHLT${fix ? `  → ${fix}` : ''}`}\n`);
 }
 
+/**
+ * A point that is worth fixing but does not stop the node from working: it is reported as
+ * HINWEIS and does not count as missing (the start script continues).
+ */
+function hint(text: string, ok: boolean, fix = ''): void {
+  process.stdout.write(`  ${text.padEnd(62)} ${ok ? 'OK' : `HINWEIS${fix ? `  → ${fix}` : ''}`}\n`);
+}
+
 async function exists(p: string): Promise<boolean> {
   try {
     await fs.access(p);
@@ -87,9 +95,17 @@ const listed = gallery?.images ?? [];
 const present = (
   await Promise.all(listed.map((img) => (typeof img?.file === 'string' ? exists(path.join(DATASET, img.file)) : Promise.resolve(false))))
 ).filter(Boolean).length;
-line(`Referenzbilder: ${present} von ${listed.length}`, listed.length > 0 && present >= listed.length * 0.98, 'pnpm datum:fetch');
 const cached = await exists(path.join(repoRoot, '.cache', 'datum', `gallery-${modelSlug(config.modelId)}.bin`));
 const shipped = await exists(seedFiles(DATASET, config.modelId).bin);
+// With the gallery's vectors at hand (shipped or computed) the pictures are only shown as evidence;
+// the localisation does not need them. Wikimedia throttles bulk downloads, so a fresh machine may
+// get only part of them on the first try: that is a hint, not a reason to stop the start.
+const picturesOk = listed.length > 0 && present >= listed.length * 0.98;
+if (cached || shipped) {
+  hint(`Referenzbilder für die Belege: ${present} von ${listed.length}`, picturesOk, 'pnpm datum:fetch (später erneut; die Ortung läuft ohne)');
+} else {
+  line(`Referenzbilder: ${present} von ${listed.length}`, picturesOk, 'pnpm datum:fetch');
+}
 line(`Referenzgalerie eingerechnet${cached ? '' : shipped ? ' (mitgelieferte Vektoren, eingelesen beim Start)' : ''}`, cached || shipped, 'pnpm datum:prepare');
 const terrain = await countTree(path.join(DATASET, 'terrain'), '.png');
 line(`Höhendaten: ${terrain} Kacheln`, terrain > 0, 'pnpm datum:fetch');
@@ -151,7 +167,15 @@ const pendingNotes = [
 ]
   .filter(Boolean)
   .join(', ');
-line(`Geortet: ${located} von ${analysed}${pendingNotes ? ` (${pendingNotes})` : ''}`, analysed > 0 && located === analysed, 'pnpm datum:prepare');
+const label = `Geortet: ${located} von ${analysed}${pendingNotes ? ` (${pendingNotes})` : ''}`;
+if (analysed > 0 && located < analysed && located + outdated + quickOnly + withoutWorld === analysed) {
+  // Every recording has a fix, only some from an earlier engine version or without the full stage
+  // yet: the node brings them up to date by itself in the background after its start, and shows
+  // the earlier fixes meanwhile. Nothing to do before starting.
+  hint(label, false, 'wird nach dem Start im Hintergrund aktualisiert');
+} else {
+  line(label, analysed > 0 && located === analysed, 'pnpm datum:prepare');
+}
 if (errors.length > 0) {
   const sorted = [...errors].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)]!;
