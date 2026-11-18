@@ -48,7 +48,8 @@ unter 15 Meldungen. Gebaut, aber nur im Labor geprüft sind Direktbilder: Ein Ka
 sich anschließen und wird mit etwa einer halben Minute Nachlauf ausgewertet; geprüft ist das
 gegen eine simulierte Kamera, nicht im Feld. Nicht fertig sind die Erprobung mit echten Kameras,
 eine erprobte Kopplung an ELD-BS oder CommandX, Benutzerverwaltung und Anmeldung jenseits dreier
-Vorführkonten, die Verschlüsselung und ein Löschkonzept für das Protokoll. Nicht gemessen ist
+Vorführkonten, die Verschlüsselung der Platte, die Verwaltung von Zertifikaten und ein
+Löschkonzept für das Protokoll. Nicht gemessen ist
 alles, was echtes Einsatzmaterial betrifft. Der Bildkodierer ist seit dem 18. November 2026
 SigLIP 2 unter Apache 2.0; die frühere Lizenzfrage ist damit für den Kodierer erledigt.
 
