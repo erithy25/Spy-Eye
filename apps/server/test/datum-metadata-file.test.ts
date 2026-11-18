@@ -15,6 +15,11 @@ function ffmpegAvailable(): boolean {
   return spawnSync(process.env['FFMPEG_PATH'] ?? 'ffmpeg', ['-version']).status === 0;
 }
 
+/** First line of `ffmpeg -version`, for failure messages. */
+function ffmpegVersion(): string {
+  return String(spawnSync(process.env['FFMPEG_PATH'] ?? 'ffmpeg', ['-version']).stdout ?? '').split('\n')[0] ?? '';
+}
+
 test('GPS and recording time are read from the tags of a real file', { skip: !ffmpegAvailable() }, async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-meta-'));
   const file = path.join(dir, 'telefon.mp4');
@@ -33,7 +38,9 @@ test('GPS and recording time are read from the tags of a real file', { skip: !ff
     assert.ok(meta.location, JSON.stringify(meta.raw));
     assert.ok(Math.abs(meta.location.lat - 50.3644) < 1e-4 && Math.abs(meta.location.lon - 7.6058) < 1e-4, JSON.stringify(meta.location));
     assert.equal(meta.altitude, 65);
-    assert.equal(meta.creationUtc, Date.parse('2024-06-21T14:30:15Z'));
+    // The tags as ffprobe reported them go into the message: ffmpeg versions differ in where they
+    // write a creation time, and a failure on another machine has to say which one it was.
+    assert.equal(meta.creationUtc, Date.parse('2024-06-21T14:30:15Z'), JSON.stringify({ raw: meta.raw, rejected: meta.creationRejected ?? null, ffmpeg: ffmpegVersion() }));
     assert.equal(meta.width, 320);
     assert.equal(meta.height, 180);
   } finally {

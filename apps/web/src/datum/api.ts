@@ -35,6 +35,8 @@ export interface DatasetRow {
   kind?: 'referenz' | 'eigene';
   name: string;
   label: string;
+  /** English name of a reference place; absent for own truths and on older nodes (label serves both). */
+  labelEn?: string;
   country: string | null;
   lat: number;
   lon: number;

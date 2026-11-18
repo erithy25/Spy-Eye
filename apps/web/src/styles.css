@@ -1799,6 +1799,7 @@ button.frame:hover::before {
 .geo {
   position: absolute;
   inset: 0;
+  container-type: size;
   overflow: hidden;
   background: var(--bg);
   touch-action: none;
@@ -1897,6 +1898,16 @@ button.frame:hover::before {
   padding: 4px 8px;
   pointer-events: none;
   white-space: nowrap;
+}
+
+/* On a narrower map the centred source line would cover the coordinate readout: it moves up and
+   to the left, above the readout. */
+@container (max-width: 1000px) {
+  .geo-attribution {
+    left: 12px;
+    transform: none;
+    bottom: 40px;
+  }
 }
 
 /* ---------- Lage ---------- */

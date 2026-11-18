@@ -196,6 +196,8 @@ export class Pipeline {
   private readonly background = new Set<string>();
   /** Whether the recording in the dense pass is background work. */
   private currentBackground = false;
+  /** Set by shutdown(): a failure from now on is the shutdown's, not the recording's (see fail). */
+  private stopped = false;
 
   constructor(
     private readonly store: Store,
@@ -341,7 +343,13 @@ export class Pipeline {
     if (this.current?.id === id) this.current.extraction?.kill();
   }
 
+  /**
+   * Ends the work of a stopping node: the queues are emptied and the running ffmpeg is killed.
+   * Set before the kill, `stopped` keeps the failure that the kill causes (and any other failure
+   * of the shutdown) from being stored, see fail().
+   */
   shutdown(): void {
+    this.stopped = true;
     this.previewQueue.length = 0;
     this.fullQueue.length = 0;
     this.background.clear();
@@ -360,7 +368,14 @@ export class Pipeline {
   private async fail(entry: VideoEntry, err: unknown): Promise<void> {
     const id = entry.info.id;
     const message = err instanceof Error ? err.message : String(err);
-    this.log.error(`Processing "${entry.info.name}" failed: ${message}`);
+    // Failed while the node shuts down (ffmpeg killed by shutdown(), "ffmpeg wurde beendet"): no
+    // failure of the recording. Stored as 'error' it would never be analysed again (the store
+    // skips such recordings at start); left as it is, it is queued again at the next start.
+    if (this.stopped) {
+      this.log.info(`Auswertung „${entry.info.name}“ beim Beenden angehalten (${message}); sie läuft beim nächsten Start erneut`);
+      return;
+    }
+    this.log.error(`Auswertung „${entry.info.name}“ fehlgeschlagen: ${message}`);
     this.cancel(id);
     this.store.resetAnalysis(entry);
     entry.info.status = 'error';
@@ -393,7 +408,7 @@ export class Pipeline {
           entry.info.processingMs = Date.now() - started;
           await this.store.persist(entry, this.model.dim);
           this.log.info(
-            `Indexed "${entry.info.name}": ${entry.info.framesIndexed} frames, ${entry.info.sceneCount} scenes in ${(entry.info.processingMs / 1000).toFixed(1)} s`,
+            `Ausgewertet „${entry.info.name}“: ${entry.info.framesIndexed} Bilder, ${entry.info.sceneCount} Szenen in ${(entry.info.processingMs / 1000).toFixed(1).replace('.', ',')} s`,
           );
           this.current = null;
           this.store.version++;
@@ -406,7 +421,7 @@ export class Pipeline {
         }
       }
     } catch (err: unknown) {
-      this.log.error(`Pipeline stopped: ${err instanceof Error ? err.message : String(err)}`);
+      this.log.error(`Auswertung angehalten: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       this.running = false;
       this.current = null;
@@ -443,7 +458,7 @@ export class Pipeline {
       }
 
       this.log.info(
-        `Preview pass: ${prepared.length} videos, ${flat.length} frames; decode ${preparedAt - chunkStart} ms, embed ${Date.now() - preparedAt} ms`,
+        `Vorschau: ${prepared.length} Videos, ${flat.length} Bilder; Dekodieren ${preparedAt - chunkStart} ms, Einbetten ${Date.now() - preparedAt} ms`,
       );
 
       // Pictures from different videos must not collapse onto one vector.

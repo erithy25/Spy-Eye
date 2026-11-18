@@ -1160,50 +1160,78 @@ function joinClauses(parts: readonly string[], and: string): string {
 }
 
 /**
+ * Decimals for a value that missed an "at least" threshold, so that the text never shows it equal
+ * to the threshold it missed: a gap of 0.0996 against 0.10 reads "0,0996", not "0,10 ist zu
+ * klein (nötig 0,10)". `digits` is the usual number of decimals; more are used only where needed.
+ */
+export function digitsBelow(value: number, threshold: number, digits: number): number {
+  for (let d = digits; d <= digits + 3; d++) if (Number(value.toFixed(d)) < threshold) return d;
+  return digits + 3;
+}
+
+/** `value` with `d` decimals, cut (not rounded) when rounding would reach `threshold` (see digitsBelow). */
+function below(value: number, threshold: number, d: number): number {
+  const rounded = Number(value.toFixed(d));
+  return rounded < threshold ? rounded : Math.floor(value * 10 ** d) / 10 ** d;
+}
+
+/**
  * Why a candidate is no match, in plain words and both languages: the best and the typical
  * similarity, then every condition it failed with its threshold. When the gap held and another
  * condition failed (most often z: a landmark seen from everywhere gives a large gap but a wide
  * spread), the text says that the gap was enough, so that it never reads as if the gap had been
- * too small.
+ * too small. A value that missed its threshold is shown with as many decimals as it takes to
+ * read below it (digitsBelow); best, typical and gap share their decimals, so that the gap still
+ * reads as the difference of the two.
  */
 export function noMatchText(stats: StreetLevelStats, opts: MatchRuleOptions): { de: string; en: string } {
   const failed = failedRules(stats, opts);
-  const minZ = fmt(opts.minZ, Number.isInteger(opts.minZ) ? 0 : 1);
-  const minZEn = fmtEn(opts.minZ, Number.isInteger(opts.minZ) ? 0 : 1);
-  const pct = (v: number): string => `${Math.round(v * 100)} %`;
-  const pctEn = (v: number): string => `${Math.round(v * 100)}%`;
+  const fails = (rule: MatchCondition): boolean => failed.includes(rule);
+  // Similarities: two decimals, more where the best or the gap would otherwise read as its threshold.
+  const d = Math.max(2, fails('similarity') ? digitsBelow(stats.best, opts.minSimilarity, 2) : 2, fails('gap') ? digitsBelow(stats.gap, opts.minGap, 2) : 2);
+  const best = fails('similarity') ? below(stats.best, opts.minSimilarity, d) : stats.best;
+  const gap = fails('gap') ? below(stats.gap, opts.minGap, d) : stats.gap;
+  const minZDigits = Number.isInteger(opts.minZ) ? 0 : 1;
+  const zDigits = fails('z') ? Math.max(1, digitsBelow(stats.z, opts.minZ, 1)) : 1;
+  const z = fails('z') ? below(stats.z, opts.minZ, zDigits) : stats.z;
+  // Agreement in per cent: whole numbers, decimals where 49.7 % would read as the 50 % it missed.
+  const agreeDigits = fails('agreement') ? digitsBelow(stats.agreement * 100, opts.minAgreement * 100, 0) : 0;
+  const agreement = fails('agreement') ? below(stats.agreement * 100, opts.minAgreement * 100, agreeDigits) : stats.agreement * 100;
+  const pct = (v: number, digits: number): string => `${fmt(v, digits)} %`;
+  const pctEn = (v: number, digits: number): string => `${fmtEn(v, digits)}%`;
   const clauses: Record<MatchCondition, { de: string; en: string }> = {
     pictures: {
       de: `zu wenige Bilder, um die Streuung zu messen (${stats.spreadPictures}, nötig ${opts.minPictures})`,
       en: `too few pictures to measure the spread (${stats.spreadPictures}, needed ${opts.minPictures})`,
     },
     similarity: {
-      de: `das beste Bild ist insgesamt zu unähnlich (${fmt(stats.best)}, nötig ${fmt(opts.minSimilarity)})`,
-      en: `the best picture is too dissimilar overall (${fmtEn(stats.best)}, needed ${fmtEn(opts.minSimilarity)})`,
+      de: `das beste Bild ist insgesamt zu unähnlich (${fmt(best, d)}, nötig ${fmt(opts.minSimilarity)})`,
+      en: `the best picture is too dissimilar overall (${fmtEn(best, d)}, needed ${fmtEn(opts.minSimilarity)})`,
     },
     gap: {
-      de: `der Abstand ${fmt(stats.gap)} ist zu klein (nötig ${fmt(opts.minGap)})`,
-      en: `the gap of ${fmtEn(stats.gap)} is too small (needed ${fmtEn(opts.minGap)})`,
+      de: `der Abstand ${fmt(gap, d)} ist zu klein (nötig ${fmt(opts.minGap)})`,
+      en: `the gap of ${fmtEn(gap, d)} is too small (needed ${fmtEn(opts.minGap)})`,
     },
     z: {
-      de: `das beste Bild sticht nicht deutlich genug aus der Streuung heraus (z ${fmt(stats.z, 1)}, nötig ${minZ})`,
-      en: `the best picture does not stand out clearly enough from the spread (z ${fmtEn(stats.z, 1)}, needed ${minZEn})`,
+      de: `das beste Bild sticht nicht deutlich genug aus der Streuung heraus (z ${fmt(z, zDigits)}, nötig ${fmt(opts.minZ, minZDigits)})`,
+      en: `the best picture does not stand out clearly enough from the spread (z ${fmtEn(z, zDigits)}, needed ${fmtEn(opts.minZ, minZDigits)})`,
     },
     agreement: {
-      de: `die nächstbesten Bilder liegen nicht beim besten (${pct(stats.agreement)}, nötig ${pct(opts.minAgreement)})`,
-      en: `the next best pictures do not lie near the best one (${pctEn(stats.agreement)}, needed ${pctEn(opts.minAgreement)})`,
+      de: `die nächstbesten Bilder liegen nicht beim besten (${pct(agreement, agreeDigits)}, nötig ${pct(opts.minAgreement * 100, 0)})`,
+      en: `the next best pictures do not lie near the best one (${pctEn(agreement, agreeDigits)}, needed ${pctEn(opts.minAgreement * 100, 0)})`,
     },
   };
-  const gapFailed = failed.includes('gap');
+  const gapFailed = fails('gap');
+  const values = { de: `bestes ${fmt(best, d)}, typisch ${fmt(stats.typical, d)}`, en: `best ${fmtEn(best, d)}, typical ${fmtEn(stats.typical, d)}` };
   const head = gapFailed
-    ? { de: `Kein Straßenbild hebt sich ab: bestes ${fmt(stats.best)}, typisch ${fmt(stats.typical)}`, en: `No street-level picture stands out: best ${fmtEn(stats.best)}, typical ${fmtEn(stats.typical)}` }
-    : { de: `Kein Straßenbild passt sicher genug: bestes ${fmt(stats.best)}, typisch ${fmt(stats.typical)}`, en: `No street-level picture matches clearly enough: best ${fmtEn(stats.best)}, typical ${fmtEn(stats.typical)}` };
+    ? { de: `Kein Straßenbild hebt sich ab: ${values.de}`, en: `No street-level picture stands out: ${values.en}` }
+    : { de: `Kein Straßenbild passt sicher genug: ${values.de}`, en: `No street-level picture matches clearly enough: ${values.en}` };
   if (failed.length === 0) return { de: `${head.de}.`, en: `${head.en}.` };
   const why = { de: joinClauses(failed.map((r) => clauses[r].de), 'und'), en: joinClauses(failed.map((r) => clauses[r].en), 'and') };
   if (gapFailed) return { de: `${head.de}; ${why.de}.`, en: `${head.en}; ${why.en}.` };
   return {
-    de: `${head.de}; der Abstand ${fmt(stats.gap)} reicht (nötig ${fmt(opts.minGap)}), aber ${why.de}.`,
-    en: `${head.en}; the gap of ${fmtEn(stats.gap)} is enough (needed ${fmtEn(opts.minGap)}), but ${why.en}.`,
+    de: `${head.de}; der Abstand ${fmt(gap, d)} reicht (nötig ${fmt(opts.minGap)}), aber ${why.de}.`,
+    en: `${head.en}; the gap of ${fmtEn(gap, d)} is enough (needed ${fmtEn(opts.minGap)}), but ${why.en}.`,
   };
 }
 
@@ -1436,7 +1464,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
                 ? `${p.name === 'panoramax' ? 'Panoramax' : 'Mapillary'} is rate limiting (429); stopped for this call.`
                 : `${p.name === 'panoramax' ? 'Panoramax' : 'Mapillary'} refuses access (${err.status}); check the key.`;
           }
-          log(`streetlevel: ${p.name} search failed: ${st.lastErrorEn}`);
+          log(`Straßenbilder: Suche bei ${p.name} fehlgeschlagen: ${st.lastError}`);
           return [];
         }
       }),
@@ -1474,7 +1502,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
       if (!(err instanceof BudgetError)) {
         timing.failed++;
         failed.add(key);
-        log(`streetlevel: ${l.provider} picture ${l.id} skipped: ${errorText(err, secrets).en}`);
+        log(`Straßenbilder: Bild ${l.id} von ${l.provider} übersprungen: ${errorText(err, secrets).de}`);
       }
       return null;
     }
@@ -1554,7 +1582,7 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
       return { inside, sample: selectSpread(inside, perCandidate, c, now) };
     });
     const totalListed = samplePer.reduce((s, x) => s + x.inside.length, 0);
-    log(`streetlevel: ${totalListed} pictures listed around ${candidates.length} candidate(s) in ${Math.round(timing.searchMs)} ms`);
+    log(`Straßenbilder: ${totalListed} Bilder um ${candidates.length} ${candidates.length === 1 ? 'Kandidat' : 'Kandidaten'} gefunden in ${Math.round(timing.searchMs)} ms`);
 
     // Interleave the candidates so a short budget still compares some pictures of each.
     const order: { l: StreetLevelListing; ci: number }[] = [];

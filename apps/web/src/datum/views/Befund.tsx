@@ -73,6 +73,14 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   }
 
   const key = fix.keyframes[Math.min(keyIndex, Math.max(0, fix.keyframes.length - 1))] ?? null;
+  const refuseVideo = (): void =>
+    setVideoRefused(
+      video.status === 'ready' && video.facesMasked > 0
+        ? t('Im Video sind Gesichter maskiert; das Original gibt es nur mit Freigabe. Gezeigt wird das Schlüsselbild.')
+        : video.status !== 'ready'
+          ? t('Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.')
+          : t('Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.'),
+    );
   const focus = fix.candidates[candidate] ?? fix.location;
   // The heading was matched on one keyframe; on the others its horizon would be drawn over a
   // picture it was not measured on. Older fixes name the frame only in the horizon evidence.
@@ -167,15 +175,12 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
                 muted
                 playsInline
                 preload="metadata"
-                onError={() =>
-                  setVideoRefused(
-                    video.status === 'ready' && video.facesMasked > 0
-                      ? t('Im Video sind Gesichter maskiert; das Original gibt es nur mit Freigabe. Gezeigt wird das Schlüsselbild.')
-                      : video.status !== 'ready'
-                        ? t('Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.')
-                        : t('Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.'),
-                  )
-                }
+                ref={(el) => {
+                  // The refusal can arrive before the element is in the page (switching tabs builds
+                  // the view while the request is already running); React then never calls onError.
+                  if (el?.error) refuseVideo();
+                }}
+                onError={refuseVideo}
               />
             ) : (
               key && <img className="dt-video" src={rel(key.imageUrl)} alt="" />

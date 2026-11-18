@@ -193,12 +193,37 @@ test('a landmark is named in German and in English; only a reference near the an
   assert.equal(referenceStrength(0.84, AGREEMENT_KM, p).where.de, `; ${AGREEMENT_KM} km vom Ergebnis`);
   assert.equal(referenceStrength(0.84, AGREEMENT_KM + 1, p).strength.en, 'A similar-looking place elsewhere, not a recognition of the place found.');
   assert.equal(referenceStrength(0.84, 0.4, p).where.en, '; at the place found');
-  assert.deepEqual(referenceStrength(0.84, null, p), { where: { de: '', en: '' }, strength: { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' } });
+  // At the answer, but the answer is not sure (a wide radius): no recognition is claimed.
+  assert.deepEqual(referenceStrength(0.84, 0.4, p, false).strength, {
+    de: 'Sehr ähnlich, hebt sich aber nicht deutlich genug ab: keine sichere Wiedererkennung.',
+    en: 'Very similar, but it does not stand out clearly enough: not a sure recognition.',
+  });
+  assert.equal(referenceStrength(0.84, 316, p, false).strength.de, 'Ein ähnlich aussehender Ort anderswo, keine Wiedererkennung des gefundenen Orts.');
+  // No place found: nothing is near it, so nothing is called a recognition.
+  assert.deepEqual(referenceStrength(0.84, null, p), {
+    where: { de: '', en: '' },
+    strength: { de: 'Sehr ähnlich, aber ohne gefundenen Ort keine Wiedererkennung.', en: 'Very similar, but with no place found it is not a recognition.' },
+  });
   assert.equal(referenceStrength(0.5, 316, p).strength.de, 'Schwache Ähnlichkeit, zählt kaum.');
   // A weak reference far away is not called "ähnlich" right before "Schwache Ähnlichkeit".
   assert.deepEqual(referenceStrength(0.5, 316, p).where, { de: '; 316 km vom Ergebnis', en: '; 316 km from the result' });
   // Decided on the distance the text shows: 25.3 km reads "25 km" and is treated as 25 km.
   assert.deepEqual(referenceStrength(0.84, AGREEMENT_KM + 0.3, p), referenceStrength(0.84, AGREEMENT_KM, p));
+
+  // With a GPS position in the file, that position is the result: a reference at the visual
+  // answer, 100 km from it, is no recognition of the place the fix states.
+  const meta = metadataFromProbe({ format: { tags: { location: '+50.9413+006.9583/' } }, streams: [{ codec_type: 'video', width: 640, height: 360 }] }, null, NOW);
+  const withGps = decideLocation(world, {
+    neighbours: [[ref('Q1', 'Deutsches Eck', 'German Corner', 50.3644, 7.6058, 0.9)]],
+    countryCosines: new Float32Array([0.12, 0.08]),
+    frameNumbers: [10],
+    metadata: meta,
+    hints: null,
+  });
+  assert.equal(withGps.location?.method, 'metadata');
+  const atVisual = withGps.evidence.find((e) => e.kind === 'landmark');
+  assert.match(atVisual?.detail ?? '', /; ähnlich, aber \d+ km vom Ergebnis entfernt\. Ein ähnlich aussehender Ort anderswo/);
+  assert.doesNotMatch(atVisual?.detailEn ?? '', /That is a recognition/);
 });
 
 test('localisation evidence and place names exist in both languages', () => {

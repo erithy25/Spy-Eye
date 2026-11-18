@@ -257,7 +257,7 @@ export class LiveIngest {
       stream.state = 'offline';
       const lastLine = stderr.trim().split('\n').pop() ?? '';
       stream.lastError = lastLine !== '' ? redactStreamText(lastLine) : code === 0 ? 'Der Strom ist zu Ende.' : `ffmpeg endete mit Code ${code ?? '?'}`;
-      this.deps.log(`Stream of "${this.deps.sources.get(stream.sourceId)?.name ?? stream.sourceId}" ended: ${stream.lastError}`);
+      this.deps.log(`Stream von „${this.deps.sources.get(stream.sourceId)?.name ?? stream.sourceId}“ beendet: ${stream.lastError}`);
       this.deps.onChange();
       // A segment that was being written when the stream ended is complete now.
       void this.scan();
@@ -318,7 +318,7 @@ export class LiveIngest {
             if (stream.recordings.length > 400) stream.recordings.splice(0, stream.recordings.length - 400);
             stream.lastSegmentAt = Date.now();
           } catch (err: unknown) {
-            this.deps.log(`Could not file segment ${file}: ${err instanceof Error ? err.message : String(err)}`);
+            this.deps.log(`Abschnitt ${file} nicht abgelegt: ${err instanceof Error ? err.message : String(err)}`);
           }
         }
       }

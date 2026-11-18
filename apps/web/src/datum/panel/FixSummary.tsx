@@ -1,6 +1,7 @@
 import type { Fix } from '../../../../server/src/datum/contract';
 import { formatDateTime, formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
+import { nameText } from '../labels';
 import { haversineKm, toMgrs } from '../../map/geo';
 import { CheckLinks } from './CheckLinks';
 import { coordParts, fmtCoord, fmtKm } from './common';
@@ -101,7 +102,8 @@ function TruthSource({ source, url }: { source: string; url: string | undefined 
 }
 
 export function FixSummary({ fix }: FixSummaryProps) {
-  const { t, locale } = useLang();
+  const lang = useLang();
+  const { t, locale } = lang;
   const loc = fix.location;
   const truth = fix.truth;
   const errorKm = truth && loc ? (truth.errorKm ?? haversineKm(loc.lat, loc.lon, truth.lat, truth.lon)) : (truth?.errorKm ?? null);
@@ -192,7 +194,7 @@ export function FixSummary({ fix }: FixSummaryProps) {
           <span className="dp-key">{t('Grundwahrheit')}</span>
           <p>
             <i className="dp-diamond" aria-hidden="true" />
-            <span className="dp-strong">{truth.label}</span>
+            <span className="dp-strong">{nameText(lang, truth.label, truth.labelEn)}</span>
             <span className="dp-low"> · {fmtCoord(truth.lat, truth.lon)}</span>
           </p>
           <p className="dp-low">

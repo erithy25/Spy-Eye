@@ -25,7 +25,7 @@ import { Pipeline } from './pipeline.js';
 import { registerRoutes } from './routes.js';
 import { DatumEngine } from './datum/engine.js';
 import { sharedGallery } from './datum/shared.js';
-import { TruthBook } from './datum/truth.js';
+import { TruthBook, truthKey } from './datum/truth.js';
 import { SearchEngine } from './search.js';
 import { Store, isValidVideoId, type VideoEntry } from './store.js';
 import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, SourceKind, UserInfo, VideoInfo } from './types.js';
@@ -593,7 +593,7 @@ export class PlatformNode {
       }
     }
     if (missing > 0) {
-      this.log(`Seed footage incomplete (${missing} file(s) missing); run "pnpm exercise:fetch" and restart.`);
+      this.log(`Vorführbestand unvollständig (${missing} ${missing === 1 ? 'Datei fehlt' : 'Dateien fehlen'}); „pnpm exercise:fetch“ ausführen und neu starten.`);
       if (count === 0) return;
     }
     await writeFileAtomic(marker, JSON.stringify({ at: Date.now(), recordings: count }));
@@ -606,7 +606,7 @@ export class PlatformNode {
       summaryEn: `Demonstration archive loaded: ${count} ${count === 1 ? 'recording' : 'recordings'}`,
       data: { recordings: count, sources: seed.sources.map((s) => s.id) },
     });
-    this.log(`Seeded archive with ${count} recordings`);
+    this.log(`Vorführbestand eingespielt: ${count} ${count === 1 ? 'Aufzeichnung' : 'Aufzeichnungen'}`);
   }
 
   // ---------------------------------------------------------------- request helpers
@@ -693,6 +693,18 @@ export class PlatformNode {
     this.pipeline.cancel(id);
     await this.store.remove(id);
     this.datum.forget(id);
+    // The own ground truth given for this file goes with it, unless another recording of the same
+    // name still answers to it; otherwise it would stay behind with no recording (and later stick
+    // to an unrelated upload of that name).
+    const truths = this.datum.truths;
+    const key = truthKey(entry.info.name);
+    if (truths?.lookup(entry.info.name) && !this.store.all().some((e) => truthKey(e.info.name) === key)) {
+      try {
+        await truths.remove([entry.info.name]);
+      } catch (err: unknown) {
+        this.log(`Grundwahrheit für „${entry.info.name}“ nicht entfernt: ${err instanceof Error ? err.message : String(err)}`, true);
+      }
+    }
     this.hub.broadcast({ type: 'video-removed', videoId: id, stats: this.store.stats() });
     return { deleted: entry.info };
   }
@@ -842,7 +854,7 @@ export class PlatformNode {
     for (const id of this.store.degenerateVideoIds()) {
       const entry = this.store.get(id);
       if (!entry) continue;
-      this.log(`Index of "${entry.info.name}" consists of identical vectors (broken encoder run); re-indexing.`);
+      this.log(`Index von „${entry.info.name}“ besteht aus gleichen Vektoren (Encoder-Lauf defekt); wird neu ausgewertet.`);
       this.store.resetAnalysis(entry);
       entry.info.status = 'queued';
       if (!pending.includes(id)) pending.push(id);
@@ -886,7 +898,7 @@ export class PlatformNode {
         await this.seedArchive();
         await this.live.open();
       })
-      .catch((err: unknown) => this.log(`Model initialisation failed: ${err instanceof Error ? err.message : String(err)}`, true));
+      .catch((err: unknown) => this.log(`Modell nicht geladen: ${err instanceof Error ? err.message : String(err)}`, true));
 
     await this.enforceRetention();
     this.retentionTimer = setInterval(() => void this.enforceRetention(), 10 * 60 * 1000);

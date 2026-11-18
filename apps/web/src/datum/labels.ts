@@ -39,6 +39,15 @@ export function placeText(
 }
 
 /**
+ * A name the node gives in German with an English twin (a reference picture's place, a reference
+ * truth, a row of the reference set), in the console language. Without the twin (own truths,
+ * fixes of older engines) the one name serves both: it is a proper name or the analyst's own text.
+ */
+export function nameText(lang: Lang, de: string, en?: string | null): string {
+  return lang.lang === 'en' && en ? en : de;
+}
+
+/**
  * Country of a fix or candidate in the console language, or '' when unknown. A point named only by
  * its coordinates has no country beside it: the country of a world-model answer is the model's
  * likeliest country, which such a point (often at sea) need not lie in.

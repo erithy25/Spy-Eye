@@ -296,7 +296,7 @@ export class ScenarioEngine {
     this.problem = null;
     this.status = 'installing';
     this.deps.onInstalled(def);
-    this.deps.log(`Exercise "${def.title}": ${Object.keys(clips).length} clips queued for analysis`);
+    this.deps.log(`Übung „${def.title}“: ${Object.keys(clips).length} Clips zur Auswertung eingereiht`);
     this.broadcast();
   }
 

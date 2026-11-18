@@ -346,18 +346,18 @@ export class Store {
         meta = JSON.parse(await fs.readFile(path.join(dir, 'meta.json'), 'utf8')) as PersistedMeta;
       } catch {
         // Upload was interrupted before the metadata was written: remove the leftovers.
-        log(`Removing incomplete upload ${id}`);
+        log(`Entferne unvollständigen Upload ${id}`);
         await fs.rm(dir, RM_OPTIONS);
         continue;
       }
       if (meta.version !== 1 || meta.info?.id !== id || typeof meta.sourceFile !== 'string') {
-        log(`Skipping ${id}: unsupported metadata format`);
+        log(`Überspringe ${id}: Metadatenformat nicht unterstützt`);
         continue;
       }
       try {
         await fs.access(path.join(dir, meta.sourceFile));
       } catch {
-        log(`Skipping ${id}: source file is missing`);
+        log(`Überspringe ${id}: Videodatei fehlt`);
         continue;
       }
 
@@ -383,7 +383,7 @@ export class Store {
       const sameModel = meta.modelId === config.modelId && meta.modelDtype === config.modelDtype;
       if (meta.info.status === 'error') continue;
       if (meta.info.status !== 'ready' || !sameModel) {
-        if (!sameModel) log(`Video ${id} was indexed with ${meta.modelId} (${meta.modelDtype}); re-indexing.`);
+        if (!sameModel) log(`Video ${id} wurde mit ${meta.modelId} (${meta.modelDtype}) ausgewertet; wird neu ausgewertet.`);
         this.resetAnalysis(entry);
         entry.info.status = 'queued';
         pending.push(id);
@@ -400,7 +400,7 @@ export class Store {
         Buffer.from(data.buffer).set(buf);
         entry.embeddings = GrowableMatrix.fromData(data, meta.dim);
       } catch (err: unknown) {
-        log(`Index of ${id} is unreadable (${err instanceof Error ? err.message : String(err)}); re-indexing.`);
+        log(`Index von ${id} nicht lesbar (${err instanceof Error ? err.message : String(err)}); wird neu ausgewertet.`);
         this.resetAnalysis(entry);
         entry.info.status = 'queued';
         pending.push(id);

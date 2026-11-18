@@ -16,9 +16,13 @@
  *   8: landmark names in both languages (gallery and truths carry labelDe/labelEn from Wikidata):
  *      label from the German, labelEn from the English name, `truth.labelEn`, `refLabelEn` on the
  *      reference evidence; a far reference picture is no longer called a recognition (of the place
- *      found); the street-level no-match text names the condition that failed.
+ *      found; distances from the GPS position where the file has one); the street-level no-match
+ *      text names the condition that failed, a value just below its threshold with the decimals
+ *      that keep it below.
+ *   9: a reference picture at the answer is called a recognition only when the answer is sure
+ *      (GPS of the file, or the 'strong' landmark tier); under a wider radius it is a similarity.
  */
-export const ENGINE_VERSION = 8;
+export const ENGINE_VERSION = 9;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

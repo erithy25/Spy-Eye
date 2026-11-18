@@ -483,6 +483,40 @@ test('a no-match names the condition that failed, in plain words and both langua
   text = noMatchText({ ...small, spreadPictures: 5, best: 0.6 }, opts);
   assert.match(text.de, /; zu wenige Bilder, .*\(5, nötig 8\), das beste Bild ist insgesamt zu unähnlich .*, der Abstand 0,05 ist zu klein .* und das beste Bild sticht/);
   assert.match(text.en, /; too few pictures .*, the best picture is too dissimilar overall .*, the gap of 0\.05 is too small .* and the best picture does not/);
+
+  // A value just below its threshold never reads as the threshold itself ("0,10 ist zu klein
+  // (nötig 0,10)"): it gets the decimals it needs, best and typical the same ones as the gap.
+  const justGap: StreetLevelStats = { ...zOnly, best: 0.7846, typical: 0.685, gap: 0.0996, spread: 0.01, z: 9.96 };
+  assert.deepEqual(failedRules(justGap, opts), ['gap']);
+  text = noMatchText(justGap, opts);
+  assert.equal(text.de, 'Kein Straßenbild hebt sich ab: bestes 0,7846, typisch 0,6850; der Abstand 0,0996 ist zu klein (nötig 0,10).');
+  assert.equal(text.en, 'No street-level picture stands out: best 0.7846, typical 0.6850; the gap of 0.0996 is too small (needed 0.10).');
+  const justZ: StreetLevelStats = { ...zOnly, z: 2.96 };
+  text = noMatchText(justZ, opts);
+  assert.match(text.de, /\(z 2,96, nötig 3\)\.$/);
+  assert.match(text.en, /\(z 2\.96, needed 3\)\.$/);
+  const justSimilar: StreetLevelStats = { ...weak, best: 0.6996, typical: 0.53, gap: 0.1696 };
+  text = noMatchText(justSimilar, opts);
+  assert.match(text.de, /^Kein Straßenbild passt sicher genug: bestes 0,6996, typisch 0,5300; der Abstand 0,1696 reicht .*zu unähnlich \(0,6996, nötig 0,70\)\.$/);
+  // Rounding that would reach the threshold at every precision: cut, not rounded.
+  const hair: StreetLevelStats = { ...zOnly, best: 0.7999999, typical: 0.7, gap: 0.0999999, spread: 0.01, z: 9.99 };
+  text = noMatchText(hair, opts);
+  assert.match(text.de, /der Abstand 0,09999 ist zu klein \(nötig 0,10\)\.$/);
+  text = noMatchText({ ...apart, agreement: 0.497 }, strict);
+  assert.match(text.de, /\(49,7 %, nötig 50 %\)\.$/);
+  assert.match(text.en, /\(49\.7%, needed 50%\)\.$/);
+  // Whatever the numbers, the value a failed condition shows lies below its threshold.
+  for (let i = 0; i < 2000; i++) {
+    const g = Math.random() * 0.2;
+    const b = 0.6 + Math.random() * 0.2;
+    const s: StreetLevelStats = { ...zOnly, best: b, typical: b - g, gap: g, spread: 0.03, z: Math.random() * 6 };
+    const t = noMatchText(s, opts).en;
+    const shown = (re: RegExp): number => Number(re.exec(t)?.[1] ?? NaN);
+    if (g < opts.minGap) assert.ok(shown(/the gap of ([\d.]+) is too small/) < opts.minGap, t);
+    if (b < opts.minSimilarity) assert.ok(shown(/too dissimilar overall \(([\d.]+),/) < opts.minSimilarity, t);
+    if (s.z < opts.minZ) assert.ok(shown(/\(z ([\d.]+), needed/) < opts.minZ, t);
+    if (g >= opts.minGap && failedRules(s, opts).length > 0) assert.ok(shown(/the gap of ([\d.]+) is enough/) >= opts.minGap, t);
+  }
 });
 
 test('without a standing-out picture the stage says so and leaves the place alone', async () => {

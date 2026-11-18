@@ -13,6 +13,9 @@ import type { Gallery, GalleryNeighbour } from '../src/datum/gallery.js';
 import type { GeoclipPrediction } from '../src/datum/geoclip.js';
 import type { GalleryState, WorldModel, WorldModelResult } from '../src/datum/geoclipService.js';
 
+/** These tests write real video files; without ffmpeg on the machine they are skipped, not failed. */
+const NO_FFMPEG = spawnSync(process.env['FFMPEG_PATH'] ?? 'ffmpeg', ['-version']).status === 0 ? false : 'ffmpeg fehlt auf diesem Rechner';
+
 /**
  * The quick stage of DATUM: a recording is located from its file before the analysis has run,
  * and the full fix replaces it later. The engine runs with a small deterministic stand-in for the
@@ -415,7 +418,7 @@ test('background jobs wait while a person\'s recording is being analysed; the pe
   }
 });
 
-test('quick stage: located from the file alone, before the analysis, every text in both languages', async () => {
+test('quick stage: located from the file alone, before the analysis, every text in both languages', { skip: NO_FFMPEG }, async () => {
   const { store, engine, events, world, dispose } = await setup();
   try {
     const entry = recording('v1', 'queued', 'Ausflug.mp4');
@@ -493,7 +496,7 @@ test('quick stage: located from the file alone, before the analysis, every text 
   }
 });
 
-test('quick stage: a slow world model does not hold the quick fix; the full stage takes its late answer', async () => {
+test('quick stage: a slow world model does not hold the quick fix; the full stage takes its late answer', { skip: NO_FFMPEG }, async () => {
   const world = new SlowWorld();
   const { store, engine, dispose } = await setup({ world, quickWorldWaitMs: 300 });
   try {

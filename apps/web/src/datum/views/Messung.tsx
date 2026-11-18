@@ -3,7 +3,7 @@ import { useLang } from '../../i18n';
 import { Dialog, pressable } from '../../ui';
 import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '../api';
 import { datasets, groupRecordings, useDatasets } from '../datasets';
-import { caseLabel } from '../labels';
+import { caseLabel, nameText } from '../labels';
 import { DatumSettingsPanel } from '../Settings';
 import { TruthButton, useTruthUpload } from '../TruthUpload';
 import { kmText } from '../useFixes';
@@ -58,7 +58,8 @@ function median(values: number[]): number | null {
 
 /** One table of cases with a known place: the reference set, or the analyst's own truths. */
 function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Map<string, string>; select: (id: string | null) => void; go: DatumViewProps['go'] }) {
-  const { t, locale, region } = useLang();
+  const lang = useLang();
+  const { t, locale, region } = lang;
   return (
     <table className="tbl">
       <thead>
@@ -83,7 +84,7 @@ function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Ma
               : {})}
           >
             <td className="strong">{caseLabel(r.videoId ? (names.get(r.videoId) ?? r.name) : r.name)}</td>
-            <td>{r.label}</td>
+            <td>{nameText(lang, r.label, r.labelEn)}</td>
             <td title={r.country ?? ''}>{r.country ? region(r.country) : '–'}</td>
             <td>
               {r.errorKm != null ? kmText(r.errorKm, locale) : r.videoId ? <span className="low">{t('wird geortet …')}</span> : '–'}

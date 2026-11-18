@@ -4,6 +4,7 @@ import { useLang } from '../../i18n';
 import { haversineKm } from '../../map/geo';
 import { pressable } from '../../ui';
 import { rel } from '../api';
+import { nameText } from '../labels';
 import { Meter, fmtCoord, fmtKm, fmtScore, kindMethod, kindRank, webLink } from './common';
 import './panel.css';
 
@@ -35,19 +36,28 @@ function groupEvidence(evidence: Evidence[]): Group[] {
 }
 
 /**
+ * The name of an entry's reference in the console language: a gallery reference's place has an
+ * English twin (refLabelEn); a street-level attribution reads the same in both languages.
+ */
+function refName(lang: ReturnType<typeof useLang>, item: Evidence): string {
+  return item.refLabel !== undefined ? nameText(lang, item.refLabel, item.refLabelEn) : lang.pick(item.label, item.labelEn);
+}
+
+/**
  * The reference picture of an entry with what it says: a gallery picture (landmark) with its name,
  * or a public street-level picture with its attribution under it. The picture always comes from
  * the node (`refImage`); a street-level picture is fetched by the node from its source, never by
  * the browser. `refUrl` opens the picture at its source, on a click only.
  */
 function Reference({ item, at, named }: { item: Evidence; at: GeoPoint | null; named: boolean }) {
-  const { t } = useLang();
+  const lang = useLang();
+  const { t } = lang;
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const page = webLink(item.refUrl);
   const street = item.kind === 'streetlevel';
   if (!item.refImage && !page) return null;
-  const name = item.refLabel ?? item.label;
+  const name = refName(lang, item);
   const hasPicture = item.refImage !== undefined && item.refImage !== '' && !failed;
   // A street-level picture the source no longer has (an expired Mapillary link, a deleted
   // Panoramax picture) is said as such; the link to its page may still work.
@@ -163,7 +173,7 @@ function entryText(entry: Evidence, lang: ReturnType<typeof useLang>, at: GeoPoi
   let title = pick(entry.label, entry.labelEn).replace(MODEL_NAME, '');
   let detail = pick(entry.detail, entry.detailEn).replace(MODEL_NAME, '');
   if (entry.kind === 'landmark' && entry.refLabel && entry.similarity !== undefined) {
-    title = t('Referenzbild: {name}', { name: entry.refLabel });
+    title = t('Referenzbild: {name}', { name: nameText(lang, entry.refLabel, entry.refLabelEn) });
     const km = at && entry.refLat !== undefined && entry.refLon !== undefined ? haversineKm(at.lat, at.lon, entry.refLat, entry.refLon) : null;
     const where = km === null ? '' : km < 1 ? t('am Ergebnisort') : t('{d} vom Ergebnis', { d: fmtKm(km) });
     const what = entry.frame !== undefined ? t('Bild {n} ähnelt diesem Referenzbild', { n: entry.frame }) : t('Ein Bild ähnelt diesem Referenzbild');
@@ -182,7 +192,7 @@ export function EvidenceList({ evidence, onSelect, at = null }: EvidenceListProp
   const item = (entry: Evidence, i: number, withPicture: boolean) => {
     const nil = entry.weight <= 0.0001;
     const text = entryText(entry, lang, at);
-    const name = entry.refLabel ?? entry.label;
+    const name = refName(lang, entry);
     return (
       <li key={i} className={nil ? 'dp-ev-item dp-ev-nil' : 'dp-ev-item'} {...(onSelect ? pressable(() => onSelect(entry)) : {})}>
         <div className="dp-ev-top">

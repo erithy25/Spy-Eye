@@ -437,6 +437,10 @@ function strokeStyleFor(ctx: CanvasRenderingContext2D, style: ShapeStyle | undef
   }
 }
 
+/** The corner the zoom buttons take (top right, CSS pixels from the right and the top edge). */
+const ZOOM_CLEAR_X = 46;
+const ZOOM_CLEAR_Y = 70;
+
 /** Draws DATUM geometry: country likelihood, uncertainty circles, view wedges, sun and shadow rays. */
 function drawShapes(
   ctx: CanvasRenderingContext2D,
@@ -453,15 +457,22 @@ function drawShapes(
   const label = (text: string, x: number, y: number, align: CanvasTextAlign = 'left'): void => {
     ctx.font = `500 9px ${FONT}`;
     setSpacing(ctx, '0.12em');
-    ctx.textAlign = align;
+    const upper = text.toUpperCase();
+    const w = ctx.measureText(upper).width;
+    // Kept on the map and clear of the zoom buttons in the top right corner.
+    let left = align === 'right' || align === 'end' ? x - w : align === 'center' ? x - w / 2 : x;
+    const limit = y < ZOOM_CLEAR_Y ? width - ZOOM_CLEAR_X : width - 6;
+    if (left + w > limit) left = limit - w;
+    if (left < 6) left = 6;
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = BG;
     ctx.lineWidth = 3;
     ctx.setLineDash([]);
-    ctx.strokeText(text.toUpperCase(), x, y);
+    ctx.strokeText(upper, left, y);
     ctx.fillStyle = '#bdbdbd';
-    ctx.fillText(text.toUpperCase(), x, y);
+    ctx.fillText(upper, left, y);
     setSpacing(ctx, '0px');
   };
   // Long lines are split so that they follow the projection (great circles look curved on the map).
@@ -666,6 +677,11 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number,
       break;
     }
   }
+}
+
+/** Whether a pointer event started on a control laid over the map (zoom buttons, links). */
+function onControl(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('button, a, input, select, .geo-zoom') !== null;
 }
 
 export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children, fly = false, globe = false }: MapCanvasProps) {
@@ -1025,7 +1041,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       ctx.textAlign = 'left';
       // Quiet markers first so that alerting and selected ones stay on top.
       const order = [...list].sort((a, b) => (a.alert ?? 0) + (a.selected ? 5 : 0) - ((b.alert ?? 0) + (b.selected ? 5 : 0)));
-      const labelBoxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+      // The zoom buttons sit in the top right corner: no label goes under them.
+      const labelBoxes: { x0: number; y0: number; x1: number; y1: number }[] = [{ x0: width - ZOOM_CLEAR_X, y0: 0, x1: width, y1: ZOOM_CLEAR_Y }];
       for (const m of order) {
         const p = positions.get(m.id);
         if (!p || p.x < -60 || p.y < -30 || p.x > width + 60 || p.y > height + 30) continue;
@@ -1068,7 +1085,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         let lx = p.x + r + 7;
         let ly = p.y;
         let box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (m.sub ? 18 : 7) };
-        const clash = (b: typeof box): boolean => labelBoxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+        const clash = (b: typeof box): boolean =>
+          b.x1 > width - 4 || b.x0 < 4 || labelBoxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
         if (clash(box)) {
           lx = p.x - r - 7 - tw;
           box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (m.sub ? 18 : 7) };
@@ -1362,7 +1380,9 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         schedule('both');
       }}
       onPointerDown={(e) => {
-        if (e.button !== 0) return;
+        // A press on the zoom buttons or a link is theirs: capturing it here would send the click
+        // to the map, and the button would never see it.
+        if (e.button !== 0 || onControl(e.target)) return;
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
         drag.current = { x: e.clientX, y: e.clientY, moved: false };
       }}
@@ -1408,6 +1428,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         schedule('cursor');
       }}
       onDoubleClick={(e) => {
+        if (onControl(e.target)) return;
         const rect = e.currentTarget.getBoundingClientRect();
         zoomAt(1, e.clientX - rect.left, e.clientY - rect.top);
       }}

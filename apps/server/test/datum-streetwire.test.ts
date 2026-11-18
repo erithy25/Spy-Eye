@@ -13,6 +13,9 @@ import type { Gallery, GalleryNeighbour } from '../src/datum/gallery.js';
 import type { StreetLevelHooks } from '../src/datum/engine.js';
 import type { FetchLike, StreetLevelDeps, StreetLevelInput, StreetLevelPicture, StreetLevelResult, StreetLevelSituation } from '../src/datum/streetlevel.js';
 
+/** These tests write real video files; without ffmpeg on the machine they are skipped, not failed. */
+const NO_FFMPEG = spawnSync(process.env['FFMPEG_PATH'] ?? 'ffmpeg', ['-version']).status === 0 ? false : 'ffmpeg fehlt auf diesem Rechner';
+
 /**
  * The street-level stage inside the full analysis: when it is asked (and when never), what it
  * changes in the fix, and that a failing, slow or rate-limiting service costs the fix at most the
@@ -241,7 +244,7 @@ function forbiddenNetwork(): { fetch: FetchLike; calls: string[] } {
 const STEP = 'Mit Straßenbildern verglichen';
 const MAPILLARY_KEY = 'MLY|4242424242|streetwire0secret0value';
 
-test('switched off: nothing is requested, the fix has no street-level step', async () => {
+test('switched off: nothing is requested, the fix has no street-level step', { skip: NO_FFMPEG }, async () => {
   const net = forbiddenNetwork();
   let lookups = 0;
   const run = await engineWith({
@@ -267,7 +270,7 @@ test('switched off: nothing is requested, the fix has no street-level step', asy
   }
 });
 
-test('offline mode (SICHT_OFFLINE): nothing is requested whatever the setting says', async () => {
+test('offline mode (SICHT_OFFLINE): nothing is requested whatever the setting says', { skip: NO_FFMPEG }, async () => {
   const net = forbiddenNetwork();
   // No `enabled` hook: the engine decides as on a node, and SICHT_OFFLINE=1 is set above.
   const run = await engineWith({ deps: { fetch: net.fetch, lookup: null, mapillaryKey: null } });
@@ -280,7 +283,7 @@ test('offline mode (SICHT_OFFLINE): nothing is requested whatever the setting sa
   }
 });
 
-test('services unreachable (no network, no name resolution): the fix completes and says why, the key never shows', async () => {
+test('services unreachable (no network, no name resolution): the fix completes and says why, the key never shows', { skip: NO_FFMPEG }, async () => {
   let asked = 0;
   const run = await engineWith({
     enabled: () => true,
@@ -321,7 +324,7 @@ test('services unreachable (no network, no name resolution): the fix completes a
   }
 });
 
-test('rate limit (429): the service is not asked again in that call, the fix completes', async () => {
+test('rate limit (429): the service is not asked again in that call, the fix completes', { skip: NO_FFMPEG }, async () => {
   const asked: string[] = [];
   const run = await engineWith({
     enabled: () => true,
@@ -357,7 +360,7 @@ function loggedSeconds(logs: readonly string[]): number {
   return Number(m[1]);
 }
 
-test('a service that never answers: the stage stops at its budget, the fix goes on', async () => {
+test('a service that never answers: the stage stops at its budget, the fix goes on', { skip: NO_FFMPEG }, async () => {
   // A fetch that answers only when it is cut off, as the real one does.
   const run = await engineWith({
     enabled: () => true,
@@ -385,7 +388,7 @@ test('a service that never answers: the stage stops at its budget, the fix goes 
   }
 });
 
-test('a resolver that hangs and a fetch that ignores its signal: the engine waits no longer than the budget', async () => {
+test('a resolver that hangs and a fetch that ignores its signal: the engine waits no longer than the budget', { skip: NO_FFMPEG }, async () => {
   const run = await engineWith({
     enabled: () => true,
     options: { budgetMs: 2_000, reserveMs: 300, requestTimeoutMs: 30_000 },
@@ -408,7 +411,7 @@ test('a resolver that hangs and a fetch that ignores its signal: the engine wait
   }
 });
 
-test('the same with a fetch that ignores its signal behind an allowed name: the engine cuts the stage off', async () => {
+test('the same with a fetch that ignores its signal behind an allowed name: the engine cuts the stage off', { skip: NO_FFMPEG }, async () => {
   const run = await engineWith({
     enabled: () => true,
     options: { budgetMs: 1_500, reserveMs: 300, requestTimeoutMs: 30_000 },
@@ -465,7 +468,7 @@ function matchedResult(): StreetLevelResult {
   };
 }
 
-test('a match: the place is pinned, the pictures are numbered as the route counts them, the quick stage never asks', async () => {
+test('a match: the place is pinned, the pictures are numbered as the route counts them, the quick stage never asks', { skip: NO_FFMPEG }, async () => {
   const inputs: StreetLevelInput[] = [];
   const deps: StreetLevelDeps[] = [];
   const run = await engineWith({
@@ -527,7 +530,7 @@ test('a match: the place is pinned, the pictures are numbered as the route count
   }
 });
 
-test('a stand-in stage that throws costs the fix nothing but the refinement', async () => {
+test('a stand-in stage that throws costs the fix nothing but the refinement', { skip: NO_FFMPEG }, async () => {
   const run = await engineWith({
     enabled: () => true,
     refine: async () => {
@@ -545,7 +548,7 @@ test('a stand-in stage that throws costs the fix nothing but the refinement', as
   }
 });
 
-test('a background fix waiting on the services lets a person\'s upload go first', async () => {
+test('a background fix waiting on the services lets a person\'s upload go first', { skip: NO_FFMPEG }, async () => {
   let started = false;
   let stoppedAfterMs: number | null = null;
   const run = await engineWith(

@@ -656,6 +656,7 @@ export function referenceStrength(
   similarity: number,
   distanceKm: number | null,
   params: Pick<LocateParams, 'landmarkSimilarity' | 'regionThreshold'>,
+  answerSure = true,
 ): { where: Named; strength: Named } {
   const km = distanceKm === null ? 0 : Math.round(distanceKm);
   // Decided on the distance as the text shows it: 25.3 km must not read "25 km … keine
@@ -679,11 +680,19 @@ export function referenceStrength(
     de: 'Ein ähnlich aussehender Ort anderswo, keine Wiedererkennung des gefundenen Orts.',
     en: 'A similar-looking place elsewhere, not a recognition of the place found.',
   };
+  // Without a place found nothing is recognised: a recognition is one of the place found.
+  const atResult = distanceKm !== null && !far;
   const strength: Named =
     similarity >= params.landmarkSimilarity
-      ? far
-        ? lookAlike
-        : { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' }
+      ? atResult
+        ? answerSure
+          ? { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' }
+          : // The picture that produced the answer is at the answer by construction; whether that
+            // is a recognition is the decision's to say, and it did not (a wide radius).
+            { de: 'Sehr ähnlich, hebt sich aber nicht deutlich genug ab: keine sichere Wiedererkennung.', en: 'Very similar, but it does not stand out clearly enough: not a sure recognition.' }
+        : far
+          ? lookAlike
+          : { de: 'Sehr ähnlich, aber ohne gefundenen Ort keine Wiedererkennung.', en: 'Very similar, but with no place found it is not a recognition.' }
       : similar
         ? far
           ? lookAlike
@@ -1044,10 +1053,18 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   // ---- evidence: reference matches
   const topRefs = [...refs].sort((a, b) => b.bestSimilarity - a.bestSimilarity).slice(0, 3);
   const totalWeight = refs.reduce((s, r) => s + r.weight, 0);
+  // Distances to the place the fix states: the GPS position of the file where it has one (it
+  // decides the place, see `location` below), else the visual answer (the world model's where it
+  // replaced the gallery's).
+  const stated = metaLocation ?? visual;
+  // A reference at the answer is a recognition only when the answer itself is sure: the file's
+  // GPS, or a landmark that stands out from its neighbours ('strong'). Under a wider tier the
+  // reference that produced the answer lies at it by construction, which proves nothing.
+  const answerSure = metaLocation !== null || radiusTier === 'strong';
   for (const r of topRefs) {
-    const distance = visual ? greatCircleKm(visual.lat, visual.lon, r.lat, r.lon) : null;
+    const distance = stated ? greatCircleKm(stated.lat, stated.lon, r.lat, r.lon) : null;
     const frame = ev.frameNumbers[pooled.frameOfRow[r.bestRow] ?? r.bestRow];
-    const said = referenceStrength(r.bestSimilarity, distance, params);
+    const said = referenceStrength(r.bestSimilarity, distance, params, answerSure);
     evidence.push({
       kind: 'landmark',
       label: `Referenzbild: ${r.label} (${fmt(r.bestSimilarity)})`,

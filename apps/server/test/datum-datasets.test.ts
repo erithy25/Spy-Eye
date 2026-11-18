@@ -307,11 +307,23 @@ test('delete: every recording as DELETE /api/videos/:id does, recordings a case 
     assert.deepEqual((await del(h.lage, 'eingang')).json() as DatasetDeleteResult, { deleted: 1, kept: 0, removed: true });
     assert.ok(h.node.sources.get('eingang'));
     assert.ok(!(await list(h)).some((d) => d.id === 'eingang'));
+    // The last a.mp4 went with the inbox, and its truth with it; a truth for no recording stays.
+    assert.deepEqual(truths.list().map((t) => t.name), ['fremd.mp4']);
 
-    // Single deletion still answers 204 and leaves its entry.
+    // Single deletion still answers 204 and leaves its entry; the recording's own truth goes too,
+    // unless another recording of the same name still answers to it.
     const lone = await recording(h.node, 'eingang', 'allein.mp4');
+    const twinA = await recording(h.node, 'eingang', 'zwilling.mp4');
+    const twinB = await recording(h.node, 'eingang', 'zwilling.mp4');
+    await truths.put([{ name: 'allein.mp4', lat: 5, lon: 5 }, { name: 'zwilling', lat: 6, lon: 6 }]);
     assert.equal((await h.app.inject({ method: 'DELETE', url: `/api/videos/${lone}`, headers: { cookie: h.lage } })).statusCode, 204);
     assert.equal(h.node.ledger.list({ limit: 1 })[0]?.summary, 'Aufzeichnung „allein.mp4“ gelöscht');
+    assert.equal(truths.lookup('allein.mp4'), null, 'the truth of a deleted recording does not stay behind');
+    assert.equal((await h.app.inject({ method: 'DELETE', url: `/api/videos/${twinA}`, headers: { cookie: h.lage } })).statusCode, 204);
+    assert.ok(truths.lookup('zwilling.mp4'), 'the other recording of that name still answers to it');
+    assert.equal((await h.app.inject({ method: 'DELETE', url: `/api/videos/${twinB}`, headers: { cookie: h.lage } })).statusCode, 204);
+    assert.equal(truths.lookup('zwilling.mp4'), null);
+    assert.deepEqual(truths.list().map((t) => t.name), ['fremd.mp4']);
     assert.equal((await h.app.inject({ method: 'DELETE', url: `/api/videos/${lone}`, headers: { cookie: h.lage } })).statusCode, 404);
   } finally {
     await h.dispose();
