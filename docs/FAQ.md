@@ -230,6 +230,17 @@ Platte, die Verwaltung von Zertifikaten und Grenzen gegen Überlastung.
 Die vollständige Liste mit Stand steht in `docs/SICHERHEIT.md`. Ein Penetrationstest durch eine
 dafür zugelassene Stelle steht aus und gehört vor jeden Betrieb mit echten Daten.
 
+### Ist die Software barrierefrei?
+
+Geprüft, nicht bescheinigt. Eine automatische Prüfung nach den Regeln der WCAG 2.1 in den
+Stufen A und AA findet in 15 Zuständen der Konsole und auf der Website keine verletzte Regel
+mehr; vorher waren es sechs, vor allem zu schwacher Kontrast der Nebentexte. Anmelden, Übung
+starten, Lage wählen, suchen und ein Bild öffnen gelingen ohne Maus, und neue Meldungen werden
+für Bildschirmleser angesagt. Nicht geprüft: die Bedienung mit einem Bildschirmleser, die
+Vergrößerung auf 200 Prozent, die Unterlagen. Die Karte lässt sich nur mit der Maus bedienen;
+ihr Inhalt steht daneben als Liste. Ein BITV-Test durch eine Prüfstelle steht aus. Einzelheiten
+in `docs/BARRIEREFREIHEIT.md`.
+
 ### Woraus besteht die Software, und unter welchen Lizenzen?
 
 Aus 143 Paketen, drei Modellen, einer Schrift und Kartendaten; jedes Teil steht mit Fassung,

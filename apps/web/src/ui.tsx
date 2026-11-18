@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { errorText, type NormRect, type Severity, type SourceKind } from './api';
 import { useLang } from './i18n';
 
@@ -7,7 +7,7 @@ export function Sev({ level }: { level: Severity }) {
   const { t } = useLang();
   const names = ['', t('Hinweis'), t('Erheblich'), t('Kritisch')];
   return (
-    <span className={`sev sev-${level}`} title={names[level]} aria-label={names[level]}>
+    <span className={`sev sev-${level}`} role="img" title={names[level]} aria-label={names[level]}>
       <i />
       <i />
       <i />
@@ -72,10 +72,13 @@ interface FrameProps {
   onClick?: () => void;
   empty?: string;
   children?: ReactNode;
+  /** Name of the button for people who do not see the picture; defaults to the alt text. */
+  label?: string;
 }
 
 /** A still with corner marks; optionally the matched region. */
-export function Frame({ src, alt = '', box, boxLabel, onClick, empty, children }: FrameProps) {
+export function Frame({ src, alt = '', label, box, boxLabel, onClick, empty, children }: FrameProps) {
+  const { t } = useLang();
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
   const body =
@@ -97,12 +100,34 @@ export function Frame({ src, alt = '', box, boxLabel, onClick, empty, children }
     );
   const cls = src && !failed ? 'frame' : 'frame frame-empty';
   return onClick ? (
-    <button type="button" className={cls} onClick={onClick}>
+    <button type="button" className={cls} onClick={onClick} aria-label={label ?? (alt !== '' ? alt : t('Bild öffnen'))}>
       {body}
     </button>
   ) : (
     <span className={cls}>{body}</span>
   );
+}
+
+/**
+ * Props for a table row or list entry that reacts to a click: reachable with the tab key and
+ * usable with Enter or the space bar. Keys pressed inside a nested control keep their meaning.
+ */
+export function pressable(
+  onActivate: () => void,
+  current = false,
+): { tabIndex: number; onClick: () => void; onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void; 'aria-current'?: 'true' } {
+  return {
+    tabIndex: 0,
+    onClick: onActivate,
+    onKeyDown: (event) => {
+      if (event.target !== event.currentTarget) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onActivate();
+      }
+    },
+    ...(current ? { 'aria-current': 'true' as const } : {}),
+  };
 }
 
 /** Runs an action with a busy flag and a visible error; refuses to start twice. */

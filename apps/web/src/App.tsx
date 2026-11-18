@@ -4,7 +4,7 @@ import { FrameSheet, type FrameTarget } from './components/FrameSheet';
 import { formatCount, formatExercise, shortHash } from './format';
 import { LangProvider, useLang } from './i18n';
 import { MapCanvas, type MapMarker } from './map/MapCanvas';
-import { Dialog, Field, useAction } from './ui';
+import { Dialog, Field, pressable, useAction } from './ui';
 import { useNode, type NodeConnection } from './useNode';
 import { Lage } from './views/Lage';
 import { Protokoll } from './views/Protokoll';
@@ -146,10 +146,10 @@ function Login({ node }: { node: NodeConnection }) {
                   <tr
                     key={u.id}
                     className="clickable"
-                    onClick={() => {
+                    {...pressable(() => {
                       setUser(u.id);
                       setPassword(info.demo?.passwordHint ?? '');
-                    }}
+                    }, user === u.id)}
                   >
                     <td className="strong" style={{ width: 92 }}>
                       {u.id}

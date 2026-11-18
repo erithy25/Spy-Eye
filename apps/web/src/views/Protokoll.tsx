@@ -3,7 +3,7 @@ import { fetchLedger, sampleLedger, verifyLedger, type LedgerEntryInfo, type Led
 import type { ViewProps } from '../App';
 import { formatDecimal, shortHash } from '../format';
 import { useLang } from '../i18n';
-import { useAction } from '../ui';
+import { pressable, useAction } from '../ui';
 
 const FILTERS: { action: string; label: string }[] = [
   { action: '', label: 'alle' },
@@ -21,7 +21,7 @@ function EntryRows({ entries, open, onToggle }: { entries: LedgerEntryInfo[]; op
     <>
       {entries.map((e) => (
         <tbody key={e.seq}>
-          <tr className={`clickable${open === e.seq ? ' sel' : ''}`} onClick={() => onToggle(e.seq)}>
+          <tr className={`clickable${open === e.seq ? ' sel' : ''}`} {...pressable(() => onToggle(e.seq), open === e.seq)}>
             <td className="num dim">{e.seq}</td>
             <td className="dim">{new Date(e.ts).toLocaleString(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</td>
             <td>{e.actor}</td>

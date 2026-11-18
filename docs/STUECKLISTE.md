@@ -83,7 +83,7 @@ Abgeglichen am 18. November 2026 mit der Datenbank der Paketverwaltung (`pnpm au
 Database). Ausgelieferte Pakete: kein bekannter Befund.
 Werkzeuge zum Bauen und Prüfen: ein bekannter Befund. Diese Pakete laufen nicht im Knoten.
 
-- `picomatch`, Einstufung high: picomatch vulnerable to ReDoS through single-branch repeated extglobs (GHSA-fc5q-39xc-vjpf)
+- `picomatch`, Einstufung hoch: picomatch vulnerable to ReDoS through single-branch repeated extglobs (GHSA-fc5q-39xc-vjpf)
 
 Der Abgleich ist eine Momentaufnahme. Im Betrieb gehört er in einen regelmäßigen Lauf, und jeder
 neue Befund in eine Bewertung, ob der Knoten betroffen ist.

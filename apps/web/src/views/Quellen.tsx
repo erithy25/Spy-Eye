@@ -6,7 +6,7 @@ import { LiveAnalysis } from '../components/LiveAnalysis';
 import { SceneBrowser } from '../components/SceneBrowser';
 import { useLang } from '../i18n';
 import { toMgrs } from '../map/geo';
-import { Dialog, Field, Glyph, KIND_LABEL, useAction } from '../ui';
+import { Dialog, Field, Glyph, KIND_LABEL, pressable, useAction } from '../ui';
 import type { NodeConnection } from '../useNode';
 
 const MODE_LABEL: Record<SourceInfo['mode'], string> = { archive: 'Archiv', exercise: 'Übung', live: 'Direktbild' };
@@ -191,7 +191,7 @@ export function Quellen({ node, openFrame }: ViewProps) {
             {sources.map((s) => {
               const feed = feeds.get(s.id);
               return (
-                <tr key={s.id} className={`clickable${target === s.id ? ' sel' : ''}`} onClick={() => s.mode === 'archive' && setTarget(s.id)}>
+                <tr key={s.id} className={`clickable${target === s.id ? ' sel' : ''}`} {...pressable(() => { if (s.mode === 'archive') setTarget(s.id); }, target === s.id)}>
                   <td className="strong" title={s.description}>
                     <Glyph kind={s.kind} /> {pick(s.name, s.nameEn)}
                   </td>
@@ -260,6 +260,7 @@ export function Quellen({ node, openFrame }: ViewProps) {
             <span className="low">
               {t('nach')}{' '}
               <select
+                aria-label={t('Zielquelle')}
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
                 style={{ background: 'transparent', border: 0, color: 'var(--fg)', font: 'inherit', cursor: 'pointer' }}

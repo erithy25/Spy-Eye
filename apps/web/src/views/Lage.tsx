@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   exercise,
   reviewAlert,
@@ -17,7 +17,7 @@ import { formatClock, formatExercise, formatScore, formatTime } from '../format'
 import { useLang } from '../i18n';
 import { MapCanvas, type MapMarker, type MapView } from '../map/MapCanvas';
 import { tagLabel } from '../tags';
-import { Frame, Glyph, KIND_LABEL, Sev, useAction } from '../ui';
+import { Frame, Glyph, KIND_LABEL, pressable, Sev, useAction } from '../ui';
 import type { NodeConnection } from '../useNode';
 
 const SPEEDS = [1, 2, 4, 8];
@@ -257,7 +257,7 @@ function IncidentRow({ incident, node, selected, onSelect }: { incident: Inciden
     void action.run(async () => node.patchIncident(await setIncidentStatus(incident.id, status)));
   };
   return (
-    <li className={`incident${selected ? ' incident-on' : ''}${incident.status === 'closed' ? ' incident-closed' : ''}`} onClick={onSelect}>
+    <li className={`incident${selected ? ' incident-on' : ''}${incident.status === 'closed' ? ' incident-closed' : ''}`} {...pressable(onSelect, selected)}>
       <h4>
         <Sev level={incident.severity} />
         <span title={pick(incident.title, incident.titleEn)}>{pick(incident.title, incident.titleEn)}</span>
@@ -310,6 +310,24 @@ export function Lage({ node, openFrame }: ViewProps) {
   const alerts = intel?.alerts ?? [];
   const incidents = intel?.incidents ?? [];
   const watches = intel?.watches ?? [];
+
+  // Says a new alert aloud for people who do not see the list change. Alerts that were already
+  // there when the view opened are not announced.
+  const announced = useRef<Set<string> | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  useEffect(() => {
+    if (!intel) return;
+    if (announced.current === null) {
+      announced.current = new Set(alerts.map((a) => a.id));
+      return;
+    }
+    const known = announced.current;
+    const fresh = alerts.filter((a) => !known.has(a.id));
+    if (fresh.length === 0) return;
+    for (const a of fresh) known.add(a.id);
+    const newest = fresh.reduce((best, a) => (a.firstSeen > best.firstSeen ? a : best));
+    setAnnouncement(`${t('Neue Meldung')}: ${pick(newest.watchName, newest.watchNameEn)} · ${newest.sourceName}`);
+  }, [intel, alerts, pick, t]);
 
   const severityBySource = useMemo(() => {
     const map = new Map<string, { severity: 1 | 2 | 3; name: string; nameEn: string }>();
@@ -462,6 +480,9 @@ export function Lage({ node, openFrame }: ViewProps) {
             </h2>
             <span className="low">{t('Vorsicht')}</span>
           </header>
+          <p className="sr-only" role="status" aria-live="polite">
+            {announcement}
+          </p>
           <ul className="pane-body">
             {sortedAlerts.length === 0 && <li className="pane-empty">{t('Keine Meldungen. Wachen melden hier, sobald sie etwas sehen.')}</li>}
             {sortedAlerts.map((a, i) => (

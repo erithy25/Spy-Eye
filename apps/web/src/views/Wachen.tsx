@@ -17,7 +17,7 @@ import {
 import type { ViewProps } from '../App';
 import { formatClock, formatDecimal, formatScore } from '../format';
 import { useLang } from '../i18n';
-import { Field, Frame, KIND_LABEL, Sev, useAction, useLoad } from '../ui';
+import { Field, Frame, KIND_LABEL, pressable, Sev, useAction, useLoad } from '../ui';
 import type { NodeConnection } from '../useNode';
 import { alertTarget } from './Lage';
 
@@ -405,7 +405,7 @@ export function Wachen({ node, openFrame }: ViewProps) {
             </thead>
             <tbody>
               {watches.map((w) => (
-                <tr key={w.id} className={`clickable${selected === w.id ? ' sel' : ''}`} onClick={() => setSelected(w.id)} style={{ opacity: w.enabled ? 1 : 0.45 }}>
+                <tr key={w.id} className={`clickable${selected === w.id ? ' sel' : ''}`} {...pressable(() => setSelected(w.id), selected === w.id)} style={{ opacity: w.enabled ? 1 : 0.45 }}>
                   <td title={pick(w.name, w.nameEn)}>
                     <Sev level={w.severity} /> {pick(w.name, w.nameEn)}
                   </td>

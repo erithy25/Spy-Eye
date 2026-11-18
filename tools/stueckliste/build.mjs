@@ -63,6 +63,9 @@ const LICENCE_NOTES = {
   '(MIT OR CC0-1.0)': 'wahlweise',
 };
 
+/** Einstufungen der Schwachstellendatenbank. */
+const SEVERITY = { info: 'Hinweis', low: 'niedrig', moderate: 'mittel', high: 'hoch', critical: 'kritisch' };
+
 /** SPDX-Kennungen, die als solche in die Stückliste gehen; alles andere als Name oder Ausdruck. */
 const SPDX_IDS = new Set([
   '0BSD', 'Apache-2.0', 'BlueOak-1.0.0', 'BSD-2-Clause', 'BSD-3-Clause', 'CC-BY-4.0', 'CC0-1.0',
@@ -513,13 +516,13 @@ function writePaper(records, version, audits) {
     const shipped = audits.prod.total === 0 ? 'kein bekannter Befund' : `${audits.prod.total} bekannte Befunde`;
     push(`Abgeglichen am ${stand} mit der Datenbank der Paketverwaltung (\`pnpm audit\`, GitHub Advisory`);
     push(`Database). Ausgelieferte Pakete: ${shipped}.`);
-    for (const advisory of audits.prod.advisories) push(`- \`${advisory.module}\`, ${advisory.severity}: ${advisory.title} (${advisory.id})`);
+    for (const advisory of audits.prod.advisories) push(`- \`${advisory.module}\`, Einstufung ${SEVERITY[advisory.severity] ?? advisory.severity}: ${advisory.title} (${advisory.id})`);
     if (audits.all) {
       const tools = audits.all.advisories.filter((advisory) => !audits.prod.advisories.some((shippedAdvisory) => shippedAdvisory.id === advisory.id));
       if (tools.length === 0) push('Werkzeuge zum Bauen und Prüfen: kein bekannter Befund.');
       else {
         push(`Werkzeuge zum Bauen und Prüfen: ${tools.length === 1 ? 'ein bekannter Befund' : `${tools.length} bekannte Befunde`}. Diese Pakete laufen nicht im Knoten.`, '');
-        for (const advisory of tools) push(`- \`${advisory.module}\`, Einstufung ${advisory.severity}: ${advisory.title} (${advisory.id})`);
+        for (const advisory of tools) push(`- \`${advisory.module}\`, Einstufung ${SEVERITY[advisory.severity] ?? advisory.severity}: ${advisory.title} (${advisory.id})`);
       }
     }
   } else {

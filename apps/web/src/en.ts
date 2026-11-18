@@ -443,4 +443,7 @@ export const EN: Record<string, string> = {
   verbindet: 'connecting',
   'Direktbild trennen': 'Disconnect live stream',
   'Personenbeschreibung zulässig': 'person descriptions permitted',
+  'Bild öffnen': 'Open picture',
+  'Neue Meldung': 'New alert',
+  Zielquelle: 'Target source',
 };

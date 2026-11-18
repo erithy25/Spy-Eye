@@ -3,7 +3,7 @@ import { addCaseNote, createCase, fetchCases, fetchMandates, removeCaseItem, sea
 import type { ViewProps } from '../App';
 import { formatClock, formatDateTime, shortHash } from '../format';
 import { useLang } from '../i18n';
-import { Field, Frame, useAction, useLoad } from '../ui';
+import { Field, Frame, pressable, useAction, useLoad } from '../ui';
 
 export function Vorgaenge({ node, openFrame }: ViewProps) {
   const { t, pick, locale } = useLang();
@@ -87,7 +87,7 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
             </thead>
             <tbody>
               {list.map((c) => (
-                <tr key={c.id} className={`clickable${selected === c.id ? ' sel' : ''}`} onClick={() => setSelected(c.id)}>
+                <tr key={c.id} className={`clickable${selected === c.id ? ' sel' : ''}`} {...pressable(() => setSelected(c.id), selected === c.id)}>
                   <td title={c.title}>{c.title}</td>
                   <td className="num dim">{c.items.length}</td>
                   <td className="dim">{c.sealedAt !== null ? t('versiegelt') : t('offen')}</td>

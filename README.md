@@ -208,6 +208,10 @@ fremdem Einsatzmaterial.
   Verschlüsselt spricht der Knoten nur, wenn der Betreiber ein Zertifikat hinterlegt; auf der
   Platte ist nichts verschlüsselt, und gegen Überlastung durch eine angemeldete Person gibt es
   nur einzelne Grenzen.
+- **Barrierefreiheit geprüft, nicht bescheinigt.** Konsole und Website verletzen keine automatisch
+  prüfbare Regel der WCAG 2.1 A und AA, und die Konsole lässt sich ohne Maus bedienen
+  ([`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md)). Einen BITV-Test und einen Test mit
+  Bildschirmleser gab es nicht; die Karte selbst lässt sich nur mit der Maus bedienen.
 - **Größe.** Die Suche vergleicht mit jedem Vektor und ist für einige Millionen Vektoren je Knoten
   ausgelegt, nicht für mehr.
 
@@ -244,6 +248,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `pnpm models:download` | Modelle vorab laden |
 | `pnpm selftest` | Rechner, Modell und ffmpeg prüfen, Geschwindigkeit messen |
 | `pnpm ledger:verify <Datei>` | ein exportiertes Protokoll unabhängig vom Knoten nachrechnen (`tools/pruefen/`, auch in Python) |
+| `node tools/barrierefreiheit/pruefen.cjs all` / `tastatur.cjs` | Konsole und Website automatisch nach WCAG 2.1 A und AA prüfen / die Konsole nur mit der Tastatur durchgehen (`docs/BARRIEREFREIHEIT.md`) |
 | `pnpm sbom` | Stückliste neu erzeugen: jedes Paket mit Fassung, Prüfsumme und Lizenz, dazu der Abgleich mit bekannten Schwachstellen (`docs/STUECKLISTE.md`, CycloneDX in `docs/stueckliste/`) |
 | `pnpm test` / `pnpm typecheck` | Prüfungen |
 

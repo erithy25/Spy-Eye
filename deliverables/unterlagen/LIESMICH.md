@@ -1,6 +1,6 @@
 # Sicht – Unterlagenmappe
 
-Die acht Unterlagen zu Sicht als druckfertige PDF-Dateien im Format A4. Jede Datei entsteht aus
+Die neun Unterlagen zu Sicht als druckfertige PDF-Dateien im Format A4. Jede Datei entsteht aus
 einer Markdown-Datei unter `docs/`; geändert wird dort, nicht im PDF. Auf dem Deckblatt steht der
 Stand, in der Fußzeile der Titel und die Seitenzahl, am Ende die Liste der Quellen mit ihren
 Adressen.
@@ -15,6 +15,7 @@ Adressen.
 | `Sicht-Architektur.pdf` | Wie Sicht gebaut ist: Weg eines Bildes, Speicherformate, Suche, Protokoll mit Format und Prüfung, Rollen und Rechte, Verbundprotokoll, alle Wege der Schnittstelle, Vorkehrungen und offene Punkte. Aus `docs/ARCHITEKTUR.md`. | Technische Prüfer, IT einer Behörde, mögliche Partner für die Kopplung. |
 | `Sicht-Sicherheitsdurchsicht.pdf` | Was eine unabhängige Durchsicht des Quelltexts gefunden hat: 21 Befunde mit Schwere, Stand und Nachweis, was in Ordnung befunden wurde, was offen bleibt. Aus `docs/SICHERHEIT.md`. | IT-Sicherheit und Datenschutz einer Behörde; Stellen, die einen Penetrationstest vorbereiten. |
 | `Sicht-Stueckliste.pdf` | Woraus Sicht besteht: 143 Pakete mit Fassung und Lizenz, Modelle, Schrift und Daten mit Herkunft und Prüfsumme, der Abgleich mit bekannten Schwachstellen und was die Liste nicht leistet. Aus `docs/STUECKLISTE.md`; maschinenlesbar in `docs/stueckliste/sicht.cdx.json`. | Vergabestelle, IT-Sicherheit, Rechtsamt. |
+| `Sicht-Barrierefreiheit.pdf` | Was an Konsole und Website geprüft wurde (automatisch nach den Regeln der WCAG 2.1 A und AA, Bedienung nur mit der Tastatur, Ansage neuer Meldungen), was gefunden und geändert wurde und was nicht geprüft ist. Kein BITV-Test. Aus `docs/BARRIEREFREIHEIT.md`. | Vergabestelle, Schwerbehindertenvertretung, Stellen, die einen BITV-Test vorbereiten. |
 
 ## Neu erzeugen
 
@@ -24,9 +25,9 @@ Im Wurzelverzeichnis des Repositorys:
 node docs/unterlagen/build.cjs
 ```
 
-Der Befehl liest die Markdown-Dateien in ihrem jetzigen Stand und schreibt alle acht PDF-Dateien
+Der Befehl liest die Markdown-Dateien in ihrem jetzigen Stand und schreibt alle neun PDF-Dateien
 neu. Eine einzelne Unterlage: `node docs/unterlagen/build.cjs strategy` (ebenso `compliance`,
-`faq`, `evaluation`, `brand`, `architecture`, `security`, `bom`). Ein anderes Datum auf dem Deckblatt:
+`faq`, `evaluation`, `brand`, `architecture`, `security`, `bom`, `accessibility`). Ein anderes Datum auf dem Deckblatt:
 `node docs/unterlagen/build.cjs --stand "2. Dezember 2026"`.
 
 Gebraucht werden Node und Playwright mit Chromium. Sind `pdftotext` und `pdfinfo` (Poppler)

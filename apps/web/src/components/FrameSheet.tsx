@@ -193,7 +193,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
             <button type="button" className="text-btn" disabled={!onNext} onClick={() => onNext?.()} aria-label={t('Weiter')}>
               →
             </button>
-            <button type="button" className="text-btn" onClick={onClose} aria-label={t('Schließen')}>
+            <button type="button" className="text-btn" onClick={onClose} title={t('Schließen')}>
               esc
             </button>
           </span>
