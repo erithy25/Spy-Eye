@@ -12,63 +12,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { config, repoRoot } from '../config.js';
+import { renameRetry } from '../core/json.js';
+import { collectFootage, footagePresent, type FootageJob } from './footage.js';
 
-interface Clip {
-  file: string;
-  url: string;
-  credit: string;
-}
-
-interface Job extends Clip {
-  dir: string;
-  group: string;
-}
-
-async function readJsonFile<T>(file: string): Promise<T | null> {
-  try {
-    return JSON.parse(await fs.readFile(file, 'utf8')) as T;
-  } catch {
-    return null;
-  }
-}
-
-async function subdirectories(dir: string): Promise<string[]> {
-  try {
-    return (await fs.readdir(dir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
-  } catch {
-    return [];
-  }
-}
-
-async function collect(): Promise<Job[]> {
-  const jobs: Job[] = [];
-  for (const name of await subdirectories(config.scenariosDir)) {
-    const definition = await readJsonFile<{ title?: string; clips?: Record<string, Clip> }>(path.join(config.scenariosDir, name, 'scenario.json'));
-    if (!definition?.clips) continue;
-    for (const clip of Object.values(definition.clips)) {
-      jobs.push({ ...clip, dir: path.join(config.scenariosDir, name, 'clips'), group: definition.title ?? name });
-    }
-  }
-  const seedsDir = path.join(repoRoot, 'seeds');
-  for (const name of await subdirectories(seedsDir)) {
-    const seed = await readJsonFile<{ sources?: { clips?: Clip[] }[] }>(path.join(seedsDir, name, 'seed.json'));
-    for (const source of seed?.sources ?? []) {
-      for (const clip of source.clips ?? []) jobs.push({ ...clip, dir: path.join(seedsDir, name, 'clips'), group: `Bestand ${name}` });
-    }
-  }
-  return jobs;
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    return (await fs.stat(file)).size > 10_000;
-  } catch {
-    return false;
-  }
-}
-
-async function download(job: Job): Promise<number> {
+async function download(job: FootageJob): Promise<number> {
   const target = path.join(job.dir, job.file);
   const partial = `${target}.part`;
   let lastError = 'unbekannter Fehler';
@@ -79,7 +26,7 @@ async function download(job: Job): Promise<number> {
       await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), createWriteStream(partial));
       const { size } = await fs.stat(partial);
       if (size < 10_000) throw new Error('Datei unvollständig');
-      await fs.rename(partial, target);
+      await renameRetry(partial, target);
       return size;
     } catch (err: unknown) {
       lastError = err instanceof Error ? err.message : String(err);
@@ -91,15 +38,15 @@ async function download(job: Job): Promise<number> {
 }
 
 async function main(): Promise<void> {
-  const jobs = await collect();
+  const jobs = await collectFootage();
   if (jobs.length === 0) {
     process.stdout.write('Keine Übungsdefinition gefunden (scenarios/*/scenario.json).\n');
     return;
   }
-  const missing: Job[] = [];
+  const missing: FootageJob[] = [];
   for (const job of jobs) {
     await fs.mkdir(job.dir, { recursive: true });
-    if (!(await exists(path.join(job.dir, job.file)))) missing.push(job);
+    if (!(await footagePresent(job))) missing.push(job);
   }
   process.stdout.write(`Übungsmaterial: ${jobs.length} Aufnahmen, ${jobs.length - missing.length} vorhanden, ${missing.length} zu laden.\n`);
   if (missing.length === 0) return;

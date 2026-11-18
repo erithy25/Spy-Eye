@@ -163,6 +163,11 @@ async function main(): Promise<void> {
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+  // A parent that started the nodes as a child process (the demonstration check) asks for an
+  // orderly end this way; Windows has no signal that a process could catch.
+  process.on('message', (message: unknown) => {
+    if (message === 'shutdown') shutdown();
+  });
 }
 
 main().catch((err: unknown) => {

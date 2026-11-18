@@ -1,0 +1,43 @@
+name: windows
+
+# The whole demonstration path on a Windows machine with Windows PowerShell 5.1: install, build,
+# fetch the footage, prepare three nodes, check them, play the exercise. It downloads about
+# 1.3 GB, so it runs only when asked for: by hand, or by a commit whose message contains [windows].
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+
+jobs:
+  demo:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[windows]')
+    runs-on: windows-latest
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: ffmpeg
+        run: choco install ffmpeg --no-progress -y
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - uses: actions/cache@v4
+        with:
+          path: .models
+          key: models-siglip2-base-patch32-256-v1
+      - run: pnpm selftest
+      - run: pnpm exercise:fetch
+      - run: pnpm demo:prepare
+      - run: pnpm demo:check
+      - run: pnpm exercise:evaluate --speed 8 --require 12

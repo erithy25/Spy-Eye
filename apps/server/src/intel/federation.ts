@@ -70,6 +70,8 @@ export class Federation {
   private readonly peers: Collection<PeerRecord>;
   private readonly status = new Map<string, PeerStatus>();
   private pinger: NodeJS.Timeout | null = null;
+  /** Peers that are being greeted out of turn right now. */
+  private readonly greeting = new Set<string>();
 
   constructor(
     file: string,
@@ -181,25 +183,35 @@ export class Federation {
     this.status.set(peer.id, { ...current, ...patch });
   }
 
+  private async ping(peer: PeerRecord): Promise<void> {
+    const started = Date.now();
+    try {
+      const hello = await this.call<FederationHello>(peer, '/api/federation/hello', { head: this.head() });
+      this.record(peer, {
+        online: true,
+        latencyMs: Date.now() - started,
+        lastSeen: Date.now(),
+        sources: hello.sources,
+        frames: hello.frames,
+      });
+      this.witness(peer, hello.head);
+    } catch {
+      this.record(peer, { online: false, latencyMs: null });
+    }
+  }
+
   async pingAll(): Promise<void> {
-    await Promise.all(
-      this.peers.all().map(async (peer) => {
-        const started = Date.now();
-        try {
-          const hello = await this.call<FederationHello>(peer, '/api/federation/hello', { head: this.head() });
-          this.record(peer, {
-            online: true,
-            latencyMs: Date.now() - started,
-            lastSeen: Date.now(),
-            sources: hello.sources,
-            frames: hello.frames,
-          });
-          this.witness(peer, hello.head);
-        } catch {
-          this.record(peer, { online: false, latencyMs: null });
-        }
-      }),
-    );
+    await Promise.all(this.peers.all().map((peer) => this.ping(peer)));
+  }
+
+  /**
+   * A signed request from a peer shows that it is up. If this node still lists it as unreachable
+   * (it started later, or was away), it is greeted at once instead of at the next round.
+   */
+  noteContact(peer: PeerRecord): void {
+    if (this.status.get(peer.id)?.online === true || this.greeting.has(peer.id)) return;
+    this.greeting.add(peer.id);
+    void this.ping(peer).finally(() => this.greeting.delete(peer.id));
   }
 
   /** Remembers a peer's ledger head; a changed head is written to this node's ledger. */

@@ -17,6 +17,7 @@
     "exercise:fetch": "pnpm --filter @sicht/server exercise:fetch",
     "exercise:evaluate": "pnpm --filter @sicht/server exercise:evaluate",
     "demo": "node apps/server/dist/index.js --nodes nodes.demo.json",
-    "demo:prepare": "node apps/server/dist/index.js --nodes nodes.demo.json --prepare"
+    "demo:prepare": "node apps/server/dist/index.js --nodes nodes.demo.json --prepare",
+    "demo:check": "node apps/server/dist/scripts/checkDemo.js"
   }
 }

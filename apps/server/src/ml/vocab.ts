@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
+import { renameRetry } from '../core/json.js';
 import type { EmbeddingModel } from './model.js';
 
 /**
@@ -122,6 +123,6 @@ export async function loadVocabulary(
   await fs.mkdir(path.dirname(cacheFile), { recursive: true });
   const tmp = `${cacheFile}.${process.pid}.tmp`;
   await fs.writeFile(tmp, Buffer.from(embeddings.buffer, embeddings.byteOffset, embeddings.byteLength));
-  await fs.rename(tmp, cacheFile);
+  await renameRetry(tmp, cacheFile);
   return { labels, embeddings, dim: model.dim };
 }

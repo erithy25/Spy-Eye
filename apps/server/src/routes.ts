@@ -1141,6 +1141,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   app.post('/api/federation/hello', async (request, reply) => {
     const peer = peerOf(request);
     if (!peer) return sendError(reply, 401, 'Unbekannter Knoten oder ungültige Signatur.');
+    federation.noteContact(peer);
     const head = new Body(request.body).text('head', 64);
     if (/^[0-9a-f]{64}$/.test(head)) federation.witness(peer, head);
     const stats = store.stats();
@@ -1156,6 +1157,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   app.post('/api/federation/search', async (request, reply) => {
     const peer = peerOf(request);
     if (!peer) return sendError(reply, 401, 'Unbekannter Knoten oder ungültige Signatur.');
+    federation.noteContact(peer);
     const incoming = request.body as Partial<FederationRequest> | null;
     const query = typeof incoming?.query === 'string' ? incoming.query.trim().slice(0, 300) : '';
     const mandate = incoming?.mandate;

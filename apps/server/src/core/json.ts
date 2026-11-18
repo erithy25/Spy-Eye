@@ -1,12 +1,36 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+const TRANSIENT_RENAME_ERRORS: ReadonlySet<string> = new Set(['EPERM', 'EBUSY', 'EACCES']);
+
+/**
+ * fs.rename that tolerates the short locks which virus scanners and indexers place on fresh files
+ * under Windows: a few attempts with growing pauses (2.5 s in total) before the error is passed on.
+ */
+export async function renameRetry(from: string, to: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await fs.rename(from, to);
+      return;
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!TRANSIENT_RENAME_ERRORS.has(code) || attempt >= 6) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 40 * 2 ** attempt));
+    }
+  }
+}
+
 /** Writes a file so that readers never observe a half-written state. */
 export async function writeFileAtomic(file: string, data: string | Buffer): Promise<void> {
   await fs.mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now().toString(36)}.tmp`;
   await fs.writeFile(tmp, data);
-  await fs.rename(tmp, file);
+  try {
+    await renameRetry(tmp, file);
+  } catch (err: unknown) {
+    await fs.rm(tmp, { force: true }).catch(() => undefined);
+    throw err;
+  }
 }
 
 export async function readJson<T>(file: string, fallback: T): Promise<T> {

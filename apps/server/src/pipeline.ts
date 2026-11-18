@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import { config } from './config.js';
+import { renameRetry } from './core/json.js';
 import type { EventHub } from './events.js';
 import { extractFrames, extractKeyframes, probeVideo, type FrameExtraction } from './media/ffmpeg.js';
 import { GrowableMatrix, dotAt, sigmoid } from './ml/math.js';
@@ -160,7 +161,7 @@ export class Pipeline {
     const boxes = await this.faces.detect(decoded);
     if (boxes.length === 0) return undefined;
     const served = this.store.framePath(id, n);
-    await fs.rename(served, this.store.originalFramePath(id, n));
+    await renameRetry(served, this.store.originalFramePath(id, n));
     const copy: DecodedFrame = { data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height };
     pixelate(copy, boxes);
     await sharp(copy.data, { raw: { width: copy.width, height: copy.height, channels: 3 } })
