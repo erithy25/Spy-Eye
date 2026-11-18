@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sicht — cue card for the demonstration</title>
+<style>
+  @font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url("../onepager/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 500; src: url("../onepager/fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url("../onepager/fonts/JetBrainsMono-Bold.woff2") format("woff2"); }
+
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body {
+    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 7.3pt;
+    line-height: 1.42;
+    color: #050505;
+    font-variant-ligatures: none;
+  }
+  .page { width: 210mm; height: 297mm; padding: 10mm 12mm 8mm; display: flex; flex-direction: column; overflow: hidden; }
+
+  .label { font-size: 6.2pt; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: #555; }
+  .rule { border-top: 0.5pt solid #050505; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 2.4mm; }
+  .wordmark { font-size: 12pt; font-weight: 700; letter-spacing: 0.42em; }
+
+  h1 { margin-top: 3.4mm; font-size: 15pt; font-weight: 700; line-height: 1.15; }
+  .lead { margin-top: 1.6mm; }
+
+  section { margin-top: 3.2mm; }
+  h2 { padding: 1.6mm 0 1.7mm; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8mm; }
+  .cols3 { display: grid; grid-template-columns: 1.15fr 1fr 1fr; column-gap: 6mm; }
+
+  code { font-family: inherit; font-weight: 700; white-space: nowrap; }
+  b { font-weight: 700; }
+
+  ul { list-style: none; }
+  ul li { padding-left: 4mm; text-indent: -4mm; }
+  ul li::before { content: "—"; display: inline-block; width: 4mm; text-indent: 0; }
+  ul li + li { margin-top: 0.7mm; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 0.78mm 0; vertical-align: top; border-top: 0.35pt solid #9a9a9a; }
+  tr:first-child td { border-top: 0; }
+  td.t { width: 10mm; font-weight: 700; white-space: nowrap; }
+  td.a { width: 78mm; padding-right: 4mm; }
+  td.s { color: #050505; }
+  .key { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 6.6pt; }
+
+  .spacer { flex: 1; }
+  footer { display: flex; justify-content: space-between; align-items: end; padding-top: 2.4mm; }
+  .fine { font-size: 6.4pt; color: #555; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="wordmark">SICHT</div>
+    <div class="label">Cue card for the demonstration · 13 minutes</div>
+  </header>
+  <div class="rule"></div>
+
+  <h1>What to do, what to say.</h1>
+  <p class="lead">One page for the lectern, with the console switched to English (EN, top right). Ledger entries, event titles and source names in search hits stay German. The full run-of-show is in <code>docs/DEMO.md</code> (German).</p>
+
+  <section>
+    <div class="rule"></div>
+    <h2 class="label">Before</h2>
+    <div class="cols">
+      <ul>
+        <li>The evening before, online: <code>.\vorfuehrung.cmd -NurPruefen</code>. The command ends with “Bereit”.</li>
+        <li>On the day: close the windows of earlier runs, then <code>.\vorfuehrung.cmd</code>. The browser opens by itself.</li>
+        <li>Chrome or Edge, full screen (F11), zoom 100&nbsp;%.</li>
+      </ul>
+      <ul>
+        <li>Sign in: <code>leitung</code>, password <code>lagebild</code>, mandate “Exercise RHEIN-MOSEL”. Below it says “31 recordings ready”.</li>
+        <li>Second window: <code>127.0.0.1:8788</code> (Trier), also <code>leitung</code>, tab LEDGER.</li>
+        <li>Clock at 4×: ten minutes of exercise in two and a half. PAUSE stops clock and sources.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="rule"></div>
+    <h2 class="label">Sequence</h2>
+    <table>
+      <tr><td class="t">0:00</td><td class="a">Sign in as <code>leitung</code>.</td><td class="s">“Every sign-in is in the ledger.”</td></tr>
+      <tr><td class="t">0:30</td><td class="a">Choose the mandate “Exercise RHEIN-MOSEL”.</td><td class="s">“No purpose, no analysis.”</td></tr>
+      <tr><td class="t">1:00</td><td class="a"><span class="key">Situation</span>: move the pointer over the map.</td><td class="s">“Drawn by the node itself from OpenStreetMap data, no map service.”</td></tr>
+      <tr><td class="t">1:30</td><td class="a">Choose 4×, <span class="key">Start exercise</span>.</td><td class="s">“Eleven sources. Freely licensed archive footage; it does not show Koblenz.”</td></tr>
+      <tr><td class="t">2:00</td><td class="a">T+01:22: “Flooding” at UAS 1. Open the picture, <span class="key">Confirm</span>.</td><td class="s">“Nobody looked at this picture. The watch is a sentence in words.”</td></tr>
+      <tr><td class="t">3:00</td><td class="a">Back to the map. Alerts come in; incidents form at the lower right.</td><td class="s">“Same kind at the same place becomes one incident. Two sources show as ‘2 sources’.”</td></tr>
+      <tr><td class="t">4:00</td><td class="a">T+04:24: “Overturned lorry” at Scout 1. Open the picture, <span class="key">Dismiss</span>.</td><td class="s">“A false alert. We show it instead of hiding it.”</td></tr>
+      <tr><td class="t">4:30</td><td class="a">T+05:22: the same watch at Scout 2, <span class="key">Confirm</span>. Then <span class="key">Watches</span>, select this watch, <span class="key">Retrain</span>.</td><td class="s">“Version 2: explicit, in the ledger, reversible. No silent learning in operation.”</td></tr>
+      <tr><td class="t">5:30</td><td class="a"><span class="key">Search</span>: tick “ask the federation”, then <code>flooded meadow</code>.</td><td class="s">“Free text, German or English. The neighbour answers with a masked preview and a receipt.”</td></tr>
+      <tr><td class="t">6:30</td><td class="a">Second window, Trier: the entry “Fremdanfrage” (peer request; entries are recorded in German).</td><td class="s">“Only the question travelled.”</td></tr>
+      <tr><td class="t">7:00</td><td class="a"><code>face of Mr Miller</code>, then <code>licence plate KO AB 123</code>.</td><td class="s">“Refused, with the rule, in the ledger. The system looks for situations, not for people.”</td></tr>
+      <tr><td class="t">8:00</td><td class="a">Open the first hit of <code>flooded meadow</code>, <span class="key">Add to case</span>, title and note, <span class="key">Secure</span>.</td><td class="s">“Secured with the checksum of the original, exempt from deletion.”</td></tr>
+      <tr><td class="t">9:00</td><td class="a"><span class="key">Cases</span>: <span class="key">Seal</span>, then <span class="key">Report</span>.</td><td class="s">“Sealed means unchangeable. The report can be printed.”</td></tr>
+      <tr><td class="t">10:00</td><td class="a"><span class="key">Situation</span>, Scout 1: open the picture, <span class="key">Request original</span>, show the dialog.</td><td class="s">“Faces are masked. The original needs a reason and a second person, for 15 minutes.”</td></tr>
+      <tr><td class="t">11:00</td><td class="a"><span class="key">Ledger</span>: <span class="key">Verify chain</span>, then <span class="key">Draw sample</span>.</td><td class="s">“Oversight checks without seeing any pictures.”</td></tr>
+      <tr><td class="t">12:00</td><td class="a"><span class="key">Effect</span>, then <span class="key">Measurement report</span>.</td><td class="s">“13 events, 13 detected, one false alert. In real time 1.1 seconds at the median.”</td></tr>
+      <tr><td class="t">13:00</td><td class="a"><span class="key">Situation</span>: <span class="key">Situation report</span>.</td><td class="s">“Printable, and as GeoJSON or CAP for existing systems.”</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="rule"></div>
+    <div class="cols3">
+      <div>
+        <h2 class="label">Numbers to quote</h2>
+        <ul>
+          <li>Exercise in real time: 13 of 13 events, 15 alerts, one false alert, delay 1.1&nbsp;s at the median.</li>
+          <li>Search on general footage: 54 of 66 queries answered.</li>
+          <li>44 recordings searchable 8&nbsp;s after the upload began.</li>
+          <li>Analysis at 3.3 times real time, four cores, no graphics card.</li>
+          <li>88 automated checks; the whole path also runs on a Windows machine.</li>
+          <li>Code review: 21 findings, the severe ones fixed. No penetration test.</li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="label">If something hangs</h2>
+        <ul>
+          <li>“Anschlüsse belegt” (ports taken): end the other window with Ctrl+C, repeat the command.</li>
+          <li>No false alert at the lorry: the rehearsal was not reset. Ctrl+C, <code>.\vorfuehrung.cmd</code>.</li>
+          <li>Federation “not reachable”: wait a few seconds.</li>
+          <li>Unsure: second terminal, <code>pnpm demo:check</code>.</li>
+          <li>Nothing works: show the product film (137&nbsp;s, German).</li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="label">Do not claim</h2>
+        <ul>
+          <li>Customers, pilots, certification: there are none.</li>
+          <li>The numbers come from an exercise with archive footage; the watches were worded on it.</li>
+          <li>Live streams are built but tested only against a simulated camera.</li>
+          <li>“No tracking of people” is a rule with a ledger, not an impossibility.</li>
+          <li>The name has not been cleared as a trade mark.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="spacer"></div>
+  <div class="rule"></div>
+  <footer>
+    <div class="fine">As of 18 November 2026 · trial stage · condensed from docs/DEMO.md</div>
+    <div class="fine">No sight without oversight.</div>
+  </footer>
+
+</div>
+</body>
+</html>
