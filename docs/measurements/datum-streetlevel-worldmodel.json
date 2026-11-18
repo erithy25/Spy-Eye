@@ -1,0 +1,4927 @@
+{
+ "measuredAt": "2026-11-18T19:25:58.959Z",
+ "summarisedAt": "2026-11-18T19:32:09.896Z",
+ "script": "apps/server/src/scripts/datum/evaluateStreetlevel.ts --worldmodel",
+ "model": "onnx-community/siglip2-base-patch32-256-ONNX",
+ "threads": 2,
+ "setup": {
+  "mode": "unknown: the reference picture of the filmed item is left out of the gallery (locate() excludeWikidata), as DATUM_HOLDOUT=1",
+  "frames": "12 frames per video, whole frame plus square crops, as the engine's quick stage samples them",
+  "frameSources": {
+   "al-skanderbeg-square": "cache",
+   "au-malmsbury-viaduct": "cache",
+   "au-wellington-point": "cache",
+   "bj-dantokpa-market": "cache",
+   "br-praia-do-grumari": "cache",
+   "ca-clarence-st-bridge": "cache",
+   "ch-schloss-der-grafen-von-greyerz": "cache",
+   "cl-palacio-de-la-moneda": "cache",
+   "cz-kolin-train-station": "cache",
+   "de-bahnhof-berlin-lichterfelde": "cache",
+   "de-berliner-fernsehturm": "cache",
+   "de-bhf-eschborn": "cache",
+   "de-dorfkirche-rieben": "cache",
+   "de-elstertalbruecke": "cache",
+   "de-hof-hauptbahnhof": "cache",
+   "de-kammergutweg": "cache",
+   "de-kirche-hanshagen": "cache",
+   "de-kyffhaeuserdenkmal": "cache",
+   "de-molenfeuer-warnemuende": "cache",
+   "de-palmengartenwehr": "cache",
+   "de-quellbrunnen": "cache",
+   "de-rheinbruecke-leverkusen": "cache",
+   "de-spitterfall": "cache",
+   "de-st-lambertus": "cache",
+   "de-zoobruecke": "cache",
+   "dz-el-mechouar-mosque": "cache",
+   "ee-tartu-railway-station": "cache",
+   "eg-al-fattah-al-alim-mosque": "cache",
+   "fr-arc-de-triomphe": "cache",
+   "fr-eiffel-tower": "cache",
+   "fr-new-gatteville-lighthouse": "cache",
+   "gb-glenfinnan-viaduct": "cache",
+   "gb-grytviken": "cache",
+   "gb-rhuddlan-castle": "cache",
+   "id-borobudur-temple": "cache",
+   "id-lovina-beach": "cache",
+   "ie-charles-fort": "cache",
+   "ie-church-of-st-anne": "cache",
+   "ie-the-elysian": "cache",
+   "it-alghero-railway-station": "cache",
+   "jp-tokyo-station": "cache",
+   "kr-busan-harbor-bridge": "cache",
+   "mn-ulaanbaatar-railway-station": "cache",
+   "mx-chapultepec-castle": "cache",
+   "mx-mexico-city-metropolitan": "cache",
+   "no-fj-l-y-lighthouse": "cache",
+   "pe-cusco-cathedral": "cache",
+   "ru-cathedral-of-christ-the": "cache",
+   "ru-crimean-bridge": "cache",
+   "ru-russky-bridge": "cache",
+   "tr-1915-canakkale-bridge": "cache",
+   "tr-istiklal-avenue": "cache",
+   "ua-buhaz": "cache",
+   "ua-kyiv-pechersk-lavra": "cache",
+   "us-corona-del-mar-state-beach": "cache",
+   "us-francis-scott-key-bridge": "cache",
+   "us-oriole-park-at-camden-yards": "cache",
+   "us-vessel": "cache",
+   "ve-estadio-olimpico": "cache",
+   "za-nelson-mandela-square": "cache"
+  },
+  "worldModelPrecision": "int8",
+  "candidateRadiusKm": 3,
+  "worldModelCandidate": "GeoCLIP's best point (LocateDiagnostics.worldModel.best) of every answer with method 'worldmodel'",
+  "landmarkCandidate": "the answer of method 'landmark' with tier strong or recognised (the engine's rule)",
+  "providers": [
+   "panoramax"
+  ],
+  "mapillary": "not measured: no Mapillary key on the measuring machine",
+  "decision": {
+   "minPictures": 8,
+   "minSimilarity": 0.7,
+   "minGap": 0.1,
+   "minZ": 3
+  },
+  "wrongPin": "a match whose refined point lies farther from the truth than its stated radius (at least 1 km)",
+  "rule": "chosen on the train half (even index): the lowest concentration threshold from 0.2 with at least 10 matches and at most one wrong pin per ten of them; none: the world-model path stays off",
+  "split": "videos sorted by id; even index = train, odd = test, as scripts/datum/evaluate.ts"
+ },
+ "worldModel": {
+  "sweep": [
+   {
+    "minConcentration": 0,
+    "train": {
+     "calls": 20,
+     "centreWithin3km": 5,
+     "withPictures": 5,
+     "withPicturesCentreWithin3km": 3,
+     "matched": 1,
+     "matchedWithin1km": 1,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 16,
+     "centreWithin3km": 3,
+     "withPictures": 4,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.05,
+    "train": {
+     "calls": 11,
+     "centreWithin3km": 4,
+     "withPictures": 3,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 1,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 8,
+     "centreWithin3km": 3,
+     "withPictures": 3,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.1,
+    "train": {
+     "calls": 6,
+     "centreWithin3km": 3,
+     "withPictures": 2,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 1,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 5,
+     "centreWithin3km": 3,
+     "withPictures": 3,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.2,
+    "train": {
+     "calls": 4,
+     "centreWithin3km": 3,
+     "withPictures": 2,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 1,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 5,
+     "centreWithin3km": 3,
+     "withPictures": 3,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.3,
+    "train": {
+     "calls": 3,
+     "centreWithin3km": 2,
+     "withPictures": 1,
+     "withPicturesCentreWithin3km": 1,
+     "matched": 1,
+     "matchedWithin1km": 1,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 3,
+     "centreWithin3km": 2,
+     "withPictures": 1,
+     "withPicturesCentreWithin3km": 1,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.4,
+    "train": {
+     "calls": 1,
+     "centreWithin3km": 1,
+     "withPictures": 0,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 3,
+     "centreWithin3km": 2,
+     "withPictures": 1,
+     "withPicturesCentreWithin3km": 1,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.5,
+    "train": {
+     "calls": 1,
+     "centreWithin3km": 1,
+     "withPictures": 0,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 3,
+     "centreWithin3km": 2,
+     "withPictures": 1,
+     "withPicturesCentreWithin3km": 1,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.6,
+    "train": {
+     "calls": 1,
+     "centreWithin3km": 1,
+     "withPictures": 0,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 2,
+     "centreWithin3km": 2,
+     "withPictures": 1,
+     "withPicturesCentreWithin3km": 1,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   },
+   {
+    "minConcentration": 0.7,
+    "train": {
+     "calls": 0,
+     "centreWithin3km": 0,
+     "withPictures": 0,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 2,
+     "centreWithin3km": 2,
+     "withPictures": 1,
+     "withPicturesCentreWithin3km": 1,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   }
+  ],
+  "chosen": null,
+  "decision": "off",
+  "looserCriterion": {
+   "note": "the first run of this script required one train match instead of ten; changed because a single match cannot show a wrong-pin rate of one in ten",
+   "wouldChoose": {
+    "minConcentration": 0.2,
+    "train": {
+     "calls": 4,
+     "centreWithin3km": 3,
+     "withPictures": 2,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 1,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 5,
+     "centreWithin3km": 3,
+     "withPictures": 3,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   }
+  },
+  "timing": {
+   "calls": 36,
+   "medianS": 1.01,
+   "p90S": 7.25,
+   "maxS": 10.62,
+   "budgetExhausted": 0
+  }
+ },
+ "landmark": {
+  "note": "in unknown mode a recognised landmark is a look-alike of the filmed one; this is the false-match risk of the engine rule",
+  "train": {
+   "calls": 2,
+   "centreWithin3km": 2,
+   "withPictures": 2,
+   "withPicturesCentreWithin3km": 2,
+   "matched": 0,
+   "matchedWithin1km": 0,
+   "wrongPins": 0
+  },
+  "test": {
+   "calls": 2,
+   "centreWithin3km": 0,
+   "withPictures": 2,
+   "withPicturesCentreWithin3km": 0,
+   "matched": 1,
+   "matchedWithin1km": 0,
+   "wrongPins": 1
+  },
+  "timing": {
+   "calls": 4,
+   "medianS": 6.05,
+   "p90S": 14.13,
+   "maxS": 14.13,
+   "budgetExhausted": 0
+  }
+ },
+ "answers": [
+  {
+   "id": "al-skanderbeg-square",
+   "label": "Skanderbeg Square",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 41.113059,
+    "lon": 20.08178,
+    "radiusKm": 1500,
+    "errorKm": 32.493,
+    "concentration": 0.246,
+    "geoclipBestKm": 1060.24,
+    "path": null
+   }
+  },
+  {
+   "id": "au-malmsbury-viaduct",
+   "label": "Malmsbury Viaduct",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 43.286453,
+    "lon": 3.106899,
+    "radiusKm": 1500,
+    "errorKm": 16689.911,
+    "concentration": 0.014,
+    "geoclipBestKm": 16689.911,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "au-wellington-point",
+   "label": "Wellington Point",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": -27.466667,
+    "lon": 153.266667,
+    "radiusKm": 1500,
+    "errorKm": 3.544,
+    "concentration": 0.0646,
+    "geoclipBestKm": 2.484,
+    "path": null
+   }
+  },
+  {
+   "id": "bj-dantokpa-market",
+   "label": "Dantokpa Market",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 4.050987,
+    "lon": 9.710197,
+    "radiusKm": 1500,
+    "errorKm": 845.984,
+    "concentration": 0.025,
+    "geoclipBestKm": 845.984,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "br-praia-do-grumari",
+   "label": "Praia do Grumari",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -23.040304,
+    "lon": -43.504303,
+    "radiusKm": 1500,
+    "errorKm": 2.384,
+    "concentration": 0.0267,
+    "geoclipBestKm": 2.384,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ca-clarence-st-bridge",
+   "label": "Clarence St. Bridge",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 42.99942,
+    "lon": -82.424431,
+    "radiusKm": 25,
+    "errorKm": 258.798,
+    "concentration": 0.2262,
+    "geoclipBestKm": 258.798,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ch-schloss-der-grafen-von-greyerz",
+   "label": "Schloss der Grafen von Greyerz",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 45.514404,
+    "lon": 25.369663,
+    "radiusKm": 1500,
+    "errorKm": 1412.984,
+    "concentration": 0.0928,
+    "geoclipBestKm": 1412.984,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "cl-palacio-de-la-moneda",
+   "label": "Palacio de La Moneda",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -33.442902,
+    "lon": -70.653076,
+    "radiusKm": 25,
+    "errorKm": 0.075,
+    "concentration": 0.2064,
+    "geoclipBestKm": 0.075,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "cz-kolin-train-station",
+   "label": "Kolín train station",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 49.895615,
+    "lon": 16.433561,
+    "radiusKm": 1500,
+    "errorKm": 88.445,
+    "concentration": 0.0199,
+    "geoclipBestKm": 88.445,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-bahnhof-berlin-lichterfelde",
+   "label": "Bahnhof Berlin-Lichterfelde Ost",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "recognised",
+    "lat": 52.3715,
+    "lon": 13.6152,
+    "radiusKm": 7500,
+    "errorKm": 20.484,
+    "concentration": 0.133,
+    "geoclipBestKm": 13.195,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "de-berliner-fernsehturm",
+   "label": "Berliner Fernsehturm",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "strong",
+    "lat": 52.518559,
+    "lon": 13.392038,
+    "radiusKm": 3,
+    "errorKm": 1.205,
+    "concentration": 0.992,
+    "geoclipBestKm": 0.672,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "de-bhf-eschborn",
+   "label": "Bhf. Eschborn",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 47.913612,
+    "lon": 12.069585,
+    "radiusKm": 1500,
+    "errorKm": 356.211,
+    "concentration": 0.0011,
+    "geoclipBestKm": 356.211,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-dorfkirche-rieben",
+   "label": "Dorfkirche Rieben",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 46.977825,
+    "lon": 24.2736,
+    "radiusKm": 1500,
+    "errorKm": 994.186,
+    "concentration": 0.0053,
+    "geoclipBestKm": 994.186,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-elstertalbruecke",
+   "label": "Elstertalbrücke",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 50.107157,
+    "lon": 8.697057,
+    "radiusKm": 1500,
+    "errorKm": 251.268,
+    "concentration": 0.0272,
+    "geoclipBestKm": 323.607,
+    "path": null
+   }
+  },
+  {
+   "id": "de-hof-hauptbahnhof",
+   "label": "Hof Hauptbahnhof",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 50.314523,
+    "lon": 11.911238,
+    "radiusKm": 1500,
+    "errorKm": 1.12,
+    "concentration": 0.0074,
+    "geoclipBestKm": 157.328,
+    "path": null
+   }
+  },
+  {
+   "id": "de-kammergutweg",
+   "label": "Kammergutweg",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 50.312814,
+    "lon": 11.915889,
+    "radiusKm": 1500,
+    "errorKm": 2.193,
+    "concentration": 0.0126,
+    "geoclipBestKm": 368.838,
+    "path": null
+   }
+  },
+  {
+   "id": "de-kirche-hanshagen",
+   "label": "Kirche Hanshagen",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 52.52737,
+    "lon": 11.517056,
+    "radiusKm": 1500,
+    "errorKm": 215.527,
+    "concentration": 0.0744,
+    "geoclipBestKm": 333.277,
+    "path": null
+   }
+  },
+  {
+   "id": "de-kyffhaeuserdenkmal",
+   "label": "Kyffhäuserdenkmal",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 56.558254,
+    "lon": -2.855939,
+    "radiusKm": 1500,
+    "errorKm": 1074.534,
+    "concentration": 0.0211,
+    "geoclipBestKm": 1074.534,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-molenfeuer-warnemuende",
+   "label": "Molenfeuer Warnemünde",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 39.488144,
+    "lon": 13.532409,
+    "radiusKm": 1500,
+    "errorKm": 1638.034,
+    "concentration": 0.0044,
+    "geoclipBestKm": 1638.034,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-palmengartenwehr",
+   "label": "Palmengartenwehr",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 55.734867,
+    "lon": 9.126291,
+    "radiusKm": 1500,
+    "errorKm": 533.438,
+    "concentration": 0.0022,
+    "geoclipBestKm": 533.438,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-quellbrunnen",
+   "label": "Quellbrunnen",
+   "split": "train",
+   "engine": {
+    "method": "region",
+    "radiusTier": "country",
+    "lat": 51.2175,
+    "lon": 12.324167,
+    "radiusKm": 1790.382,
+    "errorKm": 184.211,
+    "concentration": 0.0195,
+    "geoclipBestKm": 245.647,
+    "path": null
+   }
+  },
+  {
+   "id": "de-rheinbruecke-leverkusen",
+   "label": "Rheinbrücke Leverkusen",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 50.107342,
+    "lon": 8.694314,
+    "radiusKm": 1500,
+    "errorKm": 160.009,
+    "concentration": 0.1683,
+    "geoclipBestKm": 6064.118,
+    "path": null
+   }
+  },
+  {
+   "id": "de-spitterfall",
+   "label": "Spitterfall",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 36.560253,
+    "lon": 139.176208,
+    "radiusKm": 1500,
+    "errorKm": 9083.704,
+    "concentration": 0.0004,
+    "geoclipBestKm": 9083.704,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-st-lambertus",
+   "label": "St. Lambertus",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 51.512873,
+    "lon": -0.12208,
+    "radiusKm": 1500,
+    "errorKm": 458.93,
+    "concentration": 0.0707,
+    "geoclipBestKm": 643.14,
+    "path": null
+   }
+  },
+  {
+   "id": "de-zoobruecke",
+   "label": "Zoobrücke",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 50.717735,
+    "lon": 7.167377,
+    "radiusKm": 1500,
+    "errorKm": 29.584,
+    "concentration": 0.0608,
+    "geoclipBestKm": 29.584,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "dz-el-mechouar-mosque",
+   "label": "El Mechouar Mosque",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 31.621049,
+    "lon": -7.992184,
+    "radiusKm": 1500,
+    "errorKm": 719.142,
+    "concentration": 0.8247,
+    "geoclipBestKm": 718.389,
+    "path": null
+   }
+  },
+  {
+   "id": "ee-tartu-railway-station",
+   "label": "Tartu railway station",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -34.166222,
+    "lon": -70.745773,
+    "radiusKm": 1500,
+    "errorKm": 13600.028,
+    "concentration": 0.1031,
+    "geoclipBestKm": 13600.028,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "eg-al-fattah-al-alim-mosque",
+   "label": "Al-Fattah al-Alim mosque",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 24.463626,
+    "lon": 39.604556,
+    "radiusKm": 1500,
+    "errorKm": 1003.22,
+    "concentration": 0.1358,
+    "geoclipBestKm": 1007.734,
+    "path": null
+   }
+  },
+  {
+   "id": "fr-arc-de-triomphe",
+   "label": "Arc de Triomphe",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "strong",
+    "lat": 48.864485,
+    "lon": 2.325027,
+    "radiusKm": 3,
+    "errorKm": 2.425,
+    "concentration": 0.9944,
+    "geoclipBestKm": 0.056,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "fr-eiffel-tower",
+   "label": "Eiffel Tower",
+   "split": "test",
+   "engine": {
+    "method": "region",
+    "radiusTier": "country",
+    "lat": 48.864309,
+    "lon": 2.309836,
+    "radiusKm": 2390.691,
+    "errorKm": 1.307,
+    "concentration": 0.9985,
+    "geoclipBestKm": 0.055,
+    "path": null
+   }
+  },
+  {
+   "id": "fr-new-gatteville-lighthouse",
+   "label": "new Gatteville Lighthouse",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 43.386181,
+    "lon": -8.406139,
+    "radiusKm": 25,
+    "errorKm": 888.291,
+    "concentration": 0.3199,
+    "geoclipBestKm": 888.291,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "gb-glenfinnan-viaduct",
+   "label": "Glenfinnan Viaduct",
+   "split": "test",
+   "engine": {
+    "method": "region",
+    "radiusTier": "country",
+    "lat": 53.123933,
+    "lon": -3.864868,
+    "radiusKm": 1468.502,
+    "errorKm": 429.014,
+    "concentration": 0.4927,
+    "geoclipBestKm": 1.792,
+    "path": null
+   }
+  },
+  {
+   "id": "gb-grytviken",
+   "label": "Grytviken",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 65.412506,
+    "lon": -13.953495,
+    "radiusKm": 1500,
+    "errorKm": 13446.494,
+    "concentration": 0.0896,
+    "geoclipBestKm": 13446.494,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "gb-rhuddlan-castle",
+   "label": "Rhuddlan Castle",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 53.031203,
+    "lon": -3.26413,
+    "radiusKm": 1500,
+    "errorKm": 31.639,
+    "concentration": 0.0679,
+    "geoclipBestKm": 262.458,
+    "path": null
+   }
+  },
+  {
+   "id": "id-borobudur-temple",
+   "label": "Borobudur Temple",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": -7.606083,
+    "lon": 110.218685,
+    "radiusKm": 1500,
+    "errorKm": 1.649,
+    "concentration": 0.1762,
+    "geoclipBestKm": 0.607,
+    "path": null
+   }
+  },
+  {
+   "id": "id-lovina-beach",
+   "label": "Lovina Beach",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -8.19313,
+    "lon": 114.841476,
+    "radiusKm": 1500,
+    "errorKm": 20.556,
+    "concentration": 0.0664,
+    "geoclipBestKm": 20.556,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ie-charles-fort",
+   "label": "Charles Fort",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 53.019743,
+    "lon": -3.280151,
+    "radiusKm": 1500,
+    "errorKm": 383.624,
+    "concentration": 0,
+    "geoclipBestKm": 348.38,
+    "path": null
+   }
+  },
+  {
+   "id": "ie-church-of-st-anne",
+   "label": "Church of St Anne",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 51.849194,
+    "lon": -8.300514,
+    "radiusKm": 25,
+    "errorKm": 13.474,
+    "concentration": 0.5315,
+    "geoclipBestKm": 13.474,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ie-the-elysian",
+   "label": "The Elysian",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 51.898422,
+    "lon": -8.468742,
+    "radiusKm": 25,
+    "errorKm": 0.415,
+    "concentration": 0.2233,
+    "geoclipBestKm": 0.415,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "it-alghero-railway-station",
+   "label": "Alghero railway station",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 43.81926,
+    "lon": 13.791496,
+    "radiusKm": 1500,
+    "errorKm": 576.95,
+    "concentration": 0,
+    "geoclipBestKm": 576.95,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "jp-tokyo-station",
+   "label": "Tokyo Station",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 33.086224,
+    "lon": 129.787277,
+    "radiusKm": 1500,
+    "errorKm": 959.638,
+    "concentration": 0.035,
+    "geoclipBestKm": 959.638,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "kr-busan-harbor-bridge",
+   "label": "Busan Harbor Bridge",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 34.905833,
+    "lon": 127.705278,
+    "radiusKm": 1500,
+    "errorKm": 125.817,
+    "concentration": 0.0445,
+    "geoclipBestKm": 216.375,
+    "path": null
+   }
+  },
+  {
+   "id": "mn-ulaanbaatar-railway-station",
+   "label": "Ulaanbaatar railway station",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 51.816742,
+    "lon": 107.597977,
+    "radiusKm": 1500,
+    "errorKm": 437.596,
+    "concentration": 0.0643,
+    "geoclipBestKm": 437.596,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "mx-chapultepec-castle",
+   "label": "Chapultepec Castle",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 19.421713,
+    "lon": -99.18438,
+    "radiusKm": 25,
+    "errorKm": 0.312,
+    "concentration": 0.7171,
+    "geoclipBestKm": 0.312,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "mx-mexico-city-metropolitan",
+   "label": "Mexico City Metropolitan Cathedral",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 19.003418,
+    "lon": -98.093552,
+    "radiusKm": 1500,
+    "errorKm": 119.192,
+    "concentration": 0.1133,
+    "geoclipBestKm": 119.192,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "no-fj-l-y-lighthouse",
+   "label": "Fjøløy Lighthouse",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 59.055454,
+    "lon": 10.412592,
+    "radiusKm": 1500,
+    "errorKm": 276.78,
+    "concentration": 0.0639,
+    "geoclipBestKm": 276.78,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "pe-cusco-cathedral",
+   "label": "Cusco Cathedral",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -13.516679,
+    "lon": -71.978775,
+    "radiusKm": 25,
+    "errorKm": 0.084,
+    "concentration": 0.3254,
+    "geoclipBestKm": 0.084,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ru-cathedral-of-christ-the",
+   "label": "Cathedral of Christ the Saviour",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 59.943122,
+    "lon": 30.335357,
+    "radiusKm": 1500,
+    "errorKm": 634.195,
+    "concentration": 0.5326,
+    "geoclipBestKm": 1.415,
+    "path": null
+   }
+  },
+  {
+   "id": "ru-crimean-bridge",
+   "label": "Crimean Bridge",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 44.573532,
+    "lon": 38.026772,
+    "radiusKm": 1500,
+    "errorKm": 144.931,
+    "concentration": 0.0208,
+    "geoclipBestKm": 144.931,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ru-russky-bridge",
+   "label": "Russky Bridge",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 44.670753,
+    "lon": 37.867344,
+    "radiusKm": 1500,
+    "errorKm": 7080.609,
+    "concentration": 0.0435,
+    "geoclipBestKm": 7080.609,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "tr-1915-canakkale-bridge",
+   "label": "1915 Çanakkale Bridge",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 60.114166,
+    "lon": 31.083332,
+    "radiusKm": 1500,
+    "errorKm": 2220.23,
+    "concentration": 0.0352,
+    "geoclipBestKm": 2220.23,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "tr-istiklal-avenue",
+   "label": "İstiklal Avenue",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 41.040852,
+    "lon": 28.986179,
+    "radiusKm": 25,
+    "errorKm": 0.962,
+    "concentration": 0.7106,
+    "geoclipBestKm": 0.962,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ua-buhaz",
+   "label": "Buhaz",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 55.452255,
+    "lon": 37.567657,
+    "radiusKm": 1500,
+    "errorKm": 1156.347,
+    "concentration": 0.0189,
+    "geoclipBestKm": 1156.347,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ua-kyiv-pechersk-lavra",
+   "label": "Kyiv Pechersk Lavra",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "recognised",
+    "lat": 55.74507,
+    "lon": 37.601832,
+    "radiusKm": 7500,
+    "errorKm": 754.196,
+    "concentration": 0.6021,
+    "geoclipBestKm": 3.472,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "us-corona-del-mar-state-beach",
+   "label": "Corona del Mar State Beach",
+   "split": "train",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": -38.650322,
+    "lon": 143.071581,
+    "radiusKm": 1500,
+    "errorKm": 12966.612,
+    "concentration": 0.0501,
+    "geoclipBestKm": 12036.771,
+    "path": null
+   }
+  },
+  {
+   "id": "us-francis-scott-key-bridge",
+   "label": "Francis Scott Key Bridge",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 35.161106,
+    "lon": -90.052895,
+    "radiusKm": 1500,
+    "errorKm": 1278.527,
+    "concentration": 0.0391,
+    "geoclipBestKm": 1278.527,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "us-oriole-park-at-camden-yards",
+   "label": "Oriole Park at Camden Yards",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 39.283627,
+    "lon": -76.622238,
+    "radiusKm": 25,
+    "errorKm": 0.057,
+    "concentration": 0.6946,
+    "geoclipBestKm": 0.057,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "us-vessel",
+   "label": "Vessel",
+   "split": "test",
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "similar",
+    "lat": 40.757958,
+    "lon": -73.983038,
+    "radiusKm": 1500,
+    "errorKm": 1.676,
+    "concentration": 0.0333,
+    "geoclipBestKm": 11005.625,
+    "path": null
+   }
+  },
+  {
+   "id": "ve-estadio-olimpico",
+   "label": "Estadio Olímpico",
+   "split": "train",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 10.49163,
+    "lon": -66.889465,
+    "radiusKm": 1500,
+    "errorKm": 0.436,
+    "concentration": 0.064,
+    "geoclipBestKm": 0.436,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "za-nelson-mandela-square",
+   "label": "Nelson Mandela Square",
+   "split": "test",
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -26.206263,
+    "lon": 28.040237,
+    "radiusKm": 1500,
+    "errorKm": 11.086,
+    "concentration": 0.0711,
+    "geoclipBestKm": 11.086,
+    "path": "worldmodel"
+   }
+  }
+ ],
+ "calls": [
+  {
+   "id": "au-malmsbury-viaduct",
+   "label": "Malmsbury Viaduct",
+   "country": "AU",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 43.286453,
+    "lon": 3.106899,
+    "radiusKm": 3
+   },
+   "offsetKm": 16689.911,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,72, typisch 0,70 (Abstand 0,02, nötig 0,10); 35 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 35,
+    "spreadPictures": 25,
+    "best": 0.720791887726947,
+    "typical": 0.6989039499788277,
+    "spread": 0.01929849469910183,
+    "gap": 0.021887937748119368,
+    "z": 1.1341784988617818,
+    "agreement": 0
+   },
+   "listed": 91,
+   "sampled": 40,
+   "compared": 35,
+   "timing": {
+    "totalMs": 9789.839843,
+    "searchMs": 2089.820441,
+    "picturesMs": 7684.528125999999,
+    "embedMs": 2423.969848000006,
+    "requests": 101,
+    "downloaded": 35,
+    "fromCache": 0,
+    "failed": 27,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 403,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "6a5b9568-2835-4b4b-a9b2-2b70c6c06a45",
+     "lat": 43.305425,
+     "lon": 3.106244,
+     "similarity": 0.7208,
+     "pass": 1,
+     "truthKm": 16690.022,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6a5b9568-2835-4b4b-a9b2-2b70c6c06a45&map=18/43.305425/3.106244",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "1201cf75-a9e6-4f92-9de6-9fd5d3e2bde8",
+     "lat": 43.310786,
+     "lon": 3.116878,
+     "similarity": 0.7203,
+     "pass": 2,
+     "truthKm": 16689.178,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=1201cf75-a9e6-4f92-9de6-9fd5d3e2bde8&map=18/43.310786/3.116878",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "ee45e0b8-c3bf-4438-bd0d-bf74016b925c",
+     "lat": 43.308872,
+     "lon": 3.122983,
+     "similarity": 0.7197,
+     "pass": 1,
+     "truthKm": 16688.678,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=ee45e0b8-c3bf-4438-bd0d-bf74016b925c&map=18/43.308872/3.122983",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 16690.022,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 16690.022,
+   "pointRadiusKm": 1,
+   "nearestKm": 16688.372,
+   "nearestRank": 18,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 43.286453,
+    "lon": 3.106899,
+    "radiusKm": 1500,
+    "errorKm": 16689.911,
+    "concentration": 0.014,
+    "geoclipBestKm": 16689.911,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "bj-dantokpa-market",
+   "label": "Dantokpa Market",
+   "country": "BJ",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 4.050987,
+    "lon": 9.710197,
+    "radiusKm": 3
+   },
+   "offsetKm": 845.984,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 1099.832365000002,
+    "searchMs": 1099.407894,
+    "picturesMs": 0.011168000000907341,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 4.050987,
+    "lon": 9.710197,
+    "radiusKm": 1500,
+    "errorKm": 845.984,
+    "concentration": 0.025,
+    "geoclipBestKm": 845.984,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "br-praia-do-grumari",
+   "label": "Praia do Grumari",
+   "country": "BR",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": -23.040304,
+    "lon": -43.504303,
+    "radiusKm": 3
+   },
+   "offsetKm": 2.384,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,74, typisch 0,65 (Abstand 0,08, nötig 0,10); 22 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 22,
+    "spreadPictures": 22,
+    "best": 0.7377214592831085,
+    "typical": 0.6536824309684613,
+    "spread": 0.051143281879878925,
+    "gap": 0.08403902831464716,
+    "z": 1.643207577332073,
+    "agreement": 1
+   },
+   "listed": 22,
+   "sampled": 22,
+   "compared": 22,
+   "timing": {
+    "totalMs": 3772.200284999999,
+    "searchMs": 1157.9967849999994,
+    "picturesMs": 2612.040421999998,
+    "embedMs": 1235.5652289999962,
+    "requests": 52,
+    "downloaded": 22,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 30,
+     "errors": 0,
+     "listed": 70,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "b7c4dc92-7cf3-47af-94e3-c8a669f5647c",
+     "lat": -23.033062,
+     "lon": -43.485723,
+     "similarity": 0.7377,
+     "pass": 1,
+     "truthKm": 4.446,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=b7c4dc92-7cf3-47af-94e3-c8a669f5647c&map=18/-23.033062/-43.485723",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "e8106fbe-9f81-4126-b951-61fe9b3394ab",
+     "lat": -23.033009,
+     "lon": -43.48574,
+     "similarity": 0.7119,
+     "pass": 1,
+     "truthKm": 4.446,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=e8106fbe-9f81-4126-b951-61fe9b3394ab&map=18/-23.033009/-43.485740",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "fd19f60d-70a4-4472-8d5d-fb99b485cb1a",
+     "lat": -23.033283,
+     "lon": -43.485907,
+     "similarity": 0.7115,
+     "pass": 1,
+     "truthKm": 4.419,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=fd19f60d-70a4-4472-8d5d-fb99b485cb1a&map=18/-23.033283/-43.485907",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 4.446,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 4.444,
+   "pointRadiusKm": 1,
+   "nearestKm": 4.419,
+   "nearestRank": 3,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -23.040304,
+    "lon": -43.504303,
+    "radiusKm": 1500,
+    "errorKm": 2.384,
+    "concentration": 0.0267,
+    "geoclipBestKm": 2.384,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ca-clarence-st-bridge",
+   "label": "Clarence St. Bridge",
+   "country": "CA",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 42.99942,
+    "lon": -82.424431,
+    "radiusKm": 3
+   },
+   "offsetKm": 258.798,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,65, typisch 0,55 (Abstand 0,10, nötig 0,10); 9 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 9,
+    "spreadPictures": 9,
+    "best": 0.6467440540519825,
+    "typical": 0.5511442852282027,
+    "spread": 0.03376470710910446,
+    "gap": 0.09559976882377985,
+    "z": 2.8313519354652397,
+    "agreement": 0
+   },
+   "listed": 9,
+   "sampled": 9,
+   "compared": 9,
+   "timing": {
+    "totalMs": 2677.05803,
+    "searchMs": 1153.6115220000065,
+    "picturesMs": 1522.2828939999963,
+    "embedMs": 588.1167310000019,
+    "requests": 48,
+    "downloaded": 9,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 31,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "dca864bf-0344-4db6-8b90-f4a2351a3fcd",
+     "lat": 42.974419,
+     "lon": -82.418803,
+     "similarity": 0.6467,
+     "pass": 1,
+     "truthKm": 258.272,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=dca864bf-0344-4db6-8b90-f4a2351a3fcd&map=18/42.974419/-82.418803",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "20f8ff60-0798-40e1-b7db-78e6928da25c",
+     "lat": 43.020171,
+     "lon": -82.429915,
+     "similarity": 0.6023,
+     "pass": 1,
+     "truthKm": 259.322,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=20f8ff60-0798-40e1-b7db-78e6928da25c&map=18/43.020171/-82.429915",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "f588b95d-1f4a-41f2-a6e4-902b3fb0f1b6",
+     "lat": 43.007322,
+     "lon": -82.42419,
+     "similarity": 0.5757,
+     "pass": 1,
+     "truthKm": 258.805,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=f588b95d-1f4a-41f2-a6e4-902b3fb0f1b6&map=18/43.007322/-82.424190",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 258.272,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 258.272,
+   "pointRadiusKm": 1,
+   "nearestKm": 258.272,
+   "nearestRank": 1,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 42.99942,
+    "lon": -82.424431,
+    "radiusKm": 25,
+    "errorKm": 258.798,
+    "concentration": 0.2262,
+    "geoclipBestKm": 258.798,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ch-schloss-der-grafen-von-greyerz",
+   "label": "Schloss der Grafen von Greyerz",
+   "country": "CH",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 45.514404,
+    "lon": 25.369663,
+    "radiusKm": 3
+   },
+   "offsetKm": 1412.984,
+   "reasonCode": "too-few",
+   "reason": "Nur 2 Straßenbilder auswertbar (2 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 2,
+    "spreadPictures": 2,
+    "best": 0.5363790576378453,
+    "typical": 0.5011773112001174,
+    "spread": 0.005,
+    "gap": 0.03520174643772789,
+    "z": 7.0403492875455775,
+    "agreement": 1
+   },
+   "listed": 2,
+   "sampled": 2,
+   "compared": 2,
+   "timing": {
+    "totalMs": 1276.640578999999,
+    "searchMs": 741.4995170000038,
+    "picturesMs": 534.485861000001,
+    "embedMs": 113.34063200000674,
+    "requests": 27,
+    "downloaded": 2,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 2,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "61e6ea5b-c5af-487f-bb12-9a7c2c9cf567",
+     "lat": 45.516572,
+     "lon": 25.367636,
+     "similarity": 0.5364,
+     "pass": 1,
+     "truthKm": 1412.782,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=61e6ea5b-c5af-487f-bb12-9a7c2c9cf567&map=18/45.516572/25.367636",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "020cd2c5-0559-443f-b840-d98a20c4208f",
+     "lat": 45.516634,
+     "lon": 25.367623,
+     "similarity": 0.5012,
+     "pass": 1,
+     "truthKm": 1412.779,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=020cd2c5-0559-443f-b840-d98a20c4208f&map=18/45.516634/25.367623",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1412.782,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1412.782,
+   "pointRadiusKm": 1,
+   "nearestKm": 1412.779,
+   "nearestRank": 2,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 45.514404,
+    "lon": 25.369663,
+    "radiusKm": 1500,
+    "errorKm": 1412.984,
+    "concentration": 0.0928,
+    "geoclipBestKm": 1412.984,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "cl-palacio-de-la-moneda",
+   "label": "Palacio de La Moneda",
+   "country": "CL",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": -33.442902,
+    "lon": -70.653076,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.075,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,63, typisch 0,55 (Abstand 0,09, nötig 0,10); 60 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 60,
+    "spreadPictures": 40,
+    "best": 0.6322407091884126,
+    "typical": 0.5460827592131795,
+    "spread": 0.03302907602098454,
+    "gap": 0.08615794997523307,
+    "z": 2.6085485988313413,
+    "agreement": 1
+   },
+   "listed": 242,
+   "sampled": 40,
+   "compared": 60,
+   "timing": {
+    "totalMs": 6224.349292999999,
+    "searchMs": 1509.7117649999927,
+    "picturesMs": 4704.49280700001,
+    "embedMs": 1913.2427909999897,
+    "requests": 68,
+    "downloaded": 29,
+    "fromCache": 31,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 455,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "8a5354a6-06ca-420f-aab8-1e6fb624c231",
+     "lat": -33.440249,
+     "lon": -70.66736,
+     "similarity": 0.6322,
+     "pass": 2,
+     "truthKm": 1.289,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=8a5354a6-06ca-420f-aab8-1e6fb624c231&map=18/-33.440249/-70.667360",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "5bc1203e-bdeb-45b4-b1f6-fa1fae0108ff",
+     "lat": -33.439181,
+     "lon": -70.668274,
+     "similarity": 0.6168,
+     "pass": 2,
+     "truthKm": 1.403,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=5bc1203e-bdeb-45b4-b1f6-fa1fae0108ff&map=18/-33.439181/-70.668274",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "6b3bf952-f26a-48b1-bd8d-29de1b093a75",
+     "lat": -33.442688,
+     "lon": -70.668766,
+     "similarity": 0.6119,
+     "pass": 2,
+     "truthKm": 1.383,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6b3bf952-f26a-48b1-bd8d-29de1b093a75&map=18/-33.442688/-70.668766",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.289,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 1.318,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.258,
+   "nearestRank": 5,
+   "within1km": 15,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -33.442902,
+    "lon": -70.653076,
+    "radiusKm": 25,
+    "errorKm": 0.075,
+    "concentration": 0.2064,
+    "geoclipBestKm": 0.075,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "cz-kolin-train-station",
+   "label": "Kolín train station",
+   "country": "CZ",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 49.895615,
+    "lon": 16.433561,
+    "radiusKm": 3
+   },
+   "offsetKm": 88.445,
+   "reasonCode": "too-few",
+   "reason": "Nur 6 Straßenbilder auswertbar (6 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 6,
+    "spreadPictures": 6,
+    "best": 0.6671348153669429,
+    "typical": 0.6291483521794202,
+    "spread": 0.01524602299332509,
+    "gap": 0.037986463187522634,
+    "z": 2.4915653875212973,
+    "agreement": 1
+   },
+   "listed": 6,
+   "sampled": 6,
+   "compared": 6,
+   "timing": {
+    "totalMs": 2096.3532380000033,
+    "searchMs": 828.413830999998,
+    "picturesMs": 1267.1539009999979,
+    "embedMs": 333.21001400000387,
+    "requests": 31,
+    "downloaded": 6,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 6,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "7e9f31e1-6be4-4a8d-bd5a-11dc7420eb3c",
+     "lat": 49.898155,
+     "lon": 16.445849,
+     "similarity": 0.6671,
+     "pass": 1,
+     "truthKm": 89.265,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=7e9f31e1-6be4-4a8d-bd5a-11dc7420eb3c&map=18/49.898155/16.445849",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "7e62b634-aeb3-477b-b8b9-b21b7cf3ecb1",
+     "lat": 49.897716,
+     "lon": 16.446846,
+     "similarity": 0.6537,
+     "pass": 1,
+     "truthKm": 89.343,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=7e62b634-aeb3-477b-b8b9-b21b7cf3ecb1&map=18/49.897716/16.446846",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "13368d83-2fc2-4aab-a31d-95ab997f1879",
+     "lat": 49.898224,
+     "lon": 16.445676,
+     "similarity": 0.6311,
+     "pass": 1,
+     "truthKm": 89.251,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=13368d83-2fc2-4aab-a31d-95ab997f1879&map=18/49.898224/16.445676",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 89.265,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 89.281,
+   "pointRadiusKm": 1,
+   "nearestKm": 89.249,
+   "nearestRank": 6,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 49.895615,
+    "lon": 16.433561,
+    "radiusKm": 1500,
+    "errorKm": 88.445,
+    "concentration": 0.0199,
+    "geoclipBestKm": 88.445,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-bahnhof-berlin-lichterfelde",
+   "label": "Bahnhof Berlin-Lichterfelde Ost",
+   "country": "DE",
+   "split": "test",
+   "kind": "landmark",
+   "variant": 0,
+   "candidate": {
+    "lat": 52.3715,
+    "lon": 13.6152,
+    "radiusKm": 3
+   },
+   "offsetKm": 20.484,
+   "reasonCode": "matched",
+   "reason": "Straßenbild passt: 0,85 gegen typisch 0,69 (Abstand 0,16, 4,7 Streuungen); 36 Bilder von Panoramax verglichen.",
+   "matched": true,
+   "stats": {
+    "pictures": 36,
+    "spreadPictures": 26,
+    "best": 0.8549162880331526,
+    "typical": 0.6918007075659923,
+    "spread": 0.03463380877978496,
+    "gap": 0.16311558046716024,
+    "z": 4.709721113964441,
+    "agreement": 1
+   },
+   "listed": 26,
+   "sampled": 26,
+   "compared": 36,
+   "timing": {
+    "totalMs": 5497.920430999999,
+    "searchMs": 1261.1211289999992,
+    "picturesMs": 4232.339282000001,
+    "embedMs": 2311.5720360000123,
+    "requests": 71,
+    "downloaded": 36,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 35,
+     "errors": 0,
+     "listed": 145,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "611e942d-540d-42d2-9fb0-ef4a09ee5c8c",
+     "lat": 52.371841,
+     "lon": 13.614976,
+     "similarity": 0.8549,
+     "pass": 1,
+     "truthKm": 20.458,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=611e942d-540d-42d2-9fb0-ef4a09ee5c8c&map=18/52.371841/13.614976",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "6dcc7493-847a-48de-8be9-a3ccd19cd675",
+     "lat": 52.371899,
+     "lon": 13.61498,
+     "similarity": 0.8493,
+     "pass": 2,
+     "truthKm": 20.456,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6dcc7493-847a-48de-8be9-a3ccd19cd675&map=18/52.371899/13.614980",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "636fb554-86b7-4626-bdec-1d4f6ff16116",
+     "lat": 52.371761,
+     "lon": 13.614981,
+     "similarity": 0.801,
+     "pass": 1,
+     "truthKm": 20.461,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=636fb554-86b7-4626-bdec-1d4f6ff16116&map=18/52.371761/13.614981",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 20.458,
+   "refinedKm": 20.457,
+   "refinedRadiusKm": 1,
+   "confidence": 0.726,
+   "pointKm": 20.457,
+   "pointRadiusKm": 1,
+   "nearestKm": 20.434,
+   "nearestRank": 27,
+   "within1km": 0,
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "recognised",
+    "lat": 52.3715,
+    "lon": 13.6152,
+    "radiusKm": 7500,
+    "errorKm": 20.484,
+    "concentration": 0.133,
+    "geoclipBestKm": 13.195,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "de-berliner-fernsehturm",
+   "label": "Berliner Fernsehturm",
+   "country": "DE",
+   "split": "train",
+   "kind": "landmark",
+   "variant": 0,
+   "candidate": {
+    "lat": 52.518559,
+    "lon": 13.392038,
+    "radiusKm": 3
+   },
+   "offsetKm": 1.205,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,77, typisch 0,58 (Abstand 0,19, nötig 0,10); 58 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 58,
+    "spreadPictures": 40,
+    "best": 0.7735181085677916,
+    "typical": 0.5839289820474811,
+    "spread": 0.08678546155228103,
+    "gap": 0.18958912652031046,
+    "z": 2.1845724287137513,
+    "agreement": 0.5
+   },
+   "listed": 307,
+   "sampled": 40,
+   "compared": 58,
+   "timing": {
+    "totalMs": 6050.134322000005,
+    "searchMs": 1401.0903900000048,
+    "picturesMs": 4641.127327000002,
+    "embedMs": 1689.1155059999946,
+    "requests": 65,
+    "downloaded": 26,
+    "fromCache": 32,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 492,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "f5b55149-29b4-4702-a1be-c80d80d86203",
+     "lat": 52.521111,
+     "lon": 13.410556,
+     "similarity": 0.7735,
+     "pass": 2,
+     "truthKm": 0.081,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=f5b55149-29b4-4702-a1be-c80d80d86203&map=18/52.521111/13.410556",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2f74e9af-b8f6-4517-95aa-d2ab149eb419",
+     "lat": 52.51,
+     "lon": 13.415556,
+     "similarity": 0.7032,
+     "pass": 2,
+     "truthKm": 1.274,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2f74e9af-b8f6-4517-95aa-d2ab149eb419&map=18/52.510000/13.415556",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "a669d9fb-4cf1-4286-97f0-75beb1e85902",
+     "lat": 52.521389,
+     "lon": 13.41,
+     "similarity": 0.6925,
+     "pass": 1,
+     "truthKm": 0.072,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a669d9fb-4cf1-4286-97f0-75beb1e85902&map=18/52.521389/13.410000",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.081,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 0.081,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.072,
+   "nearestRank": 3,
+   "within1km": 12,
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "strong",
+    "lat": 52.518559,
+    "lon": 13.392038,
+    "radiusKm": 3,
+    "errorKm": 1.205,
+    "concentration": 0.992,
+    "geoclipBestKm": 0.672,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "de-bhf-eschborn",
+   "label": "Bhf. Eschborn",
+   "country": "DE",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 47.913612,
+    "lon": 12.069585,
+    "radiusKm": 3
+   },
+   "offsetKm": 356.211,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 823.5965640000068,
+    "searchMs": 822.6222180000041,
+    "picturesMs": 0.006384000007528812,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 47.913612,
+    "lon": 12.069585,
+    "radiusKm": 1500,
+    "errorKm": 356.211,
+    "concentration": 0.0011,
+    "geoclipBestKm": 356.211,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-dorfkirche-rieben",
+   "label": "Dorfkirche Rieben",
+   "country": "DE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 46.977825,
+    "lon": 24.2736,
+    "radiusKm": 3
+   },
+   "offsetKm": 994.186,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 744.918485999995,
+    "searchMs": 744.0900660000043,
+    "picturesMs": 0.647305000005872,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 46.977825,
+    "lon": 24.2736,
+    "radiusKm": 1500,
+    "errorKm": 994.186,
+    "concentration": 0.0053,
+    "geoclipBestKm": 994.186,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-kyffhaeuserdenkmal",
+   "label": "Kyffhäuserdenkmal",
+   "country": "DE",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 56.558254,
+    "lon": -2.855939,
+    "radiusKm": 3
+   },
+   "offsetKm": 1074.534,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 1031.821115999992,
+    "searchMs": 1031.5938380000007,
+    "picturesMs": 0.03804899999522604,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 56.558254,
+    "lon": -2.855939,
+    "radiusKm": 1500,
+    "errorKm": 1074.534,
+    "concentration": 0.0211,
+    "geoclipBestKm": 1074.534,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-molenfeuer-warnemuende",
+   "label": "Molenfeuer Warnemünde",
+   "country": "DE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 39.488144,
+    "lon": 13.532409,
+    "radiusKm": 3
+   },
+   "offsetKm": 1638.034,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 725.8623570000054,
+    "searchMs": 725.6727130000072,
+    "picturesMs": 0.005894000001717359,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 39.488144,
+    "lon": 13.532409,
+    "radiusKm": 1500,
+    "errorKm": 1638.034,
+    "concentration": 0.0044,
+    "geoclipBestKm": 1638.034,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-palmengartenwehr",
+   "label": "Palmengartenwehr",
+   "country": "DE",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 55.734867,
+    "lon": 9.126291,
+    "radiusKm": 3
+   },
+   "offsetKm": 533.438,
+   "reasonCode": "too-few",
+   "reason": "Nur 3 Straßenbilder auswertbar (9 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 3,
+    "spreadPictures": 3,
+    "best": 0.6110992128507627,
+    "typical": 0.5459066891030102,
+    "spread": 0.04009418650016618,
+    "gap": 0.06519252374775253,
+    "z": 1.625984449079228,
+    "agreement": 0
+   },
+   "listed": 9,
+   "sampled": 9,
+   "compared": 3,
+   "timing": {
+    "totalMs": 2058.694531000001,
+    "searchMs": 777.2803299999941,
+    "picturesMs": 1280.8057630000112,
+    "embedMs": 339.25559200000134,
+    "requests": 34,
+    "downloaded": 3,
+    "fromCache": 0,
+    "failed": 6,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 9,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "a4ad81e1-8b0f-4e05-9617-92bf206a7ccc",
+     "lat": 55.732389,
+     "lon": 9.134622,
+     "similarity": 0.6111,
+     "pass": 1,
+     "truthKm": 532.969,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a4ad81e1-8b0f-4e05-9617-92bf206a7ccc&map=18/55.732389/9.134622",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "26805701-23b8-456a-9656-692d62e00b17",
+     "lat": 55.736006,
+     "lon": 9.126414,
+     "similarity": 0.5729,
+     "pass": 1,
+     "truthKm": 533.55,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=26805701-23b8-456a-9656-692d62e00b17&map=18/55.736006/9.126414",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "4c815774-99e4-4773-94d4-6ca3856d3840",
+     "lat": 55.724153,
+     "lon": 9.105042,
+     "similarity": 0.5189,
+     "pass": 1,
+     "truthKm": 532.919,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=4c815774-99e4-4773-94d4-6ca3856d3840&map=18/55.724153/9.105042",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 532.969,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 532.969,
+   "pointRadiusKm": 1,
+   "nearestKm": 532.919,
+   "nearestRank": 3,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 55.734867,
+    "lon": 9.126291,
+    "radiusKm": 1500,
+    "errorKm": 533.438,
+    "concentration": 0.0022,
+    "geoclipBestKm": 533.438,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-spitterfall",
+   "label": "Spitterfall",
+   "country": "DE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 36.560253,
+    "lon": 139.176208,
+    "radiusKm": 3
+   },
+   "offsetKm": 9083.704,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 940.0266210000118,
+    "searchMs": 939.8309759999975,
+    "picturesMs": 0.0054459999955724925,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 36.560253,
+    "lon": 139.176208,
+    "radiusKm": 1500,
+    "errorKm": 9083.704,
+    "concentration": 0.0004,
+    "geoclipBestKm": 9083.704,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "de-zoobruecke",
+   "label": "Zoobrücke",
+   "country": "DE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 50.717735,
+    "lon": 7.167377,
+    "radiusKm": 3
+   },
+   "offsetKm": 29.584,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,80, typisch 0,74 (Abstand 0,06, nötig 0,10); 64 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 64,
+    "spreadPictures": 40,
+    "best": 0.8008615146410586,
+    "typical": 0.737891927289601,
+    "spread": 0.02831791861817607,
+    "gap": 0.06296958735145763,
+    "z": 2.2236658068167525,
+    "agreement": 1
+   },
+   "listed": 249,
+   "sampled": 40,
+   "compared": 64,
+   "timing": {
+    "totalMs": 7247.6312069999985,
+    "searchMs": 1218.0741290000005,
+    "picturesMs": 6013.788042999993,
+    "embedMs": 3797.531572000007,
+    "requests": 104,
+    "downloaded": 64,
+    "fromCache": 0,
+    "failed": 1,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 532,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "da9a71dc-c737-43bb-9567-8228dc618fd7",
+     "lat": 50.713798,
+     "lon": 7.140927,
+     "similarity": 0.8009,
+     "pass": 1,
+     "truthKm": 29.186,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=da9a71dc-c737-43bb-9567-8228dc618fd7&map=18/50.713798/7.140927",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "25604d8e-6dcd-4937-92e5-71d2bc099381",
+     "lat": 50.711587,
+     "lon": 7.139263,
+     "similarity": 0.7997,
+     "pass": 2,
+     "truthKm": 29.366,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=25604d8e-6dcd-4937-92e5-71d2bc099381&map=18/50.711587/7.139263",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "1d1913a1-fd8b-482e-bac1-ebd7beb8dff4",
+     "lat": 50.709919,
+     "lon": 7.137711,
+     "similarity": 0.7954,
+     "pass": 2,
+     "truthKm": 29.495,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=1d1913a1-fd8b-482e-bac1-ebd7beb8dff4&map=18/50.709919/7.137711",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 29.186,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 29.228,
+   "pointRadiusKm": 1,
+   "nearestKm": 26.927,
+   "nearestRank": 29,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 50.717735,
+    "lon": 7.167377,
+    "radiusKm": 1500,
+    "errorKm": 29.584,
+    "concentration": 0.0608,
+    "geoclipBestKm": 29.584,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ee-tartu-railway-station",
+   "label": "Tartu railway station",
+   "country": "EE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": -34.166222,
+    "lon": -70.745773,
+    "radiusKm": 3
+   },
+   "offsetKm": 13600.028,
+   "reasonCode": "too-few",
+   "reason": "Nur 7 Straßenbilder auswertbar (7 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 7,
+    "spreadPictures": 7,
+    "best": 0.6443479917257877,
+    "typical": 0.5397120007451197,
+    "spread": 0.022004142956778956,
+    "gap": 0.104635990980668,
+    "z": 4.755285910757643,
+    "agreement": 0.5
+   },
+   "listed": 7,
+   "sampled": 7,
+   "compared": 7,
+   "timing": {
+    "totalMs": 2327.415460999997,
+    "searchMs": 831.9673030000122,
+    "picturesMs": 1494.5385220000026,
+    "embedMs": 368.00893599999836,
+    "requests": 32,
+    "downloaded": 7,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 7,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "f3554833-6ae3-4ed0-ad3e-9e6d101c2953",
+     "lat": -34.164425,
+     "lon": -70.749454,
+     "similarity": 0.6443,
+     "pass": 1,
+     "truthKm": 13600.079,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=f3554833-6ae3-4ed0-ad3e-9e6d101c2953&map=18/-34.164425/-70.749454",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "acd9db36-598d-4b65-8ac8-62c77fb3673a",
+     "lat": -34.169176,
+     "lon": -70.7602,
+     "similarity": 0.5676,
+     "pass": 1,
+     "truthKm": 13601.104,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=acd9db36-598d-4b65-8ac8-62c77fb3673a&map=18/-34.169176/-70.760200",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "131b3aa7-a10a-4a89-bad3-fa634535151e",
+     "lat": -34.164563,
+     "lon": -70.749474,
+     "similarity": 0.5569,
+     "pass": 1,
+     "truthKm": 13600.092,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=131b3aa7-a10a-4a89-bad3-fa634535151e&map=18/-34.164563/-70.749474",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 13600.079,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 13600.079,
+   "pointRadiusKm": 1,
+   "nearestKm": 13598.265,
+   "nearestRank": 7,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -34.166222,
+    "lon": -70.745773,
+    "radiusKm": 1500,
+    "errorKm": 13600.028,
+    "concentration": 0.1031,
+    "geoclipBestKm": 13600.028,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "fr-arc-de-triomphe",
+   "label": "Arc de Triomphe",
+   "country": "FR",
+   "split": "train",
+   "kind": "landmark",
+   "variant": 0,
+   "candidate": {
+    "lat": 48.864485,
+    "lon": 2.325027,
+    "radiusKm": 3
+   },
+   "offsetKm": 2.425,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,80, typisch 0,70 (Abstand 0,10, nötig 0,10); 64 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 64,
+    "spreadPictures": 39,
+    "best": 0.7990447437941952,
+    "typical": 0.7005399766241358,
+    "spread": 0.04537743132691532,
+    "gap": 0.0985047671700594,
+    "z": 2.170787642438279,
+    "agreement": 0.5
+   },
+   "listed": 525,
+   "sampled": 40,
+   "compared": 64,
+   "timing": {
+    "totalMs": 14130.494451000006,
+    "searchMs": 2023.398675999997,
+    "picturesMs": 12090.019593000005,
+    "embedMs": 4761.249804000021,
+    "requests": 104,
+    "downloaded": 64,
+    "fromCache": 0,
+    "failed": 1,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 975,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "1bc142b8-83d9-479e-82f1-20879adf8425",
+     "lat": 48.875359,
+     "lon": 2.357711,
+     "similarity": 0.799,
+     "pass": 2,
+     "truthKm": 4.587,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=1bc142b8-83d9-479e-82f1-20879adf8425&map=18/48.875359/2.357711",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "04158c9f-2213-4024-aefe-d3694ae63204",
+     "lat": 48.87515,
+     "lon": 2.341295,
+     "similarity": 0.785,
+     "pass": 1,
+     "truthKm": 3.386,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=04158c9f-2213-4024-aefe-d3694ae63204&map=18/48.875150/2.341295",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2940022a-b66b-495b-b592-ceae02915b66",
+     "lat": 48.875437,
+     "lon": 2.357769,
+     "similarity": 0.7778,
+     "pass": 1,
+     "truthKm": 4.591,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2940022a-b66b-495b-b592-ceae02915b66&map=18/48.875437/2.357769",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 4.587,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 4.587,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.259,
+   "nearestRank": 33,
+   "within1km": 4,
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "strong",
+    "lat": 48.864485,
+    "lon": 2.325027,
+    "radiusKm": 3,
+    "errorKm": 2.425,
+    "concentration": 0.9944,
+    "geoclipBestKm": 0.056,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "fr-new-gatteville-lighthouse",
+   "label": "new Gatteville Lighthouse",
+   "country": "FR",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 43.386181,
+    "lon": -8.406139,
+    "radiusKm": 3
+   },
+   "offsetKm": 888.291,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 938.1876939999929,
+    "searchMs": 937.8294229999883,
+    "picturesMs": 0.0059390000242274255,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 43.386181,
+    "lon": -8.406139,
+    "radiusKm": 25,
+    "errorKm": 888.291,
+    "concentration": 0.3199,
+    "geoclipBestKm": 888.291,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "gb-grytviken",
+   "label": "Grytviken",
+   "country": "GB",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 65.412506,
+    "lon": -13.953495,
+    "radiusKm": 3
+   },
+   "offsetKm": 13446.494,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 718.5754559999914,
+    "searchMs": 718.4377489999752,
+    "picturesMs": 0.006465999991632998,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 65.412506,
+    "lon": -13.953495,
+    "radiusKm": 1500,
+    "errorKm": 13446.494,
+    "concentration": 0.0896,
+    "geoclipBestKm": 13446.494,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "id-lovina-beach",
+   "label": "Lovina Beach",
+   "country": "ID",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": -8.19313,
+    "lon": 114.841476,
+    "radiusKm": 3
+   },
+   "offsetKm": 20.556,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 921.9017730000196,
+    "searchMs": 921.6976250000007,
+    "picturesMs": 0.00995199999306351,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -8.19313,
+    "lon": 114.841476,
+    "radiusKm": 1500,
+    "errorKm": 20.556,
+    "concentration": 0.0664,
+    "geoclipBestKm": 20.556,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ie-church-of-st-anne",
+   "label": "Church of St Anne",
+   "country": "IE",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.849194,
+    "lon": -8.300514,
+    "radiusKm": 3
+   },
+   "offsetKm": 13.474,
+   "reasonCode": "too-few",
+   "reason": "Nur 2 Straßenbilder auswertbar (6 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 2,
+    "spreadPictures": 2,
+    "best": 0.661935728084608,
+    "typical": 0.5330750815527825,
+    "spread": 0.005,
+    "gap": 0.1288606465318255,
+    "z": 25.7721293063651,
+    "agreement": 1
+   },
+   "listed": 6,
+   "sampled": 6,
+   "compared": 2,
+   "timing": {
+    "totalMs": 1579.354741999996,
+    "searchMs": 825.3483830000041,
+    "picturesMs": 753.4863199999963,
+    "embedMs": 173.89483699999982,
+    "requests": 31,
+    "downloaded": 2,
+    "fromCache": 0,
+    "failed": 4,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 6,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "d1a95e24-aa8d-42cd-b99e-b851ce0b2699",
+     "lat": 51.851978,
+     "lon": -8.277711,
+     "similarity": 0.6619,
+     "pass": 1,
+     "truthKm": 14.768,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=d1a95e24-aa8d-42cd-b99e-b851ce0b2699&map=18/51.851978/-8.277711",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "57e78d2c-0761-4f89-8a33-3becde0f4f36",
+     "lat": 51.851978,
+     "lon": -8.277739,
+     "similarity": 0.5331,
+     "pass": 1,
+     "truthKm": 14.766,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=57e78d2c-0761-4f89-8a33-3becde0f4f36&map=18/51.851978/-8.277739",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 14.768,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 14.768,
+   "pointRadiusKm": 1,
+   "nearestKm": 14.766,
+   "nearestRank": 2,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 51.849194,
+    "lon": -8.300514,
+    "radiusKm": 25,
+    "errorKm": 13.474,
+    "concentration": 0.5315,
+    "geoclipBestKm": 13.474,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ie-the-elysian",
+   "label": "The Elysian",
+   "country": "IE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.898422,
+    "lon": -8.468742,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.415,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,77, typisch 0,70 (Abstand 0,07, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7702207334499546,
+    "typical": 0.6954909610531395,
+    "spread": 0.019787598612889493,
+    "gap": 0.07472977239681511,
+    "z": 3.776596334844628,
+    "agreement": 1
+   },
+   "listed": 254,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 6892.258690999995,
+    "searchMs": 1491.6441350000096,
+    "picturesMs": 5395.170081999997,
+    "embedMs": 3149.8919450000103,
+    "requests": 90,
+    "downloaded": 51,
+    "fromCache": 14,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 543,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "78ec30cb-341a-437f-89eb-d59c5c2a5d8a",
+     "lat": 51.91439,
+     "lon": -8.47352,
+     "similarity": 0.7702,
+     "pass": 2,
+     "truthKm": 2.087,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=78ec30cb-341a-437f-89eb-d59c5c2a5d8a&map=18/51.914390/-8.473520",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2185302b-3594-42e6-babd-c81c04713325",
+     "lat": 51.914133,
+     "lon": -8.47352,
+     "similarity": 0.7627,
+     "pass": 2,
+     "truthKm": 2.06,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2185302b-3594-42e6-babd-c81c04713325&map=18/51.914133/-8.473520",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "ceb83c45-abee-47bc-b54c-fb29a6eb39c1",
+     "lat": 51.913871,
+     "lon": -8.473473,
+     "similarity": 0.7501,
+     "pass": 2,
+     "truthKm": 2.031,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=ceb83c45-abee-47bc-b54c-fb29a6eb39c1&map=18/51.913871/-8.473473",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.087,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.074,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.413,
+   "nearestRank": 10,
+   "within1km": 10,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 51.898422,
+    "lon": -8.468742,
+    "radiusKm": 25,
+    "errorKm": 0.415,
+    "concentration": 0.2233,
+    "geoclipBestKm": 0.415,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "it-alghero-railway-station",
+   "label": "Alghero railway station",
+   "country": "IT",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 43.81926,
+    "lon": 13.791496,
+    "radiusKm": 3
+   },
+   "offsetKm": 576.95,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 828.192286000005,
+    "searchMs": 827.8191790000128,
+    "picturesMs": 0.006350000010570511,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 43.81926,
+    "lon": 13.791496,
+    "radiusKm": 1500,
+    "errorKm": 576.95,
+    "concentration": 0,
+    "geoclipBestKm": 576.95,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "jp-tokyo-station",
+   "label": "Tokyo Station",
+   "country": "JP",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 33.086224,
+    "lon": 129.787277,
+    "radiusKm": 3
+   },
+   "offsetKm": 959.638,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 732.0885569999809,
+    "searchMs": 731.9097360000014,
+    "picturesMs": 0.006420999998226762,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 33.086224,
+    "lon": 129.787277,
+    "radiusKm": 1500,
+    "errorKm": 959.638,
+    "concentration": 0.035,
+    "geoclipBestKm": 959.638,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "mn-ulaanbaatar-railway-station",
+   "label": "Ulaanbaatar railway station",
+   "country": "MN",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 51.816742,
+    "lon": 107.597977,
+    "radiusKm": 3
+   },
+   "offsetKm": 437.596,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 734.2988119999936,
+    "searchMs": 734.1387600000016,
+    "picturesMs": 0.009166000003460795,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 51.816742,
+    "lon": 107.597977,
+    "radiusKm": 1500,
+    "errorKm": 437.596,
+    "concentration": 0.0643,
+    "geoclipBestKm": 437.596,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "mx-chapultepec-castle",
+   "label": "Chapultepec Castle",
+   "country": "MX",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 19.421713,
+    "lon": -99.18438,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.312,
+   "reasonCode": "too-few",
+   "reason": "Nur 5 Straßenbilder auswertbar (5 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 5,
+    "spreadPictures": 5,
+    "best": 0.6198064161753026,
+    "typical": 0.582971480927254,
+    "spread": 0.03304251845957859,
+    "gap": 0.036834935248048595,
+    "z": 1.1147738418640614,
+    "agreement": 0
+   },
+   "listed": 5,
+   "sampled": 5,
+   "compared": 5,
+   "timing": {
+    "totalMs": 732.0065569999861,
+    "searchMs": 729.6087709999993,
+    "picturesMs": 1.7861490000213962,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 5,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 5,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "d580ca8d-2c0e-46b1-a869-123884850728",
+     "lat": 19.428849,
+     "lon": -99.16373,
+     "similarity": 0.6198,
+     "pass": 1,
+     "truthKm": 2.095,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=d580ca8d-2c0e-46b1-a869-123884850728&map=18/19.428849/-99.163730",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "eadc1705-55dd-42cc-9999-939c3585d641",
+     "lat": 19.41716,
+     "lon": -99.176603,
+     "similarity": 0.6076,
+     "pass": 1,
+     "truthKm": 0.652,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=eadc1705-55dd-42cc-9999-939c3585d641&map=18/19.417160/-99.176603",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "14289a35-c537-4da0-b8c6-3046dee8e27a",
+     "lat": 19.425516,
+     "lon": -99.171549,
+     "similarity": 0.6029,
+     "pass": 1,
+     "truthKm": 1.196,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=14289a35-c537-4da0-b8c6-3046dee8e27a&map=18/19.425516/-99.171549",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.095,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.095,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.652,
+   "nearestRank": 2,
+   "within1km": 1,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 19.421713,
+    "lon": -99.18438,
+    "radiusKm": 25,
+    "errorKm": 0.312,
+    "concentration": 0.7171,
+    "geoclipBestKm": 0.312,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "mx-mexico-city-metropolitan",
+   "label": "Mexico City Metropolitan Cathedral",
+   "country": "MX",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 19.003418,
+    "lon": -98.093552,
+    "radiusKm": 3
+   },
+   "offsetKm": 119.192,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 1014.727831999975,
+    "searchMs": 1014.5524129999976,
+    "picturesMs": 0.00935199999366887,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 19.003418,
+    "lon": -98.093552,
+    "radiusKm": 1500,
+    "errorKm": 119.192,
+    "concentration": 0.1133,
+    "geoclipBestKm": 119.192,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "no-fj-l-y-lighthouse",
+   "label": "Fjøløy Lighthouse",
+   "country": "NO",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 59.055454,
+    "lon": 10.412592,
+    "radiusKm": 3
+   },
+   "offsetKm": 276.78,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 747.3337860000029,
+    "searchMs": 747.1659790000122,
+    "picturesMs": 0.006018999993102625,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 59.055454,
+    "lon": 10.412592,
+    "radiusKm": 1500,
+    "errorKm": 276.78,
+    "concentration": 0.0639,
+    "geoclipBestKm": 276.78,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "pe-cusco-cathedral",
+   "label": "Cusco Cathedral",
+   "country": "PE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": -13.516679,
+    "lon": -71.978775,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.084,
+   "reasonCode": "matched",
+   "reason": "Straßenbild passt: 0,74 gegen typisch 0,61 (Abstand 0,13, 4,8 Streuungen); 65 Bilder von Panoramax verglichen.",
+   "matched": true,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7391883573964134,
+    "typical": 0.6084040380829867,
+    "spread": 0.027105029562536583,
+    "gap": 0.1307843193134267,
+    "z": 4.8250941402473595,
+    "agreement": 1
+   },
+   "listed": 172,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 6425.371509999997,
+    "searchMs": 1271.1882460000052,
+    "picturesMs": 5143.62738999998,
+    "embedMs": 2903.3944719999854,
+    "requests": 83,
+    "downloaded": 44,
+    "fromCache": 21,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 404,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "68daf7bd-89a0-4350-ba0d-a0c12e7d82f2",
+     "lat": -13.520588,
+     "lon": -71.976458,
+     "similarity": 0.7392,
+     "pass": 2,
+     "truthKm": 0.509,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=68daf7bd-89a0-4350-ba0d-a0c12e7d82f2&map=18/-13.520588/-71.976458",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "c806f7e1-2275-425b-a082-8b0e87d0942d",
+     "lat": -13.51992,
+     "lon": -71.975642,
+     "similarity": 0.7353,
+     "pass": 2,
+     "truthKm": 0.482,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=c806f7e1-2275-425b-a082-8b0e87d0942d&map=18/-13.519920/-71.975642",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "e8d979e3-b105-47c9-aba7-bcfef27bd131",
+     "lat": -13.520218,
+     "lon": -71.976033,
+     "similarity": 0.7278,
+     "pass": 2,
+     "truthKm": 0.49,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=e8d979e3-b105-47c9-aba7-bcfef27bd131&map=18/-13.520218/-71.976033",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 0.509,
+   "refinedKm": 0.494,
+   "refinedRadiusKm": 1,
+   "confidence": 0.662,
+   "pointKm": 0.494,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.219,
+   "nearestRank": 8,
+   "within1km": 21,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -13.516679,
+    "lon": -71.978775,
+    "radiusKm": 25,
+    "errorKm": 0.084,
+    "concentration": 0.3254,
+    "geoclipBestKm": 0.084,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ru-crimean-bridge",
+   "label": "Crimean Bridge",
+   "country": "RU",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 44.573532,
+    "lon": 38.026772,
+    "radiusKm": 3
+   },
+   "offsetKm": 144.931,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 924.7439390000072,
+    "searchMs": 924.2666690000042,
+    "picturesMs": 0.009144000010564923,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 44.573532,
+    "lon": 38.026772,
+    "radiusKm": 1500,
+    "errorKm": 144.931,
+    "concentration": 0.0208,
+    "geoclipBestKm": 144.931,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ru-russky-bridge",
+   "label": "Russky Bridge",
+   "country": "RU",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 44.670753,
+    "lon": 37.867344,
+    "radiusKm": 3
+   },
+   "offsetKm": 7080.609,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 739.5680500000017,
+    "searchMs": 739.3820859999978,
+    "picturesMs": 0.009470999997574836,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 44.670753,
+    "lon": 37.867344,
+    "radiusKm": 1500,
+    "errorKm": 7080.609,
+    "concentration": 0.0435,
+    "geoclipBestKm": 7080.609,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "tr-1915-canakkale-bridge",
+   "label": "1915 Çanakkale Bridge",
+   "country": "TR",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 60.114166,
+    "lon": 31.083332,
+    "radiusKm": 3
+   },
+   "offsetKm": 2220.23,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,73, typisch 0,68 (Abstand 0,05, nötig 0,10); 65 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 65,
+    "spreadPictures": 40,
+    "best": 0.7297150268082269,
+    "typical": 0.6781792847591335,
+    "spread": 0.02871597917973709,
+    "gap": 0.05153574204909339,
+    "z": 1.7946712430220264,
+    "agreement": 0
+   },
+   "listed": 150,
+   "sampled": 40,
+   "compared": 65,
+   "timing": {
+    "totalMs": 10622.090442999994,
+    "searchMs": 1455.888071000023,
+    "picturesMs": 9159.830507000006,
+    "embedMs": 4647.80136100002,
+    "requests": 104,
+    "downloaded": 65,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 430,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "6b5ff446-dbc0-4ae3-81ab-8f7fad08f6d5",
+     "lat": 60.10733,
+     "lon": 31.080961,
+     "similarity": 0.7297,
+     "pass": 1,
+     "truthKm": 2219.459,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6b5ff446-dbc0-4ae3-81ab-8f7fad08f6d5&map=18/60.107330/31.080961",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "77eac8cb-971f-4edf-ba55-3482af184088",
+     "lat": 60.114318,
+     "lon": 31.083573,
+     "similarity": 0.719,
+     "pass": 1,
+     "truthKm": 2220.249,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=77eac8cb-971f-4edf-ba55-3482af184088&map=18/60.114318/31.083573",
+     "license": "etalab-2.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "ed3b132e-d567-4494-b9f3-39110967086b",
+     "lat": 60.114629,
+     "lon": 31.083496,
+     "similarity": 0.7179,
+     "pass": 2,
+     "truthKm": 2220.282,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=ed3b132e-d567-4494-b9f3-39110967086b&map=18/60.114629/31.083496",
+     "license": "etalab-2.0"
+    }
+   ],
+   "bestKm": 2219.459,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2219.464,
+   "pointRadiusKm": 1,
+   "nearestKm": 2217.295,
+   "nearestRank": 27,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 60.114166,
+    "lon": 31.083332,
+    "radiusKm": 1500,
+    "errorKm": 2220.23,
+    "concentration": 0.0352,
+    "geoclipBestKm": 2220.23,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "tr-istiklal-avenue",
+   "label": "İstiklal Avenue",
+   "country": "TR",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 41.040852,
+    "lon": 28.986179,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.962,
+   "reasonCode": "matched",
+   "reason": "Straßenbild passt: 0,78 gegen typisch 0,62 (Abstand 0,16, 4,3 Streuungen); 56 Bilder von Panoramax verglichen.",
+   "matched": true,
+   "stats": {
+    "pictures": 56,
+    "spreadPictures": 40,
+    "best": 0.7829381729551057,
+    "typical": 0.6182091218309966,
+    "spread": 0.038300646807686974,
+    "gap": 0.16472905112410907,
+    "z": 4.300946977507643,
+    "agreement": 0.5
+   },
+   "listed": 309,
+   "sampled": 40,
+   "compared": 56,
+   "timing": {
+    "totalMs": 7961.850563999993,
+    "searchMs": 1685.3314399999508,
+    "picturesMs": 6269.461336000008,
+    "embedMs": 2458.1209250000247,
+    "requests": 73,
+    "downloaded": 34,
+    "fromCache": 22,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 629,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "3a4c23fd-349f-45d5-8cef-8edc1ebeb3a3",
+     "lat": 41.017413,
+     "lon": 28.973952,
+     "similarity": 0.7829,
+     "pass": 2,
+     "truthKm": 1.908,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=3a4c23fd-349f-45d5-8cef-8edc1ebeb3a3&map=18/41.017413/28.973952",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "2bd61458-316e-4c4a-b4b3-74e02064b024",
+     "lat": 41.017379,
+     "lon": 28.973796,
+     "similarity": 0.7613,
+     "pass": 2,
+     "truthKm": 1.915,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=2bd61458-316e-4c4a-b4b3-74e02064b024&map=18/41.017379/28.973796",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "5c0d8c3d-27a2-42ff-8360-e1ac6c8e43c9",
+     "lat": 41.052277,
+     "lon": 28.985111,
+     "similarity": 0.7516,
+     "pass": 2,
+     "truthKm": 2.08,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=5c0d8c3d-27a2-42ff-8360-e1ac6c8e43c9&map=18/41.052277/28.985111",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 1.908,
+   "refinedKm": 1.909,
+   "refinedRadiusKm": 1,
+   "confidence": 0.729,
+   "pointKm": 1.909,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.388,
+   "nearestRank": 27,
+   "within1km": 2,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 41.040852,
+    "lon": 28.986179,
+    "radiusKm": 25,
+    "errorKm": 0.962,
+    "concentration": 0.7106,
+    "geoclipBestKm": 0.962,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ua-buhaz",
+   "label": "Buhaz",
+   "country": "UA",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 55.452255,
+    "lon": 37.567657,
+    "radiusKm": 3
+   },
+   "offsetKm": 1156.347,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 817.422694000008,
+    "searchMs": 816.9538490000123,
+    "picturesMs": 0.010584000003291294,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 55.452255,
+    "lon": 37.567657,
+    "radiusKm": 1500,
+    "errorKm": 1156.347,
+    "concentration": 0.0189,
+    "geoclipBestKm": 1156.347,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ua-kyiv-pechersk-lavra",
+   "label": "Kyiv Pechersk Lavra",
+   "country": "UA",
+   "split": "test",
+   "kind": "landmark",
+   "variant": 0,
+   "candidate": {
+    "lat": 55.74507,
+    "lon": 37.601832,
+    "radiusKm": 3
+   },
+   "offsetKm": 754.196,
+   "reasonCode": "no-match",
+   "reason": "Kein Straßenbild hebt sich ab: bestes 0,68, typisch 0,61 (Abstand 0,08, nötig 0,10); 53 Bilder von Panoramax verglichen. Der Ort bleibt, wie er ist.",
+   "matched": false,
+   "stats": {
+    "pictures": 53,
+    "spreadPictures": 40,
+    "best": 0.6816081917420714,
+    "typical": 0.6052976369742962,
+    "spread": 0.028086343789941064,
+    "gap": 0.07631055476777526,
+    "z": 2.716998529196434,
+    "agreement": 0
+   },
+   "listed": 41,
+   "sampled": 40,
+   "compared": 53,
+   "timing": {
+    "totalMs": 3421.1420069999876,
+    "searchMs": 1204.4226339999877,
+    "picturesMs": 2204.716767999984,
+    "embedMs": 909.1969399999653,
+    "requests": 53,
+    "downloaded": 14,
+    "fromCache": 39,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 39,
+     "errors": 0,
+     "listed": 139,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "860251eb-d89b-4674-b5d5-33bc1922a51b",
+     "lat": 55.752731,
+     "lon": 37.640824,
+     "similarity": 0.6816,
+     "pass": 1,
+     "truthKm": 756.45,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=860251eb-d89b-4674-b5d5-33bc1922a51b&map=18/55.752731/37.640824",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "666f2eed-13c5-4e64-a1c2-3486ab923a4e",
+     "lat": 55.751336,
+     "lon": 37.630818,
+     "similarity": 0.6812,
+     "pass": 2,
+     "truthKm": 755.919,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=666f2eed-13c5-4e64-a1c2-3486ab923a4e&map=18/55.751336/37.630818",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "a8300759-37cf-4ad2-95b0-3f55e0fa60e3",
+     "lat": 55.750928,
+     "lon": 37.630393,
+     "similarity": 0.6626,
+     "pass": 1,
+     "truthKm": 755.867,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=a8300759-37cf-4ad2-95b0-3f55e0fa60e3&map=18/55.750928/37.630393",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 756.45,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 756.45,
+   "pointRadiusKm": 1,
+   "nearestKm": 754.476,
+   "nearestRank": 52,
+   "within1km": 0,
+   "engine": {
+    "method": "landmark",
+    "radiusTier": "recognised",
+    "lat": 55.74507,
+    "lon": 37.601832,
+    "radiusKm": 7500,
+    "errorKm": 754.196,
+    "concentration": 0.6021,
+    "geoclipBestKm": 3.472,
+    "path": "landmark"
+   }
+  },
+  {
+   "id": "us-francis-scott-key-bridge",
+   "label": "Francis Scott Key Bridge",
+   "country": "US",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 35.161106,
+    "lon": -90.052895,
+    "radiusKm": 3
+   },
+   "offsetKm": 1278.527,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 823.2272489999887,
+    "searchMs": 823.065311000013,
+    "picturesMs": 0.005872000008821487,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 35.161106,
+    "lon": -90.052895,
+    "radiusKm": 1500,
+    "errorKm": 1278.527,
+    "concentration": 0.0391,
+    "geoclipBestKm": 1278.527,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "us-oriole-park-at-camden-yards",
+   "label": "Oriole Park at Camden Yards",
+   "country": "US",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 39.283627,
+    "lon": -76.622238,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.057,
+   "reasonCode": "too-few",
+   "reason": "Nur 1 Straßenbild auswertbar (410 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 1,
+    "spreadPictures": 1,
+    "best": 0.5606017348444254,
+    "typical": 0.5606017348444254,
+    "spread": 0.005,
+    "gap": 0,
+    "z": 0,
+    "agreement": 0
+   },
+   "listed": 410,
+   "sampled": 40,
+   "compared": 1,
+   "timing": {
+    "totalMs": 3225.1529030000092,
+    "searchMs": 916.0246650000045,
+    "picturesMs": 2307.3377000000037,
+    "embedMs": 0,
+    "requests": 64,
+    "downloaded": 0,
+    "fromCache": 1,
+    "failed": 39,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 451,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "6f3cdee6-8f5d-4e88-8cbc-bae8f6e054a0",
+     "lat": 39.268588,
+     "lon": -76.598554,
+     "similarity": 0.5606,
+     "pass": 1,
+     "truthKm": 2.618,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=6f3cdee6-8f5d-4e88-8cbc-bae8f6e054a0&map=18/39.268588/-76.598554",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.618,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.618,
+   "pointRadiusKm": 1,
+   "nearestKm": 2.618,
+   "nearestRank": 1,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 39.283627,
+    "lon": -76.622238,
+    "radiusKm": 25,
+    "errorKm": 0.057,
+    "concentration": 0.6946,
+    "geoclipBestKm": 0.057,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "ve-estadio-olimpico",
+   "label": "Estadio Olímpico",
+   "country": "VE",
+   "split": "train",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": 10.49163,
+    "lon": -66.889465,
+    "radiusKm": 3
+   },
+   "offsetKm": 0.436,
+   "reasonCode": "too-few",
+   "reason": "Nur 6 Straßenbilder auswertbar (6 gelistet); zu wenige für einen Vergleich, mindestens 8.",
+   "matched": false,
+   "stats": {
+    "pictures": 6,
+    "spreadPictures": 6,
+    "best": 0.6722213735848511,
+    "typical": 0.6358381866334332,
+    "spread": 0.008691262390886651,
+    "gap": 0.036383186951417956,
+    "z": 4.186179787825537,
+    "agreement": 1
+   },
+   "listed": 6,
+   "sampled": 6,
+   "compared": 6,
+   "timing": {
+    "totalMs": 833.2314070000139,
+    "searchMs": 830.4473850000068,
+    "picturesMs": 2.1209020000242162,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 6,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 6,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [
+    {
+     "provider": "panoramax",
+     "id": "1ed447a3-4ef2-4f30-ac0a-505f6777ea86",
+     "lat": 10.485148,
+     "lon": -66.864759,
+     "similarity": 0.6722,
+     "pass": 1,
+     "truthKm": 2.367,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=1ed447a3-4ef2-4f30-ac0a-505f6777ea86&map=18/10.485148/-66.864759",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "0fdd76fb-97db-4de3-acea-e4699a739e39",
+     "lat": 10.485494,
+     "lon": -66.864445,
+     "similarity": 0.6417,
+     "pass": 1,
+     "truthKm": 2.389,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=0fdd76fb-97db-4de3-acea-e4699a739e39&map=18/10.485494/-66.864445",
+     "license": "CC-BY-SA-4.0"
+    },
+    {
+     "provider": "panoramax",
+     "id": "23024e1a-f106-4daa-afe0-fdfec74e820c",
+     "lat": 10.485444,
+     "lon": -66.864406,
+     "similarity": 0.6417,
+     "pass": 1,
+     "truthKm": 2.395,
+     "pageUrl": "https://api.panoramax.xyz/#focus=pic&pic=23024e1a-f106-4daa-afe0-fdfec74e820c&map=18/10.485444/-66.864406",
+     "license": "CC-BY-SA-4.0"
+    }
+   ],
+   "bestKm": 2.367,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": 2.367,
+   "pointRadiusKm": 1,
+   "nearestKm": 0.406,
+   "nearestRank": 4,
+   "within1km": 1,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": 10.49163,
+    "lon": -66.889465,
+    "radiusKm": 1500,
+    "errorKm": 0.436,
+    "concentration": 0.064,
+    "geoclipBestKm": 0.436,
+    "path": "worldmodel"
+   }
+  },
+  {
+   "id": "za-nelson-mandela-square",
+   "label": "Nelson Mandela Square",
+   "country": "ZA",
+   "split": "test",
+   "kind": "worldmodel",
+   "variant": 0,
+   "candidate": {
+    "lat": -26.206263,
+    "lon": 28.040237,
+    "radiusKm": 3
+   },
+   "offsetKm": 11.086,
+   "reasonCode": "no-coverage",
+   "reason": "Keine Straßenbilder im Umkreis der Kandidaten bei Panoramax.",
+   "matched": false,
+   "stats": null,
+   "listed": 0,
+   "sampled": 0,
+   "compared": 0,
+   "timing": {
+    "totalMs": 720.9321479999926,
+    "searchMs": 720.7807279999834,
+    "picturesMs": 0.010027000011177734,
+    "embedMs": 0,
+    "requests": 25,
+    "downloaded": 0,
+    "fromCache": 0,
+    "failed": 0,
+    "budgetExhausted": false
+   },
+   "providers": [
+    {
+     "name": "panoramax",
+     "requests": 25,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    },
+    {
+     "name": "mapillary",
+     "requests": 0,
+     "errors": 0,
+     "listed": 0,
+     "lastError": null
+    }
+   ],
+   "top": [],
+   "bestKm": null,
+   "refinedKm": null,
+   "refinedRadiusKm": null,
+   "confidence": null,
+   "pointKm": null,
+   "pointRadiusKm": null,
+   "nearestKm": null,
+   "nearestRank": null,
+   "within1km": 0,
+   "engine": {
+    "method": "worldmodel",
+    "radiusTier": "worldmodel",
+    "lat": -26.206263,
+    "lon": 28.040237,
+    "radiusKm": 1500,
+    "errorKm": 11.086,
+    "concentration": 0.0711,
+    "geoclipBestKm": 11.086,
+    "path": "worldmodel"
+   }
+  }
+ ]
+}

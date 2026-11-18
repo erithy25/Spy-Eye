@@ -7,6 +7,24 @@
  *   npx tsx src/scripts/datum/evaluateStreetlevel.ts --from docs/measurements/datum-streetlevel.json
  *       (no network: recomputes summary and threshold sweep from recorded calls, e.g. after
  *       changing the defaults in streetlevel.ts)
+ *   npx tsx src/scripts/datum/evaluateStreetlevel.ts --worldmodel [--out docs/measurements/datum-streetlevel-worldmodel.json]
+ *       (candidates as the engine would search them in unknown mode, see below)
+ *   npx tsx src/scripts/datum/evaluateStreetlevel.ts --worldmodel --from docs/measurements/datum-streetlevel-worldmodel.json
+ *   npx tsx src/scripts/datum/evaluateStreetlevel.ts --worldmodel --mode open
+ *       (the same with the gallery as the live node uses it: docs/measurements/datum-streetlevel-open.json)
+ *
+ * --worldmodel: every reference video is located as the engine locates it (locate() with the
+ * engine's 12 frames and crops, the reference picture of the same item left out of the gallery,
+ * GeoCLIP's prediction from its worker thread). Where the answer came from the world model,
+ * street-level pictures are compared 3 km around GeoCLIP's best point (whatever its
+ * concentration, so that the concentration threshold can be chosen afterwards); where it is a
+ * recognised landmark (tiers strong and recognised), 3 km around it (the engine's rule,
+ * streetlevel.ts streetLevelPlan, for reference: in unknown mode such a landmark is a look-alike
+ * of the filmed one). The rule for world-model answers is chosen on the train half (even ids):
+ * the lowest concentration threshold from 0.2 up with at least MIN_RULE_MATCHES matches on train,
+ * at most one in ten of them a wrong pin; the test half is reported. A rate of one in ten can only
+ * be judged on ten matches or more: with fewer, a single wrong pin is already more than that, and
+ * none says little (0 of 1 is compatible with almost any rate).
  *
  * For every reference video: 12 frames (whole frame plus square crops, the pipeline's 'standard'
  * tiling, as sampleAndEmbedFrames in locate.ts; taken from the vector cache of
@@ -75,7 +93,13 @@ const wrongCount = Math.max(0, Math.min(4, Number(argument('wrong-count', '2')))
 const offsetKm = Math.max(0, Number(argument('offset-km', '0')));
 const crops = flag('crops');
 const verbose = flag('verbose');
-const outFile = path.resolve(repoRoot, argument('out', 'docs/measurements/datum-streetlevel.json'));
+const worldModelMode = flag('worldmodel');
+/** --worldmodel: 'unknown' leaves the filmed item's reference picture out (DATUM_HOLDOUT=1); 'open' keeps it, as the live node runs. */
+const localeMode: 'unknown' | 'open' = argument('mode', 'unknown') === 'open' ? 'open' : 'unknown';
+const outFile = path.resolve(
+  repoRoot,
+  argument('out', worldModelMode ? (localeMode === 'open' ? 'docs/measurements/datum-streetlevel-open.json' : 'docs/measurements/datum-streetlevel-worldmodel.json') : 'docs/measurements/datum-streetlevel.json'),
+);
 const evalCacheDir = path.resolve(repoRoot, '.cache/datum');
 const FRAMES = 12;
 
@@ -113,7 +137,8 @@ interface Frames {
   vectors: Float32Array;
   dim: number;
   frameNumbers: number[];
-  tiles: { vectors: Float32Array; frameRow: number[] } | null;
+  /** Crops with the frame row and the tile index of each (tile 0 = the whole frame). */
+  tiles: { vectors: Float32Array; frameRow: number[]; tile: number[] } | null;
   source: 'cache' | 'sampled';
 }
 
@@ -126,7 +151,7 @@ async function framesOf(video: ManifestVideo): Promise<Frames> {
       vectors: fromB64(hit.vectors),
       dim: hit.dim,
       frameNumbers: hit.frameNumbers,
-      tiles: hit.tiles ? { vectors: fromB64(hit.tiles), frameRow: hit.frameRow } : null,
+      tiles: hit.tiles ? { vectors: fromB64(hit.tiles), frameRow: hit.frameRow, tile: hit.tile } : null,
       source: 'cache',
     };
   }
@@ -142,7 +167,7 @@ async function framesOf(video: ManifestVideo): Promise<Frames> {
     vectors: sampled.vectors,
     dim: sampled.dim,
     frameNumbers: sampled.frameNumbers,
-    tiles: sampled.tiles ? { vectors: sampled.tiles.vectors, frameRow: sampled.tiles.frameRow } : null,
+    tiles: sampled.tiles ? { vectors: sampled.tiles.vectors, frameRow: sampled.tiles.frameRow, tile: sampled.tiles.tile } : null,
     source: 'sampled',
   };
 }
@@ -160,12 +185,34 @@ interface PictureOut {
   license: string;
 }
 
+/** What the engine answered before the street-level stage (--worldmodel only). */
+interface EngineAnswer {
+  method: string;
+  radiusTier: string | null;
+  lat: number;
+  lon: number;
+  radiusKm: number;
+  /** Distance of the answer from the truth (km). */
+  errorKm: number;
+  /** GeoCLIP's mass within 25 km of its best point, and that point's distance from the truth. */
+  concentration: number | null;
+  geoclipBestKm: number | null;
+  /** Where the engine's rule (streetLevelPlan) would search: 'landmark', 'worldmodel' or nowhere. */
+  path: 'landmark' | 'worldmodel' | null;
+}
+
 interface CallRecord {
   id: string;
   label: string;
   country: string | null;
   split: 'train' | 'test';
-  kind: 'true' | 'wrong';
+  /**
+   * true/wrong: around the truth and around places 50 km away; worldmodel/landmark (--worldmodel):
+   * around the engine's own answer in unknown mode.
+   */
+  kind: 'true' | 'wrong' | 'worldmodel' | 'landmark';
+  /** --worldmodel only: the engine's answer the candidate came from. */
+  engine?: EngineAnswer;
   /** Which wrong place (0, 1, ...); 0 for 'true'. */
   variant: number;
   candidate: { lat: number; lon: number; radiusKm: number };
@@ -212,15 +259,23 @@ function pictureOut(p: { provider: string; id: string; lat: number; lon: number;
   };
 }
 
-async function measure(video: ManifestVideo, frames: Frames, kind: 'true' | 'wrong', variant = 0, options: Partial<StreetLevelOptions> = {}): Promise<CallRecord> {
+async function measure(
+  video: ManifestVideo,
+  frames: Frames,
+  kind: CallRecord['kind'],
+  variant = 0,
+  options: Partial<StreetLevelOptions> = {},
+  given: { lat: number; lon: number } | null = null,
+): Promise<CallRecord> {
   const index = indexOf.get(video.id) ?? 0;
   const bearing = (index * 137.508 + variant * 180 + (variant >> 1) * 90) % 360;
   const centre =
-    kind === 'true'
+    given ??
+    (kind === 'true'
       ? offsetKm > 0
         ? sl.destinationPoint(video.lat, video.lon, (index * 97.3) % 360, offsetKm)
         : { lat: video.lat, lon: video.lon }
-      : sl.destinationPoint(video.lat, video.lon, bearing, wrongKm);
+      : sl.destinationPoint(video.lat, video.lon, bearing, wrongKm));
   const result = await sl.refineStreetLevel({
     frameVectors: frames.vectors,
     dim: frames.dim,
@@ -252,7 +307,7 @@ async function measure(video: ManifestVideo, frames: Frames, kind: 'true' | 'wro
     kind,
     variant,
     candidate: { lat: Number(centre.lat.toFixed(6)), lon: Number(centre.lon.toFixed(6)), radiusKm },
-    offsetKm: kind === 'true' ? offsetKm : wrongKm,
+    offsetKm: given ? Number(sl.distanceKm(video.lat, video.lon, centre.lat, centre.lon).toFixed(3)) : kind === 'true' ? offsetKm : wrongKm,
     reasonCode: result.reasonCode,
     reason: result.reason,
     matched: result.matched,
@@ -273,6 +328,238 @@ async function measure(video: ManifestVideo, frames: Frames, kind: 'true' | 'wro
     nearestRank,
     within1km: all.filter((p) => sl.distanceKm(truth.lat, truth.lon, p.lat, p.lon) <= 1).length,
   };
+}
+
+// ---- --worldmodel: candidates from the engine's own answers in unknown mode
+const minPicturesWm = sl.DEFAULT_STREETLEVEL_OPTIONS.minPictures;
+/** Matches on the train half below which a wrong-pin rate of one in ten cannot be judged. */
+const MIN_RULE_MATCHES = 10;
+const hasPictures = (r: CallRecord): boolean => r.stats !== null && r.stats.spreadPictures >= minPicturesWm;
+
+/** Matches and pins of the calls of one kind, with the decision as the defaults make it now. */
+function pinScore(calls: readonly CallRecord[]): Record<string, number> {
+  const withPictures = calls.filter(hasPictures);
+  const matched = calls.filter((r) => sl.isMatch(r.stats, sl.DEFAULT_STREETLEVEL_OPTIONS));
+  // A pin is wrong when the truth lies outside the circle it states (at least 1 km: the truth is
+  // the filmed object, not the camera).
+  const wrong = matched.filter((r) => (r.pointKm ?? 99) > Math.max(1, r.pointRadiusKm ?? 0));
+  return {
+    calls: calls.length,
+    centreWithin3km: calls.filter((r) => r.offsetKm <= 3).length,
+    withPictures: withPictures.length,
+    withPicturesCentreWithin3km: withPictures.filter((r) => r.offsetKm <= 3).length,
+    matched: matched.length,
+    matchedWithin1km: matched.filter((r) => (r.pointKm ?? 99) <= 1).length,
+    wrongPins: wrong.length,
+  };
+}
+
+async function runWorldModelMode(): Promise<void> {
+  const calls: CallRecord[] = [];
+  // Declared here: the module's own frameSources is set up only after this mode has returned.
+  let frameSourcesWm: Record<string, 'cache' | 'sampled'> = {};
+  const answers: { id: string; label: string; split: 'train' | 'test'; engine: EngineAnswer | null }[] = [];
+  let measured = new Date().toISOString();
+  let precision = '';
+  if (fromFile !== '') {
+    const earlier = JSON.parse(await fs.readFile(path.resolve(repoRoot, fromFile), 'utf8')) as {
+      measuredAt: string;
+      calls: CallRecord[];
+      answers: typeof answers;
+      setup: { worldModelPrecision: string; frameSources: Record<string, 'cache' | 'sampled'> };
+    };
+    calls.push(...earlier.calls);
+    answers.push(...earlier.answers);
+    measured = earlier.measuredAt;
+    precision = earlier.setup.worldModelPrecision;
+    frameSourcesWm = earlier.setup.frameSources;
+    say(`${calls.length} Aufrufe aus ${fromFile} gelesen (gemessen ${measured}).`);
+  } else {
+    const { Gallery } = await import('../../datum/gallery.js');
+    const { World } = await import('../../datum/world.js');
+    const { locate, sampleFrameJpegs } = await import('../../datum/locate.js');
+    const { WorldModelService } = await import('../../datum/geoclipService.js');
+    const world = await World.load();
+    world.textCache = { file: path.join(evalCacheDir, `country-text-${modelSlug()}.bin`), modelId: config.modelId };
+    const gallery = new Gallery(model, { datasetDir, cacheDir: evalCacheDir });
+    const loaded = await gallery.load();
+    say(`Galerie: ${loaded.images} Bilder in ${(loaded.loadMs / 1000).toFixed(1)} s.`);
+    const worldModel = new WorldModelService({ log: (m) => say(`  ${m}`) });
+    try {
+      if (!(await worldModel.available())) throw new Error('GeoCLIP-Gewichte fehlen (pnpm models:download).');
+      await worldModel.ensureGallery();
+      precision = worldModel.boot.precision;
+      // GeoCLIP's image embeddings of the same 12 frames, as scripts/datum/evaluate.ts caches them.
+      type GeoCache = { version: number; precision: string; frames: number; videos: Record<string, { bytes: number; frames: number; embeds: string }> };
+      const geoCache = await fs
+        .readFile(path.join(evalCacheDir, `geoclip-eval-${precision}-${FRAMES}.json`), 'utf8')
+        .then((t) => JSON.parse(t) as GeoCache)
+        .catch(() => null);
+      const geoVideos = geoCache && geoCache.version === 1 && geoCache.precision === precision && geoCache.frames === FRAMES ? geoCache.videos : {};
+      const embedTexts = (texts: string[]): Promise<Float32Array> => model.embedTexts(texts);
+      // Every listed place, the world model's diffuse answers too: the threshold is chosen below.
+      const collect = { ...sl.STREETLEVEL_RULE, worldModelMinConcentration: 0 };
+      for (const [i, video] of videos.entries()) {
+        const file = path.join(datasetDir, video.file);
+        const split = (indexOf.get(video.id) ?? 0) % 2 === 0 ? 'train' : 'test';
+        let frames: Frames;
+        try {
+          frames = await framesOf(video);
+        } catch (err) {
+          say(`  ${video.id}: Bilder nicht lesbar (${err instanceof Error ? err.message : String(err)})`);
+          continue;
+        }
+        frameSourcesWm[video.id] = frames.source;
+        const bytes = (await fs.stat(file)).size;
+        const meta = await readMetadata(file).catch(() => null);
+        const cached = geoVideos[video.id];
+        const world_ =
+          cached && cached.bytes === bytes
+            ? await worldModel.predictEmbeddings(fromB64(cached.embeds), cached.frames)
+            : await worldModel.predict((await sampleFrameJpegs(file, { count: FRAMES, durationSec: meta?.durationSec ?? null, fps: meta?.fps ?? null, tmpDir })).jpegs, { wait: true });
+        // As the engine's quick stage locates it, with the reference picture of this item left out.
+        const located = await locate({
+          videoPath: file,
+          frameVectors: frames.vectors,
+          dim: frames.dim,
+          frameNumbers: frames.frameNumbers,
+          ...(frames.tiles ? { tiles: frames.tiles } : {}),
+          embedTexts,
+          gallery,
+          world,
+          fileName: path.basename(video.file),
+          metadata: meta,
+          ...(localeMode === 'unknown' ? { excludeWikidata: [video.wikidata] } : {}),
+          geoclip: world_.prediction,
+        });
+        const plan = sl.streetLevelPlan(located, collect);
+        const loc = located.location;
+        const wm = located.diagnostics.worldModel;
+        const engine: EngineAnswer | null = loc
+          ? {
+              method: located.diagnostics.method,
+              radiusTier: located.diagnostics.radiusTier,
+              lat: Number(loc.lat.toFixed(6)),
+              lon: Number(loc.lon.toFixed(6)),
+              radiusKm: Number(loc.radiusKm.toFixed(3)),
+              errorKm: Number(sl.distanceKm(video.lat, video.lon, loc.lat, loc.lon).toFixed(3)),
+              concentration: wm ? Number(wm.concentration.toFixed(4)) : null,
+              geoclipBestKm: wm ? Number(sl.distanceKm(video.lat, video.lon, wm.best.lat, wm.best.lon).toFixed(3)) : null,
+              path: plan?.source ?? null,
+            }
+          : null;
+        answers.push({ id: video.id, label: video.label, split, engine });
+        if (!plan) {
+          say(`${String(i + 1).padStart(2)}/${videos.length} ${video.id.padEnd(34)} ${located.diagnostics.method.padEnd(10)} ${located.diagnostics.radiusTier ?? '-'}: keine Suche`);
+          continue;
+        }
+        const r = await measure(video, frames, plan.source, 0, {}, plan.candidate);
+        if (engine) r.engine = engine;
+        calls.push(r);
+        const s = r.stats;
+        say(
+          `${String(i + 1).padStart(2)}/${videos.length} ${video.id.padEnd(34)} ${plan.source.padEnd(10)} c=${(engine?.concentration ?? 0).toFixed(2)} ` +
+            `Mitte ${r.offsetKm.toFixed(1)} km von der Wahrheit, ${r.reasonCode.padEnd(11)} n=${String(r.compared).padStart(3)}/${String(r.listed).padStart(4)} ` +
+            (s ? `best ${s.best.toFixed(3)} gap ${s.gap.toFixed(3)} z ${s.z.toFixed(1)} Punkt ${r.pointKm?.toFixed(2)} km ` : '') +
+            `${(r.timing.totalMs / 1000).toFixed(1)} s`,
+        );
+      }
+    } finally {
+      await worldModel.close();
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  }
+
+  const of = (kind: CallRecord['kind'], split: 'train' | 'test' | null, minC = 0): CallRecord[] =>
+    calls.filter((r) => r.kind === kind && (split === null || r.split === split) && (r.engine?.concentration ?? 0) >= minC);
+  // The world model agent's concentration threshold (LocateParams.geoclip.radius) and stricter ones.
+  const thresholds = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+  const sweep = [0, 0.05, 0.1, ...thresholds].map((minConcentration) => ({
+    minConcentration,
+    train: pinScore(of('worldmodel', 'train', minConcentration)),
+    test: pinScore(of('worldmodel', 'test', minConcentration)),
+  }));
+  // Chosen on the train half: enough matches to judge the rate, at most one wrong pin per ten
+  // matches; the lowest such threshold (the most answers searched).
+  const admissible = sweep.filter(
+    (s) => thresholds.includes(s.minConcentration) && (s.train['matched'] ?? 0) >= MIN_RULE_MATCHES && (s.train['wrongPins'] ?? 0) * 10 <= (s.train['matched'] ?? 0),
+  );
+  const chosen = admissible[0] ?? null;
+  // What the first run's looser criterion (one match on train) would have chosen, for the record.
+  const looser = sweep.find((s) => thresholds.includes(s.minConcentration) && (s.train['matched'] ?? 0) >= 1 && (s.train['wrongPins'] ?? 0) * 10 <= (s.train['matched'] ?? 0)) ?? null;
+  const timing = (subset: readonly CallRecord[]): Record<string, number | null> => {
+    const secs = subset.map((r) => r.timing.totalMs / 1000).sort((a, b) => a - b);
+    const q = (p: number): number | null => (secs.length > 0 ? Number((secs[Math.min(secs.length - 1, Math.floor(p * secs.length))] as number).toFixed(2)) : null);
+    return { calls: secs.length, medianS: q(0.5), p90S: q(0.9), maxS: q(1), budgetExhausted: subset.filter((r) => r.timing.budgetExhausted).length };
+  };
+  const report = {
+    measuredAt: measured,
+    ...(fromFile !== '' ? { summarisedAt: new Date().toISOString() } : {}),
+    script: 'apps/server/src/scripts/datum/evaluateStreetlevel.ts --worldmodel',
+    model: config.modelId,
+    threads: config.threads,
+    setup: {
+      mode:
+        localeMode === 'unknown'
+          ? 'unknown: the reference picture of the filmed item is left out of the gallery (locate() excludeWikidata), as DATUM_HOLDOUT=1'
+          : 'open: the gallery as the live node uses it (the filmed item may be in it)',
+      frames: `${FRAMES} frames per video, whole frame plus square crops, as the engine's quick stage samples them`,
+      frameSources: frameSourcesWm,
+      worldModelPrecision: precision,
+      candidateRadiusKm: radiusKm,
+      worldModelCandidate: "GeoCLIP's best point (LocateDiagnostics.worldModel.best) of every answer with method 'worldmodel'",
+      landmarkCandidate: "the answer of method 'landmark' with tier strong or recognised (the engine's rule)",
+      providers: process.env['MAPILLARY_TOKEN'] ? ['panoramax', 'mapillary'] : ['panoramax'],
+      mapillary: process.env['MAPILLARY_TOKEN'] ? 'used' : 'not measured: no Mapillary key on the measuring machine',
+      decision: { minPictures: minPicturesWm, minSimilarity: sl.DEFAULT_STREETLEVEL_OPTIONS.minSimilarity, minGap: sl.DEFAULT_STREETLEVEL_OPTIONS.minGap, minZ: sl.DEFAULT_STREETLEVEL_OPTIONS.minZ },
+      wrongPin: 'a match whose refined point lies farther from the truth than its stated radius (at least 1 km)',
+      rule: `chosen on the train half (even index): the lowest concentration threshold from 0.2 with at least ${MIN_RULE_MATCHES} matches and at most one wrong pin per ten of them; none: the world-model path stays off`,
+      split: 'videos sorted by id; even index = train, odd = test, as scripts/datum/evaluate.ts',
+    },
+    worldModel: {
+      sweep,
+      chosen,
+      decision: chosen ? 'on' : 'off',
+      looserCriterion: {
+        note: 'the first run of this script required one train match instead of ten; changed because a single match cannot show a wrong-pin rate of one in ten',
+        wouldChoose: looser,
+      },
+      timing: timing(of('worldmodel', null)),
+    },
+    landmark: {
+      note:
+        localeMode === 'unknown'
+          ? 'in unknown mode a recognised landmark is a look-alike of the filmed one; this is the false-match risk of the engine rule'
+          : 'open mode: the engine rule on the answers the live node gives',
+      byTier: Object.fromEntries(
+        ['strong', 'recognised'].map((tier) => [
+          tier,
+          {
+            train: pinScore(of('landmark', 'train').filter((r) => r.engine?.radiusTier === tier)),
+            test: pinScore(of('landmark', 'test').filter((r) => r.engine?.radiusTier === tier)),
+          },
+        ]),
+      ),
+      train: pinScore(of('landmark', 'train')),
+      test: pinScore(of('landmark', 'test')),
+      timing: timing(of('landmark', null)),
+    },
+    answers,
+    calls,
+  };
+  await fs.mkdir(path.dirname(outFile), { recursive: true });
+  await fs.writeFile(outFile, `${JSON.stringify(report, null, 1)}\n`);
+  say('');
+  for (const s of sweep) say(`Weltmodell c ≥ ${s.minConcentration}: train ${JSON.stringify(s.train)}; test ${JSON.stringify(s.test)}`);
+  say(chosen ? `Regel: c ≥ ${chosen.minConcentration} (train ${JSON.stringify(chosen.train)}, test ${JSON.stringify(chosen.test)})` : 'Keine Schwelle trägt auf der Trainingshälfte: Weltmodell-Pfad bleibt aus.');
+  say(`Landmarke (${localeMode}): train ${JSON.stringify(report.landmark.train)}; test ${JSON.stringify(report.landmark.test)}`);
+  say(`Geschrieben: ${path.relative(repoRoot, outFile)}`);
+}
+
+if (worldModelMode) {
+  await runWorldModelMode();
+  // The world model's thread is closed; the image model's may still hold the event loop.
+  process.exit(0);
 }
 
 // ---- run (or read the calls of an earlier run)

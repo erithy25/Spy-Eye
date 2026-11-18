@@ -1,9 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config, repoRoot } from './config.js';
+import { closeGallerySearch } from './datum/gallerySearch.js';
 import type { PeerRecord } from './intel/federation.js';
 import { externalPeer, pairSecret, type ExternalPeer } from './intel/peerConfig.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
+import { closeInferenceThreads } from './ml/workerHost.js';
 import { PlatformNode, VERSION, nodeScheme, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
 import { restorePreparedState, snapshotPreparedState } from './scripts/prepared.js';
@@ -192,10 +194,16 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     say('Beende …');
-    Promise.allSettled(nodes.map((n) => n.stop())).then(
-      () => process.exit(0),
-      () => process.exit(1),
-    );
+    Promise.allSettled(nodes.map((n) => n.stop()))
+      // The worker threads end after the nodes, which use them until they have stopped. An
+      // inference thread finishes its run and releases its sessions first (an onnxruntime
+      // session torn down mid-run aborts the process); a gallery search under way may finish.
+      .then(() => Promise.allSettled([closeInferenceThreads(), closeGallerySearch()]))
+      .then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
+    // Whatever has not ended after 4 s does not hold the process any longer.
     setTimeout(() => process.exit(0), 4000).unref();
   };
   // Work that runs beside a request (delayed writes, retention, stream scans) reports its failure

@@ -19,9 +19,16 @@
  * machine), a fix is located without it and its trace says so; a fix computed during that build
  * is computed again once the gallery is ready.
  *
+ * The full stage then compares the frames with public street-level pictures around a recognised
+ * place (streetlevel.ts, when the node's setting allows it and the node is not offline), while it
+ * builds the spaces; a match pins the place to a street before the horizon and the time are
+ * computed. The stage has a budget of 20 s, and the engine waits no longer than that (plus half a
+ * second): a slow, failing or unreachable service costs the fix the refinement, never the fix.
+ *
  * Quick jobs go before full ones, and recordings a person has queued before background work
  * (the seeded reference set). A fix is written next to the recording (`<videoDir>/datum/fix.json`)
- * and broadcast to the console. Everything is computed on this machine.
+ * and broadcast to the console. Everything is computed on this machine; the street-level services
+ * learn only which area is searched.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -34,7 +41,22 @@ import { haversineKm } from '../core/geo.js';
 import type { Evidence, Fix, FixLocation, Keyframe, TimeEstimate, TraceStep } from './contract.js';
 import { truthForName } from './dataset.js';
 import { Gallery } from './gallery.js';
-import { acquireWorldModel, releaseWorldModel, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
+import { acquireWorldModel, releaseWorldModel, worldModelPrecision, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
+import { reportWorldModel, streetLevelEnabled } from './settings.js';
+import {
+  applyStreetLevel,
+  DEFAULT_STREETLEVEL_OPTIONS,
+  refineStreetLevel,
+  streetLevelCutOff,
+  streetLevelEvidence,
+  streetLevelNote,
+  streetLevelPlan,
+  withStreetImagePaths,
+  type StreetLevelDeps,
+  type StreetLevelInput,
+  type StreetLevelOptions,
+  type StreetLevelResult,
+} from './streetlevel.js';
 import { breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
 import { filenameHints, readMetadata, type VideoMetadata } from './metadata.js';
 import { DAY_LABELS_EN, estimateTime, frameStatsFromJpeg, type FrameStats } from './time.js';
@@ -102,7 +124,30 @@ export interface DatumEngineOptions {
    * (every fix says so in its trace). Tests give a stand-in.
    */
   worldModel?: WorldModel | null;
+  /** The street-level comparison of the full stage; absent: the node's settings and the network. */
+  streetLevel?: StreetLevelHooks;
 }
+
+/** What tests replace of the street-level comparison (streetlevel.ts). */
+export interface StreetLevelHooks {
+  /**
+   * Whether the full stage may ask street-level services. Default: the node's setting
+   * (settings.ts streetLevelEnabled), and never in offline mode (SICHT_OFFLINE).
+   */
+  enabled?: () => boolean;
+  /** Network of the stage (a mock fetch, a resolver stub) and the Mapillary key. */
+  deps?: Pick<StreetLevelDeps, 'fetch' | 'lookup' | 'mapillaryKey'>;
+  options?: Partial<StreetLevelOptions>;
+  /** The stage itself (default refineStreetLevel). */
+  refine?: (input: StreetLevelInput, deps: StreetLevelDeps) => Promise<StreetLevelResult>;
+}
+
+/**
+ * How long the engine waits for the street-level stage beyond the stage's own budget: the stage
+ * stops its network work at budget − reserve and decides within the reserve; this margin only
+ * catches a step that cannot be interrupted (the image model, the disk) running late.
+ */
+const STREET_GRACE_MS = 500;
 
 /** How often a waiting background job looks again whether it may run. */
 const BACKGROUND_POLL_MS = 500;
@@ -296,7 +341,12 @@ export class DatumEngine {
   private readonly locatedDuringBuild = new Set<string>();
 
   constructor(private readonly opts: DatumEngineOptions) {
-    if (opts.worldModel === undefined) {
+    // DATUM_WORLDMODEL=0 switches the world model off for the whole node (every fix says so).
+    if (opts.worldModel === undefined && process.env['DATUM_WORLDMODEL'] === '0') {
+      this.ownWorld = null;
+      this.world = null;
+      reportWorldModel({ available: false, precision: worldModelPrecision() });
+    } else if (opts.worldModel === undefined) {
       this.ownWorld = acquireWorldModel((line) => opts.log(line));
       this.world = this.ownWorld;
     } else {
@@ -770,6 +820,63 @@ export class DatumEngine {
     return { result: this.askWorld(kept.jpegs) ?? Promise.resolve(null), reused: false };
   }
 
+  /**
+   * Whether the full stage may compare with street-level pictures now: the node's setting, read
+   * at every fix (an operator may switch it off at any time), and never in offline mode, which
+   * promises no network access at all.
+   */
+  private streetLevelOn(): boolean {
+    const hook = this.opts.streetLevel?.enabled;
+    if (hook) return hook();
+    if (config.offline) return false;
+    return streetLevelEnabled(this.opts.store.dataDir);
+  }
+
+  /**
+   * Runs the street-level stage, waiting at most its budget plus STREET_GRACE_MS: at that point the
+   * stage is told to stop and the fix goes on without it. Never rejects (the stage itself does not
+   * either). `signal` stops it early (the recording was deleted meanwhile).
+   */
+  private async streetLevel(input: StreetLevelInput, name: string, signal: AbortSignal): Promise<StreetLevelResult> {
+    const hooks = this.opts.streetLevel;
+    const refine = hooks?.refine ?? refineStreetLevel;
+    const options: Partial<StreetLevelOptions> = { ...hooks?.options, ...input.options };
+    const budgetMs = options.budgetMs ?? DEFAULT_STREETLEVEL_OPTIONS.budgetMs;
+    const stop = new AbortController();
+    const onAbort = (): void => stop.abort();
+    signal.addEventListener('abort', onAbort, { once: true });
+    const started = performance.now();
+    let timer: NodeJS.Timeout | null = null;
+    const cutOff = new Promise<StreetLevelResult>((resolve) => {
+      timer = setTimeout(() => {
+        stop.abort();
+        resolve(streetLevelCutOff(budgetMs, performance.now() - started));
+      }, budgetMs + STREET_GRACE_MS);
+    });
+    // The stage's own lines (one per failed request) stay out of the node's log; the outcome is
+    // logged once below and is part of the fix.
+    const deps: StreetLevelDeps = { ...hooks?.deps, dataDir: this.opts.store.dataDir, signal: stop.signal };
+    try {
+      const stage = refine({ ...input, options }, deps).catch((err: unknown): StreetLevelResult => {
+        // A stand-in stage may throw; the real one never does.
+        const message = (err instanceof Error ? err.message : String(err)).slice(0, 200);
+        const failed = streetLevelCutOff(budgetMs, performance.now() - started);
+        return {
+          ...failed,
+          reason: `Straßenbilder nicht auswertbar: ${message}.`,
+          reasonEn: `Street-level pictures could not be compared: ${message}.`,
+          timing: { ...failed.timing, budgetExhausted: false },
+        };
+      });
+      const result = await Promise.race([stage, cutOff]);
+      this.opts.log(`Straßenbilder "${name}": ${result.reason} (${(result.timing.totalMs / 1000).toFixed(1)} s)`);
+      return result;
+    } finally {
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+    }
+  }
+
   /** Keeps the quick stage's frames for the full stage, oldest dropped first. */
   private rememberSampled(id: string, frames: QuickFrames): void {
     this.sampled.delete(id);
@@ -999,6 +1106,54 @@ export class DatumEngine {
         : worldNote,
     );
 
+    // Street-level pictures around a recognised place (streetlevel.ts streetLevelPlan), when the
+    // node's setting allows it. The stage is mostly waiting for the picture services, so it runs
+    // while the spaces are built below; the horizon and the time need its answer and wait for it.
+    // The quick stage never asks: it must not wait for any service.
+    const plan = this.streetLevelOn() ? streetLevelPlan(located) : null;
+    const streetStop = new AbortController();
+    const streetJob: Promise<StreetLevelResult> | null = plan
+      ? this.streetLevel(
+          {
+            frameVectors: locateFrames.frameVectors,
+            dim,
+            frameNumbers: locateFrames.frameNumbers,
+            tiles: { vectors: locateFrames.tiles.vectors, frameRow: locateFrames.tiles.frameRow },
+            candidates: [plan.candidate],
+            model,
+          },
+          entry.info.name,
+          streetStop.signal,
+        )
+      : null;
+    try {
+      return await this.computeRest(entry, located, streetJob, { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim });
+    } finally {
+      // Deleted meanwhile or failed: the stage stops asking the services (a finished one ignores it).
+      streetStop.abort();
+    }
+  }
+
+  /** The full stage after the localisation: street-level pictures, spaces, horizon and time. */
+  private async computeRest(
+    entry: VideoEntry,
+    located: LocateResult,
+    streetJob: Promise<StreetLevelResult> | null,
+    ctx: {
+      mark: (label: string, detail?: Named) => void;
+      trace: TraceStep[];
+      frameNumbers: number[];
+      frameVectors: Float32Array;
+      framePath: (n: number) => string;
+      embedTexts: (texts: string[]) => Promise<Float32Array>;
+      meta: VideoMetadata | null;
+      hints: ReturnType<typeof filenameHints>;
+      dim: number;
+    },
+  ): Promise<Fix> {
+    const id = entry.info.id;
+    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim } = ctx;
+
     // Spaces from keyframes: depth → walkable grid, skyline.
     const keyframes: Keyframe[] = [];
     let bestSky: SkyCandidate | null = null;
@@ -1033,8 +1188,16 @@ export class DatumEngine {
       keyframes.push(key);
     }
 
-    const evidence: Evidence[] = [...located.evidence];
-    const location = located.location;
+    let evidence: Evidence[] = [...located.evidence];
+    let location = located.location;
+    if (streetJob && location) {
+      const street = await streetJob;
+      if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
+      location = applyStreetLevel(location, street);
+      // A match decides the place and leads the evidence; without one, the entry says why.
+      evidence = street.matched ? [...streetLevelEvidence(street), ...evidence] : [...evidence, ...streetLevelEvidence(street)];
+      mark('Mit Straßenbildern verglichen', streetLevelNote(street));
+    }
     let heading: Fix['heading'] = null;
     let horizon: Fix['horizon'] = null;
 
@@ -1132,7 +1295,9 @@ export class DatumEngine {
       sun: timed.sun,
       heading,
       horizon,
-      evidence,
+      // Last, on the final order: the street-level pictures are numbered as the route that serves
+      // them counts (GET /api/datum/fixes/:videoId/street/:n, streetImage.ts streetSources).
+      evidence: withStreetImagePaths(id, evidence),
       keyframes,
       trace,
       stage: 'full',

@@ -14,6 +14,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { config, repoRoot } from '../config.js';
 import { decodeFrame, writeTile, type PixelRect } from '../ml/preprocess.js';
+import { selectTop, similarityMatrix, type TopRows } from './galleryKernel.js';
+import { forgetGallery, sharedGallerySearch, type GallerySearchThread } from './gallerySearch.js';
 import { readSeed } from './gallerySeed.js';
 
 /** One reference picture as listed in `gallery.json`. */
@@ -67,6 +69,11 @@ export interface GalleryOptions {
   batchSize?: number;
   /** Parallel JPEG decodes. Default: number of cores. */
   decodeConcurrency?: number;
+  /**
+   * Thread that runs searchAsync. Default: the process-wide search thread (sharedGallerySearch,
+   * ended by closeGallerySearch on shutdown).
+   */
+  searchThread?: GallerySearchThread;
 }
 
 export interface GalleryLoadProgress {
@@ -183,9 +190,66 @@ async function writeAtomic(file: string, data: string | Uint8Array): Promise<voi
   await fs.rename(tmp, file);
 }
 
+/** One complete state of the gallery: what a search reads, taken in one piece. */
+interface GallerySnapshot {
+  images: GalleryImage[];
+  /** n x dim rows in shared memory; replaced as a whole, never written after load() set it. */
+  vectors: Float32Array;
+  dim: number;
+  version: number;
+}
+
+/** Gallery rows that may be chosen (1) under the options, or null when all may. */
+function allowedRows(images: readonly GalleryImage[], opts: GallerySearchOptions): Uint8Array | null {
+  const excluded = new Set(opts.excludeWikidata ?? []);
+  if (excluded.size === 0) return null;
+  const allowed = new Uint8Array(images.length);
+  images.forEach((img, i) => {
+    allowed[i] = img.wikidata !== null && excluded.has(img.wikidata) ? 0 : 1;
+  });
+  return allowed;
+}
+
+function neighbour(img: GalleryImage, similarity: number): GalleryNeighbour {
+  return { id: img.id, label: img.label, lat: img.lat, lon: img.lon, country: img.country, wikidata: img.wikidata, similarity };
+}
+
+/** The search itself on this thread (Gallery.search, and searchAsync when its thread fails). */
+function searchHere(snapshot: GallerySnapshot, vectors: Float32Array, rows: number, k: number, allowed: Uint8Array | null): GalleryNeighbour[][] {
+  const n = snapshot.images.length;
+  const all = similarityMatrix(vectors, rows, snapshot.vectors, n, snapshot.dim);
+  const out: GalleryNeighbour[][] = [];
+  for (let r = 0; r < rows; r++) {
+    const sims = all.subarray(r * n, (r + 1) * n);
+    out.push(selectTop(sims, k, allowed).map((i) => neighbour(snapshot.images[i] as GalleryImage, sims[i] as number)));
+  }
+  return out;
+}
+
+/** The result objects from the packed answer of the search thread (the same as searchHere's). */
+function unpack(images: readonly GalleryImage[], rows: number, top: TopRows): GalleryNeighbour[][] {
+  const out: GalleryNeighbour[][] = [];
+  for (let r = 0; r < rows; r++) {
+    const list: GalleryNeighbour[] = [];
+    const end = top.offsets[r + 1] as number;
+    for (let j = top.offsets[r] as number; j < end; j++) {
+      list.push(neighbour(images[top.indices[j] as number] as GalleryImage, top.similarities[j] as number));
+    }
+    out.push(list);
+  }
+  return out;
+}
+
+/** Distinguishes the galleries of the process in the search thread. */
+let nextGalleryKey = 1;
+
+/** Releases the matrix a garbage-collected gallery left in the search thread. */
+const galleryGone = new FinalizationRegistry<number>((key) => forgetGallery(key));
+
 /**
- * The reference gallery in memory: one L2-normalised row per picture, searched exhaustively
- * (a few thousand rows times a handful of frames is a few million multiply-adds).
+ * The reference gallery in memory: one L2-normalised row per picture, searched exhaustively.
+ * The node searches in a worker thread (searchAsync, see gallerySearch.ts): the 48 query rows of
+ * a usual localisation take about 0.4 s of one core against the full gallery, 100 rows about 1 s.
  */
 export class Gallery {
   readonly datasetDir: string;
@@ -194,10 +258,19 @@ export class Gallery {
   private readonly batchSize: number;
   private readonly decodeConcurrency: number;
 
+  private readonly searchThread: GallerySearchThread | null;
+  private readonly key = nextGalleryKey++;
+
   private images: GalleryImage[] = [];
   private byId = new Map<string, number>();
-  private vectors = new Float32Array(0);
+  /**
+   * In shared memory, so that the search thread reads the very bytes without a copy. load()
+   * replaces the array as a whole (and counts `version` up); it never writes into one it has set,
+   * so a search under way in the thread always reads one complete state.
+   */
+  private vectors = new Float32Array(new SharedArrayBuffer(0));
   private dimension = 0;
+  private version = 0;
 
   constructor(
     private readonly model: ImageEmbedder,
@@ -208,6 +281,8 @@ export class Gallery {
     this.modelId = options.modelId ?? config.modelId;
     this.batchSize = options.batchSize ?? config.batchSize;
     this.decodeConcurrency = options.decodeConcurrency ?? Math.max(2, os.availableParallelism());
+    this.searchThread = options.searchThread ?? null;
+    galleryGone.register(this, this.key);
   }
 
   get size(): number {
@@ -319,12 +394,15 @@ export class Gallery {
     }
 
     const usable = keep.filter((k) => k.row !== null);
-    const vectors = new Float32Array(usable.length * dim);
+    // A new matrix every time, filled before anybody sees it (see `vectors`).
+    const vectors = new Float32Array(new SharedArrayBuffer(usable.length * dim * Float32Array.BYTES_PER_ELEMENT));
     usable.forEach((k, i) => vectors.set(k.row as Float32Array, i * dim));
+    // The whole state changes in one synchronous step: a search sees either the old or the new.
     this.images = usable.map((k) => k.img);
     this.byId = new Map(this.images.map((img, i) => [img.id, i]));
     this.vectors = vectors;
     this.dimension = dim;
+    this.version++;
 
     const unchanged = missing.length === 0 && fromSeed === 0 && cached.size === usable.length;
     if (!unchanged) {
@@ -399,69 +477,50 @@ export class Gallery {
     return failed;
   }
 
+  private snapshot(): GallerySnapshot {
+    return { images: this.images, vectors: this.vectors, dim: this.dimension, version: this.version };
+  }
+
   /**
-   * k nearest reference pictures for every row of `vectors` (n x dim, L2-normalised), best first.
+   * k nearest reference pictures for every row of `vectors` (n x dim, L2-normalised), best first;
+   * among equal similarities the earlier gallery row first. Runs on the calling thread (up to
+   * about 1 s for 100 rows against the full gallery): the node uses searchAsync, scripts use this.
    */
   search(vectors: Float32Array, k: number, opts: GallerySearchOptions = {}): GalleryNeighbour[][] {
-    const dim = this.dimension;
-    if (dim === 0 || this.images.length === 0) return [];
+    const snapshot = this.snapshot();
+    const { dim } = snapshot;
+    if (dim === 0 || snapshot.images.length === 0) return [];
+    if (vectors.length % dim !== 0) throw new Error(`search: ${vectors.length} Werte sind kein Vielfaches von ${dim}.`);
+    return searchHere(snapshot, vectors, vectors.length / dim, k, allowedRows(snapshot.images, opts));
+  }
+
+  /**
+   * The same search with the same result as search() (same order, same ties, the same float32
+   * similarities), computed in the gallery search thread so that the calling thread stays free.
+   * It searches the gallery as it is at the call, even if load() replaces it before the answer.
+   * If the thread cannot start or fails, this search runs on the calling thread instead: a
+   * localisation never fails because of the thread. `vectors` is copied at the call; it must not
+   * be modified before the promise settles (a fallback reads it again).
+   */
+  async searchAsync(vectors: Float32Array, k: number, opts: GallerySearchOptions = {}): Promise<GalleryNeighbour[][]> {
+    // Everything up to the post to the thread runs synchronously, so the snapshot and the
+    // matrix version posted belong together.
+    const snapshot = this.snapshot();
+    const { dim, images } = snapshot;
+    if (dim === 0 || images.length === 0) return [];
     if (vectors.length % dim !== 0) throw new Error(`search: ${vectors.length} Werte sind kein Vielfaches von ${dim}.`);
     const rows = vectors.length / dim;
-    const excluded = new Set(opts.excludeWikidata ?? []);
-    const allowed = excluded.size === 0 ? null : this.images.map((img) => !(img.wikidata !== null && excluded.has(img.wikidata)));
-    const n = this.images.length;
-    const g = this.vectors;
-    const out: GalleryNeighbour[][] = [];
-    // Gallery row outside, query rows inside: the query block stays in the cache while the
-    // gallery streams through once, however many rows (frames and crops) are asked.
-    const all = new Float32Array(rows * n);
-    for (let i = 0; i < n; i++) {
-      const gOff = i * dim;
-      for (let r = 0; r < rows; r++) {
-        const qOff = r * dim;
-        let d0 = 0;
-        let d1 = 0;
-        let d2 = 0;
-        let d3 = 0;
-        let d = 0;
-        for (; d + 3 < dim; d += 4) {
-          d0 += (vectors[qOff + d] as number) * (g[gOff + d] as number);
-          d1 += (vectors[qOff + d + 1] as number) * (g[gOff + d + 1] as number);
-          d2 += (vectors[qOff + d + 2] as number) * (g[gOff + d + 2] as number);
-          d3 += (vectors[qOff + d + 3] as number) * (g[gOff + d + 3] as number);
-        }
-        for (; d < dim; d++) d0 += (vectors[qOff + d] as number) * (g[gOff + d] as number);
-        all[r * n + i] = d0 + d1 + d2 + d3;
-      }
+    if (rows === 0) return [];
+    const allowed = allowedRows(images, opts);
+    const thread = this.searchThread ?? sharedGallerySearch();
+    let top: TopRows;
+    try {
+      // A copy of just the query rows, moved to the thread: the caller's array stays intact.
+      top = await thread.search({ gallery: this.key, version: snapshot.version, matrix: snapshot.vectors, n: images.length, dim }, vectors.slice(), rows, k, allowed);
+    } catch {
+      // Thread not available or failed (it reports that once): this search is done here.
+      return searchHere(snapshot, vectors, rows, k, allowed);
     }
-    for (let r = 0; r < rows; r++) {
-      const sims = all.subarray(r * n, (r + 1) * n);
-      // Partial selection: keep a small sorted list of the best k.
-      const top: number[] = [];
-      for (let i = 0; i < n; i++) {
-        if (allowed && !allowed[i]) continue;
-        const s = sims[i] as number;
-        if (top.length === k && s <= (sims[top[top.length - 1] as number] as number)) continue;
-        let pos = top.length;
-        while (pos > 0 && (sims[top[pos - 1] as number] as number) < s) pos--;
-        top.splice(pos, 0, i);
-        if (top.length > k) top.pop();
-      }
-      out.push(
-        top.map((i) => {
-          const img = this.images[i] as GalleryImage;
-          return {
-            id: img.id,
-            label: img.label,
-            lat: img.lat,
-            lon: img.lon,
-            country: img.country,
-            wikidata: img.wikidata,
-            similarity: sims[i] as number,
-          };
-        }),
-      );
-    }
-    return out;
+    return unpack(images, rows, top);
   }
 }

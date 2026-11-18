@@ -1,0 +1,462 @@
+{
+  "generatedAt": "2026-11-18T19:17:41Z",
+  "what": "GeoCLIP world model in the DATUM engine (datum/geoclipService.ts, geoclipWorker.ts, LocateParams.geoclip): accuracy through the engine path, and timings of the quick and full stage on one 20-minute video",
+  "machine": {
+    "cores": 4,
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "note": "shared machine; other agents ran nodes, tests and measurements at the same time (load average 2.5-6 on 4 cores during the timings); every time is an upper bound"
+  },
+  "accuracy": {
+    "source": "docs/measurements/datum-geolocation.json (scripts/datum/evaluate.ts --params default: the gallery parameters as the engine runs them, GeoCLIP int8 through its worker thread)",
+    "before_galleryOnly": {
+      "unknown": {
+        "train": {
+          "n": 30,
+          "medianKm": 739.8,
+          "acc1km": 0,
+          "acc25km": 0.167,
+          "acc200km": 0.267,
+          "acc750km": 0.5,
+          "acc2500km": 0.6,
+          "countryAcc": 0.433,
+          "withinRadius": 0.7,
+          "meanConfidence": 0.731
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 936.9,
+          "acc1km": 0,
+          "acc25km": 0.133,
+          "acc200km": 0.233,
+          "acc750km": 0.433,
+          "acc2500km": 0.6,
+          "countryAcc": 0.333,
+          "withinRadius": 0.6,
+          "meanConfidence": 0.725
+        }
+      },
+      "open": {
+        "train": {
+          "n": 30,
+          "medianKm": 267.6,
+          "acc1km": 0.233,
+          "acc25km": 0.367,
+          "acc200km": 0.433,
+          "acc750km": 0.633,
+          "acc2500km": 0.7,
+          "countryAcc": 0.433,
+          "withinRadius": 0.767,
+          "meanConfidence": 0.736
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 433.6,
+          "acc1km": 0.267,
+          "acc25km": 0.433,
+          "acc200km": 0.467,
+          "acc750km": 0.533,
+          "acc2500km": 0.667,
+          "countryAcc": 0.367,
+          "withinRadius": 0.667,
+          "meanConfidence": 0.717
+        }
+      }
+    },
+    "after_withWorldModel": {
+      "unknown": {
+        "train": {
+          "n": 30,
+          "medianKm": 164.6,
+          "acc1km": 0.133,
+          "acc25km": 0.333,
+          "acc200km": 0.533,
+          "acc750km": 0.633,
+          "acc2500km": 0.867,
+          "countryAcc": 0.533,
+          "withinRadius": 0.767,
+          "meanConfidence": 0.773
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 267.8,
+          "acc1km": 0.1,
+          "acc25km": 0.333,
+          "acc200km": 0.433,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.6,
+          "withinRadius": 0.9,
+          "meanConfidence": 0.798
+        }
+      },
+      "open": {
+        "train": {
+          "n": 30,
+          "medianKm": 116.7,
+          "acc1km": 0.233,
+          "acc25km": 0.4,
+          "acc200km": 0.533,
+          "acc750km": 0.667,
+          "acc2500km": 0.867,
+          "countryAcc": 0.533,
+          "withinRadius": 0.8,
+          "meanConfidence": 0.794
+        },
+        "test": {
+          "n": 30,
+          "medianKm": 20.5,
+          "acc1km": 0.267,
+          "acc25km": 0.533,
+          "acc200km": 0.567,
+          "acc750km": 0.767,
+          "acc2500km": 0.933,
+          "countryAcc": 0.567,
+          "withinRadius": 0.9,
+          "meanConfidence": 0.791
+        }
+      }
+    },
+    "reproduces": "test half identical to docs/measurements/datum-geoclip.json (fusion int8 agree): unknown 10/33/43/77/93 %, country 60 %; open 27/53/57/77/93 %, country 57 %; gallery alone identical to its existingDecision",
+    "worldModelChoice": {
+      "recipe": {
+        "agreeKm": 200,
+        "minAgree": 0.05,
+        "replaceTiers": [
+          "strong",
+          "recognised",
+          "similar",
+          "country",
+          "continent"
+        ],
+        "concentrationKm": 25
+      },
+      "trainWorldModelAnswers": 36,
+      "concentrated": {
+        "minConcentration": 0.2,
+        "trainCases": 5,
+        "trainCoverage1km": 0.8,
+        "trainCoverage25km": 0.8,
+        "trainErrorsKm": [
+          0.06,
+          0.08,
+          0.42,
+          0.42,
+          888.29
+        ],
+        "chosenKm": 25,
+        "rule": "radius whose train coverage lies nearer 0.7; 25 km on a tie or with fewer than 4 cases"
+      },
+      "diffuse": {
+        "trainCases": 31,
+        "chosenKm": 1500,
+        "trainCoverageChosen": 0.677,
+        "radiusBy70PercentRuleKm": 2000
+      }
+    },
+    "confidence": {
+      "fused": {
+        "train": {
+          "n": 60,
+          "logLoss": 0.4633,
+          "brier": 0.1507,
+          "meanConfidence": 0.783,
+          "hitRate": 0.783
+        },
+        "test": {
+          "n": 60,
+          "logLoss": 0.3207,
+          "brier": 0.0908,
+          "meanConfidence": 0.794,
+          "hitRate": 0.9
+        }
+      },
+      "galleryOnly": {
+        "train": {
+          "n": 60,
+          "logLoss": 0.5112,
+          "brier": 0.1682,
+          "meanConfidence": 0.733,
+          "hitRate": 0.733
+        },
+        "test": {
+          "n": 60,
+          "logLoss": 0.5896,
+          "brier": 0.2007,
+          "meanConfidence": 0.721,
+          "hitRate": 0.633
+        }
+      }
+    },
+    "caveat": "the reference landmarks are likely in GeoCLIP's Flickr training data: the gain on landmark videos may be larger than on arbitrary footage",
+    "engineFramesCheck": "GeoCLIP embeddings of the engine frames (sampleFrameJpegs) through the worker equal the evaluation cache bit for bit (3 videos checked)"
+  },
+  "timing20min": {
+    "video": "one reference clip (cl-palacio-de-la-moneda, 854x480 H.264) looped to 1200 s (-stream_loop, stream copy, 81 MB); uploaded to a node of its own (port 8791, node definition of nodes.datum.json without the seeded reference set, own data dir, deleted afterwards), fps 1, detail standard",
+    "withWorldModel_coldNode": {
+      "uploadMs": 592,
+      "quickFixAfterUploadMs": 11706,
+      "quickElapsedMs": 11483,
+      "fullFixAfterUploadMs": 285126,
+      "fullElapsedMs": 2980,
+      "httpLatencyDuringQuickMs": {
+        "n": 54,
+        "median": 2,
+        "p95": 63,
+        "max": 437
+      },
+      "httpLatencyAfterQuickMs": {
+        "n": 1346,
+        "median": 1,
+        "p95": 6,
+        "max": 375
+      },
+      "quickTrace": [
+        {
+          "label": "Metadaten gelesen",
+          "ms": 1010,
+          "detail": "kein Ort, keine Zeit in der Datei"
+        },
+        {
+          "label": "Bilder für die Ortung gezogen",
+          "ms": 6158,
+          "detail": "12 Bilder, 48 Ausschnitte"
+        },
+        {
+          "label": "Mit der Referenzgalerie verglichen",
+          "ms": 2036,
+          "detail": "6.393 Referenzbilder · Asien, ± 4.267 km"
+        },
+        {
+          "label": "Weltmodell befragt",
+          "ms": 0,
+          "detail": "GeoCLIP: Portugal, ersetzt das Ergebnis der Referenzgalerie (0 % dort) · 5,7 s"
+        },
+        {
+          "label": "Licht und Sonnenstand bestimmt",
+          "ms": 2279,
+          "detail": "Vormittag, Europe/Lisbon"
+        }
+      ],
+      "fullTrace": [
+        {
+          "label": "Bildmerkmale übernommen",
+          "ms": 0,
+          "detail": "12 Bilder aus der Auswertung, 768 Dimensionen"
+        },
+        {
+          "label": "Metadaten gelesen",
+          "ms": 172,
+          "detail": "kein Ort, keine Zeit in der Datei"
+        },
+        {
+          "label": "Bilder für die Ortung gezogen",
+          "ms": 0,
+          "detail": "12 Bilder, 48 Ausschnitte, aus der Schnellortung übernommen"
+        },
+        {
+          "label": "Mit der Referenzgalerie verglichen",
+          "ms": 546,
+          "detail": "6.393 Referenzbilder · Asien, ± 4.267 km"
+        },
+        {
+          "label": "Weltmodell befragt",
+          "ms": 0,
+          "detail": "aus der Schnellortung übernommen · GeoCLIP: Portugal, ersetzt das Ergebnis der Referenzgalerie (0 % dort) · 5,7 s"
+        },
+        {
+          "label": "Raum aus Bild 1 aufgebaut",
+          "ms": 1261,
+          "detail": "Tiefe in 262 ms, Himmel 0 %, Neigung 0°"
+        },
+        {
+          "label": "Raum aus Bild 2 aufgebaut",
+          "ms": 406,
+          "detail": "Tiefe in 218 ms, Himmel 0 %, Neigung -1°"
+        },
+        {
+          "label": "Raum aus Bild 3 aufgebaut",
+          "ms": 461,
+          "detail": "Tiefe in 262 ms, Himmel 1 %, Neigung -13°"
+        },
+        {
+          "label": "Gelände geprüft",
+          "ms": 32,
+          "detail": "kein Höhenmodell oder keine Himmelslinie"
+        },
+        {
+          "label": "Licht und Sonnenstand bestimmt",
+          "ms": 101,
+          "detail": "Vormittag, Europe/Lisbon"
+        }
+      ]
+    },
+    "withoutWorldModel_coldNode": {
+      "uploadMs": 584,
+      "quickFixAfterUploadMs": 7723,
+      "quickElapsedMs": 7670,
+      "httpLatencyDuringQuickMs": {
+        "n": 35,
+        "median": 2,
+        "p95": 296,
+        "max": 299
+      },
+      "quickTrace": [
+        {
+          "label": "Metadaten gelesen",
+          "ms": 900,
+          "detail": "kein Ort, keine Zeit in der Datei"
+        },
+        {
+          "label": "Bilder für die Ortung gezogen",
+          "ms": 3801,
+          "detail": "12 Bilder, 48 Ausschnitte"
+        },
+        {
+          "label": "Mit der Referenzgalerie verglichen",
+          "ms": 524,
+          "detail": "6.393 Referenzbilder · Asien, ± 4.267 km"
+        },
+        {
+          "label": "Weltmodell befragt",
+          "ms": 1,
+          "detail": "Weltmodell abgeschaltet"
+        },
+        {
+          "label": "Licht und Sonnenstand bestimmt",
+          "ms": 2440,
+          "detail": "Nachmittag, Etc/GMT-6"
+        }
+      ]
+    },
+    "withWorldModel_secondUpload_warm": {
+      "quickFixAfterUploadMs": 7184,
+      "uploadMs": 739,
+      "quickElapsedMs": 7054,
+      "trace": [
+        {
+          "label": "Metadaten gelesen",
+          "ms": 193,
+          "detail": "kein Ort, keine Zeit in der Datei"
+        },
+        {
+          "label": "Bilder für die Ortung gezogen",
+          "ms": 5264,
+          "detail": "12 Bilder, 48 Ausschnitte"
+        },
+        {
+          "label": "Mit der Referenzgalerie verglichen",
+          "ms": 1516,
+          "detail": "6.393 Referenzbilder · Asien, ± 4.267 km"
+        },
+        {
+          "label": "Weltmodell befragt",
+          "ms": 0,
+          "detail": "GeoCLIP: Portugal, ersetzt das Ergebnis der Referenzgalerie (0 % dort) · 5,2 s"
+        },
+        {
+          "label": "Licht und Sonnenstand bestimmt",
+          "ms": 81,
+          "detail": "Vormittag, Europe/Lisbon"
+        }
+      ]
+    },
+    "withoutWorldModel_secondUpload_warm": {
+      "quickFixAfterUploadMs": 4130,
+      "uploadMs": 764,
+      "quickElapsedMs": 4044,
+      "trace": [
+        {
+          "label": "Metadaten gelesen",
+          "ms": 173,
+          "detail": "kein Ort, keine Zeit in der Datei"
+        },
+        {
+          "label": "Bilder für die Ortung gezogen",
+          "ms": 3265,
+          "detail": "12 Bilder, 48 Ausschnitte"
+        },
+        {
+          "label": "Mit der Referenzgalerie verglichen",
+          "ms": 494,
+          "detail": "6.393 Referenzbilder · Asien, ± 4.267 km"
+        },
+        {
+          "label": "Weltmodell befragt",
+          "ms": 0,
+          "detail": "Weltmodell abgeschaltet"
+        },
+        {
+          "label": "Licht und Sonnenstand bestimmt",
+          "ms": 112,
+          "detail": "Nachmittag, Etc/GMT-6"
+        }
+      ]
+    },
+    "withWorldModel_coldNode_repeat": {
+      "quickFixAfterUploadMs": 10957,
+      "quickElapsedMs": 10952,
+      "httpLatencyDuringQuickMs": {
+        "n": 50,
+        "median": 2,
+        "p95": 82,
+        "max": 491
+      }
+    },
+    "summary": {
+      "quickFixColdS": {
+        "withWorldModel": [
+          11.7,
+          11.0
+        ],
+        "without": 7.7
+      },
+      "quickFixWarmS": {
+        "withWorldModel": 7.2,
+        "without": 4.1
+      },
+      "geoclipAddedToQuickFixS": "about 3 (warm 7.2 vs 4.1 s; cold 11.0-11.7 vs 7.7 s); GeoCLIP itself 5.2-5.7 s in its thread, side by side with the image model",
+      "fullFixAfterUploadS": 285.1,
+      "fullStageS": 3.0,
+      "geoclipInFullStageMs": 0,
+      "note": "the full stage takes the quick stage world-model answer over (trace: aus der Schnellortung uebernommen); the full fix arrives when the analysis of the 1200 frames is done, here after 4 min 45 s for a 20 min video",
+      "httpLatency": "GET /api/public/info every 200 ms: median 1-2 ms throughout; during the quick stage p95 63-296 ms, max 300-490 ms in every run, also without the world model (the gallery search and frame decoding still run on the main thread); world model alone: main thread busy 0.6-1.9 ms per prediction (event-loop utilisation, test/datum-geoclip-worker.test.ts)"
+    },
+    "place": "the 12 frames of the looped video show only 3 different moments of the clip (50 s, 150 s, ... modulo 12 s); GeoCLIP put 19 % on Portugal and replaced the continent-level gallery answer (Asia); not comparable with the evaluation, which samples the 12 s clip itself"
+  },
+  "threads": {
+    "choice": "GeoCLIP intra-op threads = half the cores (2 of 4, DATUM_GEOCLIP_THREADS overrides), allow_spinning 0; the image, face and depth models keep all cores behind the gate of ml/workerHost.ts",
+    "benchmark12frames": {
+      "cores": 4,
+      "frames": 12,
+      "loadBefore": [
+        2.47,
+        3.65,
+        4.37
+      ],
+      "threads2": {
+        "geoclipAloneMs": 2956,
+        "geoclipEmbedMs": 1962,
+        "siglipCropsAloneMs": 3213,
+        "sequentialSumMs": 6169,
+        "sideBySideWallMs": 4913,
+        "sideBySideGeoclipMs": 4547,
+        "sideBySideSiglipMs": 4913
+      },
+      "threads4": {
+        "geoclipAloneMs": 2741,
+        "geoclipEmbedMs": 1781,
+        "siglipCropsAloneMs": 5335,
+        "sequentialSumMs": 8076,
+        "sideBySideWallMs": 6597,
+        "sideBySideGeoclipMs": 4470,
+        "sideBySideSiglipMs": 6597
+      },
+      "loadAfter": [
+        3.45,
+        3.64,
+        4.3
+      ]
+    },
+    "reading": "GeoCLIP alone is barely faster with 4 threads than with 2 (2.74 vs 2.96 s); side by side with the image model crops 2 threads finish both in 4.9 s instead of 6.2 s one after the other; with 4 threads the image model slows more"
+  }
+}

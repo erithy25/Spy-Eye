@@ -318,7 +318,9 @@ export const DEFAULT_STREETLEVEL_OPTIONS: StreetLevelOptions = {
   userAgent: STREETLEVEL_USER_AGENT,
   panoramaxApi: 'https://api.panoramax.xyz/api',
   mapillaryApi: 'https://graph.mapillary.com',
-  cacheDir: path.join(repoRoot, '.cache', 'datum', 'streetlevel'),
+  // DATUM_STREETLEVEL_CACHE moves it (an installation that keeps caches elsewhere, or a
+  // measurement that must start without cached vectors).
+  cacheDir: process.env['DATUM_STREETLEVEL_CACHE']?.trim() || path.join(repoRoot, '.cache', 'datum', 'streetlevel'),
   modelId: config.modelId,
   searchCacheTtlMs: 15 * 60_000,
   maxImageBytes: 4_000_000,
@@ -808,8 +810,32 @@ class RefusedUrlError extends Error {
   }
 }
 
+/**
+ * Settles with `promise`, or rejects with the signal's reason (a timeout, or the end of the
+ * budget) as soon as `signal` aborts. The system resolver takes no signal and can hang for many
+ * seconds on a broken network; a request must not wait for it beyond its timeout and budget.
+ */
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  const reason = (): Error => (signal.reason instanceof Error ? signal.reason : new BudgetError());
+  if (signal.aborted) return Promise.reject(reason());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(reason());
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
+}
+
 /** The host of `url` may be contacted (checked once per host and call). */
-async function allowedHost(ctx: CallContext, url: string): Promise<void> {
+async function allowedHost(ctx: CallContext, url: string, signal: AbortSignal): Promise<void> {
   if (!isSafeRemoteUrl(url)) throw new RefusedUrlError();
   if (!ctx.lookup) return;
   const host = new URL(url).hostname;
@@ -818,7 +844,7 @@ async function allowedHost(ctx: CallContext, url: string): Promise<void> {
     verdict = checkHost(url, ctx.lookup);
     ctx.hosts.set(host, verdict);
   }
-  const v = await verdict;
+  const v = await untilAborted(verdict, signal);
   if (v === 'refused') throw new RefusedUrlError();
   if (v === 'error') throw new Error('Name nicht auflösbar');
 }
@@ -872,7 +898,7 @@ async function httpGet(
       let sent: Record<string, string> = { 'User-Agent': ctx.opts.userAgent, ...headers };
       let res: Response;
       for (let hop = 0; ; hop++) {
-        await allowedHost(ctx, current);
+        await allowedHost(ctx, current, signal);
         res = await ctx.fetch(current, { headers: sent, signal, redirect: 'manual' });
         const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
         if (location === null) break;
@@ -1183,6 +1209,22 @@ function emptyResult(reasonCode: StreetLevelReasonCode, reason: string, reasonEn
       budgetExhausted: false,
     },
   };
+}
+
+/**
+ * The result of a call its caller stopped waiting for (the engine's hard limit, see
+ * DatumEngine): no match, reason 'error', with the time the caller waited.
+ */
+export function streetLevelCutOff(budgetMs: number, waitedMs: number): StreetLevelResult {
+  const result = emptyResult(
+    'error',
+    `Zeitbudget von ${fmt(budgetMs / 1000, 0)} s überschritten; ohne Straßenbilder weitergerechnet.`,
+    `Time budget of ${fmtEn(budgetMs / 1000, 0)} s exceeded; continued without street-level pictures.`,
+    performance.now(),
+  );
+  result.timing.totalMs = waitedMs;
+  result.timing.budgetExhausted = true;
+  return result;
 }
 
 /**
@@ -1705,7 +1747,8 @@ export function streetLevelEvidence(result: StreetLevelResult, opts: { kind?: Ev
 
 /**
  * The fix location after the stage: with a match, the refined point and radius (the label and
- * country of the coarse fix stay; method 'landmark'); without one, the location unchanged.
+ * country of the coarse fix stay; method 'streetlevel', since the street-level picture now pins
+ * the place); without one, the location unchanged.
  */
 export function applyStreetLevel(location: FixLocation, result: StreetLevelResult): FixLocation {
   if (!result.matched || !result.location) return location;
@@ -1715,6 +1758,74 @@ export function applyStreetLevel(location: FixLocation, result: StreetLevelResul
     lon: result.location.lon,
     radiusKm: Math.min(location.radiusKm, result.location.radiusKm),
     confidence: Math.max(location.confidence, result.location.confidence),
-    method: 'landmark',
+    method: 'streetlevel',
   };
+}
+
+// ------------------------------------------------------------------ when the engine asks
+
+/** The coarse answer of the localisation, as far as the decision below needs it. */
+export interface StreetLevelSituation {
+  location: FixLocation | null;
+  diagnostics: {
+    method: 'metadata' | 'landmark' | 'region' | 'worldmodel' | 'none';
+    radiusTier: string | null;
+    worldModel: { concentration: number; best: GeoPoint } | null;
+  };
+}
+
+export interface StreetLevelRule {
+  /** Radius searched around the coarse place (km). */
+  radiusKm: number;
+  /** Tiers of a gallery (landmark) answer that are close enough to search around. */
+  landmarkTiers: readonly string[];
+  /**
+   * A world-model answer is searched around GeoCLIP's best point when its mass within 25 km is at
+   * least this much; null: never.
+   */
+  worldModelMinConcentration: number | null;
+}
+
+/**
+ * When the full stage compares with street-level pictures. A recognised landmark (tiers 'strong'
+ * and 'recognised') is searched 3 km around (docs/measurements/datum-streetlevel.json: with the
+ * true place among the candidates 6 of 29 covered places matched, 5 within 1 km; around a wrong
+ * place 50 km away 1 of 18 matched).
+ *
+ * World-model answers stay off (worldModelMinConcentration null). Measured on the reference
+ * videos in unknown mode (the place not in the gallery; docs/measurements/
+ * datum-streetlevel-worldmodel.json, scripts/datum/evaluateStreetlevel.ts --worldmodel), 3 km
+ * around GeoCLIP's best point of the answers with a concentration of at least 0.2: on the train
+ * half 4 such answers, 2 with enough Panoramax pictures, 1 match (0.5 km from the truth); on the
+ * test half 5, 3 and 1 match, and that one a wrong pin (1.9 km from the truth with a 1 km
+ * radius, where GeoCLIP's own point was 1.0 km off with 25 km). Both matches moved the point away
+ * from the truth and only narrowed the circle. One match on train cannot show the wanted rate of
+ * at most one wrong pin in ten; switch it on only after a measurement with ten matches or more
+ * (with a Mapillary key, which this one did not have).
+ */
+export const STREETLEVEL_RULE: StreetLevelRule = {
+  radiusKm: 3,
+  landmarkTiers: ['strong', 'recognised'],
+  worldModelMinConcentration: null,
+};
+
+/**
+ * The candidate the full stage searches around for this answer, with why; null when it does not
+ * search (no place, GPS in the file, a country- or continent-level answer, a diffuse world-model
+ * answer).
+ */
+export function streetLevelPlan(
+  located: StreetLevelSituation,
+  rule: StreetLevelRule = STREETLEVEL_RULE,
+): { candidate: StreetLevelCandidate; source: 'landmark' | 'worldmodel' } | null {
+  const loc = located.location;
+  if (!loc) return null;
+  const d = located.diagnostics;
+  if (d.method === 'landmark' && d.radiusTier !== null && rule.landmarkTiers.includes(d.radiusTier)) {
+    return { candidate: { lat: loc.lat, lon: loc.lon, radiusKm: rule.radiusKm, label: loc.label }, source: 'landmark' };
+  }
+  if (d.method === 'worldmodel' && d.worldModel && rule.worldModelMinConcentration !== null && d.worldModel.concentration >= rule.worldModelMinConcentration) {
+    return { candidate: { lat: d.worldModel.best.lat, lon: d.worldModel.best.lon, radiusKm: rule.radiusKm, label: loc.label }, source: 'worldmodel' };
+  }
+  return null;
 }

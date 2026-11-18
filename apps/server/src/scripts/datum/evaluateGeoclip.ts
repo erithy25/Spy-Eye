@@ -14,7 +14,9 @@
  * The existing decision ('open' gallery and 'unknown' = the video's own Wikidata item left out,
  * as in scripts/datum/evaluate.ts) is recomputed with decideLocation and the engine's current
  * DEFAULT_LOCATE_PARAMS from the SigLIP vectors that `pnpm datum:evaluate` cached
- * (.cache/datum/eval-frames-*.json); nothing in locate.ts is changed.
+ * (.cache/datum/eval-frames-*.json), without a GeoCLIP prediction: the gallery alone. The fusion
+ * chosen here ("agree") now runs inside decideLocation (LocateParams.geoclip); the engine's path,
+ * with GeoCLIP in its worker thread, is measured by scripts/datum/evaluate.ts.
  *
  * Everything is chosen on the train half (even index of the manifest sorted by id): GeoCLIP's frame
  * aggregation and answer point, the fusion recipe and its weights, the radius of GeoCLIP answers.

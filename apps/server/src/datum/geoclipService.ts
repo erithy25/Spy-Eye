@@ -28,6 +28,7 @@ import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { config, repoRoot } from '../config.js';
 import { GEOCLIP_FILES, defaultGeoclipDir, geoclipFilesPresent, type GeoclipPrecision, type GeoclipPrediction } from './geoclip.js';
+import { reportWorldModel } from './settings.js';
 
 /** A text in both languages. */
 export interface Named {
@@ -440,6 +441,7 @@ export class WorldModelService implements WorldModel {
     this.live.catch(() => undefined);
     this.rejectPending(error);
     this.settleListeners(false);
+    reportWorldModel({ available: false, precision: this.boot.precision });
     this.log(`Weltmodell aufgegeben: ${error.message}`);
   }
 
@@ -462,11 +464,14 @@ export class WorldModelService implements WorldModel {
   private onEvent(event: GalleryEvent): void {
     if (event.state === 'ready') {
       this.gallery = { state: 'ready', done: this.gallery.total, total: this.gallery.total, reason: null };
+      // The settings view (GET /api/datum/settings) shows what runs, not only what is on disk.
+      reportWorldModel({ available: true, precision: this.boot.precision });
       if (event.built) this.log(`Weltmodell: Ortsgalerie einmalig berechnet in ${(event.ms / 1000).toFixed(0)} s`);
       if (event.cacheProblem) this.log(`Weltmodell: Ortsgalerie nicht zwischengespeichert (${event.cacheProblem}); sie wird beim nächsten Start neu berechnet`);
       this.settleListeners(true);
     } else if (event.state === 'failed') {
       this.gallery = { state: 'failed', done: 0, total: 0, reason: event.reason };
+      reportWorldModel({ available: false, precision: this.boot.precision });
       this.settleListeners(false);
       this.log(`Weltmodell: Ortsgalerie fehlgeschlagen (${event.reason}); Ortung ohne Weltmodell`);
     } else {
