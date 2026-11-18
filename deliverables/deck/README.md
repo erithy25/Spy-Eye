@@ -66,12 +66,12 @@ Bilder der englischen Ausgabe und ihre Adressen im englischen Dokument (`tools/b
 
 | Folie | Datei im Repository | Adresse im Dokument |
 | --- | --- | --- |
-| 6 `lage` | `docs/screens/lage-en.png` | `/_blob/c81927d5dd4d1925535f38012e36beb1` |
-| 7 `wachen` | `deliverables/deck/assets/en/wachen-ausschnitt.png` | `/_blob/6f2e3dbb499eef32e179d5afbaea6ed2` |
-| 8 `suche` | `docs/screens/suche.png` | `/_blob/367ed61fbe59cd893529971d2310a52c` |
-| 9 `verbund` | `deliverables/deck/assets/en/verbund-karte.png` | `/_blob/3d03a8d4e814c12664fc992d63430b7b` |
-| 10 `aufsicht` | `docs/screens/stichprobe.png` | `/_blob/483deb5e0d7e5ab5452f11422b1f7bbd` |
-| 11 `ruecksicht` | `docs/screens/maskiert.png` | `/_blob/0f4bab7d66e54a18e913d53e51dadd26` |
+| 6 `lage` | `docs/screens/lage-en.png` | `/_blob/4c5106e400e4b54ded63c38c4c8452b1` |
+| 7 `wachen` | `deliverables/deck/assets/en/wachen-ausschnitt.png` | `/_blob/bb49d04bfe6fd8e5153e0dc801ed8691` |
+| 8 `suche` | `docs/screens/suche.png` | `/_blob/c462880c392e11a878d4f8fa8b4a8815` |
+| 9 `verbund` | `deliverables/deck/assets/en/verbund-karte.png` | `/_blob/09ac49e610692389c0db35929f04da4d` |
+| 10 `aufsicht` | `docs/screens/stichprobe.png` | `/_blob/25e066c84d23e495f67862521d8560b3` |
+| 11 `ruecksicht` | `docs/screens/maskiert.png` | `/_blob/d4b8bbad12e4b3614b2263fad8e5bcd0` |
 
 Neue Bildschirmfotos übernehmen:
 

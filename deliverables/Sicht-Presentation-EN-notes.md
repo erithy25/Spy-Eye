@@ -77,7 +77,7 @@ The largest risk is legal: there is no explicit legal basis for the AI analysis 
 
 ## 19 · Status: what runs, what is missing, the ask
 
-You have seen what runs. Live streams are built and tested in the lab, with a delay of about half a minute; they have not been tried in the field. My request is concrete: an authority that trials Sicht in an exercise for three months and receives a measurement report for it. [Decide before the meeting whether to ask for financing; the slide deliberately names the need of the base case and no sum asked for.]
+You have seen what runs. Live streams are built and tested in the lab, with a delay of about half a minute; they have not been tried in the field. A second reader has gone through the source code: 21 findings, the severe ones are fixed, a penetration test is still to come. My request is concrete: an authority that trials Sicht in an exercise for three months and receives a measurement report for it. [Decide before the meeting whether to ask for financing; the slide deliberately names the need of the base case and no sum asked for.]
 
 ## 20 · Close
 

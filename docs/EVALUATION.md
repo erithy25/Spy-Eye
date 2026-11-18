@@ -78,8 +78,8 @@ die Schnittstelle des laufenden Knotens.
 Die Konsole und der Messbericht einer Übung nennen eine zweite Zahl: die reine Auswertezeit je
 Aufzeichnung, ohne den ersten Durchgang, das Speichern und die Wartezeit zwischen den
 Aufzeichnungen. Sie liegt höher als der Wert in der Tabelle, der von Anfang bis Ende gemessen
-ist: zuletzt 4,3-fache Echtzeit im vorbereiteten Stand der Vorführung, in dem das Übungsmaterial
-für sich allein ausgewertet wird.
+ist: zuletzt 3,9-fache Echtzeit im vorbereiteten Stand der Vorführung (in früheren Läufen 3,7 bis
+4,8), in dem das Übungsmaterial für sich allein ausgewertet wird.
 
 Zum Vergleich auf demselben Rechner: MobileCLIP-S2 62 ms je Bild, CLIP ViT-B/32 26 ms je Bild.
 MobileCLIP ist nur für Forschungszwecke lizenziert und deshalb nicht mehr voreingestellt.
@@ -200,20 +200,23 @@ noch nicht geprüfte Aufzeichnungen abzurufen.
 
 Der Weg, den eine Vorführung nimmt, wird auf einem zweiten Rechner automatisch durchgespielt
 (`.github/workflows/windows.yml`): ein Windows-Rechner von GitHub mit vier Rechenkernen und
-16 GB, Windows PowerShell 5.1, Node 22, ffmpeg 9.0.2. Lauf vom 18. November 2026:
+16 GB, Windows PowerShell 5.1, Node 22, ffmpeg 9.0.2. Letzter Lauf vom 18. November 2026, auf dem
+Stand nach der Sicherheitsdurchsicht:
 
 | Schritt | Ergebnis |
 | --- | --- |
 | `pnpm install`, `typecheck`, `test`, `build` | bestanden |
 | `pnpm selftest` | Rechner, ffmpeg und Bildkodierer in Ordnung |
 | `pnpm exercise:fetch` | 45 Aufnahmen geladen |
-| `pnpm demo:prepare` | drei Knoten vorbereitet in 6 min 39 s |
+| `pnpm demo:prepare` | drei Knoten vorbereitet in 6 min 40 s |
 | `pnpm demo:check` | „Ergebnis: bereit“ |
 | `pnpm demo:reset`, danach `pnpm demo:check` | zurückgesetzt, wieder „bereit“ |
-| `pnpm exercise:evaluate --speed 8` | 13 von 13 Ereignissen, 15 Meldungen, 1 Fehlmeldung, Verzug im Median 3,1 s bei achtfacher Uhr |
+| `pnpm exercise:evaluate --speed 8` | 13 von 13 Ereignissen, 15 Meldungen, 1 Fehlmeldung, Verzug im Median 3 s bei achtfacher Uhr |
+| `pnpm ledger:verify` und `ledger_verify.py` auf dem Protokoll des Knotens Koblenz | beide: Kette unversehrt, 14 Einträge, derselbe letzte Stand |
 
 Die Erkennung stimmt mit dem Lauf auf dem Entwicklungsrechner überein (dort bei achtfacher Uhr
-2,4 s im Median; der Windows-Rechner ist langsamer).
+2,3 bis 2,4 s im Median; der Windows-Rechner ist langsamer). Die 77 automatischen Prüfungen laufen
+dort ebenfalls, einschließlich der beiden Prüfprogramme für das Protokoll.
 
 **Was die Gegenprobe gezeigt hat.** Die ersten beiden Läufe fielen anders aus: Eine Suche auf dem
 Knoten Mainz lag genau auf der Schwelle (Sicherheit 0,50 statt 0,53), und die Übung brachte drei

@@ -180,6 +180,11 @@ fremdem Einsatzmaterial.
 - **Kein Rechtsgutachten.** Ob eine Behörde Bildmaterial so auswerten darf, entscheidet ihre
   Rechtsgrundlage. [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) ordnet die Anforderungen den
   gebauten Vorkehrungen zu und nennt, was fehlt.
+- **Durchgesehen, nicht angegriffen.** Ein zweiter Prüfer hat den Quelltext des Knotens gelesen und
+  21 Befunde belegt; die schweren und die meisten übrigen sind behoben
+  ([`docs/SICHERHEIT.md`](docs/SICHERHEIT.md)). Einen Penetrationstest gab es nicht. Der Knoten
+  spricht selbst kein TLS, auf der Platte ist nichts verschlüsselt, und gegen Überlastung durch
+  eine angemeldete Person gibt es nur einzelne Grenzen.
 - **Größe.** Die Suche vergleicht mit jedem Vektor und ist für einige Millionen Vektoren je Knoten
   ausgelegt, nicht für mehr.
 

@@ -97,7 +97,7 @@ window.SICHT_EN = {
     'The situation map shows sources, alerts and incidents where they were recorded, with an MGRS grid and the grid reference under the pointer. It is drawn in-house from OpenStreetMap vector data and contour lines and needs no tile service. Alerts of the same kind at the same place become one incident.',
   'mod1.alt': 'Console, LAGE tab: situation map with eleven sources, running alerts, incidents and the frames of the sources',
   'mod1.cap':
-    '<b>Console · LAGE</b> Exercise RHEIN-MOSEL at T+07:10: eleven sources on the map, six of 13 alerts still running, ten incidents.',
+    '<b>Console · LAGE</b> Exercise RHEIN-MOSEL at T+07:09: eleven sources on the map, six of 13 alerts still running, ten incidents.',
   'mod1.dalt': 'Console: an alert of the watch “Brand” (fire) with frame, source, grid reference and the buttons to confirm or dismiss it',
   'mod1.dcap':
     '<b>Detail</b> A single alert: the watch “Brand” (fire) at Erkunder 3, with grid reference and confidence. Whether it is confirmed or dismissed is decided by a person.',
@@ -283,7 +283,7 @@ window.SICHT_EN = {
     'Image encoder in all measurements: SigLIP 2 (Google, Apache-2.0), 34&nbsp;ms per frame on this machine. It runs offline and understands queries in German and English.',
   'measured.alt': 'Console, WIRKUNG tab: detection delay, coverage, recorded queries and the events of the exercise with their delay',
   'measured.cap':
-    '<b>Console · WIRKUNG</b> A run of the exercise in real time: 13 of 13 events detected, a median delay of 1.1&nbsp;s, one false alert, 15 alerts. Via MESSBERICHT the console issues the same figures as a printable document, with the conditions of the run and the state of the ledger. The line AUSWERTUNG gives the pure analysis time per recording, here 4.3 times real time; the table gives the lower figure for the whole run, including the first pass and waiting.',
+    '<b>Console · WIRKUNG</b> A run of the exercise in real time: 13 of 13 events detected, a median delay of 1.1&nbsp;s, one false alert, 15 alerts. Via MESSBERICHT the console issues the same figures as a printable document, with the conditions of the run and the state of the ledger. The line AUSWERTUNG gives the pure analysis time per recording, here 3.9 times real time; the table gives the lower figure for the whole run, including the first pass and waiting.',
 
   // ---------------------------------------------------------------- 07 operation
   'ops.h2': 'Runs at the authority.<br>Stays at the authority.',
@@ -328,6 +328,9 @@ window.SICHT_EN = {
   'open5.k': 'No legal opinion',
   'open5.v':
     'Whether an authority may analyse footage in this way is decided by its legal basis. The documentation of Sicht maps the requirements to the safeguards that have been built and names what is missing.',
+  'open7.k': 'Reviewed, not attacked',
+  'open7.v':
+    'A second reader went through the source code of the node and documented 21 findings; the five severe ones and most of the others are fixed. There has been no penetration test. The node itself does not speak TLS, and nothing on its disk is encrypted.',
   'open6.k': 'Scale',
   'open6.v': 'The search compares every query with every vector. It is designed for a few million vectors per node, not for more.',
   'demo.label': 'A demonstration in 15 minutes',

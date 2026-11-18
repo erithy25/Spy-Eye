@@ -1,6 +1,6 @@
 # Sicht – Unterlagenmappe
 
-Die fünf Unterlagen zu Sicht als druckfertige PDF-Dateien im Format A4. Jede Datei entsteht aus
+Die sieben Unterlagen zu Sicht als druckfertige PDF-Dateien im Format A4. Jede Datei entsteht aus
 einer Markdown-Datei unter `docs/`; geändert wird dort, nicht im PDF. Auf dem Deckblatt steht der
 Stand, in der Fußzeile der Titel und die Seitenzahl, am Ende die Liste der Quellen mit ihren
 Adressen.
@@ -12,6 +12,8 @@ Adressen.
 | `Sicht-Fragen-und-Antworten.pdf` | Die harten Fragen aus Ministerium, Datenschutz, Einsatzleitung und Presse und von Investoren, jede mit einer Antwort. Aus `docs/FAQ.md`. | Wer Sicht vorstellt, zur Vorbereitung auf Gespräche. |
 | `Sicht-Messbericht.pdf` | Was gemessen wurde, womit und unter welchen Bedingungen: die Übung RHEIN-MOSEL, die Auswertung von Aufzeichnungen und Direktbild, die Suche, das Gefahrenmodell, die Gegenprobe auf einem Windows-Rechner; dazu, was nicht gemessen ist. Aus `docs/EVALUATION.md`. | Technische Prüfer und Fachabteilungen; alle, die eine Zahl aus den anderen Unterlagen nachprüfen wollen. |
 | `Sicht-Marke.pdf` | Name, Leitsatz, Wortschatz, Gestaltung und die Liste dessen, was über Sicht behauptet werden darf. Aus `docs/BRAND.md`. | Alle, die für Sicht schreiben oder gestalten. |
+| `Sicht-Architektur.pdf` | Wie Sicht gebaut ist: Weg eines Bildes, Speicherformate, Suche, Protokoll mit Format und Prüfung, Rollen und Rechte, Verbundprotokoll, alle Wege der Schnittstelle, Vorkehrungen und offene Punkte. Aus `docs/ARCHITEKTUR.md`. | Technische Prüfer, IT einer Behörde, mögliche Partner für die Kopplung. |
+| `Sicht-Sicherheitsdurchsicht.pdf` | Was eine unabhängige Durchsicht des Quelltexts gefunden hat: 21 Befunde mit Schwere, Stand und Nachweis, was in Ordnung befunden wurde, was offen bleibt. Aus `docs/SICHERHEIT.md`. | IT-Sicherheit und Datenschutz einer Behörde; Stellen, die einen Penetrationstest vorbereiten. |
 
 ## Neu erzeugen
 
@@ -21,9 +23,9 @@ Im Wurzelverzeichnis des Repositorys:
 node docs/unterlagen/build.cjs
 ```
 
-Der Befehl liest die Markdown-Dateien in ihrem jetzigen Stand und schreibt alle fünf PDF-Dateien
+Der Befehl liest die Markdown-Dateien in ihrem jetzigen Stand und schreibt alle sieben PDF-Dateien
 neu. Eine einzelne Unterlage: `node docs/unterlagen/build.cjs strategy` (ebenso `compliance`,
-`faq`, `evaluation`, `brand`). Ein anderes Datum auf dem Deckblatt:
+`faq`, `evaluation`, `brand`, `architecture`, `security`). Ein anderes Datum auf dem Deckblatt:
 `node docs/unterlagen/build.cjs --stand "2. Dezember 2026"`.
 
 Gebraucht werden Node und Playwright mit Chromium. Sind `pdftotext` und `pdfinfo` (Poppler)

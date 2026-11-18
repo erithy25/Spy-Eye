@@ -1,9 +1,10 @@
 /**
- * Erzeugt die Unterlagenmappe: die fünf Unterlagen aus docs/ als druckfertige PDF-Dateien im
+ * Erzeugt die Unterlagenmappe: die sieben Unterlagen aus docs/ als druckfertige PDF-Dateien im
  * Erscheinungsbild von Sicht, zum Weitergeben ohne das Repository.
  *
- *   node docs/unterlagen/build.cjs                       alle fünf
- *   node docs/unterlagen/build.cjs strategy faq          einzelne: strategy, compliance, faq, evaluation, brand
+ *   node docs/unterlagen/build.cjs                       alle sieben
+ *   node docs/unterlagen/build.cjs strategy faq          einzelne: strategy, compliance, faq, evaluation, brand,
+ *                                                        architecture, security
  *   node docs/unterlagen/build.cjs --stand "2. Dezember 2026"
  *   node docs/unterlagen/build.cjs brand --html          lässt die Zwischendatei docs/unterlagen/.brand.html liegen
  *   node docs/unterlagen/build.cjs --tabellen            nennt je Tabelle die gewählte Form und die Spaltenbreiten
@@ -50,6 +51,8 @@ const DOCUMENTS = {
   faq: { source: 'docs/FAQ.md', target: 'Sicht-Fragen-und-Antworten.pdf', title: 'Fragen und Antworten' },
   evaluation: { source: 'docs/EVALUATION.md', target: 'Sicht-Messbericht.pdf', title: 'Messbericht' },
   brand: { source: 'docs/BRAND.md', target: 'Sicht-Marke.pdf', title: 'Marke' },
+  architecture: { source: 'docs/ARCHITEKTUR.md', target: 'Sicht-Architektur.pdf', title: 'Architektur' },
+  security: { source: 'docs/SICHERHEIT.md', target: 'Sicht-Sicherheitsdurchsicht.pdf', title: 'Sicherheitsdurchsicht' },
 };
 const DEFAULT_STAND = '18. November 2026';
 
@@ -103,7 +106,7 @@ function auditInPage(limits) {
 }
 
 /**
- * Was der Leser nicht kennt, erscheint im PDF als gewöhnlicher Text. Die fünf Unterlagen kommen
+ * Was der Leser nicht kennt, erscheint im PDF als gewöhnlicher Text. Die Unterlagen kommen
  * ohne Bilder, Verweise mit Kennung und HTML aus; kommt so etwas hinzu, wird darauf hingewiesen.
  */
 function unsupported(markdown) {

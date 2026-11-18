@@ -10,12 +10,18 @@ Unterlagen.
 | --- | --- | --- |
 | Konsole und Knoten (das Produkt) | dieses Repository; Start siehe Abschnitt 2 | läuft; unter Linux und Windows von Anfang bis Ende durchgespielt |
 | Ablauf der Vorführung, 13 Minuten, mit Sprechzeilen und Rückfallebenen | [`docs/DEMO.md`](docs/DEMO.md); zum Ausdrucken [`deliverables/Sicht-Vorfuehrung-Ablauf.pdf`](deliverables/Sicht-Vorfuehrung-Ablauf.pdf) | fertig |
-| Präsentation, 20 Folien | privates Dokument <https://claude.ai/artifact/NhPkBXmqP2jQbv2GZaDKyQ>; ohne Netz: [`deliverables/Sicht-Praesentation.pdf`](deliverables/Sicht-Praesentation.pdf); Sprechzettel daneben | fertig; Folie 19 nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe |
+| Kurzvorstellung: ein Satz, 30 Sekunden, zwei Minuten, sechs Antworten in einem Atemzug | [`docs/vertrieb/KURZVORSTELLUNG.md`](docs/vertrieb/KURZVORSTELLUNG.md), deutsch und englisch | fertig |
+| Präsentation, 20 Folien, deutsch | privates Dokument <https://claude.ai/artifact/NhPkBXmqP2jQbv2GZaDKyQ>; ohne Netz: [`deliverables/Sicht-Praesentation.pdf`](deliverables/Sicht-Praesentation.pdf); Sprechzettel daneben | fertig; Folie 19 nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe |
+| Präsentation, englisch | privates Dokument <https://claude.ai/artifact/KjH984UGPDCVaVUAiDBTR2>; ohne Netz: [`deliverables/Sicht-Presentation-EN.pdf`](deliverables/Sicht-Presentation-EN.pdf); Notizen daneben | fertig; kein Muttersprachler hat gegengelesen |
 | Website, deutsch und englisch | private Seite <https://claude.ai/artifact/JarVGwmtbRpmb321zGdU9B>; Quelle in [`site/`](site/) | fertig; nicht öffentlich, mit `noindex` |
-| Einseiter | [`deliverables/Sicht-Einseiter.pdf`](deliverables/Sicht-Einseiter.pdf) | fertig |
+| Einseiter, deutsch und englisch | [`deliverables/Sicht-Einseiter.pdf`](deliverables/Sicht-Einseiter.pdf), [`deliverables/Sicht-One-Pager-EN.pdf`](deliverables/Sicht-One-Pager-EN.pdf) | fertig |
 | Finanzmodell, drei Szenarien | [`deliverables/Sicht-Finanzmodell.xlsx`](deliverables/Sicht-Finanzmodell.xlsx) | fertig; alle Werte sind Annahmen |
-| Markenfilm (40 s und 66 s), Produktfilm (142 s, Bildschirmaufnahme) | `deliverables/film/` (liegt nicht im Repository, wurde im Gespräch übergeben) | fertig |
-| Strategie, Recht, Fragen und Antworten, Marke | [`docs/STRATEGY.md`](docs/STRATEGY.md), [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), [`docs/FAQ.md`](docs/FAQ.md), [`docs/BRAND.md`](docs/BRAND.md) | fertig |
+| Filme: Markenfilm (40 s und 67 s), englische Fassung (40 s), Produktfilm (143 s, Bildschirmaufnahme), Hochkant-Teaser (20 s, deutsch und englisch) | `deliverables/film/` (liegt nicht im Repository, wurde im Gespräch übergeben); Schnittwerkzeug und Drehbuch in [`media/brand/`](media/brand/) | fertig; Ton nur gemessen, nicht angehört |
+| Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
+| Architektur und Sicherheitsdurchsicht | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md), [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) | fertig; 21 Befunde einer unabhängigen Durchsicht, die schweren behoben |
+| Vertriebsvorlagen: Anschreiben, Angebot zur Erprobung | [`docs/vertrieb/`](docs/vertrieb/) | Vorlagen; eckige Klammern und Preis vor dem Versand füllen |
+| Prüfprogramme für das Protokoll, unabhängig von Sicht | [`tools/pruefen/`](tools/pruefen/), `pnpm ledger:verify <Datei>` | fertig; je eines in Node und Python |
+| Wortmarke als Datei | [`brand/`](brand/) | fertig; Name markenrechtlich nicht geprüft |
 | Messbericht mit Bedingungen und Einschränkungen | [`docs/EVALUATION.md`](docs/EVALUATION.md) | fertig; nachmessbar |
 
 ## 2. In Gang bringen (Windows, PowerShell)
@@ -61,6 +67,11 @@ pnpm demo
   stellt den Ausgangsstand in einer Sekunde wieder her.
 - Ohne `ML_DEVICE` starten. Die Auswertung läuft auf dem Prozessor; eine Grafikkarte wird nur
   verwendet, wenn sie nachweislich dasselbe rechnet.
+- Nach jedem `git pull` wieder `pnpm install` und `pnpm build`, dann `pnpm demo:check`. Neu
+  vorbereiten (`pnpm demo:prepare`) ist nur nötig, wenn die Prüfung es sagt; ein früher
+  vorbereiteter Stand bleibt verwendbar.
+- Die Kette ohne Sicht nachrechnen, falls jemand fragt:
+  `pnpm ledger:verify data-koblenz/ledger.jsonl`.
 
 Für eigenes Material statt der Übung: `pnpm start`, anmelden, Mandat „Erprobung“, im Reiter
 QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen.
@@ -85,6 +96,8 @@ QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen.
 | 44 Aufnahmen durchsuchbar 8 s nach Beginn des Hochladens; Auswertung in 3,3-facher Echtzeit auf vier Kernen ohne Grafikkarte | Rechtsgrundlage: kein Gutachten; `docs/COMPLIANCE.md` ordnet zu, ersetzt es nicht |
 | Der ganze Vorführweg unter Windows PowerShell (`.github/workflows/windows.yml`) | Direktbilder echter Kameras: nur gegen eine simulierte Kamera geprüft |
 | Verbund über drei Knoten auf einem Rechner | Verbund über ein echtes Netz, mehr als drei Knoten |
+| Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |
+| 77 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
 
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
 gemessenen Anfragen eingestellt. Diese Einschränkung gehört zu jeder Nennung der Zahlen.

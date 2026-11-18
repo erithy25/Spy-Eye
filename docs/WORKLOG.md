@@ -71,3 +71,37 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
 - Measurement report per exercise as a printable document (WIRKUNG, MESSBERICHT), numbers in the
   console's language (decimal comma in German), model download reports progress and stalls,
   an occupied port is explained.
+
+## 07:30 UTC · T+438 min
+
+- Final screenshots at real-time speed in docs, website and both decks; captions checked against
+  what the pictures show. The ledger sample is shown in the oversight role.
+- English edition of the deck (own build file, notes, PDF) and of the one-pager. Document folder
+  as print-ready PDFs with a tool that builds and checks them; two more papers joined it:
+  `docs/ARCHITEKTUR.md` (path of a frame, storage formats, ledger format, roles, federation
+  protocol, every route with its permission) and `docs/SICHERHEIT.md`.
+- Ledger can be verified without Sicht: `tools/pruefen/` holds one verifier in Node and one in
+  Python, without dependencies; tests hold both to what the ledger writes. `pnpm ledger:verify`.
+- Independent review of `apps/server/src` by a second reader: 21 findings, 5 of them high. Fixed
+  with tests or a recorded run:
+  frames were servable before they were masked (ffmpeg now writes under a name that is never
+  served; a frame is released only after the face check; without the detector nothing is
+  released); a recording was handed out while its face count was still zero; the query check read
+  text differently from the model (full-width letters, invisible characters, hyphens, inner
+  capitals, other scripts); two query paths wrote no ledger entry; a line separator in a text
+  made the ledger unreadable under Node 24.
+  Also: federation signature covers sender, recipient, path and a nonce and is accepted once;
+  peer answers are checked field by field; peers get no person descriptions and a budget;
+  requests started by another site and queries opened as a page or picture are refused; sealing
+  and sharing a source are the supervisor's; evidence keeps its recording; the approver's
+  password is guarded like a sign-in; stream addresses are redacted in ffmpeg's messages.
+  Found before the review while checking roles: the case report gave oversight pictures.
+- Check run with 44 recordings while they were analysed: 332 requests for frames not yet
+  released and 2,813 requests for recordings not yet checked, all refused; afterwards 21
+  recordings without faces free, 23 with masked faces only with approval.
+- After the hardening: fresh analysis of all footage (241 s), exercise 13 of 13 with one false
+  alert, preflight green, browser walks in all three roles without errors.
+- Films: German card 3 is now the documented quotation; English cut; product film from a new
+  console take; vertical teasers in German and English (5 generations, 31.25 credits).
+- Short pitch in three lengths (German and English), brand files (wordmark as outlines, share
+  card), sales templates.

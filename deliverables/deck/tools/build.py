@@ -29,12 +29,12 @@ MINUS = "−"
 
 # Uploaded pictures of the artifact (the same table is in tools/blobs.json for the local render).
 IMG = {
-    "lage": "/_blob/aecf6e3bb9b63cb5d0c1a6e531a82a05",
-    "wachen": "/_blob/2c270a1d9c95aed479d9ade2e51d18a0",
-    "suche": "/_blob/29897d68d63ba9734c6452ad24f0b489",
-    "verbund": "/_blob/884584f768773e791253265dbefec92b",
-    "aufsicht": "/_blob/7f453c7591f03d916a718612d49dddd5",
-    "ruecksicht": "/_blob/9cd1635d5b85e492feb7c057509e0720",
+    "lage": "/_blob/d48af69efbfd2271d21670811a9cae48",
+    "wachen": "/_blob/468fcb00d1fdc1f73b8a2b89089faa8c",
+    "suche": "/_blob/c3abf7cfbe15922abfd3b92987cec815",
+    "verbund": "/_blob/905c961d0d04f1e09328675219edb01f",
+    "aufsicht": "/_blob/575a728fabf7a6b2d82021b33d69b958",
+    "ruecksicht": "/_blob/f0409ba8a8cd634abb00b16de4e440f3",
 }
 
 CSS = """/* Sicht. One typeface, black ground, hairlines, corner marks. No colour. */
@@ -657,7 +657,7 @@ add("risiken", "Risiken: sechs Punkte und die Gegenmaßnahmen", f"""
 
 # 19 Stand
 
-_n = "Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]"
+_n = "Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Den Quelltext hat ein zweiter Prüfer durchgesehen: 21 Befunde, die schweren sind behoben, ein Penetrationstest steht aus. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]"
 add("stand", "Stand: was läuft, was fehlt, was gesucht wird", f"""
 <section id="stand" data-transition="fade">
 {head("Stand: was läuft, was fehlt, was gesucht wird")}
