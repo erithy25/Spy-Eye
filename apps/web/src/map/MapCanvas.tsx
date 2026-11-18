@@ -75,6 +75,8 @@ interface MapCanvasProps {
   grid?: boolean;
   label?: string;
   children?: ReactNode;
+  /** Fly to a new view (zoom out, travel, zoom in) instead of jumping. */
+  fly?: boolean;
 }
 
 const BG = '#050505';
@@ -498,7 +500,7 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number,
   }
 }
 
-export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children }: MapCanvasProps) {
+export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children, fly = false }: MapCanvasProps) {
   const gridRef = useRef(grid);
   gridRef.current = grid;
   const container = useRef<HTMLDivElement>(null);
@@ -871,11 +873,46 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     };
   }, [schedule]);
 
-  // Jump to a new view when asked.
+  // Jump (or fly) to a new view when asked.
+  const flight = useRef<number | null>(null);
+  const firstView = useRef(true);
   useEffect(() => {
-    state.current = { ...project(view.lat, view.lon), zoom: view.zoom };
-    setZoomShown(view.zoom);
-    schedule('both');
+    const target = { ...project(view.lat, view.lon), zoom: view.zoom };
+    if (flight.current !== null) cancelAnimationFrame(flight.current);
+    flight.current = null;
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!fly || firstView.current || reduce || size.current.width === 0) {
+      firstView.current = false;
+      state.current = target;
+      setZoomShown(view.zoom);
+      schedule('both');
+      return;
+    }
+    const from = { ...state.current };
+    // Shortest way around the world for the x coordinate.
+    let dx = target.x - from.x;
+    if (dx > 0.5) dx -= 1;
+    if (dx < -0.5) dx += 1;
+    const dy = target.y - from.y;
+    const dist = Math.hypot(dx, dy);
+    const fit = Math.log2((size.current.width * 0.7) / Math.max(1e-9, dist * worldSize(0)));
+    const mid = Math.max(minZoom, Math.min(from.zoom, target.zoom, fit));
+    const ease = (u: number): number => (u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2);
+    const duration = Math.min(1600, 650 + 120 * (Math.abs(from.zoom - mid) + Math.abs(target.zoom - mid)));
+    const started = performance.now();
+    const step = (now: number): void => {
+      const u = Math.min(1, (now - started) / duration);
+      const e = ease(u);
+      const zoom = u < 0.5 ? from.zoom + (mid - from.zoom) * ease(u * 2) : mid + (target.zoom - mid) * ease((u - 0.5) * 2);
+      state.current = { x: (((from.x + dx * e) % 1) + 1) % 1, y: from.y + dy * e, zoom };
+      setZoomShown(zoom);
+      schedule('both');
+      flight.current = u < 1 ? requestAnimationFrame(step) : null;
+    };
+    flight.current = requestAnimationFrame(step);
+    return () => {
+      if (flight.current !== null) cancelAnimationFrame(flight.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewKey]);
 

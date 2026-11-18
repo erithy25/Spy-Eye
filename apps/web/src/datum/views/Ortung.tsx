@@ -185,6 +185,7 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
           shapes={shapes}
           minZoom={1}
           maxZoom={16}
+          fly
           onSelect={(id) => {
             if (id === null) return;
             select(id.startsWith('truth:') ? id.slice(6) : id);
