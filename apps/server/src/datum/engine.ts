@@ -28,7 +28,8 @@ import { horizonProfile, refinePosition } from './horizon.js';
 
 /** Bumped when the engine changes in a way that makes stored fixes outdated. */
 export const ENGINE_VERSION = 2;
-const LOCATE_FRAMES = 8;
+/** Frames whose whole-frame and crop vectors go into the localisation (as in the evaluation). */
+const LOCATE_FRAMES = 12;
 const SPACE_FRAMES = 3;
 
 type StoredFix = Fix & { engineVersion: number };
@@ -232,10 +233,21 @@ export class DatumEngine {
     const matrix = entry.embeddings?.view() ?? null;
     if (!matrix || entry.frames.length === 0) throw new Error('Keine ausgewerteten Bilder vorhanden.');
 
-    // Frame vectors: tile 0 is always the whole frame.
+    // Frame vectors: tile 0 is always the whole frame; the other tiles are square crops of it,
+    // stored by the pipeline, and go into retrieval as well.
     const picks = spread(entry.frames.length, LOCATE_FRAMES);
     const frameVectors = new Float32Array(picks.length * dim);
     picks.forEach((fi, row) => frameVectors.set(matrix.subarray(fi * tiles * dim, fi * tiles * dim + dim), row * dim));
+    const tileVectors = new Float32Array(picks.length * tiles * dim);
+    const tileFrameRow: number[] = [];
+    const tileIndex: number[] = [];
+    picks.forEach((fi, row) => {
+      for (let t = 0; t < tiles; t++) {
+        tileVectors.set(matrix.subarray((fi * tiles + t) * dim, (fi * tiles + t + 1) * dim), (row * tiles + t) * dim);
+        tileFrameRow.push(row);
+        tileIndex.push(t);
+      }
+    });
     const frameNumbers = picks.map((fi) => entry.frames[fi]!.n);
     const framePath = (n: number): string => store.framePath(id, n);
     const embedTexts = this.embedTexts;
@@ -253,6 +265,7 @@ export class DatumEngine {
       frameVectors,
       dim,
       frameNumbers,
+      tiles: { vectors: tileVectors, frameRow: tileFrameRow, tile: tileIndex },
       embedTexts,
       gallery,
       fileName: entry.info.name,
@@ -303,7 +316,7 @@ export class DatumEngine {
             evidence.push({
               kind: 'horizon',
               label: `Geländehorizont passt bei Blickrichtung ${Math.round(refined.match.headingDeg)}°`,
-              detail: `Die Himmelslinie des Videos wurde mit dem aus Höhendaten berechneten Horizont verglichen; mittlere Abweichung ${refined.match.errorDeg.toFixed(2)}°, Bildwinkel ${Math.round(refined.match.fovDeg)}°.`,
+              detail: `Die Himmelslinie des Videos wurde mit dem aus Höhendaten berechneten Horizont am geschätzten Ort verglichen; mittlere Abweichung ${refined.match.errorDeg.toFixed(2)}°, Bildwinkel ${Math.round(refined.match.fovDeg)}°. Die Blickrichtung gilt nur, wenn der Ort stimmt; in Städten enthalten die Höhendaten auch Gebäude.`,
               weight: 0.35,
               frame: bestSky.frame,
             });

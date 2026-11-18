@@ -5,7 +5,8 @@
  *
  * The vectors are cached next to the node's data (`<dataDir>/datum/gallery-<model>.bin` plus a
  * `.json` index). A restart reads the cache in well under a second; when the gallery grows only
- * the new pictures are embedded.
+ * the new pictures are embedded. Vectors shipped with the dataset (gallerySeed.ts) fill rows the
+ * cache does not have, so a fresh machine embeds nothing that was shipped.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -13,6 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { config, repoRoot } from '../config.js';
 import { decodeFrame, writeTile, type PixelRect } from '../ml/preprocess.js';
+import { readSeed } from './gallerySeed.js';
 
 /** One reference picture as listed in `gallery.json`. */
 export interface GalleryImage {
@@ -269,6 +271,10 @@ export class Gallery {
       // No cache yet, or an unreadable one: everything is embedded.
     }
 
+    // Vectors shipped with the dataset: used where the local cache has no row, so a fresh machine
+    // starts without embedding the pictures.
+    const seed = await readSeed(this.datasetDir, this.modelId, dim);
+
     // Which listed pictures still have a valid cached row? The file size tells a replaced picture.
     const sources = await mapLimit(listed, 32, async (img) => {
       try {
@@ -279,12 +285,26 @@ export class Gallery {
       }
     });
     const keep: { img: GalleryImage; source: string; row: Float32Array | null }[] = [];
+    let fromSeed = 0;
     for (let i = 0; i < listed.length; i++) {
       const source = sources[i];
       const img = listed[i] as GalleryImage;
-      if (source === null || source === undefined) continue; // picture not on disk (yet)
       const hit = cached.get(img.id);
-      keep.push({ img, source, row: hit && hit.source === source ? hit.row : null });
+      const shipped = seed.get(img.id);
+      if (source === null || source === undefined) {
+        // Picture not on disk: a shipped row still makes the place searchable (only its
+        // thumbnail is missing); without one there is nothing to embed.
+        if (shipped) {
+          keep.push({ img, source: shipped.source, row: shipped.row });
+          fromSeed++;
+        }
+        continue;
+      }
+      if (hit && hit.source === source) keep.push({ img, source, row: hit.row });
+      else if (shipped && shipped.source === source) {
+        keep.push({ img, source, row: shipped.row });
+        fromSeed++;
+      } else keep.push({ img, source, row: null });
     }
 
     const missing = keep.filter((k) => k.row === null);
@@ -306,7 +326,7 @@ export class Gallery {
     this.vectors = vectors;
     this.dimension = dim;
 
-    const unchanged = missing.length === 0 && cached.size === usable.length;
+    const unchanged = missing.length === 0 && fromSeed === 0 && cached.size === usable.length;
     if (!unchanged) {
       await fs.mkdir(this.cacheDir, { recursive: true });
       const index: CacheIndex = {
@@ -392,15 +412,30 @@ export class Gallery {
     const n = this.images.length;
     const g = this.vectors;
     const out: GalleryNeighbour[][] = [];
-    const sims = new Float32Array(n);
-    for (let r = 0; r < rows; r++) {
-      const qOff = r * dim;
-      for (let i = 0; i < n; i++) {
-        let dot = 0;
-        const gOff = i * dim;
-        for (let d = 0; d < dim; d++) dot += (vectors[qOff + d] as number) * (g[gOff + d] as number);
-        sims[i] = dot;
+    // Gallery row outside, query rows inside: the query block stays in the cache while the
+    // gallery streams through once, however many rows (frames and crops) are asked.
+    const all = new Float32Array(rows * n);
+    for (let i = 0; i < n; i++) {
+      const gOff = i * dim;
+      for (let r = 0; r < rows; r++) {
+        const qOff = r * dim;
+        let d0 = 0;
+        let d1 = 0;
+        let d2 = 0;
+        let d3 = 0;
+        let d = 0;
+        for (; d + 3 < dim; d += 4) {
+          d0 += (vectors[qOff + d] as number) * (g[gOff + d] as number);
+          d1 += (vectors[qOff + d + 1] as number) * (g[gOff + d + 1] as number);
+          d2 += (vectors[qOff + d + 2] as number) * (g[gOff + d + 2] as number);
+          d3 += (vectors[qOff + d + 3] as number) * (g[gOff + d + 3] as number);
+        }
+        for (; d < dim; d++) d0 += (vectors[qOff + d] as number) * (g[gOff + d] as number);
+        all[r * n + i] = d0 + d1 + d2 + d3;
       }
+    }
+    for (let r = 0; r < rows; r++) {
+      const sims = all.subarray(r * n, (r + 1) * n);
       // Partial selection: keep a small sorted list of the best k.
       const top: number[] = [];
       for (let i = 0; i < n; i++) {

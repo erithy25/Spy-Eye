@@ -1,0 +1,55 @@
+{
+ "v": 5,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-18T15:00:00Z"
+ },
+ "lists": "css",
+ "format": {
+  "v": 1,
+  "shared": [
+   "project/deck.css"
+  ]
+ },
+ "title": "DATUM – Präsentation",
+ "cover": "titel",
+ "order": [
+  "titel",
+  "problem",
+  "ortung",
+  "befund",
+  "raum",
+  "gelaende",
+  "verfahren",
+  "gemessen",
+  "grenzen",
+  "abgrenzung",
+  "weg",
+  "schluss"
+ ],
+ "sections": {
+  "s1": {
+   "description": "Das Problem: Videos ohne Ort und Zeit.",
+   "start": "titel"
+  },
+  "s2": {
+   "description": "Was DATUM zeigt, an der laufenden Konsole: Ortung, Befund, Raum, Gelände.",
+   "start": "ortung"
+  },
+  "s3": {
+   "description": "Wie es arbeitet und was gemessen ist, mit seinen Grenzen.",
+   "start": "verfahren"
+  },
+  "s4": {
+   "description": "Grauzone, Abgrenzung und die nächsten Schritte.",
+   "start": "grenzen"
+  }
+ },
+ "faces": {
+  "jetbrains-mono": {
+   "family": "JetBrains Mono",
+   "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+  }
+ },
+ "designSystems": []
+}

@@ -18,7 +18,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { config } from '../config.js';
-import { decodeFrame, writeTile, type PixelRect } from '../ml/preprocess.js';
+import { decodeFrame, tileLayout, writeTile, type PixelRect } from '../ml/preprocess.js';
+import type { DetailLevel } from '../types.js';
 import type { CountryProb, Evidence, FixCandidate, FixLocation } from './contract.js';
 import { galleryImageUrl, type Gallery, type GalleryNeighbour, type ImageEmbedder } from './gallery.js';
 import { filenameHints, readMetadata, type FilenameHints, type VideoMetadata } from './metadata.js';
@@ -62,6 +63,29 @@ export interface LocateParams {
   countryMinP: number;
   continentMinP: number;
   maxCandidates: number;
+  /**
+   * How the crops of a frame (tiles: tile 0 is the whole frame, the others square crops) enter
+   * retrieval: 'whole' uses the whole frame only; 'frame' gives every reference the best
+   * similarity over all tiles of a frame (a landmark that fills a part of the picture is found by
+   * its crop); 'rows' lets every tile vote as a frame of its own.
+   */
+  tilePooling: 'whole' | 'frame' | 'rows';
+  /** A reference's weight over the frames: the mean of its per-frame weights, or the best one. */
+  frameAggregation: 'mean' | 'max';
+  /**
+   * Radius tiers: 'strong' when the best match stands out by at least strongGap and at least
+   * agreementMin of the frames (query rows) have their best match within 25 km of the answer;
+   * 'recognised' for any other recognition (recognitionGap); 'similar' for the rest.
+   */
+  strongGap: number;
+  agreementMin: number;
+  /**
+   * Stated radius per evidence tier, calibrated on the training half so that the true place lies
+   * inside the circle in about 70 % of the training cases of each tier: the minimum radius of a
+   * landmark-level answer (the spread of the supporting references can widen it) and the factor
+   * on the country or continent radius.
+   */
+  radiusKm: { strong: number; recognised: number; similar: number; countryFactor: number; continentFactor: number };
   prior: CountryPriorParams;
   /**
    * Logistic model of P(error <= radius) over the best similarity, the margin to the second
@@ -77,6 +101,7 @@ export interface LocateParams {
     region: number;
     continent: number;
     countryP: number;
+    agreement: number;
   };
 }
 
@@ -101,8 +126,13 @@ export const DEFAULT_LOCATE_PARAMS: LocateParams = {
   countryMinP: 0.25,
   continentMinP: 0.05,
   maxCandidates: 8,
+  tilePooling: 'whole',
+  frameAggregation: 'mean',
+  strongGap: 0.1,
+  agreementMin: 0.5,
+  radiusKm: { strong: 0.5, recognised: 0.5, similar: 25, countryFactor: 1, continentFactor: 1 },
   prior: DEFAULT_PRIOR_PARAMS,
-  confidence: { bias: -1.832, topSim: 0.304, gap: 0.188, margin: -0.24, share: 0.534, region: 0.881, continent: 0, countryP: 0.921 },
+  confidence: { bias: -1.832, topSim: 0.304, gap: 0.188, margin: -0.24, share: 0.534, region: 0.881, continent: 0, countryP: 0.921, agreement: 0 },
 };
 
 export interface LocateInput {
@@ -112,6 +142,12 @@ export interface LocateInput {
   dim: number;
   /** Frame number in the video for each row. */
   frameNumbers: number[];
+  /**
+   * Optional crops: m x dim, L2-normalised tile vectors of the same frames (tile 0 of a frame is
+   * the whole frame), with the frame row (index into frameVectors) and the tile index of each.
+   * Used for retrieval unless params.tilePooling is 'whole'.
+   */
+  tiles?: { vectors: Float32Array; frameRow: number[]; tile: number[] };
   embedTexts: EmbedTexts;
   gallery: Gallery;
   /** Wikidata items to leave out of the gallery (evaluation of unknown places). */
@@ -136,6 +172,11 @@ export interface LocateDiagnostics {
   features: ConfidenceFeatures;
   /** Granularity of the visual answer; null when there is none. */
   level: 'landmark' | 'country' | 'continent' | null;
+  /** Evidence tier that sets the radius (see LocateParams.radiusKm); null without an answer. */
+  radiusTier: RadiusTier | null;
+  /** The evidence-based part of the radius: spread of the supporting references (landmark
+   * tiers) or the country / continent radius before the calibrated factor. */
+  radiusBaseKm: number;
   /** Best country and continent of the posterior (zero-shot prior times retrieval votes). */
   countryTop: { iso: string; p: number } | null;
   continentTop: { code: string; p: number } | null;
@@ -184,9 +225,28 @@ function kernel(dKm: number, params: Pick<LocateParams, 'kernelsKm' | 'kernelMix
 }
 
 /** Collapses the neighbours of all frames to one weighted entry per reference picture. */
-export function weightNeighbours(rows: readonly GalleryNeighbour[][], params: Pick<LocateParams, 'simOffset' | 'simTemperature'>): WeightedRef[] {
+export function weightNeighbours(
+  rows: readonly GalleryNeighbour[][],
+  params: Pick<LocateParams, 'simOffset' | 'simTemperature'> & Partial<Pick<LocateParams, 'frameAggregation'>>,
+): WeightedRef[] {
   const byId = new Map<string, WeightedRef>();
   const frames = Math.max(1, rows.length);
+  if (params.frameAggregation === 'max') {
+    // Every reference counts once, with the weight of its best frame.
+    rows.forEach((row, r) => {
+      for (const n of row) {
+        const ref = byId.get(n.id);
+        if (!ref) {
+          byId.set(n.id, { id: n.id, label: n.label, lat: n.lat, lon: n.lon, country: n.country, weight: 0, bestSimilarity: n.similarity, bestRow: r });
+        } else if (n.similarity > ref.bestSimilarity) {
+          ref.bestSimilarity = n.similarity;
+          ref.bestRow = r;
+        }
+      }
+    });
+    for (const ref of byId.values()) ref.weight = Math.exp((ref.bestSimilarity - params.simOffset) / params.simTemperature);
+    return [...byId.values()].sort((a, b) => b.weight - a.weight);
+  }
   rows.forEach((row, r) => {
     for (const n of row) {
       const w = Math.exp((n.similarity - params.simOffset) / params.simTemperature) / frames;
@@ -296,6 +356,21 @@ function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
 }
 
+export type RadiusTier = 'strong' | 'recognised' | 'similar' | 'country' | 'continent';
+
+/** Share of the rows whose best match lies within `km` of a point. */
+export function frameAgreement(rows: readonly GalleryNeighbour[][], lat: number, lon: number, km = 25): number {
+  let n = 0;
+  let agree = 0;
+  for (const row of rows) {
+    const best = row[0];
+    if (!best) continue;
+    n++;
+    if (greatCircleKm(lat, lon, best.lat, best.lon) <= km) agree++;
+  }
+  return n > 0 ? agree / n : 0;
+}
+
 export interface ConfidenceFeatures {
   topSim: number;
   /** How far the best match stands out from the next neighbours (see gapThreshold). */
@@ -308,6 +383,8 @@ export interface ConfidenceFeatures {
   continent: number;
   /** Probability of the best country (continent for a continent-level answer). */
   countryP: number;
+  /** Share of the frames whose best match lies within 25 km of the answer. */
+  agreement: number;
 }
 
 /** P(true place within the radius), clamped: nothing visual is ever certain. */
@@ -320,7 +397,8 @@ export function confidenceFrom(f: ConfidenceFeatures, c: LocateParams['confidenc
     c.share * f.share +
     c.region * f.region +
     c.continent * f.continent +
-    c.countryP * f.countryP;
+    c.countryP * f.countryP +
+    c.agreement * f.agreement;
   return Math.min(0.95, Math.max(0.02, sigmoid(z)));
 }
 
@@ -333,7 +411,12 @@ function formatCoord(lat: number, lon: number): string {
 
 /** Everything locate() needs, already computed; the pure part, used directly by the evaluation. */
 export interface LocateEvidence {
+  /** Gallery neighbours per query row (a frame, or a tile of a frame when rowFrame is given). */
   neighbours: GalleryNeighbour[][];
+  /** Frame index (into frameNumbers) of each neighbour row; absent: row r is frame r. */
+  rowFrame?: readonly number[];
+  /** Tile index of each neighbour row (0 = whole frame); absent: every row is a whole frame. */
+  rowTile?: readonly number[];
   /** Mean cosine per country, order of world.countries(). */
   countryCosines: Float32Array;
   frameNumbers: readonly number[];
@@ -406,12 +489,59 @@ function placeLabel(world: World, lat: number, lon: number, landmark: string | n
   return country ? country.name_de : formatCoord(lat, lon);
 }
 
+/**
+ * Turns per-tile neighbour rows into the rows the vote works on. 'whole' keeps the whole-frame
+ * rows, 'frame' merges the tiles of each frame (every reference keeps its best similarity over
+ * the tiles, the best k stay), 'rows' keeps every tile row. Returns the rows and, for each, the
+ * frame index it belongs to.
+ */
+export function poolTileRows(
+  rows: readonly GalleryNeighbour[][],
+  rowFrame: readonly number[] | undefined,
+  rowTile: readonly number[] | undefined,
+  mode: LocateParams['tilePooling'],
+  k: number,
+): { rows: GalleryNeighbour[][]; frameOfRow: number[] } {
+  if (!rowFrame || !rowTile) return { rows: rows.map((r) => r.slice(0, k)), frameOfRow: rows.map((_, i) => i) };
+  if (mode === 'rows') return { rows: rows.map((r) => r.slice(0, k)), frameOfRow: [...rowFrame] };
+  if (mode === 'whole') {
+    const out: GalleryNeighbour[][] = [];
+    const frameOfRow: number[] = [];
+    rows.forEach((r, i) => {
+      if (rowTile[i] !== 0) return;
+      out.push(r.slice(0, k));
+      frameOfRow.push(rowFrame[i] as number);
+    });
+    return { rows: out, frameOfRow };
+  }
+  const byFrame = new Map<number, Map<string, GalleryNeighbour>>();
+  rows.forEach((r, i) => {
+    const f = rowFrame[i] as number;
+    let best = byFrame.get(f);
+    if (!best) {
+      best = new Map();
+      byFrame.set(f, best);
+    }
+    for (const n of r.slice(0, k)) {
+      const seen = best.get(n.id);
+      if (!seen || n.similarity > seen.similarity) best.set(n.id, n);
+    }
+  });
+  const frames = [...byFrame.keys()].sort((a, b) => a - b);
+  return {
+    rows: frames.map((f) => [...(byFrame.get(f) as Map<string, GalleryNeighbour>).values()].sort((a, b) => b.similarity - a.similarity).slice(0, k)),
+    frameOfRow: frames,
+  };
+}
+
 /** The pure decision: candidates, location and evidence from precomputed neighbours and prior. */
 export function decideLocation(world: World, ev: LocateEvidence, partial: Partial<LocateParams> = {}): LocateResult {
   const params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, ...partial };
   const evidence: Evidence[] = [];
   const zeroShot = world.priorFromCosines(ev.countryCosines, params.prior);
-  const refs = weightNeighbours(ev.neighbours, params);
+  const pooled = poolTileRows(ev.neighbours, ev.rowFrame, ev.rowTile, params.tilePooling, params.k);
+  const neighbours = pooled.rows;
+  const refs = weightNeighbours(neighbours, params);
   const countries = countryPosterior(world, zeroShot, refs, params);
   const pCountry = new Map(countries.map((c) => [c.iso, c.p]));
   const countryName = (iso: string | null): string | null => (iso ? (world.country(iso)?.name_de ?? iso) : null);
@@ -468,7 +598,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   });
   scored.sort((a, b) => b.score - a.score);
   const topSimilarity = refs.reduce((s, r) => Math.max(s, r.bestSimilarity), -1);
-  const topGap = similarityGap(ev.neighbours);
+  const topGap = similarityGap(neighbours);
   // A clearly recognised reference: its mode goes first, whatever the vote says.
   const recognised = topGap >= params.recognitionGap;
   if (recognised) {
@@ -508,6 +638,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   });
 
   const continents = continentPosterior(world, countries);
+  let agreement = 0;
   const features = (level: 'landmark' | 'country' | 'continent'): ConfidenceFeatures => ({
     topSim: topSimilarity,
     gap: topGap,
@@ -516,7 +647,10 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     region: level === 'country' ? 1 : 0,
     continent: level === 'continent' ? 1 : 0,
     countryP: level === 'continent' ? (continents[0]?.p ?? 0) : (countries[0]?.p ?? 0),
+    agreement,
   });
+  let radiusTier: RadiusTier | null = null;
+  let radiusBaseKm = 0;
   let level: 'landmark' | 'country' | 'continent' = 'landmark';
   const confidenceOf = (l: typeof level): number => confidenceFrom(features(l), params.confidence);
 
@@ -536,9 +670,12 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     // reference, so the absolute similarity does not mean recognition; only a match that stands
     // out from its neighbours (the gap) earns a landmark-sized radius. Everything else is a
     // regional guess and says so: at least 25 km, or the spread of the supporting references.
-    let radiusKm: number;
-    if (recognised) radiusKm = Math.max(0.5, local);
-    else radiusKm = Math.max(25, support);
+    // How sure the radius is, is calibrated per tier: a recognition that most frames confirm,
+    // one that they do not, and a mere similarity.
+    agreement = frameAgreement(neighbours, first.mode.lat, first.mode.lon);
+    radiusTier = topGap >= params.strongGap && agreement >= params.agreementMin ? 'strong' : recognised ? 'recognised' : 'similar';
+    radiusBaseKm = radiusTier === 'similar' ? support : local;
+    const radiusKm = Math.max(params.radiusKm[radiusTier], radiusBaseKm, 0.5);
     visual = {
       lat: first.mode.lat,
       lon: first.mode.lon,
@@ -562,10 +699,12 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     }
     if (anchor) {
       level = 'country';
+      radiusTier = 'country';
+      radiusBaseKm = regionRadiusKm(world, best.iso);
       visual = {
         lat: anchor.lat,
         lon: anchor.lon,
-        radiusKm: regionRadiusKm(world, best.iso),
+        radiusKm: regionRadiusKm(world, best.iso) * params.radiusKm.countryFactor,
         confidence: confidenceOf('country'),
         method: 'region',
         label: world.country(best.iso)?.name_de ?? best.name,
@@ -579,10 +718,12 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     const info = world.continent(continents[0].code);
     if (info) {
       level = 'continent';
+      radiusTier = 'continent';
+      radiusBaseKm = info.radiusKm;
       visual = {
         lat: info.lat,
         lon: info.lon,
-        radiusKm: info.radiusKm,
+        radiusKm: info.radiusKm * params.radiusKm.continentFactor,
         confidence: confidenceOf('continent'),
         method: 'region',
         label: info.name_de,
@@ -598,7 +739,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   const totalWeight = refs.reduce((s, r) => s + r.weight, 0);
   for (const r of topRefs) {
     const distance = visual ? greatCircleKm(visual.lat, visual.lon, r.lat, r.lon) : null;
-    const frame = ev.frameNumbers[r.bestRow];
+    const frame = ev.frameNumbers[pooled.frameOfRow[r.bestRow] ?? r.bestRow];
     evidence.push({
       kind: 'landmark',
       label: `Referenzbild: ${r.label} (${fmt(r.bestSimilarity)})`,
@@ -650,6 +791,8 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     diagnostics: {
       features: features(level),
       level: visual ? level : null,
+      radiusTier: visual ? radiusTier : null,
+      radiusBaseKm,
       countryTop: countries[0] ? { iso: countries[0].iso, p: countries[0].p } : null,
       continentTop: continents[0] ?? null,
       topSimilarity,
@@ -670,10 +813,18 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
     readMetadata(input.videoPath).catch(() => null),
     world.countryCosines(input.frameVectors, input.dim, input.embedTexts),
   ]);
-  const neighbours = input.gallery.search(input.frameVectors, params.k, {
-    ...(input.excludeWikidata ? { excludeWikidata: input.excludeWikidata } : {}),
-  });
+  const search = { ...(input.excludeWikidata ? { excludeWikidata: input.excludeWikidata } : {}) };
   const hints = filenameHints(input.fileName ?? path.basename(input.videoPath));
+  const tiles = params.tilePooling !== 'whole' ? input.tiles : undefined;
+  if (tiles && tiles.frameRow.length > 0) {
+    const neighbours = input.gallery.search(tiles.vectors, params.k, search);
+    return decideLocation(
+      world,
+      { neighbours, rowFrame: tiles.frameRow, rowTile: tiles.tile, countryCosines, frameNumbers: input.frameNumbers, metadata, hints },
+      params,
+    );
+  }
+  const neighbours = input.gallery.search(input.frameVectors, params.k, search);
   return decideLocation(world, { neighbours, countryCosines, frameNumbers: input.frameNumbers, metadata, hints }, params);
 }
 
@@ -684,6 +835,8 @@ export interface SampledFrames {
   dim: number;
   frameNumbers: number[];
   times: number[];
+  /** Tile vectors with the pipeline's tiling (only when opts.detail is not 'fast'). */
+  tiles?: { vectors: Float32Array; frameRow: number[]; tile: number[] };
 }
 
 function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
@@ -716,8 +869,9 @@ function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
 export async function sampleAndEmbedFrames(
   videoPath: string,
   model: ImageEmbedder,
-  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string } = {},
+  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string; detail?: DetailLevel } = {},
 ): Promise<SampledFrames> {
+  const detail = opts.detail ?? 'fast';
   const count = opts.count ?? 6;
   let duration = opts.durationSec ?? null;
   let fps = opts.fps ?? null;
@@ -746,24 +900,39 @@ export async function sampleAndEmbedFrames(
     const size = model.imageSize;
     const plane = 3 * size * size;
     const kept: number[] = [];
-    const pixels = new Float32Array(count * plane);
+    // Every tile of every readable frame, whole frame first (the pipeline's layout).
+    const rects: { frameRow: number; tile: number; pixels: Float32Array }[] = [];
     for (let i = 0; i < count; i++) {
       try {
         const decoded = await decodeFrame(path.join(dir, `f${i}.jpg`));
-        const full: PixelRect = { left: 0, top: 0, width: decoded.width, height: decoded.height };
-        await writeTile(decoded, full, size, model.imageMean, model.imageStd, pixels, kept.length * plane);
+        const layout: PixelRect[] = tileLayout(decoded.width, decoded.height, detail);
+        for (const [t, rect] of layout.entries()) {
+          const px = new Float32Array(plane);
+          await writeTile(decoded, rect, size, model.imageMean, model.imageStd, px, 0);
+          rects.push({ frameRow: kept.length, tile: t, pixels: px });
+        }
         kept.push(i);
       } catch {
         // A seek past the last frame writes no picture.
       }
     }
     if (kept.length === 0) throw new Error('Aus dem Video konnten keine Bilder gelesen werden.');
-    const vectors = await model.embedPixels(pixels.subarray(0, kept.length * plane), kept.length);
+    const all = new Float32Array(rects.length * plane);
+    rects.forEach((r, j) => all.set(r.pixels, j * plane));
+    const tileVectors = await model.embedPixels(all, rects.length);
+    const dim = model.dim;
+    const vectors = new Float32Array(kept.length * dim);
+    rects.forEach((r, j) => {
+      if (r.tile === 0) vectors.set(tileVectors.subarray(j * dim, (j + 1) * dim), r.frameRow * dim);
+    });
     return {
       vectors,
-      dim: model.dim,
+      dim,
       frameNumbers: kept.map((i) => (fps !== null ? Math.round((times[i] as number) * fps) : i)),
       times: kept.map((i) => times[i] as number),
+      ...(detail !== 'fast'
+        ? { tiles: { vectors: tileVectors, frameRow: rects.map((r) => r.frameRow), tile: rects.map((r) => r.tile) } }
+        : {}),
     };
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

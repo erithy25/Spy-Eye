@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
-import { DEFAULT_LOCATE_PARAMS, decideLocation, voteModes, weightNeighbours, type WeightedRef } from '../src/datum/locate.js';
+import { DEFAULT_LOCATE_PARAMS, decideLocation, frameAgreement, poolTileRows, voteModes, weightNeighbours, type WeightedRef } from '../src/datum/locate.js';
 import { filenameHints, judgeCreationTime, metadataFromProbe, parseIso6709, parseTagDate } from '../src/datum/metadata.js';
 import { World, greatCircleKm, pointInRing, type LonLat } from '../src/datum/world.js';
+import { interleaveByContinent } from '../src/scripts/datum/selection.js';
 
 /** Deterministic pseudo-random numbers. */
 function rng(seed: number): () => number {
@@ -78,6 +79,61 @@ test('neighbour weighting sharpens similarity and pools frames', () => {
   assert.equal(refs[0]?.id, 'a');
   assert.equal(refs[0]?.bestSimilarity, 0.9);
   assert.ok((refs[0]?.weight ?? 0) > 1000 * (refs[1]?.weight ?? 1));
+  // 'max': a reference counts once, with its best frame; the mean divides by the frames.
+  const maxed = weightNeighbours([[n('a', 0.9)], [n('a', 0.85)]], { simOffset: 0.6, simTemperature: 0.03, frameAggregation: 'max' });
+  assert.equal(maxed.length, 1);
+  assert.ok(Math.abs((maxed[0]?.weight ?? 0) - Math.exp(0.3 / 0.03)) < 1e-6 * Math.exp(10));
+  assert.equal(maxed[0]?.bestRow, 0);
+});
+
+test('tile rows: whole frames only, best tile per frame, or every tile', () => {
+  const n = (id: string, s: number): GalleryNeighbour => ({ id, label: id, lat: 50, lon: 7, country: 'DE', wikidata: null, similarity: s });
+  // Two frames with two tiles each (tile 0 = whole frame); the crop of frame 0 finds 'tower'.
+  const rows = [
+    [n('street', 0.7), n('tower', 0.5)],
+    [n('tower', 0.9), n('street', 0.4)],
+    [n('park', 0.6)],
+    [n('park', 0.65), n('street', 0.3)],
+  ];
+  const rowFrame = [0, 0, 1, 1];
+  const rowTile = [0, 1, 0, 1];
+  const whole = poolTileRows(rows, rowFrame, rowTile, 'whole', 5);
+  assert.deepEqual(whole.rows.map((r) => r.map((x) => x.id)), [['street', 'tower'], ['park']]);
+  assert.deepEqual(whole.frameOfRow, [0, 1]);
+  const frame = poolTileRows(rows, rowFrame, rowTile, 'frame', 5);
+  assert.deepEqual(frame.rows.map((r) => r.map((x) => `${x.id}:${x.similarity}`)), [['tower:0.9', 'street:0.7'], ['park:0.65', 'street:0.3']]);
+  assert.deepEqual(frame.frameOfRow, [0, 1]);
+  // k caps the merged list.
+  assert.equal(poolTileRows(rows, rowFrame, rowTile, 'frame', 1).rows[0]?.length, 1);
+  const every = poolTileRows(rows, rowFrame, rowTile, 'rows', 5);
+  assert.equal(every.rows.length, 4);
+  assert.deepEqual(every.frameOfRow, rowFrame);
+  // Without tile information every row is a frame.
+  assert.deepEqual(poolTileRows(rows, undefined, undefined, 'frame', 5).frameOfRow, [0, 1, 2, 3]);
+});
+
+test('frame agreement: share of frames whose best match lies near the answer', () => {
+  const at = (id: string, lat: number, lon: number): GalleryNeighbour => ({ id, label: id, lat, lon, country: null, wikidata: null, similarity: 0.8 });
+  const rows = [[at('a', 50.36, 7.6)], [at('b', 50.4, 7.65), at('far', 0, 0)], [at('c', 48.86, 2.35)], []];
+  // Three frames with a match; two of them within 25 km of Koblenz, Paris is not.
+  assert.equal(frameAgreement(rows, 50.36, 7.59), 2 / 3);
+  assert.equal(frameAgreement(rows, 50.36, 7.59, 1000), 1);
+  assert.equal(frameAgreement([], 0, 0), 0);
+});
+
+test('gallery selection interleaves continents and keeps the order within each', () => {
+  const items = [
+    { id: 'eu1', c: 'EU' },
+    { id: 'eu2', c: 'EU' },
+    { id: 'eu3', c: 'EU' },
+    { id: 'as1', c: 'AS' },
+    { id: 'af1', c: 'AF' },
+    { id: 'xx1', c: 'XX' },
+    { id: 'as2', c: 'AS' },
+  ];
+  const out = interleaveByContinent(items, (i) => i.c).map((i) => i.id);
+  assert.deepEqual(out, ['eu1', 'as1', 'af1', 'xx1', 'eu2', 'as2', 'eu3']);
+  assert.deepEqual(interleaveByContinent([], () => 'EU'), []);
 });
 
 test('point in polygon with holes and nested rings', () => {

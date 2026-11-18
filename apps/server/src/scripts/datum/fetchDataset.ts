@@ -31,6 +31,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { interleaveByContinent } from './selection.js';
 
 // ---------------------------------------------------------------------------------------------
 // Paths, flags, constants
@@ -1048,27 +1049,6 @@ const EXTRA_CLASSES: [string, string, number, number][] = [
 
 const WORLD_TARGET = 2900;
 const GERMAN_TARGET = 1400;
-const CONTINENT_ORDER = ['EU', 'AS', 'NA', 'AF', 'SA', 'OC', 'AN'];
-
-/** Interleaves a list (sorted by notability) over continents: EU, AS, NA, AF, SA, OC, EU, … */
-export function interleaveByContinent<T>(items: readonly T[], continent: (item: T) => string): T[] {
-  const buckets = new Map<string, T[]>();
-  for (const item of items) {
-    const c = continent(item);
-    const list = buckets.get(c) ?? [];
-    list.push(item);
-    buckets.set(c, list);
-  }
-  const order = [...CONTINENT_ORDER, ...[...buckets.keys()].filter((c) => !CONTINENT_ORDER.includes(c)).sort()];
-  const out: T[] = [];
-  for (let i = 0; out.length < items.length; i++) {
-    for (const c of order) {
-      const item = buckets.get(c)?.[i];
-      if (item !== undefined) out.push(item);
-    }
-  }
-  return out;
-}
 
 function classQuery(cls: string, minSitelinks: number, germanyOnly: boolean): string {
   return `SELECT ?item ?sl ?coord ?image ?country ?de ?en WHERE {

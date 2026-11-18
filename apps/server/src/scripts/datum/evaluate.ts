@@ -1,10 +1,12 @@
 /**
  * Measures the DATUM localisation on the reference videos with known places.
  *
- *   SICHT_OFFLINE=1 npx tsx src/scripts/datum/evaluate.ts [--dataset datasets/datum] [--frames 6]
- *       [--limit N] [--out docs/measurements/datum-geolocation.json]
+ *   SICHT_OFFLINE=1 npx tsx src/scripts/datum/evaluate.ts [--dataset datasets/datum] [--frames 12]
+ *       [--detail standard] [--limit N] [--out docs/measurements/datum-geolocation.json]
  *
- * For every test video: 6 evenly spaced frames are embedded, then `locate` decides twice:
+ * For every test video: 12 evenly spaced frames are embedded with the pipeline's tiling (tile 0
+ * is the whole frame, the others square crops; the live engine reads the same vectors from the
+ * store), then `locate` decides twice:
  *   open      the gallery as it is (it contains a picture of the same Wikidata item: leakage, the
  *             "known landmark" case);
  *   unknown   the same item left out of the gallery (the place is not in the reference set).
@@ -27,9 +29,10 @@ const { Gallery, modelSlug } = await import('../../datum/gallery.js');
 const { World, greatCircleKm } = await import('../../datum/world.js');
 const { readMetadata, filenameHints } = await import('../../datum/metadata.js');
 const { decodeFrame, writeTile } = await import('../../ml/preprocess.js');
-const { DEFAULT_LOCATE_PARAMS, decideLocation, sampleAndEmbedFrames, weightNeighbours } = await import(
+const { DEFAULT_LOCATE_PARAMS, decideLocation, poolTileRows, sampleAndEmbedFrames, weightNeighbours } = await import(
   '../../datum/locate.js'
 );
+type DetailLevel = import('../../types.js').DetailLevel;
 type LocateParams = import('../../datum/locate.js').LocateParams;
 type LocateEvidence = import('../../datum/locate.js').LocateEvidence;
 type ConfidenceFeatures = import('../../datum/locate.js').ConfidenceFeatures;
@@ -56,6 +59,12 @@ interface ManifestVideo {
 }
 
 const THRESHOLDS_KM = [1, 25, 200, 750, 2500] as const;
+/** What changed against the previous measurement (written into the report). */
+const CHANGES = [
+  'gallery: broad worldwide layer (group d of fetchDataset.ts, chosen by sitelinks and class, interleaved over continents, independent of the test places)',
+  'queries: 12 frames per video with the pipeline tiles (whole frame plus square crops); tilePooling and frameAggregation tuned on the train half',
+  'evaluation uses the live node vector cache (.cache/datum) and caches frame vectors; one gallery search serves both modes',
+];
 const MODES = ['open', 'unknown'] as const;
 type Mode = (typeof MODES)[number];
 const K_MAX = 30;
@@ -69,7 +78,10 @@ interface Prepared {
    * (a dependency such as GS for South Georgia and its sovereign GB both count). */
   truthIsos: string[];
   frameNumbers: number[];
+  /** Neighbour rows per tile (rowFrame / rowTile say which frame and tile). */
   neighbours: Record<Mode, GalleryNeighbour[][]>;
+  rowFrame: number[];
+  rowTile: number[];
   cosines: Float32Array;
   hasGps: boolean;
   metadata: Awaited<ReturnType<typeof readMetadata>> | null;
@@ -97,6 +109,8 @@ interface ModeOutcome {
   continentCorrect: boolean;
   zeroShotCountry: string | null;
   features: ConfidenceFeatures;
+  radiusTier: string | null;
+  radiusBaseKm: number;
 }
 
 function median(values: number[]): number {
@@ -136,6 +150,8 @@ function objective(outcomes: ModeOutcome[]): number {
 function evidenceFor(p: Prepared, mode: Mode, withMetadata: boolean): LocateEvidence {
   return {
     neighbours: p.neighbours[mode],
+    rowFrame: p.rowFrame,
+    rowTile: p.rowTile,
     countryCosines: p.cosines,
     frameNumbers: p.frameNumbers,
     metadata: withMetadata ? p.metadata : null,
@@ -153,7 +169,7 @@ function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams): 
   const lat = loc?.lat ?? 0;
   const lon = loc?.lon ?? 0;
   const errorKm = loc ? greatCircleKm(lat, lon, p.video.lat, p.video.lon) : 20_000;
-  const refs = weightNeighbours(neighbours, params);
+  const refs = weightNeighbours(poolTileRows(neighbours, ev.rowFrame, ev.rowTile, params.tilePooling, params.k).rows, params);
   const top = [...refs].sort((a, b) => b.bestSimilarity - a.bestSimilarity)[0];
   const sameItem = top ? top.id === p.video.wikidata || neighbours.flat().some((n) => n.id === top.id && n.wikidata === p.video.wikidata) : false;
   return {
@@ -177,6 +193,8 @@ function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams): 
     continentCorrect: p.truthIsos.some((iso) => world.continentOf(iso) === (r.diagnostics.continentTop?.code ?? '-')),
     zeroShotCountry: r.diagnostics.zeroShotTop[0]?.iso ?? null,
     features: r.diagnostics.features,
+    radiusTier: r.diagnostics.radiusTier,
+    radiusBaseKm: r.diagnostics.radiusBaseKm,
   };
 }
 
@@ -199,6 +217,8 @@ function tune(world: WorldT, train: Prepared[], start: LocateParams): { params: 
   let bestScore = trainScore(world, train, best);
   log.push(`start ${bestScore.toFixed(4)}`);
   const grid: { name: string; values: Partial<LocateParams>[] }[] = [
+    { name: 'tilePooling', values: (['whole', 'frame', 'rows'] as const).map((tilePooling) => ({ tilePooling })) },
+    { name: 'frameAggregation', values: (['mean', 'max'] as const).map((frameAggregation) => ({ frameAggregation })) },
     { name: 'k', values: [5, 10, 15, 20, 30].map((k) => ({ k })) },
     { name: 'simTemperature', values: [0.01, 0.02, 0.03, 0.05, 0.08, 0.12].map((simTemperature) => ({ simTemperature })) },
     {
@@ -221,6 +241,7 @@ function tune(world: WorldT, train: Prepared[], start: LocateParams): { params: 
   for (let sweep = 0; sweep < 2; sweep++) {
     let changed = false;
     for (const g of grid) {
+      if ((g.name === 'tilePooling' && fixedPooling) || (g.name === 'frameAggregation' && fixedAggregation)) continue;
       for (const v of g.values) {
         const candidate = { ...best, ...v };
         const score = trainScore(world, train, candidate);
@@ -290,13 +311,13 @@ function precisionThreshold(rows: { p: number; correct: boolean }[], target: num
 
 /** Logistic regression (L2) of "error within the stated radius" on the confidence features. */
 function fitConfidence(rows: { f: ConfidenceFeatures; hit: boolean }[]): LocateParams['confidence'] {
-  const keys = ['topSim', 'gap', 'margin', 'share', 'region', 'continent', 'countryP'] as const;
-  const w = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0 };
+  const keys = ['topSim', 'gap', 'margin', 'share', 'region', 'continent', 'countryP', 'agreement'] as const;
+  const w = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0, agreement: 0 };
   if (rows.length < 10) return DEFAULT_LOCATE_PARAMS.confidence;
   const lr = 0.5;
   const lambda = 0.01;
   for (let iter = 0; iter < 6000; iter++) {
-    const g = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0 };
+    const g = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0, agreement: 0 };
     for (const r of rows) {
       let z = w.bias;
       for (const k of keys) z += w[k] * r.f[k];
@@ -316,7 +337,59 @@ function fitConfidence(rows: { f: ConfidenceFeatures; hit: boolean }[]): LocateP
     region: round(w.region, 3),
     continent: round(w.continent, 3),
     countryP: round(w.countryP, 3),
+    agreement: round(w.agreement, 3),
   };
+}
+
+const RADIUS_TARGET = 0.7;
+const RADIUS_GRID_KM = [0.5, 1, 2, 3, 5, 10, 25, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 7500];
+const FACTOR_GRID = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6];
+
+/**
+ * Radius per evidence tier, on the training half only (both modes pooled): the smallest grid
+ * value with which the truth lies inside the stated circle in at least RADIUS_TARGET of the cases
+ * of that tier. Tiers with fewer than four cases fall back to the next weaker tier's value.
+ */
+function calibrateRadii(rows: ModeOutcome[]): LocateParams['radiusKm'] & { counts: Record<string, number> } {
+  const inTier = (t: string): ModeOutcome[] => rows.filter((o) => o.radiusTier === t);
+  const pickMin = (cases: ModeOutcome[], fallback: number): number => {
+    if (cases.length < 4) return fallback;
+    for (const r of RADIUS_GRID_KM) {
+      if (cases.filter((o) => o.errorKm <= Math.max(r, o.radiusBaseKm, 0.5)).length / cases.length >= RADIUS_TARGET) return r;
+    }
+    return RADIUS_GRID_KM[RADIUS_GRID_KM.length - 1] as number;
+  };
+  const pickFactor = (cases: ModeOutcome[]): number => {
+    if (cases.length < 4) return 1;
+    for (const f of FACTOR_GRID) {
+      if (cases.filter((o) => o.errorKm <= o.radiusBaseKm * f).length / cases.length >= RADIUS_TARGET) return f;
+    }
+    return FACTOR_GRID[FACTOR_GRID.length - 1] as number;
+  };
+  const similar = pickMin(inTier('similar'), 25);
+  const recognised = pickMin(inTier('recognised'), similar);
+  const strong = pickMin(inTier('strong'), recognised);
+  const counts: Record<string, number> = {};
+  for (const t of ['strong', 'recognised', 'similar', 'country', 'continent']) counts[t] = inTier(t).length;
+  return {
+    strong,
+    recognised,
+    similar,
+    countryFactor: pickFactor(inTier('country')),
+    continentFactor: pickFactor(inTier('continent')),
+    counts,
+  };
+}
+
+/** Within-radius share per tier (for the report). */
+function coverageByTier(outcomes: ModeOutcome[]): Record<string, { n: number; withinRadius: number; medianRadiusKm: number }> {
+  const out: Record<string, { n: number; withinRadius: number; medianRadiusKm: number }> = {};
+  for (const t of ['strong', 'recognised', 'similar', 'country', 'continent']) {
+    const c = outcomes.filter((o) => o.radiusTier === t);
+    if (c.length === 0) continue;
+    out[t] = { n: c.length, withinRadius: round(c.filter((o) => o.withinRadius).length / c.length, 3), medianRadiusKm: round(median(c.map((o) => o.radiusKm)), 1) };
+  }
+  return out;
 }
 
 /** Smallest similarity from which the open-gallery top match lies within 1 km in >= 80 % (train). */
@@ -349,10 +422,17 @@ function calibration(outcomes: ModeOutcome[]): { bin: string; n: number; meanCon
 // ---------------------------------------------------------------------------------------------
 
 const datasetDir = path.resolve(repoRoot, argument('dataset', 'datasets/datum'));
-const frameCount = Number(argument('frames', '6'));
+const frameCount = Number(argument('frames', '12'));
+const detail = argument('detail', 'standard') as DetailLevel;
+/** Frames actually used of the sampled ones (evenly spread, as the engine picks them); 0 = all. */
+const useFrames = Number(argument('use-frames', '0'));
+/** Structural choices fixed from the command line instead of tuned (experiments). */
+const fixedPooling = argument('pooling', '') as '' | LocateParams['tilePooling'];
+const fixedAggregation = argument('frame-aggregation', '') as '' | LocateParams['frameAggregation'];
 const limit = Number(argument('limit', '0'));
 const outFile = path.resolve(repoRoot, argument('out', 'docs/measurements/datum-geolocation.json'));
-const cacheDir = path.join(config.dataDir, 'datum');
+// The same vector cache as the live node (datum/shared.ts): the gallery is embedded once.
+const cacheDir = path.resolve(repoRoot, argument('cache', '.cache/datum'));
 
 const manifest = JSON.parse(await fs.readFile(path.join(datasetDir, 'manifest.json'), 'utf8')) as { videos: ManifestVideo[] };
 let videos = manifest.videos.filter(
@@ -425,6 +505,21 @@ const countryTextMs = performance.now() - tText;
 say(`Ländertexte (${world.countries().length} × 5 Prompts) in ${(countryTextMs / 1000).toFixed(1)} s eingebettet.`);
 
 // ---- per video: frames, neighbours, prior
+// Frame and tile vectors are cached per clip (keyed by size, frame count, tiling and model), so a
+// rerun after a gallery change does not embed the videos again.
+type FrameCacheEntry = { bytes: number; frameNumbers: number[]; dim: number; vectors: string; tiles: string | null; frameRow: number[]; tile: number[] };
+const frameCacheFile = path.join(cacheDir, `eval-frames-${modelSlug()}-${frameCount}-${detail}.json`);
+const frameCache: Record<string, FrameCacheEntry> = await fs
+  .readFile(frameCacheFile, 'utf8')
+  .then((t) => JSON.parse(t) as Record<string, FrameCacheEntry>)
+  .catch(() => ({}));
+const toB64 = (v: Float32Array): string => Buffer.from(v.buffer, v.byteOffset, v.byteLength).toString('base64');
+const fromB64 = (t: string): Float32Array => {
+  const b = Buffer.from(t, 'base64');
+  return new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+};
+let frameCacheDirty = false;
+const searchMs: number[] = [];
 const prepared: Prepared[] = [];
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-eval-'));
 for (let i = 0; i < videos.length; i++) {
@@ -433,16 +528,56 @@ for (let i = 0; i < videos.length; i++) {
   const t0 = performance.now();
   try {
     const metadata = await readMetadata(file).catch(() => null);
-    const frames = await sampleAndEmbedFrames(file, model, {
-      count: frameCount,
-      durationSec: metadata?.durationSec ?? null,
-      fps: metadata?.fps ?? null,
-      tmpDir,
-    });
+    const bytes = (await fs.stat(file)).size;
+    let cachedFrames = frameCache[video.id];
+    if (!cachedFrames || cachedFrames.bytes !== bytes || cachedFrames.dim !== model.dim) {
+      const sampled = await sampleAndEmbedFrames(file, model, {
+        count: frameCount,
+        durationSec: metadata?.durationSec ?? null,
+        fps: metadata?.fps ?? null,
+        tmpDir,
+        detail,
+      });
+      cachedFrames = {
+        bytes,
+        frameNumbers: sampled.frameNumbers,
+        dim: sampled.dim,
+        vectors: toB64(sampled.vectors),
+        tiles: sampled.tiles ? toB64(sampled.tiles.vectors) : null,
+        frameRow: sampled.tiles?.frameRow ?? sampled.frameNumbers.map((_, r) => r),
+        tile: sampled.tiles?.tile ?? sampled.frameNumbers.map(() => 0),
+      };
+      frameCache[video.id] = cachedFrames;
+      frameCacheDirty = true;
+    }
+    let frames = { vectors: fromB64(cachedFrames.vectors), dim: cachedFrames.dim, frameNumbers: cachedFrames.frameNumbers };
+    let tileVectors = cachedFrames.tiles ? fromB64(cachedFrames.tiles) : frames.vectors;
+    let rowFrame = cachedFrames.frameRow;
+    let rowTile = cachedFrames.tile;
+    if (useFrames > 0 && useFrames < frames.frameNumbers.length) {
+      // The engine's choice of frames: evenly spread over the sampled ones.
+      const n = frames.frameNumbers.length;
+      const picks = [...new Set(Array.from({ length: useFrames }, (_, i) => Math.min(n - 1, Math.round(((i + 0.5) / useFrames) * (n - 1)))))];
+      const dim = frames.dim;
+      const fv = new Float32Array(picks.length * dim);
+      picks.forEach((f, r) => fv.set(frames.vectors.subarray(f * dim, (f + 1) * dim), r * dim));
+      const keepRows = rowFrame.map((f, i) => (picks.includes(f) ? i : -1)).filter((i) => i >= 0);
+      const tv = new Float32Array(keepRows.length * dim);
+      keepRows.forEach((i, r) => tv.set(tileVectors.subarray(i * dim, (i + 1) * dim), r * dim));
+      rowFrame = keepRows.map((i) => picks.indexOf(rowFrame[i] as number));
+      rowTile = keepRows.map((i) => rowTile[i] as number);
+      tileVectors = tv;
+      frames = { vectors: fv, dim, frameNumbers: picks.map((f) => frames.frameNumbers[f] as number) };
+    }
     const t1 = performance.now();
     const cosines = await world.countryCosines(frames.vectors, frames.dim, embedTexts);
-    const open = gallery.search(frames.vectors, K_MAX);
-    const unknown = gallery.search(frames.vectors, K_MAX, { excludeWikidata: [video.wikidata] });
+    // One search serves both modes: every Wikidata item has one picture, so the unknown case is
+    // the open list without it (a few spare neighbours keep k rows full).
+    const ts = performance.now();
+    const wide = gallery.search(tileVectors, K_MAX + 4);
+    searchMs.push(performance.now() - ts);
+    const open = wide.map((row) => row.slice(0, K_MAX));
+    const unknown = wide.map((row) => row.filter((n) => n.wikidata !== video.wikidata).slice(0, K_MAX));
     const p: Prepared = {
       video,
       index: i,
@@ -457,6 +592,8 @@ for (let i = 0; i < videos.length; i++) {
       ],
       frameNumbers: frames.frameNumbers,
       neighbours: { open, unknown },
+      rowFrame,
+      rowTile,
       cosines,
       hasGps: metadata?.location != null,
       metadata,
@@ -475,6 +612,10 @@ for (let i = 0; i < videos.length; i++) {
   }
 }
 await fs.rm(tmpDir, { recursive: true, force: true });
+if (frameCacheDirty) {
+  await fs.mkdir(cacheDir, { recursive: true });
+  await fs.writeFile(frameCacheFile, JSON.stringify(frameCache));
+}
 
 const train = prepared.filter((p) => p.split === 'train');
 const test = prepared.filter((p) => p.split === 'test');
@@ -497,7 +638,12 @@ const START: LocateParams = {
   countryMinP: 0.3,
   continentMinP: 0.4,
   prior: { temperature: 0.01, uniformMix: 0.01, populationExponent: 1 },
-  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1 },
+  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1, agreement: 0 },
+  strongGap: 0.1,
+  agreementMin: 0.5,
+  radiusKm: { strong: 0.5, recognised: 0.5, similar: 25, countryFactor: 1, continentFactor: 1 },
+  ...(fixedPooling ? { tilePooling: fixedPooling } : {}),
+  ...(fixedAggregation ? { frameAggregation: fixedAggregation } : {}),
 };
 const prior = tunePrior(world, train, START);
 let params: LocateParams = {
@@ -515,6 +661,7 @@ const zeroShot = {
 };
 const tuned = tune(world, train, params);
 params = tuned.params;
+say(`Abstimmung (nur Abstimmungshälfte): ${tuned.log.join('; ')}`);
 // Country- and continent-level answers only where the training half shows they are right at
 // least half of the time (the coarse-answer cut-offs are not fitted to the Im2GPS objective).
 {
@@ -527,6 +674,31 @@ params = tuned.params;
 }
 const trainOpen = train.map((p) => runMode(world, p, 'open', params));
 params = { ...params, landmarkSimilarity: landmarkThreshold(trainOpen, params.landmarkSimilarity) };
+// Radii: the agreement cut-off that gives the smallest median stated radius on train, each tier
+// calibrated to cover the truth in RADIUS_TARGET of its training cases.
+let radiusCalibration: ReturnType<typeof calibrateRadii> | null = null;
+{
+  let best: { median: number; strongGap: number; agreementMin: number; radii: ReturnType<typeof calibrateRadii> } | null = null;
+  for (const strongGap of [params.recognitionGap, 0.1, 0.12, 0.14]) {
+    for (const agreementMin of [0, 0.34, 0.5, 0.67, 0.8]) {
+      const trial = { ...params, strongGap, agreementMin };
+      const runs = runAll(world, train, trial);
+      const radii = calibrateRadii([...runs.open, ...runs.unknown]);
+      const { counts: _c, ...radiusKm } = radii;
+      const again = runAll(world, train, { ...trial, radiusKm });
+      // Geometric mean of the stated radii: every tier covers RADIUS_TARGET by construction, so
+      // the cut-offs that keep the circles smallest overall win.
+      const all = [...again.open, ...again.unknown];
+      const m = all.reduce((s, o) => s + Math.log(Math.max(0.5, o.radiusKm)), 0) / Math.max(1, all.length);
+      if (!best || m < best.median - 1e-9) best = { median: m, strongGap, agreementMin, radii };
+    }
+  }
+  if (best) {
+    const { counts: _c, ...radiusKm } = best.radii;
+    params = { ...params, strongGap: best.strongGap, agreementMin: best.agreementMin, radiusKm };
+    radiusCalibration = best.radii;
+  }
+}
 const trainRuns = runAll(world, train, params);
 params = {
   ...params,
@@ -553,6 +725,7 @@ const baseline = (() => {
 const times = prepared.map((p) => p.timing.totalMs);
 const report = {
   generatedAt: new Date().toISOString(),
+  changes: CHANGES,
   model: config.modelId,
   modelSlug: modelSlug(),
   device: model.state.device,
@@ -567,7 +740,7 @@ const report = {
   },
   protocol: {
     framesPerVideo: frameCount,
-    frameSampling: 'middle of equal segments, full frame resized to the model input (as the pipeline)',
+    frameSampling: `middle of equal segments; tiles as the pipeline at detail "${detail}" (tile 0 = whole frame, further tiles = square crops), each resized to the model input`,
     modes: {
       open: 'whole gallery, including the picture of the same Wikidata item (known-landmark case, leakage on purpose)',
       unknown: 'gallery without the same Wikidata item (excludeWikidata: [video.wikidata])',
@@ -596,9 +769,19 @@ const report = {
     perVideoMeanMs: round(times.reduce((s, t) => s + t, 0) / Math.max(1, times.length), 0),
     perVideoFramesMedianMs: round(median(prepared.map((p) => p.timing.framesMs)), 0),
     perVideoLocateMedianMs: round(median(prepared.map((p) => p.timing.locateMs)), 1),
+    perVideoSearchMedianMs: round(median(searchMs), 1),
+    note: 'framesMs = sampling and embedding of all tiles (taken from the evaluation cache when present); the live engine reuses the stored tile vectors, so it pays only search and decision',
   },
   summary,
   baselineZeroShotCentroidTestUnknown: baseline,
+  radius: {
+    meaning: `stated radius per evidence tier, calibrated on the train half to cover the truth in ${RADIUS_TARGET * 100} % of its cases (both modes)`,
+    calibration: radiusCalibration,
+    coverageByTier: {
+      train: { open: coverageByTier(bySplit('open', 'train')), unknown: coverageByTier(bySplit('unknown', 'train')) },
+      test: { open: coverageByTier(bySplit('open', 'test')), unknown: coverageByTier(bySplit('unknown', 'test')) },
+    },
+  },
   calibration: {
     meaning: 'confidence = estimated probability that the true place lies within radiusKm',
     test: { open: calibration(bySplit('open', 'test')), unknown: calibration(bySplit('unknown', 'test')) },
@@ -629,10 +812,12 @@ function compact(o: ModeOutcome): Record<string, unknown> {
     withinRadius: o.withinRadius,
     topSimilarity: round(o.topSimilarity, 4),
     gap: round(o.features.gap, 4),
+    agreement: round(o.features.agreement, 3),
     topReference: o.topReference,
     topReferenceIsSameItem: o.topReferenceIsSameItem,
     countryCorrect: o.countryCorrect,
     level: o.level,
+    radiusTier: o.radiusTier,
     countryTopP: round(o.countryTopP, 3),
     continentTop: o.continentTop,
     continentTopP: round(o.continentTopP, 3),
