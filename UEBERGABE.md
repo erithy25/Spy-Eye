@@ -37,7 +37,10 @@ git pull
   20 bis 40 Minuten (gemessen unter Linux auf vier Kernen: Ortung aller 60 Videos 5,7 Minuten;
   die Messung auf einem Windows-Rechner läuft in der CI); danach startet derselbe Befehl in unter
   einer Minute und ohne Netz.
-- Am Vorabend genügt `.\datum.cmd -NurPruefen`: alles bis zur Prüfung, ohne zu starten.
+- Beim ersten Start ist die Konsole sofort nach dem Download erreichbar; die 60 Videos werden
+  dann im Hintergrund ausgewertet und geortet (15 bis 30 Minuten), die Karte füllt sich nach und
+  nach. Für eine Vorführung vorher einmal `.\datum.cmd -NurPruefen` laufen lassen: Das wertet
+  alles vollständig aus und prüft es, ohne zu starten.
 - Anmeldung `leitung`, Passwort `lagebild`, Mandat „Erprobung“.
 - Reiter ORTUNG: Weltkarte mit allen Videos. Eine Zeile wählen: Ort mit Kreis, Uhrzeit, Sonne,
   Schatten. BEFUND: alle Belege, Uhr, Sonnenstand. RAUM: in das Video hineingehen (W A S D,

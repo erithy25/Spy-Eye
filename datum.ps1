@@ -95,13 +95,23 @@ Schritt 'Bauen (pnpm build)' { pnpm build }
 
 # ---------------------------------------------------------------- vorbereiten
 $vorbereitet = Test-Path -Path (Join-Path $PSScriptRoot 'data-datum\.prepared\manifest.json')
+$imHintergrund = $false
 if (-not $vorbereitet) {
-  Schritt 'Referenzbestand laden (pnpm datum:fetch): Videos, Referenzbilder, Höhendaten' { pnpm datum:fetch } 'Häufigster Grund: keine Verbindung zum Netz. Der Befehl setzt beim nächsten Mal dort fort, wo er stehen blieb.'
-  Schritt 'Auswerten und orten (pnpm datum:prepare), 15 bis 30 Minuten' { pnpm datum:prepare }
+  Schritt 'Referenzbestand laden (pnpm datum:fetch): Vorschaubilder, Höhendaten' { pnpm datum:fetch } 'Häufigster Grund: keine Verbindung zum Netz. Der Befehl setzt beim nächsten Mal dort fort, wo er stehen blieb.'
+  if ($NurPruefen) {
+    Schritt 'Auswerten und orten (pnpm datum:prepare), 15 bis 30 Minuten' { pnpm datum:prepare }
+  } else {
+    # Erster Start: Der Knoten startet sofort und wertet die 60 Videos selbst im Hintergrund aus;
+    # die Konsole ist gleich erreichbar und die Karte füllt sich, statt 15 bis 30 Minuten vor
+    # einer nicht erreichbaren Seite zu warten.
+    $imHintergrund = $true
+  }
 }
 
 # ---------------------------------------------------------------- prüfen
-Schritt 'Prüfen (pnpm datum:check)' { pnpm datum:check } 'Jede Zeile mit FEHLT nennt den nächsten Schritt.'
+if (-not $imHintergrund) {
+  Schritt 'Prüfen (pnpm datum:check)' { pnpm datum:check } 'Jede Zeile mit FEHLT nennt den nächsten Schritt.'
+}
 
 if ($NurPruefen) {
   Sage ''
@@ -113,6 +123,10 @@ if ($NurPruefen) {
 Sage ''
 Sage 'DATUM startet. Adresse: http://127.0.0.1:8787'
 Sage 'Anmeldung: leitung   Passwort: lagebild   Mandat: Erprobung'
+if ($imHintergrund) {
+  Sage 'Erster Start: Die 60 Videos werden jetzt im Hintergrund ausgewertet und geortet (15 bis 30 Minuten).'
+  Sage 'Die Konsole ist sofort erreichbar; die Karte im Reiter ORTUNG füllt sich nach und nach.'
+}
 Sage 'Beenden: Strg+C in diesem Fenster.'
 
 if (-not $OhneBrowser) {
