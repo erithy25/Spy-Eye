@@ -21,7 +21,7 @@ Unterlagen.
 | Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht, Stückliste, Barrierefreiheit, Betrieb | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
 | Architektur und Sicherheitsdurchsicht | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md), [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) | fertig; 21 Befunde einer unabhängigen Durchsicht, die schweren behoben |
 | Vertriebsvorlagen: Anschreiben, Angebot zur Erprobung | [`docs/vertrieb/`](docs/vertrieb/) | Vorlagen; eckige Klammern und Preis vor dem Versand füllen |
-| Gesprächsleitfaden für die ersten zehn Behördengespräche: Fragen je Annahme, Stufen der Zusage, Auswertung gegen die Abbruchkriterien | [`docs/vertrieb/GESPRAECHSLEITFADEN.md`](docs/vertrieb/GESPRAECHSLEITFADEN.md) | Vorlage; die Schwellen der Auswertung sind ein Vorschlag, kein Erfahrungswert |
+| Gesprächsleitfaden für die ersten zehn Behördengespräche: Fragen je Annahme, Stufen der Zusage, Auswertung gegen die Abbruchkriterien | [`docs/vertrieb/GESPRAECHSLEITFADEN.md`](docs/vertrieb/GESPRAECHSLEITFADEN.md); zum Ausdrucken [`deliverables/Sicht-Gespraechsleitfaden.pdf`](deliverables/Sicht-Gespraechsleitfaden.pdf) | Vorlage; die Schwellen der Auswertung sind ein Vorschlag, kein Erfahrungswert |
 | Harte Fragen, kurze Antworten, englisch | [`docs/vertrieb/FAQ-EN.md`](docs/vertrieb/FAQ-EN.md) | Übersetzung einer Auswahl aus `docs/FAQ.md`; kein Muttersprachler hat gegengelesen |
 | Stückliste: jedes Paket, jedes Modell und alle Daten mit Fassung, Prüfsumme und Lizenz | [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md), maschinenlesbar [`docs/stueckliste/sicht.cdx.json`](docs/stueckliste/sicht.cdx.json), `pnpm sbom` | fertig; kein bekannter Befund in den ausgelieferten Paketen (Abgleich vom 18. November 2026) |
 | Barrierefreiheit: automatische Prüfung nach WCAG 2.1 A und AA, Gang nur mit der Tastatur | [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md), Werkzeuge in [`tools/barrierefreiheit/`](tools/barrierefreiheit/) | keine verletzte Regel in 18 Zuständen, 24 von 24 Schritten ohne Maus; kein BITV-Test, kein Test mit Bildschirmleser |
@@ -107,6 +107,9 @@ ohne zu starten. Derselbe Befehl läuft auf einem Windows-Rechner von GitHub in 
   Maßgeblich ist die Breite im Browser, nicht die des Bildschirms: Ein Bildschirm mit 1920
   Bildpunkten hat bei der Anzeigeskalierung 150 Prozent von Windows nur 1280. Dann den Zoom des
   Browsers mit Strg und Minus auf 90 oder 80 Prozent stellen; sonst bleibt er bei 100 Prozent.
+  Unter 1280 Breite (nachgesehen bei 1097 und 1152) bleibt alles bedienbar und nichts läuft
+  über, aber Mandat und Rolle in der Kopfzeile sind nicht mehr lesbar, und die Spalte der
+  Meldungen zeigt nur ein bis zwei Meldungen.
 - Ohne `ML_DEVICE` starten. Die Auswertung läuft auf dem Prozessor; eine Grafikkarte wird nur
   verwendet, wenn sie nachweislich dasselbe rechnet.
 - Die Kette ohne Sicht nachrechnen, falls jemand fragt:

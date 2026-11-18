@@ -1,19 +1,45 @@
 /**
- * Erzeugt deliverables/Sicht-Vorfuehrung-Ablauf.pdf aus docs/DEMO.md: der Ablauf der Vorführung
- * zum Ausdrucken, in der Schrift der übrigen Unterlagen.
+ * Erzeugt zwei Blätter zum Ausdrucken, in der Schrift der übrigen Unterlagen:
  *
- *   node docs/ablauf/build.cjs
+ *   node docs/ablauf/build.cjs              beide
+ *   node docs/ablauf/build.cjs ablauf       deliverables/Sicht-Vorfuehrung-Ablauf.pdf aus docs/DEMO.md
+ *   node docs/ablauf/build.cjs leitfaden    deliverables/Sicht-Gespraechsleitfaden.pdf aus
+ *                                           docs/vertrieb/GESPRAECHSLEITFADEN.md
  *
- * Braucht Playwright mit Chromium. Die Umsetzung von Markdown ist auf das beschränkt, was
- * docs/DEMO.md verwendet: Überschriften, Absätze, Listen, Tabellen, Befehlsblöcke.
+ * Braucht Playwright mit Chromium. Die Umsetzung von Markdown ist auf das beschränkt, was die
+ * beiden Vorlagen verwenden: Überschriften in drei Stufen, Absätze, Listen, Tabellen,
+ * Befehlsblöcke.
  */
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require('playwright');
 
-const source = path.resolve(__dirname, '..', 'DEMO.md');
-const target = path.resolve(__dirname, '..', '..', 'deliverables', 'Sicht-Vorfuehrung-Ablauf.pdf');
+const deliverables = path.resolve(__dirname, '..', '..', 'deliverables');
+const SHEETS = {
+  ablauf: {
+    source: path.resolve(__dirname, '..', 'DEMO.md'),
+    target: path.join(deliverables, 'Sicht-Vorfuehrung-Ablauf.pdf'),
+    title: 'Sicht — Ablauf der Vorführung',
+    label: 'Ablauf der Vorführung · zum Ausdrucken',
+    foot: 'SICHT · Erprobungsstand · Übungsmaterial',
+  },
+  leitfaden: {
+    source: path.resolve(__dirname, '..', 'vertrieb', 'GESPRAECHSLEITFADEN.md'),
+    target: path.join(deliverables, 'Sicht-Gespraechsleitfaden.pdf'),
+    title: 'Sicht — Gesprächsleitfaden',
+    label: 'Gesprächsleitfaden · zum Ausdrucken',
+    foot: 'SICHT · Erprobungsstand · Vorlage',
+  },
+};
+const wanted = process.argv.slice(2);
+for (const name of wanted) {
+  if (!(name in SHEETS)) {
+    process.stderr.write(`Unbekanntes Blatt „${name}“. Möglich: ${Object.keys(SHEETS).join(', ')}.\n`);
+    process.exit(1);
+  }
+}
+const sheets = wanted.length > 0 ? wanted : Object.keys(SHEETS);
 const fonts = pathToFileURL(path.resolve(__dirname, '..', 'onepager', 'fonts')).href;
 
 const esc = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -52,6 +78,7 @@ function convert(markdown) {
     }
     if (line.startsWith('# ')) { out.push(`<h1>${inline(line.slice(2))}</h1>`); i++; continue; }
     if (line.startsWith('## ')) { out.push(`<h2>${inline(line.slice(3))}</h2>`); i++; continue; }
+    if (line.startsWith('### ')) { out.push(`<h3>${inline(line.slice(4))}</h3>`); i++; continue; }
     if (line.startsWith('|')) {
       const head = cells(line);
       i += 2;
@@ -84,8 +111,8 @@ function convert(markdown) {
   return out.join('\n');
 }
 
-const html = `<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>Sicht — Ablauf der Vorführung</title>
+const page = (sheet) => `<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>${esc(sheet.title)}</title>
 <style>
   @font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url("${fonts}/JetBrainsMono-Regular.woff2") format("woff2"); }
   @font-face { font-family: "JetBrains Mono"; font-weight: 500; src: url("${fonts}/JetBrainsMono-Medium.woff2") format("woff2"); }
@@ -98,6 +125,7 @@ const html = `<!doctype html>
   .label { font-size: 6.2pt; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: #555; }
   h1 { font-size: 15pt; font-weight: 700; line-height: 1.2; margin-bottom: 3mm; }
   h2 { font-size: 6.6pt; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; border-bottom: 0.5pt solid #050505; padding-bottom: 1.4mm; margin: 6.5mm 0 2.6mm; break-after: avoid; }
+  h3 { font-size: 7.6pt; font-weight: 700; margin: 4.2mm 0 1.6mm; break-after: avoid; }
   p { margin-bottom: 2mm; max-width: 172mm; }
   pre { font: inherit; border-left: 0.7pt solid #050505; padding: 0.6mm 0 0.6mm 3mm; margin: 1mm 0 3mm; line-height: 1.7; break-inside: avoid; }
   code { font: inherit; font-weight: 500; }
@@ -113,22 +141,25 @@ const html = `<!doctype html>
   table.run td:nth-child(3) { color: #333; }
 </style></head>
 <body>
-<header><span class="wordmark">SICHT</span><span class="label">Ablauf der Vorführung · zum Ausdrucken</span></header>
-${convert(fs.readFileSync(source, 'utf8'))}
+<header><span class="wordmark">SICHT</span><span class="label">${esc(sheet.label)}</span></header>
+${convert(fs.readFileSync(sheet.source, 'utf8'))}
 </body></html>`;
 
 (async () => {
   const browser = await chromium.launch();
   try {
-    const page = await browser.newPage();
-    const temp = path.join(__dirname, '.ablauf.html');
-    fs.writeFileSync(temp, html);
-    await page.goto(pathToFileURL(temp).href);
-    await page.evaluate(() => document.fonts.ready);
-    const font = await page.evaluate(() => document.fonts.check('8pt "JetBrains Mono"'));
+   for (const name of sheets) {
+    const sheet = SHEETS[name];
+    const target = sheet.target;
+    const tab = await browser.newPage();
+    const temp = path.join(__dirname, `.${name}.html`);
+    fs.writeFileSync(temp, page(sheet));
+    await tab.goto(pathToFileURL(temp).href);
+    await tab.evaluate(() => document.fonts.ready);
+    const font = await tab.evaluate(() => document.fonts.check('8pt "JetBrains Mono"'));
     if (!font) throw new Error('JetBrains Mono wurde nicht geladen (docs/onepager/fonts).');
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    await page.pdf({
+    await tab.pdf({
       path: target,
       format: 'A4',
       printBackground: true,
@@ -136,10 +167,12 @@ ${convert(fs.readFileSync(source, 'utf8'))}
       displayHeaderFooter: true,
       headerTemplate: '<span></span>',
       footerTemplate:
-        '<div style="width:100%;font-family:monospace;font-size:6pt;color:#555;padding:0 14mm;display:flex;justify-content:space-between;"><span>SICHT · Erprobungsstand · Übungsmaterial</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
+        '<div style="width:100%;font-family:monospace;font-size:6pt;color:#555;padding:0 14mm;display:flex;justify-content:space-between;"><span>' + esc(sheet.foot) + '</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
     });
     fs.rmSync(temp, { force: true });
+    await tab.close();
     console.log(path.relative(process.cwd(), target));
+   }
   } finally {
     await browser.close();
   }
