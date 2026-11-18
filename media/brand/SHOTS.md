@@ -10,6 +10,7 @@ Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` ne
 | `sicht-brandfilm-en.mp4` | Derselbe Schnitt mit englischen Tafeln, 40,2 s, 29 MB |
 | `sicht-markenfilm-lang.mp4` | Langfassung mit drei Ausschnitten aus der Konsole, 66,8 s, 37 MB |
 | `sicht-produktfilm.mp4` | Produktfilm aus dem Mitschnitt der Konsole, 136,6 s, 28 MB |
+| `sicht-productfilm-en.mp4` | Derselbe Produktfilm mit englischen Tafeln und Einblendungen; die Konsole im Bild bleibt deutsch, 136,6 s, 28 MB |
 | `sicht-teaser-hochkant.mp4` | Teaser im Hochformat, 19,5 s, 1080×1920, 7,2 MB |
 | `sicht-teaser-vertical-en.mp4` | Derselbe Teaser mit englischen Tafeln, 19,5 s, 7,2 MB |
 | `*-web.mp4` | Zu jeder Fassung eine leichte Datei zum Einbetten (1280×720, im Hochformat 720×1280): 2,8 · 2,8 · 4,2 · 6,8 · 0,8 · 0,8 MB |
@@ -20,7 +21,7 @@ Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` ne
 | `raw/*.kling.mp4`, `raw-hochkant/*.kling.mp4` | Die Aufnahmen, wie Higgsfield sie geliefert hat (1280×720 und 720×1280, 24 B/s) |
 | `raw/verworfen/` | Verworfene Aufnahme (siehe unten) |
 | `build.sh` | Schnitt als Skript; der erste Schnitt steht darin, jeder andere in einer Ablaufdatei |
-| `ablauf-v1-en.txt`, `ablauf-lang.txt`, `ablauf-produktfilm.txt`, `ablauf-teaser-hochkant.txt`, `ablauf-teaser-vertical-en.txt` | Die Abläufe der übrigen Fassungen |
+| `ablauf-v1-en.txt`, `ablauf-lang.txt`, `ablauf-produktfilm.txt`, `ablauf-productfilm-en.txt`, `ablauf-teaser-hochkant.txt`, `ablauf-teaser-vertical-en.txt` | Die Abläufe der übrigen Fassungen |
 | `fonts/`, `tools/track_font.py` | JetBrains Mono (SIL OFL 1.1) und die daraus abgeleiteten gesperrten Schnitte |
 
 Videos, Aufnahmen, Tafeln und Ton liegen nicht im Repository (`.gitignore`); im Repository
@@ -459,6 +460,14 @@ SEQ=ablauf-lang.txt OUT=sicht-markenfilm-lang.mp4 ./build.sh
 
 ```bash
 END_NOTE='BILDSCHIRMAUFNAHME DER KONSOLE · ÜBUNGSDATEN · ERPROBUNGSSTAND' SEQ=ablauf-produktfilm.txt OUT=sicht-produktfilm.mp4 MUSIC=audio/bed-lang.mp3 CLIP_W=1728 CLIP_H=972 ./build.sh
+```
+
+Die englische Fassung des Produktfilms hat dieselben Schnitte und dieselbe Länge; ihre
+Ablaufdatei setzt Ausgabename, Schlusstafel und Musik selbst. Wer die Schnitte ändert, ändert
+sie in beiden Dateien:
+
+```bash
+CLIP_W=1728 CLIP_H=972 SEQ=ablauf-productfilm-en.txt ./build.sh
 ```
 
 Die leichte Fassung entsteht jeweils mit denselben Angaben und dem Wort `web` am Ende. Läuft

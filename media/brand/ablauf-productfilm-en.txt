@@ -1,0 +1,32 @@
+# Sicht — product film with English cards and captions; the console itself is shown in German.
+#
+#   CLIP_W=1728 CLIP_H=972 SEQ=ablauf-productfilm-en.txt ./build.sh
+#
+# Same take, same cuts and the same durations as the German product film (ablauf-produktfilm.txt),
+# so both films have the same length. A change to the cuts belongs in both files.
+
+set|OUT|sicht-productfilm-en.mp4
+set|END_LINE|NO SIGHT WITHOUT OVERSIGHT.
+set|END_NOTE|SCREEN RECORDING OF THE CONSOLE · EXERCISE DATA · TRIAL BUILD
+set|MUSIC|audio/bed-lang.mp3
+
+card|p01-title-en|2.8||SICHT|THE IMAGE LAYER FOR THE CIVIL SITUATION PICTURE.
+card|p02-exercise-en|3.0|EXERCISE DATA · NOT A REAL INCIDENT|ONE EXERCISE. ELEVEN SOURCES. NINE WATCHES.
+clip|../product/take.mp4|2.4|9.0|SIGN-IN · MANDATE: NO PURPOSE, NO ANALYSIS
+clip|../product/take.mp4|13.8|20.0|SITUATION · FIRST ALERT: FLOODING AT THE MOSELLE BEND
+clip|../product/take.mp4|36.4|12.4|SITUATION · ALERTS OF THE SAME KIND BECOME INCIDENTS
+
+mark|turn
+card|p03-false-alert-en|3.0||ONE FALSE ALERT.|DISMISSED. RETRAINED.
+clip|../product/take.mp4|49.0|17.2|WATCH · VERSION 2, EXPLICIT AND IN THE LEDGER
+card|p04-search-en|3.2||SEARCH IN WORDS, GERMAN OR ENGLISH.|IN THE FEDERATION ONLY THE QUESTION TRAVELS.
+clip|../product/take.mp4|67.4|12.8|SEARCH · THE NEIGHBOUR ANSWERS WITH A RECEIPT
+clip|../product/take.mp4|80.2|9.6|CASE · PICTURE SECURED WITH ITS CHECKSUM
+card|p05-refusal-en|2.6||WHAT SICHT REFUSES.
+clip|../product/take.mp4|90.8|9.2|QUERY SCREENING · FACES AND LICENCE PLATES
+clip|../product/take.mp4|100.0|6.0|FEDERATION · THREE NODES, NO SHARED DATA HOLDING
+card|p06-ledger-en|2.6||EVERY STEP IS IN THE LEDGER.
+clip|../product/take.mp4|107.2|7.4|LEDGER · CHAIN VERIFIED
+card|p07-measured-en|3.2|ARCHIVE FOOTAGE · CLOCK AT EIGHT TIMES SPEED|MEASURED, NOT CLAIMED.
+clip|../product/take.mp4|116.0|8.2|EFFECT · 13 OF 13 EVENTS, ONE FALSE ALERT
+end|4.4
