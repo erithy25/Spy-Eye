@@ -90,6 +90,23 @@ QUELLEN Aufzeichnungen oder ganze Ordner ablegen. Neue Aufnahmen sind nach einem
 Durchgang sofort durchsuchbar; die dichte Auswertung läuft dahinter weiter. Für die Entwicklung
 startet `pnpm dev` den Knoten (8787) und die Konsole mit Neuladen (5173).
 
+### Zwei Rechner im Verbund
+
+Jeder Rechner startet seinen Knoten mit einer eigenen Knotendatei, die den anderen als Nachbarn
+mit Adresse nennt; [`nodes.beispiel.json`](nodes.beispiel.json) ist die Vorlage für die eine
+Seite. Auf der anderen Seite sind `id`, Name und Adresse vertauscht. Beide Dateien tragen
+dasselbe `federationSecret` (mindestens 16 Zeichen), aus dem beide Knoten denselben Schlüssel für
+ihr Paar ableiten; `host` `0.0.0.0` lässt Verbindungen von anderen Rechnern zu.
+
+```bash
+node apps/server/dist/index.js --nodes nodes.beispiel.json
+```
+
+Im Reiter VERBUND erscheint der Nachbar als erreichbar, sobald beide laufen. Durchsuchbar sind
+für ihn nur Quellen, die die Leitung einzeln freigegeben hat. Geprüft ist das mit zwei getrennt
+gestarteten und getrennt eingerichteten Knoten auf einem Rechner, nicht über ein Netz; die
+Verbindung ist unverschlüsselt, solange kein TLS-Abschluss davor steht.
+
 ### Als Container
 
 ```bash

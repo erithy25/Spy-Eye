@@ -243,8 +243,15 @@ Protokollstand des anderen fest.
 Der fragende Knoten übernimmt aus einer Antwort höchstens zwölf Treffer, deren Vorschaubild ein
 eingebettetes JPEG ist, prüft jedes Feld und lehnt Antworten über 2 MB und Weiterleitungen ab.
 
+Eingerichtet wird ein Nachbar in der Knotendatei: als Kennung eines Knotens im selben Prozess
+(die Vorführung) oder mit Name und Adresse eines Knotens auf einem anderen Rechner
+(`intel/peerConfig.ts`, Vorlage `nodes.beispiel.json`). Den Schlüssel eines Paars leiten beide
+Seiten aus einem gemeinsamen Geheimnis und ihren beiden Kennungen ab, oder er wird für das Paar
+angegeben.
+
 Offen: Es gibt keinen Schlüsselwechsel und keine Zertifikate; der Verbund ist über drei Knoten
-auf einem Rechner erprobt, nicht über ein echtes Netz. Die Angaben zu Person und Mandat stammen
+in einem Prozess und zwischen zwei getrennt gestarteten Knoten auf einem Rechner erprobt, nicht
+über ein echtes Netz. Die Angaben zu Person und Mandat stammen
 vom fragenden Knoten; der antwortende vertraut ihnen so weit, wie er dem Schlüssel traut.
 
 ## 9. Schnittstelle

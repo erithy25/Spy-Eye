@@ -1,8 +1,8 @@
-import { createHmac } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config, repoRoot } from './config.js';
 import type { PeerRecord } from './intel/federation.js';
+import { externalPeer, pairSecret, type ExternalPeer } from './intel/peerConfig.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
 import { PlatformNode, VERSION, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
@@ -19,9 +19,14 @@ interface NodesFile {
     lat: number;
     lon: number;
     port: number;
+    /** Address this node listens on; the default accepts connections from this machine only. */
+    host?: string;
     dataDir: string;
-    /** Ids of other nodes in this file that this node federates with. */
-    peers: string[];
+    /**
+     * The nodes this node federates with: the id of another node in this file (same machine), or
+     * the description of a node on another machine with the address it is reached at.
+     */
+    peers: (string | ExternalPeer)[];
     /** Optional directory (relative to the repository) with seed footage for a fresh node. */
     seed?: string;
   }[];
@@ -34,11 +39,6 @@ function env(name: string, fallback: string): string {
 
 function fromRoot(p: string): string {
   return path.isAbsolute(p) ? p : path.resolve(repoRoot, p);
-}
-
-/** One key per pair of nodes, the same on both sides. */
-function pairSecret(master: string, a: string, b: string): string {
-  return createHmac('sha256', master).update([a, b].sort().join('|')).digest('hex');
 }
 
 async function loadNodeConfigs(): Promise<NodeConfig[]> {
@@ -62,13 +62,21 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
   }
   const parsed = JSON.parse(await fs.readFile(fromRoot(file), 'utf8')) as NodesFile;
   if (!Array.isArray(parsed.nodes) || parsed.nodes.length === 0) throw new Error(`${file}: no nodes defined`);
-  if (parsed.nodes.some((n) => n.peers.length > 0) && (typeof parsed.federationSecret !== 'string' || parsed.federationSecret.length < 16)) {
+  for (const n of parsed.nodes) if (!Array.isArray(n.peers)) n.peers = [];
+  if (parsed.nodes.some((n) => n.peers.some((p) => typeof p === 'string')) && (typeof parsed.federationSecret !== 'string' || parsed.federationSecret.length < 16)) {
     throw new Error(`${file}: "federationSecret" fehlt oder ist kürzer als 16 Zeichen; aus ihm werden die Schlüssel zwischen den Knoten abgeleitet.`);
   }
   const byId = new Map(parsed.nodes.map((n) => [n.id, n]));
   return parsed.nodes.map((n): NodeConfig => {
     const peers: PeerRecord[] = [];
     for (const peerId of n.peers) {
+      if (typeof peerId !== 'string') {
+        // A node on another machine, described with its address.
+        const external = externalPeer(file, n.id, peerId, parsed.federationSecret);
+        if (peers.some((p) => p.id === external.id) || byId.has(external.id)) throw new Error(`${file}: Nachbar "${external.id}" von "${n.id}" ist doppelt genannt.`);
+        peers.push(external);
+        continue;
+      }
       const peer = byId.get(peerId);
       if (!peer) throw new Error(`${file}: node "${n.id}" lists unknown peer "${peerId}"`);
       peers.push({
@@ -89,7 +97,7 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
       region: n.region,
       lat: n.lat,
       lon: n.lon,
-      host: config.host,
+      host: typeof n.host === 'string' && n.host.trim() !== '' ? n.host.trim() : config.host,
       port: n.port,
       dataDir: fromRoot(n.dataDir),
       peers,

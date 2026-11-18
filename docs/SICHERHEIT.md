@@ -87,7 +87,7 @@ vor der Durchsicht aufgefallen waren (A bis C).
 | Transport | Der Knoten spricht selbst kein TLS. | Zwischen Rechnern gehört ein TLS-Abschluss davor, der die Kopfzeile `Host` unverändert durchreicht; erst dann sind Sitzung und Verbundschlüssel auf der Leitung geschützt. |
 | Zugänge | Drei feste Zugänge, kein zweiter Faktor, kein Verzeichnisdienst. | Die Rollentrennung ist gebaut, die Bindung an benannte Personen nicht. |
 | Daten auf der Platte | Nichts ist verschlüsselt; das Protokoll liegt auf dem Rechner, auf dem es entsteht. | Wer den Rechner hat, hat Aufnahmen, Originale, Schlüssel und kann das Protokoll löschen. Der Abgleich mit bezeugten Ständen zeigt das, verhindert es aber nicht. |
-| Verbund | Schlüssel ohne Wechsel, keine Zertifikate; nur auf einem Rechner erprobt. | Vor einem Verbund über ein Netz. |
+| Verbund | Schlüssel ohne Wechsel, keine Zertifikate; zwischen getrennt eingerichteten Knoten erprobt, aber nur auf einem Rechner. | Vor einem Verbund über ein Netz. |
 | Last | Keine Mengenbegrenzung je Person, keine Prüfung des freien Platzes. | Eine angemeldete Person kann den Knoten lahmlegen. |
 | Direktbild | Keine Einschränkung der Ziele, zu denen ffmpeg sich verbindet. | Betrifft nur die Leitung, bleibt aber ein Weg ins interne Netz. |
 | Abhängigkeiten | Keine Prüfung der eingesetzten Pakete auf bekannte Schwachstellen. | Gehört vor jeden Betrieb. |

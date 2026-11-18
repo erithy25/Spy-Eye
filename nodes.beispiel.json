@@ -1,0 +1,27 @@
+{
+  "federationSecret": "hier-ein-langes-geheimnis-das-beide-behoerden-kennen",
+  "nodes": [
+    {
+      "id": "kreis-a",
+      "name": "Lagezentrum Kreis A",
+      "operator": "Untere Katastrophenschutzbehörde Kreis A",
+      "region": "Kreis A",
+      "lat": 50.3569,
+      "lon": 7.589,
+      "host": "0.0.0.0",
+      "port": 8787,
+      "dataDir": "data-kreis-a",
+      "peers": [
+        {
+          "id": "kreis-b",
+          "name": "Lagezentrum Kreis B",
+          "operator": "Untere Katastrophenschutzbehörde Kreis B",
+          "region": "Kreis B",
+          "url": "http://192.168.1.20:8787",
+          "lat": 49.7596,
+          "lon": 6.6442
+        }
+      ]
+    }
+  ]
+}
