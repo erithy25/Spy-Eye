@@ -99,10 +99,14 @@ ohne zu starten. Derselbe Befehl läuft auf einem Windows-Rechner von GitHub in 
   noch die erste Fassung (Spy-Eye) oder ein anderes Programm auf Anschluss 8787: dessen Fenster
   mit Strg+C beenden und den Befehl wiederholen.
 - Browser: Chrome oder Edge. Alle Durchgänge liefen in Chromium; in Firefox und Safari ist die
-  Konsole nicht geprüft.
+  Konsole nicht geprüft. Eine Durchsicht des Quelltexts fand keine Funktion, die nur Chromium
+  kennt; ausgeführt wurde die Konsole dort trotzdem nie. Der Befehl öffnet den Standardbrowser:
+  Ist das ein anderer, die Adresse von Hand in Chrome oder Edge öffnen.
 - Bildschirm: geprüft von 1280 × 720 bis 1920 × 1080. Bei 1280 Breite kürzt die rechte Spalte der
-  Lage lange Titel; für die Vorführung sind 1440 Breite oder mehr besser (Zoom des Browsers auf
-  100 Prozent, Vollbild mit F11).
+  Lage lange Titel; für die Vorführung sind 1440 Breite oder mehr besser (Vollbild mit F11).
+  Maßgeblich ist die Breite im Browser, nicht die des Bildschirms: Ein Bildschirm mit 1920
+  Bildpunkten hat bei der Anzeigeskalierung 150 Prozent von Windows nur 1280. Dann den Zoom des
+  Browsers mit Strg und Minus auf 90 oder 80 Prozent stellen; sonst bleibt er bei 100 Prozent.
 - Ohne `ML_DEVICE` starten. Die Auswertung läuft auf dem Prozessor; eine Grafikkarte wird nur
   verwendet, wenn sie nachweislich dasselbe rechnet.
 - Die Kette ohne Sicht nachrechnen, falls jemand fragt:
@@ -148,7 +152,32 @@ QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen. Bilder ersche
 sie auf Gesichter geprüft sind; eine Aufnahme lässt sich abspielen, sobald sie vollständig
 ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 
-## 3. Vor dem Termin entscheiden
+## 3. Vorschlag für den Termin
+
+Ein Vorschlag, kein erprobter Ablauf. Die Folien 06 bis 11 zeigen als Bild, was die Vorführung
+am System zeigt; wer vorführt, überspringt sie und hat sie als Rückfallebene.
+
+| Ab Minute | Was | Womit |
+| --- | --- | --- |
+| 0 | Markenfilm, 40 Sekunden, ohne Ansage | `sicht-markenfilm-v1.mp4` |
+| 1 | Folien 01 bis 05: der Fall, das Muster, der Zeitpunkt, was Sicht ist | Präsentation, Sprechzettel |
+| 8 | Vorführung am System, 13 Minuten | Spickkarte |
+| 21 | Folien 12 bis 14: Messwerte mit ihren Einschränkungen, Grenzen, Wettbewerb | Präsentation |
+| 27 | Folien 15 bis 19: Käufer, Geschäftsmodell, Fünfjahresfall, Risiken, Stand und Bitte | Präsentation |
+| 35 | Fragen | `docs/FAQ.md`, englisch `docs/vertrieb/FAQ-EN.md` |
+
+- **In 20 Minuten:** Film; Folien 01, 02 und 05; von der Spickkarte nur die Zeilen 1:30 bis 7:00
+  (Übung, erste Meldung, Fehlmeldung, Suche im Verbund, abgelehnte Anfragen), dafür vorher
+  anmelden und das Mandat wählen; Folien 12, 13 und 19; Fragen.
+- **Vor einer Behörde:** Die Folien 16 bis 18 weglassen und die Zeit der Vorführung geben. Das
+  Gespräch beginnt besser mit Fragen als mit Folien: `docs/vertrieb/GESPRAECHSLEITFADEN.md`.
+- **Vor Geldgebern:** Die Folien 14 bis 18 nicht kürzen. Der kleine Kernmarkt und der eine
+  Landesrahmenvertrag, an dem der Basisfall hängt, gehören selbst angesprochen, bevor jemand
+  fragt.
+- **Läuft das System nicht:** den Produktfilm zeigen (137 Sekunden) und mit den Folien 06 bis 11
+  erläutern.
+
+## 4. Vor dem Termin entscheiden
 
 1. **Finanzierung.** Folie 19 nennt den Mittelbedarf des Basisfalls bis 2031, rund 3,2 Mio. €
    (Annahme), lässt aber offen, ob und worum gebeten wird.
@@ -159,7 +188,7 @@ ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 4. **Wer spricht mit wem.** Die Strategie nennt als ersten Schritt eine bezahlte Erprobung bei
    einem Kreis mit eigener Drohneneinheit und ein Abbruchkriterium Ende März 2027.
 
-## 4. Was belegt ist und was nicht
+## 5. Was belegt ist und was nicht
 
 | Belegt, in diesem Repository nachmessbar | Nicht belegt |
 | --- | --- |
@@ -176,7 +205,7 @@ ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
 gemessenen Anfragen eingestellt. Diese Einschränkung gehört zu jeder Nennung der Zahlen.
 
-## 5. Die schwächsten Stellen des Geschäftsfalls
+## 6. Die schwächsten Stellen des Geschäftsfalls
 
 - **Der Kernmarkt ist klein.** Bei vollständiger Abdeckung zu den angenommenen Listenpreisen
   rund 25,5 Mio. € im Jahr. Das trägt ein profitables Fachunternehmen, aber keine
