@@ -10,7 +10,9 @@ Grafikkarte und ohne Dienst im Netz. Was aus dem Netz stammt (Referenzbilder, H�
 Kartendaten, Modelle), wird einmal geladen und liegt danach auf der Platte.
 
 Stand: Erprobung mit einem Referenzbestand aus Wikimedia Commons. Keine Kunden, keine Zulassung,
-der Name ist markenrechtlich nicht geprüft.
+der Name ist markenrechtlich nicht geprüft. Die 60 Referenzclips (mit Urheber und Lizenz je Datei in
+`datasets/datum/clips/LIZENZEN.md`) und die Vektoren der Galerie liegen dem Repository bei; der
+erste Start hängt nicht von Wikimedia ab, das Abrufe drosselt.
 
 ## Was für wen
 

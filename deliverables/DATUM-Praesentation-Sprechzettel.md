@@ -16,7 +16,7 @@ Die Karte ist selbst gezeichnet aus OpenStreetMap-Daten, ohne Kartendienst. Jede
 
 ## 04 · Befund: jede Aussage mit Beleg
 
-Nichts wird ohne Begründung behauptet. Jede Ortung zeigt, welche Referenzbilder gepasst haben, wie sicher das Land ist und woraus die Uhrzeit folgt. Der Ablauf zeigt jeden Schritt mit seiner Zeit; diese Ortung hat 7,3 s gedauert, mit Raum und Gelände.
+Nichts wird ohne Begründung behauptet. Jede Ortung zeigt, welche Referenzbilder gepasst haben, wie sicher das Land ist und woraus die Uhrzeit folgt. Der Ablauf zeigt jeden Schritt mit seiner Zeit; diese Ortung hat 6,6 s gedauert, mit Raum und Gelände.
 
 ## 05 · Raum: in das Video hineingehen
 
