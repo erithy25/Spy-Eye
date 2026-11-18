@@ -272,7 +272,7 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
 - This commit asks for one more Windows run, so that the last commit of the branch is itself one
   that ran there. Its result is in the final report of the session, not in this file.
 
-## 12:25 UTC · after the twelve hours
+## 12:18 UTC · after the twelve hours
 
 - The Windows run asked for by the closing entry passed on commit 146875f (run 44294986874):
   fresh machine in 7 min 19 s, prepared machine in 24 s, start in 32 s, exercise 13 of 13 with at
