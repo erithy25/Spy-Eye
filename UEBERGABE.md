@@ -30,14 +30,28 @@ git pull
 ```
 
 - Der erste Lauf lädt Modelle (rund 1 GB), 60 Referenzvideos, rund 6 400 Referenzbilder und
-  Höhendaten (zusammen gut 1,5 GB) und wertet alles aus. Das dauert je nach Rechner und Netz 20
-  bis 40 Minuten; danach startet derselbe Befehl in unter einer Minute und ohne Netz.
+  Höhendaten (zusammen gut 1,5 GB) und wertet alles aus. Die Galerie muss dabei nicht mehr
+  eingerechnet werden, ihre Vektoren liegen im Repository bei. Das dauert je nach Rechner und Netz
+  20 bis 40 Minuten (gemessen unter Linux auf vier Kernen: Ortung aller 60 Videos 5,7 Minuten;
+  die Messung auf einem Windows-Rechner läuft in der CI); danach startet derselbe Befehl in unter
+  einer Minute und ohne Netz.
 - Am Vorabend genügt `.\datum.cmd -NurPruefen`: alles bis zur Prüfung, ohne zu starten.
 - Anmeldung `leitung`, Passwort `lagebild`, Mandat „Erprobung“.
 - Reiter ORTUNG: Weltkarte mit allen Videos. Eine Zeile wählen: Ort mit Kreis, Uhrzeit, Sonne,
   Schatten. BEFUND: alle Belege, Uhr, Sonnenstand. RAUM: in das Video hineingehen (W A S D,
   Maus) und das Gelände in 3D. MESSUNG: Abweichung jeder Ortung gegen die Wahrheit.
-- Eigene Videos: im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung geortet.
+- Eigene Videos: im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung geortet
+  (rund 5 s je Video nach der Auswertung der Bilder). Trägt die Datei GPS und Aufnahmezeit, gelten
+  diese exakt.
+- Präsentation: privates Dokument <https://claude.ai/artifact/Co1LMwmb6jBPNSHWqnVbDU>, als PDF
+  [`deliverables/DATUM-Praesentation.pdf`](deliverables/DATUM-Praesentation.pdf), Sprechzettel
+  [`deliverables/DATUM-Praesentation-Sprechzettel.md`](deliverables/DATUM-Praesentation-Sprechzettel.md).
+- Produktfilm, 94 s: `deliverables/film/datum-produktfilm.mp4` (als Datei übergeben, nicht im
+  Repository; Neubau mit `media/brand/tools/datum-take.cjs`, `datum_sequence.py` und
+  `media/brand/build.sh`).
+- Gemessen (Prüfhälfte, 30 Videos): bekannter Ort 27 % auf 1 km, 43 % auf 25 km; unbekannter Ort
+  13 % auf 25 km, 60 % auf 2 500 km; die Wahrheit liegt in 67 bzw. 60 % der Fälle im angegebenen
+  Kreis. Einzelheiten und Grenzen in [`docs/DATUM.md`](docs/DATUM.md).
 
 ## 1. Was vorliegt
 
