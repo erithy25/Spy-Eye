@@ -86,7 +86,12 @@ export class SearchEngine {
   async search(params: { query: string; limit: number; videoId: string | null }): Promise<SearchResponse> {
     const started = performance.now();
     if (!this.model.ready) throw new SearchError('Das Modell wird noch geladen.', 503);
-    const queryVector = await this.model.embedQuery(params.query);
+    let queryVector: Float32Array;
+    try {
+      queryVector = await this.model.embedQuery(params.query);
+    } catch (err: unknown) {
+      throw new SearchError(err instanceof Error ? err.message : String(err), 500);
+    }
     const embedMs = performance.now() - started;
     const dim = this.model.dim;
 
@@ -107,7 +112,8 @@ export class SearchEngine {
         let bestTile = 0;
         const base = f * tiles * dim;
         for (let t = 0; t < tiles; t++) {
-          const s = dotAt(data, base + t * dim, queryVector, 0, dim);
+          const raw = dotAt(data, base + t * dim, queryVector, 0, dim);
+          const s = Number.isFinite(raw) ? raw : -1;
           if (s > best) {
             best = s;
             bestTile = t;

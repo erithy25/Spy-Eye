@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "models:download": "tsx src/scripts/downloadModels.ts"
+    "models:download": "tsx src/scripts/downloadModels.ts",
+    "selftest": "tsx src/scripts/selftest.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.9",

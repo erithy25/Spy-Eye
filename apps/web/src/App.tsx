@@ -149,6 +149,7 @@ export function App() {
   else if (!connected) status = 'verbindung getrennt';
   else if (state.model.phase === 'loading') status = state.model.message.toLowerCase();
   else if (state.model.phase === 'error') status = state.model.message;
+  else if (state.model.notice !== '') status = state.model.notice;
   else if (!hasIndex) status = 'bereit · noch kein video indexiert';
   const loading = state?.model.phase === 'loading' ? state.model.progress : null;
 

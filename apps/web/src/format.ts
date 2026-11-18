@@ -14,8 +14,8 @@ export function formatCount(n: number): string {
 }
 
 /** 0.874 -> "0.87" */
-export function formatScore(value: number): string {
-  return value.toFixed(2);
+export function formatScore(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : '–';
 }
 
 export function pad(n: number, width: number): string {

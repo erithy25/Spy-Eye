@@ -11,6 +11,7 @@
     "build": "pnpm -r build",
     "start": "pnpm --filter @spy-eye/server start",
     "typecheck": "pnpm -r typecheck",
-    "models:download": "pnpm --filter @spy-eye/server models:download"
+    "models:download": "pnpm --filter @spy-eye/server models:download",
+    "selftest": "pnpm --filter @spy-eye/server selftest"
   }
 }

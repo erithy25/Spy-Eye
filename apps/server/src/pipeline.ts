@@ -59,6 +59,15 @@ const PREVIEW_CHUNK = 32;
 /** Dense analysis waits until no upload has arrived for this long. */
 const INGEST_SETTLE_MS = 1200;
 
+/**
+ * Frames that reach the model differ visibly (static repeats are filtered before). If their vectors
+ * are nevertheless numerically identical, the encoder is broken and the index would be worthless.
+ */
+const IDENTICAL_DISTANCE = 1e-6;
+const IDENTICAL_FRAMES_LIMIT = 4;
+const DEGENERATE_MESSAGE =
+  'Das Modell liefert für unterschiedliche Bilder identische Vektoren. Server ohne ML_DEVICE neu starten (CPU).';
+
 interface Logger {
   info(msg: string): void;
   error(msg: string): void;
@@ -285,6 +294,16 @@ export class Pipeline {
         `Preview pass: ${prepared.length} videos, ${flat.length} frames; decode ${preparedAt - chunkStart} ms, embed ${Date.now() - preparedAt} ms`,
       );
 
+      // Pictures from different videos must not collapse onto one vector.
+      let identical = 0;
+      for (let i = 1; i < flat.length; i++) {
+        if (1 - dotAt(embeddings, (i - 1) * dim, embeddings, i * dim, dim) < IDENTICAL_DISTANCE) identical++;
+      }
+      if (flat.length >= 3 && identical === flat.length - 1) {
+        for (const item of prepared) await this.fail(item.entry, new Error(DEGENERATE_MESSAGE));
+        continue;
+      }
+
       let offset = 0;
       for (const item of prepared) {
         const { entry } = item;
@@ -448,6 +467,7 @@ export class Pipeline {
     let msPerFrame = 0;
     let lastBroadcast = 0;
     let next = 1;
+    let identicalStreak = 0;
 
     const closeScene = (): void => {
       const open = state.open;
@@ -558,6 +578,8 @@ export class Pipeline {
             const full = embedded.subarray(rowOffset, rowOffset + dim);
 
             const distance = previousFull ? 1 - dotAt(full, 0, previousFull, 0, dim) : 0;
+            identicalStreak = previousFull && distance < IDENTICAL_DISTANCE ? identicalStreak + 1 : 0;
+            if (identicalStreak >= IDENTICAL_FRAMES_LIMIT) throw new Error(DEGENERATE_MESSAGE);
             let drift = 0;
             const currentScene = state.open;
             if (currentScene) {

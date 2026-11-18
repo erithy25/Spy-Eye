@@ -51,6 +51,7 @@ interface PersistedMeta {
 }
 
 const ID_PATTERN = /^[a-f0-9]{16}$/;
+const IDENTICAL_FRAMES_MIN = 4;
 const PLAYABLE_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.mov', '.ogv']);
 
 /** Removal options that tolerate short-lived file locks (Windows releases handles lazily). */
@@ -334,6 +335,45 @@ export class Store {
     }
     this.version++;
     return pending.sort((a, b) => (this.get(a)?.info.createdAt ?? 0) - (this.get(b)?.info.createdAt ?? 0));
+  }
+
+  /**
+   * Finds indexes whose vectors are all the same. They come from a broken execution provider and
+   * make every search return identical scores, so they have to be rebuilt.
+   */
+  degenerateVideoIds(): string[] {
+    const tolerance = 1e-6;
+    const same = (a: Float32Array, aOff: number, b: Float32Array, bOff: number, dim: number): boolean => {
+      let dot = 0;
+      for (let i = 0; i < dim; i++) dot += (a[aOff + i] as number) * (b[bOff + i] as number);
+      return 1 - dot < tolerance;
+    };
+    const ready = this.all().filter((e) => e.info.status === 'ready' && e.embeddings && e.embeddings.rows > 0);
+    const ids = new Set<string>();
+
+    // Within one video: first, middle and last indexed frame identical.
+    for (const entry of ready) {
+      const emb = entry.embeddings;
+      const tiles = entry.info.tilesPerFrame;
+      if (!emb || tiles <= 0 || entry.frames.length < IDENTICAL_FRAMES_MIN) continue;
+      const row = (frame: number): number => frame * tiles * emb.dim;
+      const last = entry.frames.length - 1;
+      if (
+        same(emb.data, row(0), emb.data, row(last), emb.dim) &&
+        same(emb.data, row(0), emb.data, row(last >> 1), emb.dim)
+      ) {
+        ids.add(entry.info.id);
+      }
+    }
+
+    // Across videos: every video starts with the same vector.
+    const first = ready[0];
+    if (first?.embeddings && ready.length >= 3) {
+      const base = first.embeddings;
+      const allSame = ready.every((e) => e.embeddings && e.embeddings.dim === base.dim && same(base.data, 0, e.embeddings.data, 0, base.dim));
+      if (allSame) for (const e of ready) ids.add(e.info.id);
+    }
+    return [...ids];
   }
 
   sceneInfo(entry: VideoEntry, scene: SceneRecord): SceneInfo {

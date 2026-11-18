@@ -87,7 +87,7 @@ export function Results({ response, threshold, onThresholdChange, onOpen }: Resu
         </label>
       </header>
       <p className="meta">
-        {formatCount(response.vectorsSearched)} vektoren · {response.tookMs} ms · cos ≥ {response.threshold.toFixed(3)}
+        {formatCount(response.vectorsSearched)} vektoren · {response.tookMs} ms · cos ≥ {formatScore(response.threshold)}
         {totalAbove > hits.length ? ` · beste ${hits.length} angezeigt` : ''}
       </p>
 

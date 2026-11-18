@@ -10,3 +10,4 @@ data/
 *.tsbuildinfo
 dataset/
 *.zip
+.goal-start

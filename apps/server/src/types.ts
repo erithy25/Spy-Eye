@@ -75,6 +75,8 @@ export interface ModelState {
   family: 'siglip' | 'clip' | 'mobileclip' | null;
   /** Execution provider actually in use (cpu, dml, cuda, ...). */
   device: string;
+  /** Non-fatal remark from start-up, e.g. that a GPU provider was rejected. Empty when all is well. */
+  notice: string;
   dim: number | null;
   imageSize: number | null;
   dtype: string;

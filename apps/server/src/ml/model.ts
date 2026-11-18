@@ -14,6 +14,105 @@ import { l2normalizeRows } from './math.js';
 
 export type ModelFamily = 'siglip' | 'clip' | 'mobileclip';
 
+interface Towers {
+  device: string;
+  text: CallableModel;
+  vision: CallableModel;
+}
+
+interface Probe {
+  images: Float32Array;
+  texts: Float32Array;
+  dim: number;
+}
+
+/** Three synthetic pictures that any working vision tower must map to clearly different vectors. */
+const PROBE_IMAGES: readonly ((x: number, y: number) => [number, number, number])[] = [
+  // red disc on white
+  (x, y) => ((x - 0.5) ** 2 + (y - 0.5) ** 2 < 0.09 ? [0.86, 0.08, 0.1] : [1, 1, 1]),
+  // blue and yellow vertical stripes
+  (x) => (Math.floor(x * 8) % 2 === 0 ? [0.1, 0.2, 0.85] : [0.98, 0.85, 0.1]),
+  // black and white checkerboard
+  (x, y) => ((Math.floor(x * 6) + Math.floor(y * 6)) % 2 === 0 ? [0.03, 0.03, 0.03] : [0.97, 0.97, 0.97]),
+];
+const PROBE_TEXTS = [
+  'a red circle on a white background',
+  'blue and yellow vertical stripes',
+  'a black and white checkerboard',
+] as const;
+
+function cosineRows(a: Float32Array, i: number, b: Float32Array, j: number, dim: number): number {
+  let dot = 0;
+  for (let k = 0; k < dim; k++) dot += (a[i * dim + k] as number) * (b[j * dim + k] as number);
+  return dot;
+}
+
+/** Throws when an encoder returned NaN/Infinity or an all-zero row. */
+function assertUsable(data: Float32Array, rows: number, what: string): void {
+  const dim = data.length / rows;
+  if (rows <= 0 || !Number.isInteger(dim) || dim <= 0) throw new Error(`${what}: leere Ausgabe.`);
+  for (let r = 0; r < rows; r++) {
+    let sum = 0;
+    for (let i = 0; i < dim; i++) {
+      const v = data[r * dim + i] as number;
+      sum += v * v;
+    }
+    if (!Number.isFinite(sum) || sum < 1e-12) {
+      throw new Error(`${what} liefert ungültige Werte (NaN oder Nullvektor).`);
+    }
+  }
+}
+
+/** A provider that maps different inputs to (nearly) the same vector is broken. */
+function checkProbe(probe: Probe): void {
+  const n = PROBE_IMAGES.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (cosineRows(probe.images, i, probe.images, j, probe.dim) > 0.985) {
+        throw new Error('Bild-Encoder liefert für verschiedene Bilder denselben Vektor');
+      }
+      if (cosineRows(probe.texts, i, probe.texts, j, probe.dim) > 0.985) {
+        throw new Error('Text-Encoder liefert für verschiedene Texte denselben Vektor');
+      }
+    }
+  }
+}
+
+/** The accelerated provider must reproduce the CPU result. */
+function compareProbes(candidate: Probe, cpu: Probe, device: string): void {
+  if (candidate.dim !== cpu.dim) throw new Error(`${device}: andere Vektorgröße als CPU`);
+  for (let i = 0; i < PROBE_IMAGES.length; i++) {
+    const image = cosineRows(candidate.images, i, cpu.images, i, cpu.dim);
+    const text = cosineRows(candidate.texts, i, cpu.texts, i, cpu.dim);
+    if (image < 0.98 || text < 0.98) {
+      throw new Error(`weicht vom CPU-Ergebnis ab (Bild ${image.toFixed(3)}, Text ${text.toFixed(3)})`);
+    }
+  }
+}
+
+async function disposeTowers(towers: Towers | null): Promise<void> {
+  if (!towers) return;
+  for (const model of [towers.text, towers.vision]) {
+    const dispose = (model as unknown as { dispose?: () => Promise<unknown> }).dispose;
+    if (typeof dispose === 'function') await dispose.call(model).catch(() => undefined);
+  }
+}
+
+/** How well the probe captions pick their own picture (0..3); a plausibility figure for diagnostics. */
+export function probeAgreement(probe: { images: Float32Array; texts: Float32Array; dim: number }): number {
+  let correct = 0;
+  for (let i = 0; i < PROBE_IMAGES.length; i++) {
+    let best = 0;
+    for (let j = 1; j < PROBE_TEXTS.length; j++) {
+      if (cosineRows(probe.images, i, probe.texts, j, probe.dim) > cosineRows(probe.images, i, probe.texts, best, probe.dim)) {
+        best = j;
+      }
+    }
+    if (best === i) correct++;
+  }
+  return correct;
+}
+
 type ProgressListener = (state: ModelState) => void;
 
 interface CallableModel {
@@ -92,8 +191,7 @@ class Mutex {
 export class EmbeddingModel {
   readonly family: ModelFamily;
   private tokenizer: CallableTokenizer | null = null;
-  private textModel: CallableModel | null = null;
-  private visionModel: CallableModel | null = null;
+  private towers: Towers | null = null;
   private readonly visionLock = new Mutex();
   private readonly textLock = new Mutex();
   private readonly listeners = new Set<ProgressListener>();
@@ -117,6 +215,7 @@ export class EmbeddingModel {
       imageSize: null,
       dtype: config.modelDtype,
       device: 'cpu',
+      notice: '',
       threads: config.threads,
       progress: 0,
       message: 'Initialisiere …',
@@ -194,43 +293,63 @@ export class EmbeddingModel {
     const TextModel = this.family === 'siglip' ? SiglipTextModel : CLIPTextModelWithProjection;
     const VisionModel = this.family === 'siglip' ? SiglipVisionModel : CLIPVisionModelWithProjection;
 
-    // Try the requested execution provider first; a GPU provider that fails to initialise or to
-    // run the warm-up falls back to the CPU instead of taking the whole app down.
-    const candidates = deviceCandidates();
-    let lastError: unknown = null;
-    let active: string | null = null;
-    for (const device of candidates) {
-      try {
-        const modelOptions = {
-          dtype: config.modelDtype,
-          progress_callback,
-          ...(device === 'cpu' ? {} : { device: device as 'dml' }),
-          session_options: { intraOpNumThreads: config.threads, interOpNumThreads: 1 },
-        };
-        this.updateState({ message: `Lade Text-Encoder (${device}) …` });
-        this.textModel = (await TextModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
-        this.updateState({ message: `Lade Bild-Encoder (${device}) …` });
-        this.visionModel = (await VisionModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
+    // Try the requested execution provider first. A GPU provider is only accepted if it loads AND
+    // reproduces the CPU result on a set of probe inputs: providers have been seen to return
+    // finite but constant vectors, which silently breaks search. Anything else falls back to CPU.
+    const load = async (device: string): Promise<Towers> => {
+      const modelOptions = {
+        dtype: config.modelDtype,
+        progress_callback,
+        ...(device === 'cpu' ? {} : { device: device as 'dml' }),
+        session_options: { intraOpNumThreads: config.threads, interOpNumThreads: 1 },
+      };
+      this.updateState({ message: `Lade Text-Encoder (${device}) …` });
+      const text = (await TextModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
+      this.updateState({ message: `Lade Bild-Encoder (${device}) …` });
+      const vision = (await VisionModel.from_pretrained(config.modelId, modelOptions)) as unknown as CallableModel;
+      return { device, text, vision };
+    };
 
-        this.updateState({ progress: 0.99, message: 'Wärme Modell auf …' });
-        const warm = await this.embedPixels(new Float32Array(3 * this.imageSize * this.imageSize), 1);
-        if (warm.length <= 0 || !warm.every((v) => Number.isFinite(v))) {
-          throw new Error('Vision model returned an empty or non-finite embedding.');
+    const candidates = deviceCandidates();
+    let notice = '';
+    let chosen: Towers | null = null;
+    let reference: { towers: Towers; probe: Probe } | null = null;
+    let lastError: unknown = null;
+    for (const device of candidates) {
+      let towers: Towers | null = null;
+      try {
+        if (device === 'cpu' && reference) {
+          chosen = reference.towers;
+          reference = null;
+          break;
         }
-        this.dim = warm.length;
-        const warmText = await this.embedTexts(['warm-up']);
-        if (warmText.length !== this.dim) {
-          throw new Error(`Text (${warmText.length}) and image (${this.dim}) embedding sizes differ.`);
+        towers = await load(device);
+        this.updateState({ progress: 0.99, message: `Selbsttest (${device}) …` });
+        const probe = await this.runProbe(towers);
+        checkProbe(probe);
+        if (device !== 'cpu') {
+          reference ??= await (async () => {
+            const cpu = await load('cpu');
+            const cpuProbe = await this.runProbe(cpu);
+            checkProbe(cpuProbe);
+            return { towers: cpu, probe: cpuProbe };
+          })();
+          compareProbes(probe, reference.probe, device);
         }
-        active = device;
+        chosen = towers;
         break;
       } catch (err: unknown) {
         lastError = err;
-        this.textModel = null;
-        this.visionModel = null;
+        const message = err instanceof Error ? err.message : String(err);
+        if (device !== 'cpu') notice = `${device.toUpperCase()} verworfen (${message}); CPU aktiv.`;
+        await disposeTowers(towers);
       }
     }
-    if (active === null) throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    if (reference && chosen !== reference.towers) await disposeTowers(reference.towers);
+    if (chosen === null) throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    this.towers = chosen;
+    this.dim = (await this.embedTexts(['warm-up'])).length;
+    const active = chosen.device;
 
     this.updateState({
       phase: 'ready',
@@ -238,6 +357,7 @@ export class EmbeddingModel {
       dim: this.dim,
       imageSize: this.imageSize,
       device: active,
+      notice,
       message: 'Bereit',
     });
   }
@@ -257,42 +377,84 @@ export class EmbeddingModel {
    * @returns L2-normalized embeddings, `count * dim` values.
    */
   embedPixels(pixels: Float32Array, count: number): Promise<Float32Array> {
-    const model = this.visionModel;
-    if (!model) return Promise.reject(new Error('Model is not loaded yet.'));
-    const size = this.imageSize;
-    if (pixels.length !== count * 3 * size * size) {
-      return Promise.reject(new Error(`Pixel buffer has ${pixels.length} values, expected ${count * 3 * size * size}.`));
-    }
-    return this.visionLock.run(async () => {
-      const input = new Tensor('float32', pixels, [count, 3, size, size]);
-      const output = await model({ pixel_values: input });
-      const tensor = this.pickEmbedding(output, 'image');
-      const out = new Float32Array(tensor.data as Float32Array);
-      const dim = out.length / count;
-      l2normalizeRows(out, dim);
-      return out;
-    });
+    const towers = this.towers;
+    if (!towers) return Promise.reject(new Error('Model is not loaded yet.'));
+    return this.visionLock.run(() => this.runVision(towers, pixels, count));
   }
 
   /** Embeds texts; returns L2-normalized embeddings, `texts.length * dim` values. */
   embedTexts(texts: string[]): Promise<Float32Array> {
-    const model = this.textModel;
-    const tokenizer = this.tokenizer;
-    if (!model || !tokenizer) return Promise.reject(new Error('Model is not loaded yet.'));
+    const towers = this.towers;
+    if (!towers) return Promise.reject(new Error('Model is not loaded yet.'));
     if (texts.length === 0) return Promise.resolve(new Float32Array(0));
-    return this.textLock.run(async () => {
-      // SigLIP and MobileCLIP expect fixed-length padding; CLIP uses dynamic padding.
-      const inputs = tokenizer(texts, {
-        padding: this.family === 'clip' ? true : 'max_length',
-        truncation: true,
-      });
-      const feed = this.family === 'siglip' ? { input_ids: inputs['input_ids'] } : inputs;
-      const output = await model(feed);
-      const tensor = this.pickEmbedding(output, 'text');
-      const out = new Float32Array(tensor.data as Float32Array);
-      l2normalizeRows(out, out.length / texts.length);
-      return out;
+    return this.textLock.run(() => this.runText(towers, texts));
+  }
+
+  private async runVision(towers: Towers, pixels: Float32Array, count: number): Promise<Float32Array> {
+    const size = this.imageSize;
+    if (pixels.length !== count * 3 * size * size) {
+      throw new Error(`Pixel buffer has ${pixels.length} values, expected ${count * 3 * size * size}.`);
+    }
+    const input = new Tensor('float32', pixels, [count, 3, size, size]);
+    const output = await towers.vision({ pixel_values: input });
+    const out = new Float32Array(this.pickEmbedding(output, 'image').data as Float32Array);
+    assertUsable(out, count, 'Bild-Encoder');
+    l2normalizeRows(out, out.length / count);
+    return out;
+  }
+
+  private async runText(towers: Towers, texts: string[]): Promise<Float32Array> {
+    const tokenizer = this.tokenizer;
+    if (!tokenizer) throw new Error('Model is not loaded yet.');
+    // SigLIP and MobileCLIP expect fixed-length padding; CLIP uses dynamic padding.
+    const inputs = tokenizer(texts, {
+      padding: this.family === 'clip' ? true : 'max_length',
+      truncation: true,
     });
+    const feed = this.family === 'siglip' ? { input_ids: inputs['input_ids'] } : inputs;
+    const output = await towers.text(feed);
+    const out = new Float32Array(this.pickEmbedding(output, 'text').data as Float32Array);
+    assertUsable(out, texts.length, 'Text-Encoder');
+    l2normalizeRows(out, out.length / texts.length);
+    return out;
+  }
+
+  /** Runs the probe on the active provider and reports timings; used by `pnpm selftest`. */
+  async diagnose(): Promise<{ device: string; agreement: number; imageMs: number; textMs: number }> {
+    const towers = this.towers;
+    if (!towers) throw new Error('Model is not loaded yet.');
+    const probe = await this.runProbe(towers);
+    checkProbe(probe);
+    const size = this.imageSize;
+    const pixels = new Float32Array(8 * 3 * size * size).fill(0.25);
+    let started = performance.now();
+    await this.embedPixels(pixels, 8);
+    const imageMs = (performance.now() - started) / 8;
+    started = performance.now();
+    await this.embedTexts(['a flooded street', 'smoke over a building']);
+    const textMs = (performance.now() - started) / 2;
+    return { device: towers.device, agreement: probeAgreement(probe), imageMs, textMs };
+  }
+
+  /** Embeds a fixed set of synthetic pictures and captions; used to validate an execution provider. */
+  private async runProbe(towers: Towers): Promise<Probe> {
+    const size = this.imageSize;
+    const plane = size * size;
+    const pixels = new Float32Array(PROBE_IMAGES.length * 3 * plane);
+    PROBE_IMAGES.forEach((paint, n) => {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const rgb = paint(x / size, y / size);
+          for (let c = 0; c < 3; c++) {
+            const value = ((rgb[c] as number) - (this.imageMean[c] as number)) / (this.imageStd[c] as number);
+            pixels[n * 3 * plane + c * plane + y * size + x] = value;
+          }
+        }
+      }
+    });
+    const images = await this.runVision(towers, pixels, PROBE_IMAGES.length);
+    const texts = await this.runText(towers, [...PROBE_TEXTS]);
+    return { images, texts, dim: images.length / PROBE_IMAGES.length };
   }
 
   /**

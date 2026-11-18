@@ -78,8 +78,10 @@ analysiertem Frame. Mehr Durchsatz gibt es nur über Hardware:
 ML_DEVICE=auto pnpm start
 ```
 
-`auto` versucht unter Windows DirectML (jede DirectX-12-GPU) und unter Linux CUDA und fällt bei einem
-Fehler auf die CPU zurück. Dieser Pfad ist implementiert, aber mangels GPU nicht gemessen.
+`auto` versucht unter Windows DirectML (jede DirectX-12-GPU) und unter Linux CUDA. Der Server übernimmt
+den GPU-Pfad nur, wenn er beim Start dieselben Vektoren liefert wie die CPU (Selbsttest mit Prüfbildern);
+sonst läuft er auf der CPU weiter und meldet das in der Statuszeile. Dieser Pfad ist experimentell und
+mangels GPU nicht gemessen. `pnpm selftest` prüft Umgebung, ffmpeg und Modell und gibt das Ergebnis aus.
 
 Schwächen: zusammengesetzte Queries mit kleinen Objekten (`man with a cup` in einer Totalen) ranken
 plausibel, aber nicht zuverlässig; hier hilft `detail`. Treffer aus dem Grob-Index beruhen auf einem

@@ -35,6 +35,14 @@ async function main(): Promise<void> {
   model.onState((state) => hub.broadcast({ type: 'model', model: state }));
 
   const pending = await store.load(log.info);
+  for (const id of store.degenerateVideoIds()) {
+    const entry = store.get(id);
+    if (!entry) continue;
+    log.info(`Index of "${entry.info.name}" consists of identical vectors (broken encoder run); re-indexing.`);
+    store.resetAnalysis(entry);
+    entry.info.status = 'queued';
+    if (!pending.includes(id)) pending.push(id);
+  }
   log.info(`Loaded ${store.all().length} video(s) from ${config.dataDir}; ${pending.length} pending`);
 
   await registerRoutes(app, { store, model, pipeline, search, hub });
@@ -47,7 +55,10 @@ async function main(): Promise<void> {
     });
     pipeline.setVocabulary(vocabulary);
     model.updateState({ vocabSize: vocabulary.labels.length, message: 'Bereit' });
-    log.info(`Model ${config.modelId} (${config.modelDtype}) ready: dim ${model.dim}, ${vocabulary.labels.length} tags`);
+    log.info(
+      `Model ${config.modelId} (${config.modelDtype}) ready on ${model.state.device}: dim ${model.dim}, ${vocabulary.labels.length} tags`,
+    );
+    if (model.state.notice !== '') log.error(model.state.notice);
   })();
   pipeline.setReadyGate(modelReady);
   modelReady
