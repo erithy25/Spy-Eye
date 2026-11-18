@@ -247,7 +247,7 @@ def acc_row(label, s, last=False):
     cls = "row g-acc row-end" if last else "row g-acc"
     return (
         f'<div class="{cls}"><p class="cell">{label}</p><p class="num">{km(s["medianKm"])}</p><p class="num">{pct(s["acc1km"])}</p>'
-        f'<p class="num">{pct(s["acc25km"])}</p><p class="num">{pct(s["acc750km"])}</p><p class="num">{pct(s["acc2500km"])}</p></div>'
+        f'<p class="num">{pct(s["acc25km"])}</p><p class="num">{pct(s["acc2500km"])}</p><p class="num">{pct(s["withinRadius"])}</p></div>'
     )
 
 
@@ -255,13 +255,14 @@ _n = (
     f"Gemessen an 60 Videos mit bekanntem Ort, die Schwellen nur an der einen Hälfte eingestellt, berichtet an der anderen. "
     f"Liegt ein Referenzbild desselben Bauwerks in der Galerie, landen {pct(OPEN_T['acc1km'])} der Prüfhälfte innerhalb eines Kilometers und {pct(OPEN_T['acc2500km'])} innerhalb von 2 500 Kilometern. "
     f"Ist der Ort unbekannt, bleibt eine Schätzung auf Land- und Kontinentebene: {pct(UNK_T['acc25km'])} innerhalb 25 Kilometern, {pct(UNK_T['acc2500km'])} innerhalb 2 500. "
+    f"Die letzte Spalte ist der Fortschritt dieser Runde: Der Unsicherheitskreis sagt jetzt ehrlich, wie weit man der Ortung trauen kann; die Wahrheit lag in {pct(OPEN_T['withinRadius'])} und {pct(UNK_T['withinRadius'])} der Fälle darin, vorher in 43 und 17 %. "
     "Der Abstand zwischen den ersten beiden Zeilen ist der Hebel: Liegen die Orte des Zielgebiets in der Galerie, gilt die obere. Wahllos mehr Bilder helfen nicht; 11 552 zusätzliche, weltweit gestreute Referenzbilder haben die Abstimmungshälfte verschlechtert, weil Doppelgänger das richtige Bauwerk verdrängen. Die dritte Zeile zeigt, was die Länderschätzung allein leistet."
 )
 add("gemessen", "Gemessen gegen die Grundwahrheit", f"""
 <section id="gemessen" data-transition="fade">
 {head("Gemessen gegen die Grundwahrheit")}
 <div class="rows">
-<div class="row g-acc"><p class="acc-h-l">Prüfhälfte, 30 Videos</p><p class="acc-h">Median</p><p class="acc-h">≤ 1 km</p><p class="acc-h">≤ 25 km</p><p class="acc-h">≤ 750 km</p><p class="acc-h">≤ 2 500 km</p></div>
+<div class="row g-acc"><p class="acc-h-l">Prüfhälfte, 30 Videos</p><p class="acc-h">Median</p><p class="acc-h">≤ 1 km</p><p class="acc-h">≤ 25 km</p><p class="acc-h">≤ 2 500 km</p><p class="acc-h">im Kreis</p></div>
 {acc_row("Referenzbild des Ortes in der Galerie", OPEN_T)}
 {acc_row("Ort ohne Referenzbild (unbekannt)", UNK_T, last=BASE_T is None)}
 {acc_row("Nur Länderschätzung, ohne Galerie", BASE_T, last=True) if BASE_T else ""}
@@ -269,7 +270,7 @@ add("gemessen", "Gemessen gegen die Grundwahrheit", f"""
 <div class="grow"></div>
 <div class="duo">
 {pt("Protokoll", "Schwellen nur an der Abstimmungshälfte eingestellt; die Prüfhälfte wurde nur gemessen. Grundwahrheit: Koordinate des Wikidata-Objekts.")}
-{pt("Grenze", "30 Videos je Hälfte: Anteile schwanken um rund neun Prozentpunkte. Die Uhrzeit hat keine Grundwahrheit, geprüft ist die Rechnung.")}
+{pt("Im Kreis", "Anteil, bei dem die Wahrheit im angegebenen Unsicherheitskreis liegt; vorher 43 und 17 %. 30 Videos je Hälfte: Anteile schwanken um rund neun Punkte.")}
 </div>
 <p class="src above-m">pnpm datum:evaluate · docs/measurements/datum-geolocation.json · 18.11.2026</p>
 {foot("Belege")}
