@@ -32,7 +32,7 @@ Sieben Schritte, alle auf dem eigenen Rechner. Am stärksten sind die Metadaten,
 
 ## 08 · Gemessen gegen die Grundwahrheit
 
-Gemessen an 60 Videos mit bekanntem Ort, die Schwellen nur an der einen Hälfte eingestellt, berichtet an der anderen. Liegt ein Referenzbild desselben Bauwerks in der Galerie, landen 40 % der Prüfhälfte innerhalb eines Kilometers und 80 % innerhalb von 2 500 Kilometern. Ist der Ort unbekannt, bleibt eine Schätzung auf Land- und Kontinentebene: 17 % innerhalb 25 Kilometern, 70 % innerhalb 2 500. Der Abstand zwischen den ersten beiden Zeilen ist der Hebel: Je dichter die Galerie im Zielgebiet, desto öfter gilt die obere. Die dritte Zeile zeigt, was die Länderschätzung allein leistet.
+Gemessen an 60 Videos mit bekanntem Ort, die Schwellen nur an der einen Hälfte eingestellt, berichtet an der anderen. Liegt ein Referenzbild desselben Bauwerks in der Galerie, landen 40 % der Prüfhälfte innerhalb eines Kilometers und 80 % innerhalb von 2 500 Kilometern. Ist der Ort unbekannt, bleibt eine Schätzung auf Land- und Kontinentebene: 17 % innerhalb 25 Kilometern, 70 % innerhalb 2 500. Der Abstand zwischen den ersten beiden Zeilen ist der Hebel: Liegen die Orte des Zielgebiets in der Galerie, gilt die obere. Wahllos mehr Bilder helfen nicht; 11 552 zusätzliche, weltweit gestreute Referenzbilder haben die Abstimmungshälfte verschlechtert, weil Doppelgänger das richtige Bauwerk verdrängen. Die dritte Zeile zeigt, was die Länderschätzung allein leistet.
 
 ## 09 · Grauzone mit Leitplanken
 
@@ -44,7 +44,7 @@ Palantir führt vorhandene Daten zusammen. DATUM erzeugt neue Daten aus Pixeln, 
 
 ## 11 · Die nächsten Schritte
 
-Der nächste Hebel ist die Galerie: Für ein Zielgebiet zehntausende Referenzbilder, dann steigt der Anteil der genauen Treffer. Danach eine Erprobung mit Material einer Behörde, gemessen wie hier. Vor einem Vertrag in den USA stehen eine eigene Gesellschaft dort und eine anwaltliche Prüfung von Ausfuhr und Eigentümerkontrolle.
+Der nächste Hebel ist die Galerie, aber gezielt: Referenzbilder des Zielgebiets und eine Zweitprüfung der besten Treffer, damit Doppelgänger nicht gewinnen. Wahllos mehr Bilder haben es in unserer Messung schlechter gemacht. Danach eine Erprobung mit Material einer Behörde, gemessen wie hier. Vor einem Vertrag in den USA stehen eine eigene Gesellschaft dort und eine anwaltliche Prüfung von Ausfuhr und Eigentümerkontrolle.
 
 ## 12 · Schluss
 

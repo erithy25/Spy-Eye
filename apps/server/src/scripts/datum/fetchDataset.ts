@@ -12,7 +12,8 @@
  *   --gallery-minutes=N                                       stop gallery downloads after N minutes
  *   --extend                                                  add the broad worldwide group (d) to
  *                                                             the stored selection and load it
- *   --extra-target=N                                          size of group (d) (default 12000)
+ *   --extra-target=N                                          size of group (d) (default 12000 with
+ *                                                             --extend, otherwise 0: off)
  *
  * Output (relative to the repository root):
  *   datasets/datum/manifest.json        selection of test videos with ground truth (committed)
@@ -53,7 +54,10 @@ const FLAG_GALLERY_ONLY = ARGS.has('--gallery-only');
 const FLAG_RESELECT = ARGS.has('--reselect');
 const FLAG_SELECT_ONLY = ARGS.has('--select-only');
 const FLAG_EXTEND = ARGS.has('--extend');
-const EXTRA_TARGET = Number(process.argv.find((a) => a.startsWith('--extra-target='))?.split('=')[1] ?? '12000');
+// Group (d) is off by default: measured on the train half, the 17 945-picture gallery it gives
+// located worse than the 6 393 pictures without it (more look-alikes outrank the true place;
+// docs/DATUM.md). --extend --extra-target=N reproduces the experiment.
+const EXTRA_TARGET = Number(process.argv.find((a) => a.startsWith('--extra-target='))?.split('=')[1] ?? (FLAG_EXTEND ? '12000' : '0'));
 const GALLERY_MINUTES = Number(
   process.argv.find((a) => a.startsWith('--gallery-minutes='))?.split('=')[1] ?? '60',
 );

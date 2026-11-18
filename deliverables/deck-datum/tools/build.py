@@ -255,7 +255,7 @@ _n = (
     f"Gemessen an 60 Videos mit bekanntem Ort, die Schwellen nur an der einen Hälfte eingestellt, berichtet an der anderen. "
     f"Liegt ein Referenzbild desselben Bauwerks in der Galerie, landen {pct(OPEN_T['acc1km'])} der Prüfhälfte innerhalb eines Kilometers und {pct(OPEN_T['acc2500km'])} innerhalb von 2 500 Kilometern. "
     f"Ist der Ort unbekannt, bleibt eine Schätzung auf Land- und Kontinentebene: {pct(UNK_T['acc25km'])} innerhalb 25 Kilometern, {pct(UNK_T['acc2500km'])} innerhalb 2 500. "
-    "Der Abstand zwischen den ersten beiden Zeilen ist der Hebel: Je dichter die Galerie im Zielgebiet, desto öfter gilt die obere. Die dritte Zeile zeigt, was die Länderschätzung allein leistet."
+    "Der Abstand zwischen den ersten beiden Zeilen ist der Hebel: Liegen die Orte des Zielgebiets in der Galerie, gilt die obere. Wahllos mehr Bilder helfen nicht; 11 552 zusätzliche, weltweit gestreute Referenzbilder haben die Abstimmungshälfte verschlechtert, weil Doppelgänger das richtige Bauwerk verdrängen. Die dritte Zeile zeigt, was die Länderschätzung allein leistet."
 )
 add("gemessen", "Gemessen gegen die Grundwahrheit", f"""
 <section id="gemessen" data-transition="fade">
@@ -324,12 +324,12 @@ add("abgrenzung", "Zulieferer, nicht Konkurrent", f"""
 """, _n)
 
 # 11 Weg
-_n = "Der nächste Hebel ist die Galerie: Für ein Zielgebiet zehntausende Referenzbilder, dann steigt der Anteil der genauen Treffer. Danach eine Erprobung mit Material einer Behörde, gemessen wie hier. Vor einem Vertrag in den USA stehen eine eigene Gesellschaft dort und eine anwaltliche Prüfung von Ausfuhr und Eigentümerkontrolle."
+_n = "Der nächste Hebel ist die Galerie, aber gezielt: Referenzbilder des Zielgebiets und eine Zweitprüfung der besten Treffer, damit Doppelgänger nicht gewinnen. Wahllos mehr Bilder haben es in unserer Messung schlechter gemacht. Danach eine Erprobung mit Material einer Behörde, gemessen wie hier. Vor einem Vertrag in den USA stehen eine eigene Gesellschaft dort und eine anwaltliche Prüfung von Ausfuhr und Eigentümerkontrolle."
 add("weg", "Die nächsten Schritte", f"""
 <section id="weg" data-transition="fade">
 {head("Die nächsten Schritte")}
 <div class="tri">
-{pt("1 · Galerie", "Referenzbilder je Zielgebiet in die Zehntausende; Ziel: mehr Treffer unter einem Kilometer.")}
+{pt("1 · Galerie", "Referenzbilder des Zielgebiets und eine Zweitprüfung der besten Treffer gegen Doppelgänger.")}
 {pt("2 · Erprobung", "Material einer Behörde, gemessen nach demselben Protokoll wie hier.")}
 {pt("3 · Zulieferung", "Fixe als Datensatz mit Belegen in bestehende Lagesysteme.")}
 {pt("4 · Gesellschaft", "Eigene Gesellschaft im Zielland; Eigentümerkontrolle und Ausfuhr anwaltlich prüfen.")}

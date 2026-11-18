@@ -61,9 +61,10 @@ interface ManifestVideo {
 const THRESHOLDS_KM = [1, 25, 200, 750, 2500] as const;
 /** What changed against the previous measurement (written into the report). */
 const CHANGES = [
-  'gallery: broad worldwide layer (group d of fetchDataset.ts, chosen by sitelinks and class, interleaved over continents, independent of the test places)',
-  'queries: 12 frames per video with the pipeline tiles (whole frame plus square crops); tilePooling and frameAggregation tuned on the train half',
-  'evaluation uses the live node vector cache (.cache/datum) and caches frame vectors; one gallery search serves both modes',
+  'queries: 12 frames per video with the pipeline tiles (whole frame plus three square crops at detail "standard"); every tile row votes on its own (tilePooling "rows"), chosen on the train half among whole / frame / rows (train objective 0.373 / 0.343 / 0.403)',
+  'radius: calibrated per evidence tier (strong recognition with agreeing frames, other recognition, similarity, country, continent) on the train half to cover the truth in 70 % of its cases; agreement of the frames is a new confidence feature',
+  'gallery unchanged (6 393 pictures): a broad worldwide layer to 17 945 pictures (fetchDataset.ts --extend) lowered the train objective from 0.403 to 0.283 and was not kept',
+  'evaluation uses the live node vector cache (.cache/datum), caches frame vectors, one gallery search serves both modes',
 ];
 const MODES = ['open', 'unknown'] as const;
 type Mode = (typeof MODES)[number];
