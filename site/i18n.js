@@ -308,6 +308,12 @@ window.SICHT_EN = {
   'ops6.v': 'Analysts, supervisors and oversight hold separate rights. Oversight sees the ledger, but no footage.',
   'ops7.k': 'Deletion period',
   'ops7.v': 'Recordings are deleted after a configurable period, 60 days by default. Exempt is whatever has been secured as evidence in a case.',
+  'ops10.k': 'Bill of materials',
+  'ops10.v':
+    'Every package, every model, the typeface and the map data are listed with version, checksum and licence in a bill of materials in CycloneDX format. No package is under GPL or AGPL. A comparison with known vulnerabilities on 18&nbsp;November 2026 found none in the shipped packages; that is a snapshot.',
+  'ops11.k': 'Usable without a mouse',
+  'ops11.v':
+    'Signing in, starting the exercise, choosing an incident, searching and opening a picture all work from the keyboard alone; new alerts are announced to screen readers. The console and this page violate no automatically testable rule of WCAG&nbsp;2.1 at levels A and AA.',
 
   // ---------------------------------------------------------------- 08 status
   'status.h2': 'Trial build.',
@@ -331,6 +337,9 @@ window.SICHT_EN = {
   'open7.k': 'Reviewed, not attacked',
   'open7.v':
     'A second reader went through the source code of the node and documented 21 findings; the five severe ones and most of the others are fixed. There has been no penetration test. The node encrypts its connections only if the operator supplies a certificate, and nothing on its disk is encrypted.',
+  'open8.k': 'Accessibility checked, not certified',
+  'open8.v':
+    'There has been an automatic check and a keyboard-only walk, but no test under the German accessibility rules (BITV) and no test with a screen reader. The markers on the map can only be selected with the mouse; what they show is listed beside it.',
   'open6.k': 'Scale',
   'open6.v': 'The search compares every query with every vector. It is designed for a few million vectors per node, not for more.',
   'demo.label': 'A demonstration in 15 minutes',

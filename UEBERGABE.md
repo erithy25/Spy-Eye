@@ -70,6 +70,9 @@ ohne zu starten. Derselbe Befehl läuft auf einem Windows-Rechner von GitHub in 
 - Hauptbildschirm: <http://127.0.0.1:8787>, Anmeldung `leitung`, Passwort `lagebild`, Mandat
   „Übung RHEIN-MOSEL“.
 - Beenden: Strg+C im Fenster. Nach einer Probe einfach `.\vorfuehrung.cmd` wiederholen.
+- Meldet der Befehl, die Anschlüsse seien belegt und dort antworte kein Knoten von Sicht, läuft
+  noch die erste Fassung (Spy-Eye) oder ein anderes Programm auf Anschluss 8787: dessen Fenster
+  mit Strg+C beenden und den Befehl wiederholen.
 - Bildschirm: geprüft von 1280 × 720 bis 1920 × 1080. Bei 1280 Breite kürzt die rechte Spalte der
   Lage lange Titel; für die Vorführung sind 1440 Breite oder mehr besser (Zoom des Browsers auf
   100 Prozent, Vollbild mit F11).
