@@ -1,10 +1,13 @@
 /**
- * English wording of ledger summaries. The ledger keeps every entry as it was written (German),
- * because the entries are part of the hash chain; the node does not send an English version. The
- * summaries follow fixed templates of the node, so the console words them in English itself.
- * Names in quotes (recordings, mandates, cases, queries) stay as they were recorded; a summary of
- * a template not listed here is shown as recorded.
+ * English wording of ledger summaries. The ledger keeps every entry as it was written, because the
+ * entries are part of the hash chain. Entries written by a current node carry their English version
+ * (`summaryEn`, recorded with the entry); entries written before that have only the German summary.
+ * Those follow fixed templates of the node, so the console words them in English itself. Names in
+ * quotes (recordings, mandates, cases, queries) stay as they were recorded; a summary of a template
+ * not listed here is shown as recorded.
  */
+import type { LedgerEntryInfo } from './api';
+
 
 type Rule = [RegExp, (m: RegExpMatchArray, name: (s: string) => string) => string];
 
@@ -77,4 +80,9 @@ export function ledgerSummaryEn(summary: string, name: (s: string) => string): s
     if (m) return make(m, name);
   }
   return summary;
+}
+
+/** The English summary of an entry: the one the node recorded, else the console's wording of the German one. */
+export function ledgerEnglish(entry: Pick<LedgerEntryInfo, 'summary' | 'summaryEn'>, name: (s: string) => string): string {
+  return entry.summaryEn !== undefined && entry.summaryEn !== '' ? entry.summaryEn : ledgerSummaryEn(entry.summary, name);
 }

@@ -23,7 +23,8 @@ const RULE_LABEL: Record<string, string> = {
   'unsupported-script': 'Schrift außerhalb von Deutsch und Englisch',
 };
 
-function resultTarget(r: SearchResult, query: string): FrameTarget {
+/** `pick` words the source in the console language (sourceNameEn where the node sends one). */
+function resultTarget(r: SearchResult, query: string, pick: (de: string, en?: string | null) => string): FrameTarget {
   return {
     videoId: r.videoId,
     frameNumber: r.frameNumber,
@@ -31,7 +32,7 @@ function resultTarget(r: SearchResult, query: string): FrameTarget {
     time: r.time,
     sceneIndex: r.sceneIndex,
     at: r.at,
-    sourceName: r.sourceName,
+    sourceName: pick(r.sourceName, r.sourceNameEn),
     lat: r.lat,
     lon: r.lon,
     query,
@@ -144,13 +145,13 @@ export function Suche({ node, openFrame }: ViewProps) {
     submit(input);
   };
 
-  const targets = useMemo(() => (response ? response.results.map((r) => resultTarget(r, response.query)) : []), [response]);
+  const targets = useMemo(() => (response ? response.results.map((r) => resultTarget(r, response.query, pick)) : []), [response, pick]);
   const openResult = useCallback(
     (result: SearchResult) => {
       if (!response) return;
-      openFrame(resultTarget(result, response.query), targets);
+      openFrame(resultTarget(result, response.query, pick), targets);
     },
-    [openFrame, response, targets],
+    [openFrame, response, targets, pick],
   );
   const openPoint = useCallback(
     (point: MapPoint) =>

@@ -26,11 +26,12 @@ const LIST_SETTLE_MS = 1_500;
 const LIST_SPACING_MS = 10_000;
 
 /**
- * All fixes of the node: the full list, kept current from the event stream and read again when
- * announcements may have been missed (the stream reconnected) and, as a safety net, after new
- * recordings appeared. The list is about 10 kB per recording; reading it for every recording of a
- * folder upload made the node serialise and the console parse tens of megabytes. New recordings
- * are announced through the stream anyway, so their read waits until the uploads settle.
+ * All fixes of the node: the slimmed list (see `fetchFixes`), kept current from the event stream
+ * and read again when announcements may have been missed (the stream reconnected) and, as a
+ * safety net, after new recordings appeared. In full the list was about 10 kB per recording;
+ * reading it for every recording of a folder upload made the node serialise and the console parse
+ * tens of megabytes. Slimmed it is a fraction of that, and an unchanged list costs a 304. New
+ * recordings are announced through the stream anyway, so their read waits until the uploads settle.
  */
 export function useFixes(node: NodeConnection): { fixes: Fix[]; byId: Map<string, Fix>; loading: boolean; error: string | null } {
   const [base, setBase] = useState<Base | null>(null);
@@ -96,10 +97,24 @@ export function withLiveSummary(full: Fix, summary: Fix | undefined): Fix {
   // its summary; the sun path and horizon profile follow when its full fix has been read.
   if (summary.computedAt > full.computedAt) return summary;
   if (summary.computedAt !== full.computedAt) return full;
+  // A slim entry of the list (GET /api/datum/fixes?slim=1) leaves out what only the detail views
+  // show; for the same computation those parts come from the full fix. What a slim entry does
+  // carry (status, ground truth, stage) is as current as the list.
+  const { slim, ...live } = summary;
+  const parts: Fix = slim
+    ? {
+        ...live,
+        evidence: full.evidence,
+        keyframes: full.keyframes,
+        candidates: full.candidates,
+        countries: full.countries,
+        ...(full.trace ? { trace: full.trace } : {}),
+      }
+    : live;
   return {
-    ...summary,
-    sun: summary.sun ? { ...summary.sun, path: summary.sun.path.length > 0 ? summary.sun.path : (full.sun?.path ?? []) } : full.sun,
-    horizon: summary.horizon ? { ...summary.horizon, profile: summary.horizon.profile ?? full.horizon?.profile ?? null } : full.horizon,
+    ...parts,
+    sun: parts.sun ? { ...parts.sun, path: parts.sun.path.length > 0 ? parts.sun.path : (full.sun?.path ?? []) } : full.sun,
+    horizon: parts.horizon ? { ...parts.horizon, profile: parts.horizon.profile ?? full.horizon?.profile ?? null } : full.horizon,
   };
 }
 

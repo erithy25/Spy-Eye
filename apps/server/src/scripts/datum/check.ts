@@ -13,6 +13,8 @@ import { config, repoRoot } from '../../config.js';
 import { haversineKm } from '../../core/geo.js';
 import type { Fix } from '../../datum/contract.js';
 import { modelSlug } from '../../datum/gallery.js';
+import { GeoClip, defaultGeoclipDir, geoclipFilesPresent } from '../../datum/geoclip.js';
+import { worldModelPrecision } from '../../datum/geoclipService.js';
 import { seedFiles } from '../../datum/gallerySeed.js';
 import { ENGINE_VERSION } from '../../datum/version.js';
 
@@ -67,6 +69,14 @@ process.stdout.write('DATUM · Prüfung\n');
 const modelDir = path.join(config.modelCacheDir, ...config.modelId.split('/'));
 line(`Bildmodell ${config.modelId.split('/').pop()}`, await exists(modelDir), 'pnpm models:download');
 line('Tiefenmodell depth-anything-v2-small', await exists(path.join(config.modelCacheDir, 'onnx-community', 'depth-anything-v2-small')), 'pnpm models:download');
+// The world model (GeoCLIP): its files (sizes of the pinned revision; the download checks the
+// SHA-256) and its place gallery, computed once (40-50 s) by the download or at the first start.
+const geoclipDir = defaultGeoclipDir();
+const geoclipPrecision = worldModelPrecision(geoclipDir);
+const geoclipFiles = await geoclipFilesPresent(geoclipPrecision, geoclipDir);
+line(`Weltmodell GeoCLIP (${geoclipPrecision})${geoclipFiles.ok ? '' : `: ${geoclipFiles.missing.length} Datei(en) fehlen`}`, geoclipFiles.ok, 'pnpm models:download');
+const geoclipGallery = geoclipFiles.ok ? await new GeoClip({ precision: geoclipPrecision, modelDir: geoclipDir }).galleryCached().catch(() => false) : false;
+line('Ortsgalerie des Weltmodells berechnet', geoclipGallery, 'pnpm models:download');
 
 const manifest = await readJson<{ videos: { file: string }[] }>(path.join(DATASET, 'manifest.json'));
 const clips = await count(path.join(DATASET, 'clips'), (n) => n.endsWith('.mp4'));
@@ -100,6 +110,9 @@ let outdated = 0;
 // Quick fixes (from frames sampled straight from the file) still wait for the full stage with the
 // walkable spaces; a prepared node has none of them.
 let quickOnly = 0;
+// Fixes located while the world model's gallery was still being computed: the node computes
+// them again with the world model.
+let withoutWorld = 0;
 const errors: number[] = [];
 try {
   for (const id of await fs.readdir(videosDir)) {
@@ -109,7 +122,7 @@ try {
     // As in the engine: the fix of a recording that is not (or no longer) analysed is not used.
     if (meta.info.status !== 'ready') continue;
     analysed++;
-    const fix = await readJson<Fix & { engineVersion?: number }>(path.join(videosDir, id, 'datum', 'fix.json'));
+    const fix = await readJson<Fix & { engineVersion?: number; worldModel?: string }>(path.join(videosDir, id, 'datum', 'fix.json'));
     if (fix?.status !== 'ready') continue;
     if (fix.engineVersion !== ENGINE_VERSION) {
       outdated++;
@@ -117,6 +130,10 @@ try {
     }
     if (fix.stage === 'quick') {
       quickOnly++;
+      continue;
+    }
+    if (fix.worldModel === 'building') {
+      withoutWorld++;
       continue;
     }
     located++;
@@ -127,7 +144,13 @@ try {
 }
 line(`Aufnahmen im Knoten: ${recordings}`, recordings > 0, 'pnpm datum:prepare');
 line(`Ausgewertet: ${analysed} von ${recordings}`, recordings > 0 && analysed === recordings, 'pnpm datum:prepare');
-const pendingNotes = [outdated > 0 ? `${outdated} veraltet` : '', quickOnly > 0 ? `${quickOnly} nur schnell geortet` : ''].filter(Boolean).join(', ');
+const pendingNotes = [
+  outdated > 0 ? `${outdated} veraltet` : '',
+  quickOnly > 0 ? `${quickOnly} nur schnell geortet` : '',
+  withoutWorld > 0 ? `${withoutWorld} noch ohne Weltmodell` : '',
+]
+  .filter(Boolean)
+  .join(', ');
 line(`Geortet: ${located} von ${analysed}${pendingNotes ? ` (${pendingNotes})` : ''}`, analysed > 0 && located === analysed, 'pnpm datum:prepare');
 if (errors.length > 0) {
   const sorted = [...errors].sort((a, b) => a - b);

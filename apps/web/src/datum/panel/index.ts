@@ -6,3 +6,4 @@ export { CandidateList, type CandidateListProps } from './CandidateList';
 export { FixSummary, type FixSummaryProps } from './FixSummary';
 export { SkylineFrame, type SkylineFrameProps } from './SkylineFrame';
 export { CountryBars, type CountryBarsProps } from './CountryBars';
+export { CheckLinks, type CheckLinksProps } from './CheckLinks';

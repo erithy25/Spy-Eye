@@ -3,6 +3,7 @@ import { useLang } from '../../i18n';
 import { pressable } from '../../ui';
 import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '../api';
 import { caseLabel } from '../labels';
+import { DatumSettingsPanel } from '../Settings';
 import { TruthControl, useTruthUpload } from '../TruthUpload';
 import { kmText } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
@@ -268,6 +269,13 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
           <p className="hint">
             {t('Quelle der Videos: Wikimedia Commons, verknüpft über Wikidata (Eigenschaften P10 und P625). Lizenzen je Datei auf der jeweiligen Dateiseite.')}
           </p>
+        </section>
+
+        {/* What the engine may use (street-level pictures, the world model): it decides what the
+            figures above can reach, so it is listed with them. */}
+        <section className="section-gap" style={{ marginTop: 26 }}>
+          <h3 className="label">{t('Einstellungen der Ortung')}</h3>
+          <DatumSettingsPanel can={can} />
         </section>
       </div>
     </div>

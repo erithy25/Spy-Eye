@@ -15,17 +15,44 @@
  *
  * The 100 000 location embeddings are computed once with the location encoder and cached as
  * float16 under .cache/datum (102 MB); the country of every gallery point is cached next to them.
+ *
+ * The model runs in a worker thread of its own (geoclipWorker.ts, started by geoclipService.ts).
+ * onnxruntime is imported here only when a session is created, so that the main thread can use
+ * the pure functions of this module (massWithin, compactPrediction, ...) without loading it.
  */
 import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import * as ort from 'onnxruntime-node';
+import { Readable } from 'node:stream';
+import type { ReadableStream as WebReadableStream } from 'node:stream/web';
+import type * as Ort from 'onnxruntime-node';
 import sharp from 'sharp';
 import { config, repoRoot } from '../config.js';
 import type { CountryProb, GeoPoint } from './contract.js';
 import { greatCircleKm, type World } from './world.js';
 
+let ortModule: Promise<typeof Ort> | null = null;
+
+/** onnxruntime, loaded on first use (only the thread that runs the model ever needs it). */
+function onnx(): Promise<typeof Ort> {
+  ortModule ??= import('onnxruntime-node');
+  return ortModule;
+}
+
 export const GEOCLIP_MODEL_ID = 'Xenova/geoclip-large-patch14';
+/**
+ * Commit of the Hugging Face repository the files are fetched from (pinned, so that a later
+ * upload under the same name cannot change what the node runs), with the SHA-256 and size of
+ * every file the node uses (the LFS object ids of that commit, checked against the local copies).
+ */
+export const GEOCLIP_REVISION = 'ae27bf552f1bdbfce265b813f5c2901aea336d37';
+export const GEOCLIP_REMOTE_FILES: Readonly<Record<string, { sha256: string; bytes: number }>> = {
+  'onnx/vision_model_int8.onnx': { sha256: 'ce2a0aa90833e4b6c67a2e06464acce0d70183ae3b8443ac13e4f9d14853023a', bytes: 306_961_304 },
+  'onnx/vision_model.onnx': { sha256: 'be5e445d71789363360e94657263e077ebbc21111526209707c31ff61c2acfaa', bytes: 1_220_407_251 },
+  'onnx/location_model.onnx': { sha256: 'b6f75032491fd06e9d37d4d0353e5904c96edd49ee2858358644829a408a0269', bytes: 37_808_863 },
+  'gps_gallery/coordinates_100K.bin': { sha256: '428bce04a09f854bbd4c09b97b7cabccda9cc9d2debc073145e10ccab228979f', bytes: 800_000 },
+};
 /** Input side of the image tower (CLIPImageProcessor of openai/clip-vit-large-patch14). */
 export const GEOCLIP_IMAGE_SIZE = 224;
 export const GEOCLIP_MEAN: readonly [number, number, number] = [0.48145466, 0.4578275, 0.40821073];
@@ -63,6 +90,12 @@ export interface GeoclipOptions {
   threads?: number;
   /** Frames per inference batch of the image tower. Default 4. */
   batchSize?: number;
+  /**
+   * Whether onnxruntime's pool threads spin while they wait for work (its default). Off in the
+   * node, where the model shares the cores with the image model's thread: spinning threads would
+   * take cores from it between the runs.
+   */
+  spin?: boolean;
 }
 
 export interface PredictOptions {
@@ -284,9 +317,35 @@ export function normaliseRows(v: Float32Array, dim: number): Float32Array {
 export function cosines(images: Float32Array, frames: number, gallery: Float32Array, n: number, dim: number): Float32Array {
   const out = new Float32Array(frames * n);
   // Gallery outside, frames inside: the frame block stays in cache while the gallery streams once.
+  // Four frames share each gallery value read (four independent sums instead of one chain); every
+  // sum still runs over d in order, so the result is bit for bit that of one frame at a time. On
+  // 100 000 points and 12 frames this halves the time (about 1.2 s to 0.6 s on the 4-core test
+  // machine).
   for (let g = 0; g < n; g++) {
     const go = g * dim;
-    for (let f = 0; f < frames; f++) {
+    let f = 0;
+    for (; f + 3 < frames; f += 4) {
+      const o0 = f * dim;
+      const o1 = o0 + dim;
+      const o2 = o1 + dim;
+      const o3 = o2 + dim;
+      let s0 = 0;
+      let s1 = 0;
+      let s2 = 0;
+      let s3 = 0;
+      for (let d = 0; d < dim; d++) {
+        const x = gallery[go + d] as number;
+        s0 += (images[o0 + d] as number) * x;
+        s1 += (images[o1 + d] as number) * x;
+        s2 += (images[o2 + d] as number) * x;
+        s3 += (images[o3 + d] as number) * x;
+      }
+      out[f * n + g] = s0;
+      out[(f + 1) * n + g] = s1;
+      out[(f + 2) * n + g] = s2;
+      out[(f + 3) * n + g] = s3;
+    }
+    for (; f < frames; f++) {
       const fo = f * dim;
       let s = 0;
       for (let d = 0; d < dim; d++) s += (images[fo + d] as number) * (gallery[go + d] as number);
@@ -498,6 +557,28 @@ export function bestInCountry(
   return modesOf(pred.coords, pred.probs, inside, modeKm, 1)[0] ?? null;
 }
 
+/**
+ * The prediction reduced to its support: `coords` and `probs` hold only the points that carry the
+ * probability mass (`support` becomes 0..m-1 over them), the full gallery arrays are dropped. This
+ * is what crosses from the model's thread to the main thread (at most 20 000 points, about 0.3 MB,
+ * instead of 1.2 MB of gallery arrays per call); massWithin and densityAt give the same answers on
+ * it, because they only ever read the support. (bestInCountry needs the gallery rows: not on it.)
+ */
+export function compactPrediction(pred: GeoclipPrediction): GeoclipPrediction {
+  const m = pred.support.length;
+  const coords = new Float32Array(2 * m);
+  const probs = new Float32Array(m);
+  for (let k = 0; k < m; k++) {
+    const i = pred.support[k] as number;
+    coords[2 * k] = pred.coords[2 * i] as number;
+    coords[2 * k + 1] = pred.coords[2 * i + 1] as number;
+    probs[k] = pred.probs[i] as number;
+  }
+  const support = new Uint32Array(m);
+  for (let k = 0; k < m; k++) support[k] = k;
+  return { ...pred, probs, coords, support };
+}
+
 /** Points of a square grid of (2·half + 1)² around a centre, `stepDeg` apart (longitude scaled). */
 export function localGrid(center: GeoPoint, stepDeg: number, half: number): Float32Array {
   const out = new Float32Array((2 * half + 1) ** 2 * 2);
@@ -531,6 +612,125 @@ async function exists(file: string): Promise<boolean> {
   }
 }
 
+/** Relative paths (inside the model directory) of the files a precision needs. */
+export function geoclipFilesFor(precision: GeoclipPrecision): string[] {
+  return [GEOCLIP_FILES.vision[precision], GEOCLIP_FILES.location, GEOCLIP_FILES.gallery];
+}
+
+/**
+ * Whether the files of a precision are on disk with the size of the pinned revision. Cheap (no
+ * hashing): the download step checks the SHA-256; this catches a missing or cut-off file.
+ */
+export async function geoclipFilesPresent(precision: GeoclipPrecision, modelDir: string = defaultGeoclipDir()): Promise<{ ok: boolean; missing: string[] }> {
+  const missing: string[] = [];
+  for (const rel of geoclipFilesFor(precision)) {
+    const expected = GEOCLIP_REMOTE_FILES[rel]?.bytes;
+    try {
+      const st = await fs.stat(path.join(modelDir, ...rel.split('/')));
+      if (expected !== undefined && st.size !== expected) missing.push(rel);
+    } catch {
+      missing.push(rel);
+    }
+  }
+  return { ok: missing.length === 0, missing };
+}
+
+/** SHA-256 of a file (hex), streamed. */
+export async function sha256File(file: string): Promise<string> {
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(file)) hash.update(chunk as Buffer);
+  return hash.digest('hex');
+}
+
+export interface GeoclipDownloadOptions {
+  precision?: GeoclipPrecision;
+  modelDir?: string;
+  /** Hash files that are already there (default true); false trusts a file of the right size. */
+  verifyExisting?: boolean;
+  /** Where the files come from (tests); default the pinned revision on huggingface.co. */
+  baseUrl?: string;
+  /** fetch to use (tests). */
+  fetchImpl?: typeof fetch;
+  /** Pinned size and SHA-256 per file (tests); default GEOCLIP_REMOTE_FILES. */
+  pinned?: Readonly<Record<string, { sha256: string; bytes: number }>>;
+  onProgress?: (file: string, loaded: number, total: number) => void;
+  /** Timeout without any data (ms); default 60 s. */
+  stallMs?: number;
+}
+
+export interface GeoclipDownloadReport {
+  fetched: string[];
+  present: string[];
+}
+
+/**
+ * Brings the GeoCLIP files of a precision into the model directory: every file that is missing, of
+ * the wrong size or (with verifyExisting) of the wrong SHA-256 is fetched from the pinned revision
+ * into a temporary file next to it, checked against the pinned size and SHA-256, and only then
+ * renamed into place; a failed or wrong download leaves nothing behind. Idempotent. Throws when a
+ * file cannot be had (the node then runs without the world model).
+ */
+export async function ensureGeoclipFiles(opts: GeoclipDownloadOptions = {}): Promise<GeoclipDownloadReport> {
+  const precision = opts.precision ?? 'int8';
+  const modelDir = opts.modelDir ?? defaultGeoclipDir();
+  const baseUrl = opts.baseUrl ?? `https://huggingface.co/${GEOCLIP_MODEL_ID}/resolve/${GEOCLIP_REVISION}`;
+  const doFetch = opts.fetchImpl ?? fetch;
+  const report: GeoclipDownloadReport = { fetched: [], present: [] };
+  const table = opts.pinned ?? GEOCLIP_REMOTE_FILES;
+  for (const rel of geoclipFilesFor(precision)) {
+    const pinned = table[rel];
+    if (!pinned) throw new Error(`GeoCLIP: keine Prüfsumme für ${rel} hinterlegt.`);
+    // Path segments joined with the platform separator (Windows-safe).
+    const dest = path.join(modelDir, ...rel.split('/'));
+    const size = await fs.stat(dest).then((s) => s.size).catch(() => -1);
+    if (size === pinned.bytes && (opts.verifyExisting === false || (await sha256File(dest)) === pinned.sha256)) {
+      report.present.push(rel);
+      continue;
+    }
+    if (config.offline && !opts.fetchImpl) throw new Error(`GeoCLIP: ${rel} fehlt, und der Offline-Modus ist aktiv (SICHT_OFFLINE).`);
+    await fs.mkdir(path.dirname(dest), { recursive: true });
+    const tmp = `${dest}.${process.pid}.part`;
+    const controller = new AbortController();
+    // Aborts a download that delivers nothing for stallMs; re-armed with every chunk, and always
+    // cleared (a pending timer would keep a finished script alive).
+    let timer = setTimeout(() => controller.abort(), opts.stallMs ?? 60_000);
+    try {
+      const response = await doFetch(`${baseUrl}/${rel}`, { signal: controller.signal, headers: { 'user-agent': 'datum-node' } });
+      if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+      const hash = createHash('sha256');
+      const out = await fs.open(tmp, 'w');
+      let loaded = 0;
+      try {
+        for await (const chunk of Readable.fromWeb(response.body as WebReadableStream<Uint8Array>)) {
+          const bytes = chunk as Buffer;
+          clearTimeout(timer);
+          timer = setTimeout(() => controller.abort(), opts.stallMs ?? 60_000);
+          hash.update(bytes);
+          await out.write(bytes);
+          loaded += bytes.length;
+          opts.onProgress?.(rel, loaded, pinned.bytes);
+        }
+      } finally {
+        await out.close();
+      }
+      const digest = hash.digest('hex');
+      if (loaded !== pinned.bytes) throw new Error(`${loaded} Bytes statt ${pinned.bytes}`);
+      if (digest !== pinned.sha256) throw new Error('Prüfsumme (SHA-256) stimmt nicht');
+      // On Windows a rename onto an existing file fails: the wrong copy goes first.
+      await fs.rm(dest, { force: true });
+      await fs.rename(tmp, dest);
+      report.fetched.push(rel);
+    } catch (err: unknown) {
+      await fs.rm(tmp, { force: true }).catch(() => undefined);
+      const reason = err instanceof Error ? (err.name === 'AbortError' ? 'Zeitüberschreitung' : err.message) : String(err);
+      throw new Error(`GeoCLIP: ${rel} nicht geladen (${reason}).`);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return report;
+}
+
 /**
  * GeoCLIP on onnxruntime (CPU). Sessions are created on first use, one per tower, and runs are
  * serialised (each run uses all configured threads).
@@ -541,8 +741,9 @@ export class GeoClip {
   readonly cacheDir: string;
   readonly threads: number;
   readonly batchSize: number;
-  private vision: Promise<ort.InferenceSession> | null = null;
-  private location: Promise<ort.InferenceSession> | null = null;
+  readonly spin: boolean;
+  private vision: Promise<Ort.InferenceSession> | null = null;
+  private location: Promise<Ort.InferenceSession> | null = null;
   private galleryLoad: Promise<GeoclipGallery> | null = null;
   private countryLoad: Promise<{ countryOf: Int16Array; isos: string[] }> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
@@ -553,13 +754,14 @@ export class GeoClip {
     this.cacheDir = options.cacheDir ?? path.join(repoRoot, '.cache', 'datum');
     this.threads = options.threads ?? config.threads;
     this.batchSize = options.batchSize ?? 4;
+    this.spin = options.spin ?? true;
   }
 
   files(): { vision: string; location: string; gallery: string } {
     return {
-      vision: path.join(this.modelDir, GEOCLIP_FILES.vision[this.precision]),
-      location: path.join(this.modelDir, GEOCLIP_FILES.location),
-      gallery: path.join(this.modelDir, GEOCLIP_FILES.gallery),
+      vision: path.join(this.modelDir, ...GEOCLIP_FILES.vision[this.precision].split('/')),
+      location: path.join(this.modelDir, ...GEOCLIP_FILES.location.split('/')),
+      gallery: path.join(this.modelDir, ...GEOCLIP_FILES.gallery.split('/')),
     };
   }
 
@@ -569,12 +771,16 @@ export class GeoClip {
     return (await Promise.all([exists(f.vision), exists(f.location), exists(f.gallery)])).every(Boolean);
   }
 
-  private session(file: string): Promise<ort.InferenceSession> {
+  private async session(file: string): Promise<Ort.InferenceSession> {
+    const ort = await onnx();
     return ort.InferenceSession.create(file, {
       intraOpNumThreads: this.threads,
       interOpNumThreads: 1,
       executionMode: 'sequential',
       graphOptimizationLevel: 'all',
+      // Flattened by the Node binding into the session config entry
+      // "session.intra_op.allow_spinning".
+      ...(this.spin ? {} : { extra: { session: { intra_op: { allow_spinning: '0' } } } }),
     });
   }
 
@@ -584,7 +790,7 @@ export class GeoClip {
     return run;
   }
 
-  private visionSession(): Promise<ort.InferenceSession> {
+  private visionSession(): Promise<Ort.InferenceSession> {
     if (!this.vision) {
       this.vision = this.session(this.files().vision);
       this.vision.catch(() => (this.vision = null));
@@ -592,7 +798,7 @@ export class GeoClip {
     return this.vision;
   }
 
-  private locationSession(): Promise<ort.InferenceSession> {
+  private locationSession(): Promise<Ort.InferenceSession> {
     if (!this.location) {
       this.location = this.session(this.files().location);
       this.location.catch(() => (this.location = null));
@@ -600,9 +806,25 @@ export class GeoClip {
     return this.location;
   }
 
+  /** Creates the image tower's session now (instead of on the first picture). */
+  async loadVision(): Promise<void> {
+    await this.visionSession();
+  }
+
+  /** Whether the gallery embeddings are cached on disk (then loading takes about a second). */
+  async galleryCached(): Promise<boolean> {
+    try {
+      const st = await fs.stat(await this.galleryCacheFile());
+      return st.size > 12;
+    } catch {
+      return false;
+    }
+  }
+
   /** Image embeddings (count x 512, L2-normalised) of preprocessed pixels (count x 3 x 224 x 224). */
   async embedPixels(pixels: Float32Array, count: number): Promise<Float32Array> {
     const session = await this.visionSession();
+    const ort = await onnx();
     const plane = 3 * GEOCLIP_IMAGE_SIZE * GEOCLIP_IMAGE_SIZE;
     const out = new Float32Array(count * GEOCLIP_DIM);
     for (let i = 0; i < count; i += this.batchSize) {
@@ -627,6 +849,7 @@ export class GeoClip {
   /** Location embeddings (n x 512, L2-normalised) of lat/lon pairs in degrees. */
   async embedLocations(coords: Float32Array, chunk = 4096): Promise<Float32Array> {
     const session = await this.locationSession();
+    const ort = await onnx();
     const n = coords.length / 2;
     const out = new Float32Array(n * GEOCLIP_DIM);
     for (let i = 0; i < n; i += chunk) {
@@ -671,9 +894,18 @@ export class GeoClip {
       embeds.set(await this.embedLocations(coords.subarray(2 * i, 2 * (i + m))), i * GEOCLIP_DIM);
       onProgress?.(i + m, size);
     }
-    await writeEmbeddingCache(file, embeds, size, GEOCLIP_DIM);
+    try {
+      await writeEmbeddingCache(file, embeds, size, GEOCLIP_DIM);
+      this.cacheProblem = null;
+    } catch (err: unknown) {
+      // A full or read-only disk costs the next start the 40 s again, not this gallery.
+      this.cacheProblem = err instanceof Error ? err.message : String(err);
+    }
     return { coords, embeds, size };
   }
+
+  /** Why the last gallery build could not be cached, if it could not. */
+  cacheProblem: string | null = null;
 
   /**
    * Country of every gallery point (index into `isos`, -1 over sea or unknown), computed once with
@@ -709,10 +941,16 @@ export class GeoClip {
       const c = world.countryNear(coords[2 * i] as number, coords[2 * i + 1] as number);
       countryOf[i] = c ? (index.get(c.iso) ?? -1) : -1;
     }
-    await fs.mkdir(this.cacheDir, { recursive: true });
     const tmp = `${file}.${process.pid}.tmp`;
-    await fs.writeFile(tmp, Buffer.from(countryOf.buffer));
-    await fs.rename(tmp, file);
+    try {
+      await fs.mkdir(this.cacheDir, { recursive: true });
+      await fs.writeFile(tmp, Buffer.from(countryOf.buffer));
+      await fs.rename(tmp, file);
+    } catch (err: unknown) {
+      // Computed again at the next start; the countries themselves are fine.
+      await fs.rm(tmp, { force: true }).catch(() => undefined);
+      this.cacheProblem = err instanceof Error ? err.message : String(err);
+    }
     return { countryOf, isos };
   }
 

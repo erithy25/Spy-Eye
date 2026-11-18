@@ -707,6 +707,54 @@
   color: var(--fg);
 }
 
+/* The picture with what must stay under it: the attribution of a street-level picture. */
+.dp-ref-fig {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dp-ref-open .dp-ref-fig {
+  max-width: 480px;
+}
+
+.dp-ref-thumb-none {
+  cursor: default;
+}
+
+.dp-ref-attr {
+  color: var(--low);
+  font-size: 9.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.dp-ref-link {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+/* ---------- check links (Google, opened by a person) ---------- */
+
+.dp-checks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  white-space: nowrap;
+}
+
+.dp-check {
+  color: var(--low);
+  text-decoration-color: var(--faint);
+}
+
+.dp-check:hover,
+.dp-check:focus-visible {
+  color: var(--fg);
+  text-decoration-color: var(--fg);
+}
+
 /* ---------- candidates ---------- */
 
 .dp-cand-list {
@@ -770,11 +818,31 @@
 
 .dp-cand-pos {
   grid-column: 2 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   color: var(--mid);
   font-size: 11px;
+  min-width: 0;
+}
+
+/* The coordinates give way (ellipsis) before the check links do. */
+.dp-cand-coord {
+  min-width: 0;
   white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.dp-cand-pos .dp-checks {
+  flex: none;
+  margin-left: auto;
+  font-size: 10.5px;
+}
+
+.dp-cand-on .dp-check,
+.dp-cand:hover .dp-check {
+  color: var(--mid);
 }
 
 .dp-cand-bar {

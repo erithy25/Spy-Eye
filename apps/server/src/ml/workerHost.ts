@@ -1,5 +1,6 @@
 import { Worker } from 'node:worker_threads';
 import {
+  THREAD_RUNNING,
   deserializeError,
   type HostMessage,
   type OpMap,
@@ -111,6 +112,40 @@ export interface ThreadSpec<Options, Info, Event> {
 
 /** All threads that were started and not closed, for `closeInferenceThreads`. */
 const open = new Set<InferenceThread<OpMap, unknown, unknown, unknown>>();
+
+/** Every worker of this process that has not exited, with its shared "closed" flag. */
+const liveWorkers = new Map<Worker, Int32Array>();
+
+/** How long the exiting process waits for its inference threads to finish their runs. */
+const EXIT_DRAIN_MS = 5000;
+
+/**
+ * Runs when the process exits (process.exit in the node's shutdown, or the end of a script).
+ * Node then terminates the worker threads; one that is inside a session run at that moment takes
+ * the process down with an abort in onnxruntime's binding. So every thread is asked to finish its
+ * run and release its sessions first, and the exit waits for that, at most EXIT_DRAIN_MS. Only
+ * synchronous code can run here: the wait is Atomics.wait on each thread's shared flag.
+ */
+function drainAtExit(): void {
+  const deadline = Date.now() + EXIT_DRAIN_MS;
+  const close: HostMessage = { type: 'close' };
+  for (const worker of liveWorkers.keys()) {
+    try {
+      worker.postMessage(close);
+    } catch {
+      // Already gone.
+    }
+  }
+  for (const flag of liveWorkers.values()) {
+    for (;;) {
+      const left = deadline - Date.now();
+      if (left <= 0 || Atomics.load(flag, 0) !== THREAD_RUNNING) break;
+      Atomics.wait(flag, 0, THREAD_RUNNING, left);
+    }
+  }
+}
+
+let drainRegistered = false;
 
 /**
  * One inference thread running one service. Calls are serialised through the process-wide gate;
@@ -269,7 +304,8 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
 
   private spawn(): Promise<{ worker: Worker; info: Info }> {
     return new Promise((resolve, reject) => {
-      const boot: WorkerBoot = { service: this.spec.service, options: this.spec.options };
+      const closed = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+      const boot: WorkerBoot = { service: this.spec.service, options: this.spec.options, closed };
       let worker: Worker;
       try {
         const execArgv = workerExecArgv();
@@ -279,6 +315,11 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
         return;
       }
       this.workers.add(worker);
+      liveWorkers.set(worker, closed);
+      if (!drainRegistered) {
+        drainRegistered = true;
+        process.on('exit', drainAtExit);
+      }
       let ready = false;
       let lastError: Error | null = null;
       worker.on('message', (message: ThreadMessage) => {
@@ -323,6 +364,7 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
       });
       worker.on('exit', (code: number) => {
         this.workers.delete(worker);
+        liveWorkers.delete(worker);
         if (!ready) {
           reject(lastError ?? new Error(`${this.spec.name}: Rechenthread endete beim Laden (Code ${code}).`));
           return;

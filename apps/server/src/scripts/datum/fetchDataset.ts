@@ -14,6 +14,11 @@
  *                                                             the stored selection and load it
  *   --extra-target=N                                          size of group (d) (default 12000 with
  *                                                             --extend, otherwise 0: off)
+ *   --no-worldmodel                                           leave out the world model (GeoCLIP)
+ *
+ * After the dataset, the world model's files are fetched (pinned revision, SHA-256 checked) and
+ * its place gallery is computed once (datum/geoclipService.ts prepareWorldModel); a failure there
+ * is reported and leaves the node working without the world model.
  *
  * Output (relative to the repository root):
  *   datasets/datum/manifest.json        selection of test videos with ground truth (committed)
@@ -1383,6 +1388,11 @@ async function main(): Promise<void> {
   const videoItems = (): Promise<Map<string, VideoItem>> => (itemsPromise ??= loadVideoItems());
   if (!FLAG_GALLERY_ONLY) await runVideos(countries, videoItems);
   if (!FLAG_VIDEOS_ONLY) await runGallery(countries, videoItems);
+  if (!FLAG_SELECT_ONLY && !ARGS.has('--no-worldmodel')) {
+    // Loaded only here: the dataset steps above need neither the configuration nor the model code.
+    const { prepareWorldModel } = await import('../../datum/geoclipService.js');
+    await prepareWorldModel((line) => log(line.trim()));
+  }
 }
 
 main().catch((err: unknown) => {

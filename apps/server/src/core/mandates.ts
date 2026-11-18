@@ -24,6 +24,30 @@ export class Mandates {
     return this.items.get(id);
   }
 
+  /**
+   * Adds the English texts of a mandate the node seeded itself, when it was stored before they
+   * existed. Only missing fields are filled and only when the German text is the seeded one, so a
+   * mandate an operator changed by hand keeps exactly what it says.
+   */
+  addEnglish(id: string, seeded: { legalBasis: string; legalBasisEn: string; purpose: string; purposeEn: string; title?: string; titleEn?: string }): void {
+    const mandate = this.items.get(id);
+    if (!mandate) return;
+    let changed = false;
+    if (mandate.legalBasisEn === undefined && mandate.legalBasis === seeded.legalBasis) {
+      mandate.legalBasisEn = seeded.legalBasisEn;
+      changed = true;
+    }
+    if (mandate.purposeEn === undefined && mandate.purpose === seeded.purpose) {
+      mandate.purposeEn = seeded.purposeEn;
+      changed = true;
+    }
+    if (mandate.titleEn === undefined && seeded.titleEn !== undefined && mandate.title === seeded.title) {
+      mandate.titleEn = seeded.titleEn;
+      changed = true;
+    }
+    if (changed) this.items.touch();
+  }
+
   /** A mandate can be used while it is open and inside its validity window. */
   isUsable(mandate: Mandate, now = Date.now()): boolean {
     return mandate.status === 'open' && now >= mandate.validFrom && (mandate.validTo === null || now <= mandate.validTo);

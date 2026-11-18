@@ -265,3 +265,62 @@ export const KIND_METHOD: Record<EvidenceKind, string> = {
   worldmodel: 'Weltmodell (GeoCLIP)',
   streetlevel: 'Abgleich mit Straßenbildern',
 };
+
+/**
+ * Evidence kinds in the order the console lists groups of equal weight: what pins a place down
+ * (metadata, a recognised landmark and the street-level pictures that refine it, the terrain
+ * horizon) before what only narrows a region.
+ */
+export const KIND_ORDER: readonly EvidenceKind[] = ['metadata', 'landmark', 'streetlevel', 'horizon', 'sun', 'worldmodel', 'region', 'season', 'text', 'filename'];
+
+/** Position of a kind in KIND_ORDER; a kind of a newer engine that this console does not know goes last. */
+export function kindRank(kind: string): number {
+  const i = (KIND_ORDER as readonly string[]).indexOf(kind);
+  return i < 0 ? KIND_ORDER.length : i;
+}
+
+/**
+ * Code and phrase of a kind. The record covers every kind of the contract this console was built
+ * with; a newer node may send one it does not know, which then shows as sent instead of failing.
+ */
+export function kindCode(kind: string): string {
+  return (KIND_CODE as Partial<Record<string, string>>)[kind] ?? kind.toUpperCase();
+}
+
+export function kindMethod(kind: string): string {
+  return (KIND_METHOD as Partial<Record<string, string>>)[kind] ?? kind;
+}
+
+/**
+ * A page link from the node (Evidence.refUrl), but only if it is a web address: the link opens in
+ * the analyst's browser, so a javascript: or data: URL must never become clickable.
+ */
+export function webLink(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------- check links (Google, opened by a person only) ----------
+
+/**
+ * Coordinates as Google's map URLs take them: six decimals (about 0.1 m) with a decimal point,
+ * whatever the console language. Nothing else is handed over.
+ */
+function googlePoint(lat: number, lon: number): string {
+  return `${lat.toFixed(6)},${lon.toFixed(6)}`;
+}
+
+/** Google Street View at a point (Maps URLs, documented for links a person clicks). */
+export function streetViewUrl(lat: number, lon: number): string {
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${googlePoint(lat, lon)}`;
+}
+
+/** Google Maps with a pin at a point. */
+export function googleMapsUrl(lat: number, lon: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${googlePoint(lat, lon)}`;
+}

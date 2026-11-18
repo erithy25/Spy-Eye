@@ -4,11 +4,13 @@ import { formatPercent, formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker, type MapShape } from '../../map/MapCanvas';
 import { formatCoordinate } from '../../map/geo';
-import { pressable } from '../../ui';
+import { Dialog, pressable } from '../../ui';
 import { VIDEO_ACCEPT, dragHasFiles, filesFromDrop, uploads, useUploads, type UploadItem, type UploadOptions } from '../../uploads';
 import { fetchCountries, fetchTerrain, rel, type CountryShape, type Fix } from '../api';
 import { terrainContours, type ContourSet } from '../contours';
-import { caseLabel, countryText, isReference, placeText, stageOf } from '../labels';
+import { caseLabel, countryText, isReference, placeText, radiusText, stageOf } from '../labels';
+import { CheckLinks } from '../panel/CheckLinks';
+import { DatumSettingsPanel } from '../Settings';
 import { TruthControl, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
@@ -73,9 +75,14 @@ function medianOf(values: number[]): number {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
+/**
+ * The picture of a recording: its middle keyframe, chosen as the node chooses the one keyframe of
+ * a slim list entry (floor(n / 2)), so that a row keeps its picture when a full summary from the
+ * event stream replaces the slim entry.
+ */
 function middleFrame(fix: Fix | null): string | null {
   if (!fix || fix.keyframes.length === 0) return null;
-  return rel(fix.keyframes[Math.floor((fix.keyframes.length - 1) / 2)]!.imageUrl);
+  return rel(fix.keyframes[Math.floor(fix.keyframes.length / 2)]!.imageUrl);
 }
 
 /** What a recording is waiting for, or how its analysis went, in one short line. */
@@ -135,7 +142,7 @@ const FixRow = memo(function FixRow({ video, fix, selected, select }: RowProps) 
         )}
         {loc && (
           <div className="dt-row-sub">
-            ± {kmText(loc.radiusKm, locale)}
+            {radiusText(lang, loc)}
             {fix?.status === 'running' && ` · ${t('wird neu geortet …')}`}
             {fix?.truth?.errorKm != null && ` · ${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}`}
           </div>
@@ -221,6 +228,7 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
   const [showTruth, setShowTruth] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const dragDepth = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
@@ -477,7 +485,7 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
             </div>
             <div className="dt-hud-place">{placeText(lang, current.location, current)}</div>
             <div className="dt-hud-sub">
-              {[countryText(lang, current.location), `± ${kmText(current.location.radiusKm, locale)}`].filter((x) => x !== '').join(' · ')}
+              {[countryText(lang, current.location), radiusText(lang, current.location)].filter((x) => x !== '').join(' · ')}
             </div>
             <div className="dt-hud-clock">{bestWindowText(current) ?? '––:––'}</div>
             <div className="dt-hud-sub">
@@ -493,6 +501,9 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
             </div>
             <div className="dt-hud-detail">
               <div>{formatCoordinate(current.location.lat, current.location.lon)}</div>
+              <div className="dt-hud-checks">
+                <CheckLinks lat={current.location.lat} lon={current.location.lon} />
+              </div>
               {sun && (
                 <div>
                   {t('Sonne')} {Math.round(sun.azimuthDeg)}° / {Math.round(sun.elevationDeg)}° · {t('Schatten')} {Math.round(sun.shadowAzimuthDeg)}°
@@ -548,6 +559,9 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
               {t('Weltansicht')}
             </button>
           )}
+          <button type="button" className="text-btn" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">
+            {t('Einstellungen')}
+          </button>
         </div>
         {total === 0 && mayUpload && (
           <div className="dt-map-empty">
@@ -559,6 +573,16 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
           </div>
         )}
       </section>
+      {settingsOpen && (
+        <Dialog title={t('Einstellungen der Ortung')} onClose={() => setSettingsOpen(false)}>
+          <DatumSettingsPanel can={can} />
+          <div className="btn-row">
+            <button type="button" className="btn" onClick={() => setSettingsOpen(false)}>
+              {t('Schließen')}
+            </button>
+          </div>
+        </Dialog>
+      )}
       {dragging && (
         <div className="dt-drop" aria-hidden="true">
           <div className="dt-drop-box">

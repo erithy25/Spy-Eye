@@ -315,9 +315,9 @@ function MandateList({ node, onChosen }: { node: NodeConnection; onChosen: () =>
             {m.personDescriptions && <span className="pill">{t('Personenbeschreibung zulässig')}</span>}
             {node.session?.mandate?.id === m.id && <span className="pill pill-solid">{t('aktiv')}</span>}
           </h4>
-          <div className="alert-line">{t(m.legalBasis)}</div>
+          <div className="alert-line">{pick(m.legalBasis, m.legalBasisEn)}</div>
           <div className="alert-line" style={{ whiteSpace: 'normal' }}>
-            {t(m.purpose)}
+            {pick(m.purpose, m.purposeEn)}
           </div>
           <div className="alert-line low">
             {t('erteilt von')} {m.issuedBy} · {m.validTo === null ? t('unbefristet') : `${t('bis')} ${new Date(m.validTo).toLocaleString(locale)}`}
@@ -470,7 +470,7 @@ function Shell({ node }: { node: NodeConnection }) {
         </nav>
         <div className="top-right">
           {node.can('mandate.read') && (
-            <button type="button" className="text-btn who" onClick={() => setMandateDialog(true)} title={t(session.mandate?.purpose ?? '')}>
+            <button type="button" className="text-btn who" onClick={() => setMandateDialog(true)} title={session.mandate ? pick(session.mandate.purpose, session.mandate.purposeEn) : ''}>
               {t('Mandat')}: <b>{session.mandate ? pick(session.mandate.title, session.mandate.titleEn) : t('keines')}</b>
             </button>
           )}

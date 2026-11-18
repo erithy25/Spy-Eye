@@ -3,11 +3,12 @@ import { fetchLedger, fetchPeers } from '../api';
 import type { ViewProps } from '../App';
 import { formatClock, shortHash } from '../format';
 import { useLang } from '../i18n';
+import { ledgerEnglish } from '../ledgerText';
 import { MapCanvas, type MapLink, type MapMarker, type MapView } from '../map/MapCanvas';
 import { Glyph, useLoad } from '../ui';
 
 export function Verbund({ node }: ViewProps) {
-  const { t, locale } = useLang();
+  const { t, locale, lang } = useLang();
   const peers = useLoad(() => fetchPeers(), []);
   const full = node.can('ledger.read');
   const inbound = useLoad(
@@ -162,7 +163,7 @@ export function Verbund({ node }: ViewProps) {
                       <td className="num dim">{e.seq}</td>
                       <td className="dim">{formatClock(Date.parse(e.ts), locale)}</td>
                       <td>{e.actor.replace('node:', '')}</td>
-                      <td title={e.summary}>{e.summary}</td>
+                      <td title={e.summary}>{lang === 'en' ? ledgerEnglish(e, t) : e.summary}</td>
                       <td className="dim">{mandate?.title ?? ''}</td>
                     </tr>
                   );

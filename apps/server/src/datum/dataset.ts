@@ -101,6 +101,7 @@ export async function writeSeed(): Promise<{ clips: number; missing: number }> {
         kind: 'upload',
         owner: 'DATUM',
         description: 'Videos mit bekanntem Aufnahmeort aus Wikimedia Commons; der Ort wird nicht mitgegeben.',
+        descriptionEn: 'Videos with a known recording place from Wikimedia Commons; the place is not given to the engine.',
         lat: 0,
         lon: 0,
         shared: false,

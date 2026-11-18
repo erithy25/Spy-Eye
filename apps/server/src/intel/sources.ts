@@ -2,6 +2,14 @@ import { Collection, newId } from '../core/json.js';
 import { DEFAULT_SOURCE_ID } from '../store.js';
 import type { SourceInfo, SourceKind } from '../types.js';
 
+/** The upload inbox every node has, in both languages. */
+const INBOX = {
+  name: 'Eingang',
+  nameEn: 'Inbox',
+  description: 'Hochgeladenes Material ohne Zuordnung zu einem Sensor.',
+  descriptionEn: 'Uploaded footage not assigned to a sensor.',
+} as const;
+
 /** Registry of the sensors and inboxes a node receives footage from. */
 export class Sources {
   private readonly items: Collection<SourceInfo>;
@@ -12,14 +20,19 @@ export class Sources {
 
   async open(): Promise<void> {
     await this.items.load();
-    if (!this.items.has(DEFAULT_SOURCE_ID)) {
+    const inbox = this.items.get(DEFAULT_SOURCE_ID);
+    if (inbox) {
+      // Stored before the English description existed: add it while the text is still the seeded one.
+      this.addEnglish(DEFAULT_SOURCE_ID, INBOX);
+    } else {
       this.items.put({
         id: DEFAULT_SOURCE_ID,
-        name: 'Eingang',
-        nameEn: 'Inbox',
+        name: INBOX.name,
+        nameEn: INBOX.nameEn,
         kind: 'upload',
         owner: '',
-        description: 'Hochgeladenes Material ohne Zuordnung zu einem Sensor.',
+        description: INBOX.description,
+        descriptionEn: INBOX.descriptionEn,
         lat: null,
         lon: null,
         mode: 'archive',
@@ -37,6 +50,26 @@ export class Sources {
     return this.items.get(id);
   }
 
+  /**
+   * Adds the English name and description of a seeded source stored before they existed. Only
+   * missing fields are filled, and only while the German text is the seeded one: a source an
+   * operator renamed or described anew keeps what they wrote.
+   */
+  addEnglish(id: string, seeded: { name: string; nameEn?: string; description: string; descriptionEn?: string }): void {
+    const source = this.items.get(id);
+    if (!source) return;
+    let changed = false;
+    if (source.nameEn === undefined && seeded.nameEn !== undefined && source.name === seeded.name) {
+      source.nameEn = seeded.nameEn;
+      changed = true;
+    }
+    if (source.descriptionEn === undefined && seeded.descriptionEn !== undefined && source.description === seeded.description) {
+      source.descriptionEn = seeded.descriptionEn;
+      changed = true;
+    }
+    if (changed) this.items.touch();
+  }
+
   /** Falls back to the upload inbox for recordings whose source no longer exists. */
   resolve(id: string): SourceInfo {
     return this.items.get(id) ?? (this.items.get(DEFAULT_SOURCE_ID) as SourceInfo);
@@ -49,6 +82,7 @@ export class Sources {
     kind: SourceKind;
     owner: string;
     description: string;
+    descriptionEn?: string;
     lat: number | null;
     lon: number | null;
     mode: SourceInfo['mode'];
@@ -66,6 +100,7 @@ export class Sources {
       shared: input.shared,
       createdAt: Date.now(),
       ...(input.nameEn !== undefined ? { nameEn: input.nameEn } : {}),
+      ...(input.descriptionEn !== undefined ? { descriptionEn: input.descriptionEn } : {}),
     };
     return this.items.put(source);
   }

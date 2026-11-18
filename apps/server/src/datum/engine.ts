@@ -13,6 +13,12 @@
  *          with spaces and horizon. The sampled frames of the quick stage are reused, so its
  *          localisation is the same and is not computed twice.
  *
+ * The world model (GeoCLIP, geoclipService.ts) looks at the quick stage's frames in a thread of
+ * its own while the image model embeds them; the full stage takes its prediction over. Without
+ * its weights, or while its place gallery is still being computed once (40-50 s on a fresh
+ * machine), a fix is located without it and its trace says so; a fix computed during that build
+ * is computed again once the gallery is ready.
+ *
  * Quick jobs go before full ones, and recordings a person has queued before background work
  * (the seeded reference set). A fix is written next to the recording (`<videoDir>/datum/fix.json`)
  * and broadcast to the console. Everything is computed on this machine.
@@ -28,7 +34,8 @@ import { haversineKm } from '../core/geo.js';
 import type { Evidence, Fix, FixLocation, Keyframe, TimeEstimate, TraceStep } from './contract.js';
 import { truthForName } from './dataset.js';
 import { Gallery } from './gallery.js';
-import { breathe, locate, sampleAndEmbedFrames, type SampledFrames } from './locate.js';
+import { acquireWorldModel, releaseWorldModel, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
+import { breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
 import { filenameHints, readMetadata, type VideoMetadata } from './metadata.js';
 import { DAY_LABELS_EN, estimateTime, frameStatsFromJpeg, type FrameStats } from './time.js';
 import { estimateDisparity } from './depth.js';
@@ -47,7 +54,11 @@ const SPACE_FRAMES = 3;
  */
 const SAMPLED_CACHE = 96;
 
-type StoredFix = Fix & { engineVersion: number };
+/**
+ * A fix as written to disk. `worldModel: 'building'` marks one located while the world model's
+ * gallery was still being computed: it is computed again (see DatumEngine.init).
+ */
+type StoredFix = Fix & { engineVersion: number; worldModel?: 'building' };
 
 export type JobKind = 'quick' | 'full';
 
@@ -86,6 +97,11 @@ export interface DatumEngineOptions {
    * pipeline). Background jobs wait while it is, so the person's recording has every core.
    */
   foregroundElsewhere?: () => boolean;
+  /**
+   * The world model. Absent: the process-wide GeoCLIP thread (acquireWorldModel); null: none
+   * (every fix says so in its trace). Tests give a stand-in.
+   */
+  worldModel?: WorldModel | null;
 }
 
 /** How often a waiting background job looks again whether it may run. */
@@ -219,8 +235,35 @@ function timeNote(time: TimeEstimate): Named {
   };
 }
 
-/** Frames sampled from the file with their light statistics: what the quick stage hands on. */
-type QuickFrames = SampledFrames & { stats: FrameStats[] };
+/**
+ * Frames sampled from the file with their light statistics and the world model's prediction for
+ * them: what the quick stage hands on. The JPEG bytes are kept only while the world model still
+ * has to look at them (its gallery was being built), otherwise dropped (about 0.5 MB a video).
+ */
+type QuickFrames = SampledFrames & { stats: FrameStats[]; geoclip: WorldModelResult | null };
+
+/** What the trace says about the world model's answer. */
+function worldModelNote(result: WorldModelResult | null, located: LocateResult): Named {
+  if (!result) return { de: 'Weltmodell abgeschaltet', en: 'world model switched off' };
+  if (!result.prediction) return result.reason ?? { de: 'ohne Weltmodell', en: 'without the world model' };
+  const wm = located.diagnostics.worldModel;
+  const secs = `${(result.ms / 1000).toFixed(1).replace('.', ',')} s`;
+  const secsEn = `${(result.ms / 1000).toFixed(1)} s`;
+  if (!wm) return { de: `GeoCLIP gerechnet in ${secs}`, en: `GeoCLIP computed in ${secsEn}` };
+  const place = located.location && wm.replaced ? located.location : null;
+  const pct = (p: number): string => `${Math.round(p * 100)} %`;
+  const pctEn = (p: number): string => `${Math.round(p * 100)}%`;
+  if (place) {
+    return {
+      de: `GeoCLIP: ${place.label}, ersetzt das Ergebnis der Referenzgalerie (${pct(wm.agreeMass)} dort) · ${secs}`,
+      en: `GeoCLIP: ${place.labelEn ?? place.label}, replaces the reference gallery's result (${pctEn(wm.agreeMass)} there) · ${secsEn}`,
+    };
+  }
+  return {
+    de: `GeoCLIP bestätigt das Ergebnis der Referenzgalerie (${pct(wm.agreeMass)} im Umkreis) · ${secs}`,
+    en: `GeoCLIP confirms the reference gallery's result (${pctEn(wm.agreeMass)} around it) · ${secsEn}`,
+  };
+}
 
 export class DatumEngine {
   private readonly fixes = new Map<string, Fix>();
@@ -238,8 +281,29 @@ export class DatumEngine {
   private readonly sampled = new Map<string, QuickFrames>();
   /** One function for the whole process lifetime: prompt vectors are cached per function. */
   private readonly embedTexts = (texts: string[]): Promise<Float32Array> => this.opts.model.embedTexts(texts);
+  /** The world model, or null when there is none (see DatumEngineOptions.worldModel). */
+  private readonly world: WorldModel | null;
+  /** The process-wide world model acquired by this engine, released at stop(). */
+  private readonly ownWorld: WorldModelService | null;
+  private warmed = false;
+  /**
+   * Full fixes located while the world model's gallery was being computed: computed again once
+   * it is ready (they stay on show meanwhile and do not count as final).
+   */
+  private readonly awaitingWorld = new Set<string>();
+  private worldListening = false;
+  /** Set by compute() when the world model's gallery was still being built (read by runFull). */
+  private readonly locatedDuringBuild = new Set<string>();
 
-  constructor(private readonly opts: DatumEngineOptions) {}
+  constructor(private readonly opts: DatumEngineOptions) {
+    if (opts.worldModel === undefined) {
+      this.ownWorld = acquireWorldModel((line) => opts.log(line));
+      this.world = this.ownWorld;
+    } else {
+      this.ownWorld = null;
+      this.world = opts.worldModel;
+    }
+  }
 
   dir(videoId: string): string {
     return path.join(this.opts.store.videoDir(videoId), 'datum');
@@ -342,6 +406,12 @@ export class DatumEngine {
         this.fixes.set(info.id, withoutVersion(stored));
         // The node stopped between the quick and the full stage.
         if (stored.stage === 'quick') this.enqueue(info.id, true);
+        // Located while the world model's gallery was being computed: it stays on show and is
+        // computed again with the world model.
+        else if (stored.worldModel === 'building' && this.world) {
+          this.stale.add(info.id);
+          this.enqueue(info.id, true);
+        }
         continue;
       }
       if (stored && stored.status === 'ready' && stored.engineVersion >= OLDEST_SHOWN_VERSION) {
@@ -398,6 +468,7 @@ export class DatumEngine {
     this.fixes.delete(videoId);
     this.stale.delete(videoId);
     this.sampled.delete(videoId);
+    this.awaitingWorld.delete(videoId);
     for (let i = this.queue.length - 1; i >= 0; i--) if (this.queue[i]?.id === videoId) this.queue.splice(i, 1);
   }
 
@@ -433,9 +504,44 @@ export class DatumEngine {
   }
 
   stop(): void {
+    if (!this.stopped && this.ownWorld) releaseWorldModel(this.ownWorld);
     this.stopped = true;
     this.queue.length = 0;
     this.wake?.();
+  }
+
+  /**
+   * Starts the world model's thread (and the reading of its gallery) at the beginning of the first
+   * localisation, so that it loads while the frames are sampled.
+   */
+  private warmWorld(): void {
+    if (this.warmed || !this.world) return;
+    this.warmed = true;
+    this.world.warm();
+  }
+
+  /**
+   * Remembers a full fix located while the world model's gallery was being computed; once the
+   * gallery is ready, such fixes are computed again (in the background), and if it fails they
+   * stay as they are.
+   */
+  private awaitWorld(videoId: string): void {
+    const world = this.world;
+    if (!world) return;
+    this.awaitingWorld.add(videoId);
+    this.stale.add(videoId);
+    if (this.worldListening) return;
+    this.worldListening = true;
+    world.onGallerySettled((ready) => {
+      this.worldListening = false;
+      const ids = [...this.awaitingWorld];
+      this.awaitingWorld.clear();
+      for (const id of ids) {
+        if (!this.opts.store.get(id)) continue;
+        if (ready) this.enqueue(id, true);
+        else this.stale.delete(id);
+      }
+    });
   }
 
   private async drain(): Promise<void> {
@@ -475,9 +581,9 @@ export class DatumEngine {
   }
 
   /** Writes a finished fix next to the recording. */
-  private async persist(fix: Fix): Promise<void> {
+  private async persist(fix: Fix, worldBuilding = false): Promise<void> {
     await this.ensureDir(fix.videoId);
-    const stored: StoredFix = { ...fix, engineVersion: ENGINE_VERSION };
+    const stored: StoredFix = { ...fix, engineVersion: ENGINE_VERSION, ...(worldBuilding ? { worldModel: 'building' as const } : {}) };
     await fs.writeFile(path.join(this.dir(fix.videoId), 'fix.json'), JSON.stringify(stored));
   }
 
@@ -528,13 +634,18 @@ export class DatumEngine {
       }
       fix.elapsedMs = Date.now() - started;
       fix.truth = await this.truthFor(entry, fix.location);
-      await this.persist(fix);
+      const worldBuilding = this.locatedDuringBuild.delete(id);
+      await this.persist(fix, worldBuilding);
       this.stale.delete(id);
-      this.sampled.delete(id);
+      // Located without the world model while its gallery is built: the frames stay for the
+      // second run, which then only adds the world model's answer.
+      if (worldBuilding) this.awaitWorld(id);
+      else this.sampled.delete(id);
       this.publish(fix);
       this.opts.onFix?.(fix);
       this.opts.log(`Ortung "${entry.info.name}": ${whereText(fix)} in ${(fix.elapsedMs / 1000).toFixed(1)} s`);
     } catch (err: unknown) {
+      this.locatedDuringBuild.delete(id);
       // A deletion in the middle of the work makes it fail (frames gone); that is no error.
       if (this.gone(entry)) {
         this.forget(id);
@@ -628,6 +739,37 @@ export class DatumEngine {
     };
   }
 
+  /** Asks the world model about these frames; never rejects (null without a world model). */
+  private askWorld(jpegs: readonly Buffer[]): Promise<WorldModelResult> | null {
+    const world = this.world;
+    if (!world || jpegs.length === 0) return null;
+    return world.predict(jpegs).catch((err: unknown): WorldModelResult => {
+      const message = err instanceof Error ? err.message : String(err);
+      return { state: 'failed', prediction: null, reason: { de: `Weltmodell fehlgeschlagen: ${message}`, en: `world model failed: ${message}` }, ms: 0 };
+    });
+  }
+
+  /**
+   * Stores the world model's answer with the quick stage's frames. The JPEG bytes stay only when
+   * the full stage may still ask (gallery being built, or a failure that a new thread may not
+   * repeat); otherwise they are dropped.
+   */
+  private keepWorld(frames: QuickFrames, result: WorldModelResult | null): void {
+    frames.geoclip = result;
+    if (!result || result.state === 'ok' || result.state === 'unavailable') frames.jpegs = [];
+  }
+
+  /**
+   * The world model's answer for the full stage: the quick stage's when it had one (the same
+   * frames are never looked at twice), else asked now from the kept frames.
+   */
+  private worldFor(kept: QuickFrames): { result: Promise<WorldModelResult | null>; reused: boolean } {
+    if (kept.geoclip && (kept.geoclip.state === 'ok' || kept.geoclip.state === 'unavailable' || kept.jpegs.length === 0)) {
+      return { result: Promise.resolve(kept.geoclip), reused: true };
+    }
+    return { result: this.askWorld(kept.jpegs) ?? Promise.resolve(null), reused: false };
+  }
+
   /** Keeps the quick stage's frames for the full stage, oldest dropped first. */
   private rememberSampled(id: string, frames: QuickFrames): void {
     this.sampled.delete(id);
@@ -645,6 +787,7 @@ export class DatumEngine {
     const id = entry.info.id;
     const trace: TraceStep[] = [];
     const mark = this.marker(id, trace, true);
+    this.warmWorld();
     // The gallery waits for the model, which everything below needs.
     const gallery = await this.opts.gallery();
     const videoPath = store.sourcePath(entry);
@@ -653,15 +796,21 @@ export class DatumEngine {
     mark('Metadaten gelesen', metadataNote(meta));
     const truthVideo = await truthForName(entry.info.name);
 
+    // The world model starts on the frames as soon as they are read and works in its own thread
+    // while the image model embeds the crops and the gallery is searched.
+    const worldJob: { current: Promise<WorldModelResult> | null } = { current: null };
     const sampled = await sampleAndEmbedFrames(videoPath, model, {
       count: LOCATE_FRAMES,
       durationSec: meta?.durationSec ?? null,
       fps: meta?.fps ?? null,
       detail: 'standard',
       frameStats: true,
+      onFrames: (jpegs) => {
+        worldJob.current = this.askWorld(jpegs);
+      },
     });
     if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
-    const frames: QuickFrames = { ...sampled, stats: sampled.stats ?? [] };
+    const frames: QuickFrames = { ...sampled, stats: sampled.stats ?? [], geoclip: null };
     this.rememberSampled(id, frames);
     const crops = sampled.tiles?.frameRow.length ?? sampled.frameNumbers.length;
     mark('Bilder für die Ortung gezogen', {
@@ -669,6 +818,7 @@ export class DatumEngine {
       en: `${sampled.frameNumbers.length} frames, ${crops} crops`,
     });
 
+    const world: Promise<WorldModelResult | null> = worldJob.current ?? Promise.resolve(null);
     const located = await locate({
       videoPath,
       frameVectors: sampled.vectors,
@@ -680,8 +830,12 @@ export class DatumEngine {
       fileName: entry.info.name,
       metadata: meta,
       ...(this.opts.holdout && truthVideo ? { excludeWikidata: [truthVideo.wikidata] } : {}),
+      geoclip: world.then((r) => r?.prediction ?? null),
     });
-    mark('Mit der Referenzgalerie verglichen', placeNote(located.location, gallery.size));
+    const worldResult = await world;
+    this.keepWorld(frames, worldResult);
+    mark('Mit der Referenzgalerie verglichen', placeNote(galleryPlace(located), gallery.size));
+    mark('Weltmodell befragt', worldModelNote(worldResult, located));
     await breathe();
 
     const location = located.location;
@@ -726,6 +880,7 @@ export class DatumEngine {
     const id = entry.info.id;
     const trace: TraceStep[] = [];
     const mark = this.marker(id, trace, opts.announce);
+    this.warmWorld();
     const dim = model.dim;
     const tiles = Math.max(1, entry.info.tilesPerFrame);
     const matrix = entry.embeddings?.view() ?? null;
@@ -769,23 +924,46 @@ export class DatumEngine {
       frameNumbers,
       tiles: { vectors: tileVectors, frameRow: tileFrameRow, tile: tileIndex },
     };
+    // The world model's answer for the frames the localisation looks at (none for the analysis
+    // vectors: their pictures are not these frames).
+    let world: Promise<WorldModelResult | null> = Promise.resolve(null);
+    let worldReused = false;
+    let worldSampled = false;
     const kept = this.sampled.get(id);
     if (kept?.tiles && kept.tiles.frameRow.length > 0 && kept.dim === dim) {
       locateFrames = { frameVectors: kept.vectors, frameNumbers: kept.frameNumbers, tiles: kept.tiles };
+      const asked = this.worldFor(kept);
+      world = asked.result;
+      worldReused = asked.reused;
+      worldSampled = true;
       mark('Bilder für die Ortung gezogen', {
         de: `${kept.frameNumbers.length} Bilder, ${kept.tiles.frameRow.length} Ausschnitte, aus der Schnellortung übernommen`,
         en: `${kept.frameNumbers.length} frames, ${kept.tiles.frameRow.length} crops, taken over from the quick localisation`,
       });
     } else {
       try {
+        const worldJob: { current: Promise<WorldModelResult> | null } = { current: null };
         const sampled = await sampleAndEmbedFrames(videoPath, model, {
           count: LOCATE_FRAMES,
           durationSec: meta?.durationSec ?? null,
           fps: meta?.fps ?? null,
           detail: 'standard',
+          onFrames: (jpegs) => {
+            worldJob.current = this.askWorld(jpegs);
+          },
         });
         if (sampled.tiles && sampled.tiles.frameRow.length > 0 && sampled.dim === dim) {
           locateFrames = { frameVectors: sampled.vectors, frameNumbers: sampled.frameNumbers, tiles: sampled.tiles };
+          const asked: Promise<WorldModelResult | null> = worldJob.current ?? Promise.resolve(null);
+          world = asked;
+          worldSampled = true;
+          // While the world model's gallery is built, the frames are kept for the second run.
+          void asked.then((r) => {
+            if (r?.state !== 'building' || this.gone(entry)) return;
+            const frames: QuickFrames = { ...sampled, stats: [], geoclip: null };
+            this.keepWorld(frames, r);
+            this.rememberSampled(id, frames);
+          });
         }
         const crops = sampled.tiles?.frameRow.length ?? sampled.frameNumbers.length;
         mark('Bilder für die Ortung gezogen', {
@@ -808,8 +986,18 @@ export class DatumEngine {
       fileName: entry.info.name,
       metadata: meta,
       ...(this.opts.holdout && truthVideo ? { excludeWikidata: [truthVideo.wikidata] } : {}),
+      geoclip: world.then((r) => r?.prediction ?? null),
     });
-    mark('Mit der Referenzgalerie verglichen', placeNote(located.location, gallery.size));
+    const worldResult = await world;
+    if (worldResult?.state === 'building') this.locatedDuringBuild.add(id);
+    mark('Mit der Referenzgalerie verglichen', placeNote(galleryPlace(located), gallery.size));
+    const worldNote = this.world && !worldSampled ? { de: 'keine gezogenen Bilder für das Weltmodell', en: 'no sampled frames for the world model' } : worldModelNote(worldResult, located);
+    mark(
+      'Weltmodell befragt',
+      worldReused && worldResult?.prediction
+        ? { de: `aus der Schnellortung übernommen · ${worldNote.de}`, en: `taken over from the quick localisation · ${worldNote.en}` }
+        : worldNote,
+    );
 
     // Spaces from keyframes: depth → walkable grid, skyline.
     const keyframes: Keyframe[] = [];
@@ -954,8 +1142,16 @@ export class DatumEngine {
 }
 
 function withoutVersion(stored: StoredFix): Fix {
-  const { engineVersion: _version, ...fix } = stored;
+  const { engineVersion: _version, worldModel: _world, ...fix } = stored;
   return fix;
+}
+
+/**
+ * The place the reference gallery gave (what the trace step of the gallery comparison names);
+ * the file's GPS when that decided. The world model's say follows in a step of its own.
+ */
+function galleryPlace(located: LocateResult): FixLocation | null {
+  return located.diagnostics.method === 'metadata' ? located.location : located.diagnostics.gallery;
 }
 
 function whereText(fix: Fix): string {

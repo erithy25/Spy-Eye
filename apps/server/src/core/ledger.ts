@@ -21,8 +21,14 @@ export interface LedgerBody {
   mandateId: string | null;
   /** Dotted action name, e.g. `search.query`. */
   action: string;
-  /** One human-readable line. */
+  /** One human-readable line, in German: the wording on record. */
   summary: string;
+  /**
+   * The same line in English, for the console's English view. Optional: entries written before it
+   * existed have none, and an entry without it hashes exactly as before (canonical() leaves
+   * absent keys out). Where present it is part of the hashed body like every other field.
+   */
+  summaryEn?: string;
   data: Record<string, unknown>;
 }
 
@@ -66,6 +72,7 @@ function bodyOf(entry: LedgerEntry): LedgerBody {
     mandateId: entry.mandateId,
     action: entry.action,
     summary: entry.summary,
+    ...(entry.summaryEn !== undefined ? { summaryEn: entry.summaryEn } : {}),
     data: entry.data,
   };
 }

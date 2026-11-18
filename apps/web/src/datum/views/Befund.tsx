@@ -4,9 +4,9 @@ import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker } from '../../map/MapCanvas';
 import { useAction } from '../../ui';
 import { recompute, rel, fetchCountries, type CountryShape } from '../api';
-import { caseLabel, countryText, placeText, stageOf } from '../labels';
-import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
-import { KIND_METHOD } from '../panel/common';
+import { caseLabel, countryText, placeText, radiusText, stageOf } from '../labels';
+import { CandidateList, CheckLinks, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
+import { kindMethod } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps } from './Ortung';
 
@@ -86,7 +86,8 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
         <div className="dt-result-place">
           <span className="label">{t('Ort')}</span>
           <b>{loc ? placeText(lang, loc, fix) : t('Ort unbestimmt')}</b>
-          <span className="low">{loc ? [countryText(lang, loc), `± ${kmText(loc.radiusKm, locale)}`].filter((x) => x !== '').join(' · ') : ''}</span>
+          <span className="low">{loc ? [countryText(lang, loc), radiusText(lang, loc)].filter((x) => x !== '').join(' · ') : ''}</span>
+          {loc && <CheckLinks lat={loc.lat} lon={loc.lon} />}
         </div>
         <div className="dt-result-time">
           <span className="label">{t('Uhrzeit')}</span>
@@ -99,7 +100,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
         <div className="dt-result-conf">
           <span className="label">{t('Konfidenz')}</span>
           <b>{loc ? formatScore(loc.confidence) : '–'}</b>
-          <span className="low">{loc ? t(KIND_METHOD[loc.method]) : ''}</span>
+          <span className="low">{loc ? t(kindMethod(loc.method)) : ''}</span>
         </div>
         {fix.truth?.errorKm != null && (
           <div className="dt-result-truth">
@@ -149,7 +150,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
 
         <div className="dt-col">
           <section className="dt-section">
-            <EvidenceList evidence={fix.evidence} />
+            <EvidenceList evidence={fix.evidence} at={loc} />
           </section>
           {trace.length > 0 && (
             <section className="dt-section">

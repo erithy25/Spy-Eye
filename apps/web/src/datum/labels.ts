@@ -6,6 +6,7 @@ import type { Fix, FixCandidate, FixLocation } from '../../../server/src/datum/c
 import type { VideoInfo } from '../api';
 import { VIDEO_FILE_PATTERN } from '../format';
 import type { useLang } from '../i18n';
+import { kmText } from './useFixes';
 
 type Lang = ReturnType<typeof useLang>;
 
@@ -33,6 +34,16 @@ export function placeText(lang: Lang, place: Pick<FixLocation, 'label' | 'countr
 /** Country of a fix or candidate in the console language, or '' when unknown. */
 export function countryText(lang: Lang, place: Pick<FixCandidate, 'country'> & { countryName?: string | null }): string {
   return place.country ? lang.region(place.country, place.countryName ?? null) : '';
+}
+
+/**
+ * The radius of a fix as the console states it. An answer of the world model stands for a region
+ * (often hundreds of kilometres), not a point: it says so, so that its circle is not read as a
+ * place that was pinned down.
+ */
+export function radiusText(lang: Lang, loc: Pick<FixLocation, 'radiusKm' | 'method'>): string {
+  const r = kmText(loc.radiusKm, lang.locale);
+  return loc.method === 'worldmodel' ? lang.t('Weltmodell: Region ± {r}', { r }) : `± ${r}`;
 }
 
 export type Stage = 'quick' | 'full';

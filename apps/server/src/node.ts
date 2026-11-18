@@ -32,6 +32,17 @@ import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, S
 
 export const VERSION = '0.5.0';
 
+/** A text in both languages: `de` is what is recorded, `en` its English twin. */
+export interface Bilingual {
+  de: string;
+  en: string;
+}
+
+/** The summary fields of a ledger entry from a German line or a pair. */
+export function ledgerSummary(summary: string | Bilingual): { summary: string; summaryEn?: string } {
+  return typeof summary === 'string' ? { summary } : { summary: summary.de, summaryEn: summary.en };
+}
+
 /** How often the witnessed ledger head of one peer is written to this node's own ledger. */
 const WITNESS_INTERVAL_MS = 15 * 60 * 1000;
 
@@ -86,6 +97,7 @@ export interface SeedFile {
     kind: SourceKind;
     owner: string;
     description: string;
+    descriptionEn?: string;
     lat: number;
     lon: number;
     shared: boolean;
@@ -109,6 +121,18 @@ export function seedRecordingKeys(seed: SeedFile): Set<string> {
   for (const source of seed.sources) for (const clip of source.clips) keys.add(seedKey(source.id, clip.name ?? clip.file));
   return keys;
 }
+
+/** The mandate a fresh demonstration node gets, in both languages. */
+const TRIAL_MANDATE = {
+  title: 'Erprobung',
+  titleEn: 'Evaluation',
+  legalBasis: 'Kein Echtbetrieb: Erprobung mit eigenem, frei verwendbarem Material',
+  legalBasisEn: 'No live operation: trial with own, freely usable material',
+  purpose:
+    'Funktionsprüfung des Systems mit eigenem, frei verwendbarem Material ohne personenbezogene Echtdaten. Beschreibungen von Personen nach Geschlecht, Altersgruppe oder Kleidung sind für diese Erprobung ausdrücklich zugelassen.',
+  purposeEn:
+    'Functional test of the system with own, freely usable material without real personal data. Descriptions of persons by sex, age group or clothing are expressly permitted for this trial.',
+} as const;
 
 /** Things every node in this process shares: the models are loaded once. */
 export interface SharedRuntime {
@@ -219,6 +243,7 @@ export class PlatformNode {
           mandateId: null,
           action: 'ledger.witness',
           summary: `Protokollstand von ${peer.name} bezeugt`,
+          summaryEn: `Ledger state of ${peer.name} witnessed`,
           data: { peer: peer.id, head },
         });
       },
@@ -400,13 +425,20 @@ export class PlatformNode {
   /** Creates the exercise mandate and the scenario's standard watches (once). */
   private async installExerciseDefaults(definition: ScenarioDefinition): Promise<void> {
     const mandateId = `md_exercise_${definition.id}`;
+    const { legalBasisEn, purposeEn } = definition.mandate;
+    if (this.mandates.get(mandateId) && legalBasisEn !== undefined && purposeEn !== undefined) {
+      // Created before the script had English texts: add them while the German ones are unchanged.
+      this.mandates.addEnglish(mandateId, { legalBasis: definition.mandate.legalBasis, legalBasisEn, purpose: definition.mandate.purpose, purposeEn });
+    }
     if (!this.mandates.get(mandateId)) {
       this.mandates.create(
         {
           title: definition.mandate.title,
           titleEn: definition.mandate.titleEn,
           legalBasis: definition.mandate.legalBasis,
+          ...(legalBasisEn !== undefined ? { legalBasisEn } : {}),
           purpose: definition.mandate.purpose,
+          ...(purposeEn !== undefined ? { purposeEn } : {}),
           issuedBy: definition.mandate.issuedBy,
           validFrom: Date.now(),
           validTo: null,
@@ -421,6 +453,7 @@ export class PlatformNode {
         mandateId,
         action: 'mandate.create',
         summary: `Übungsmandat „${definition.mandate.title}“ angelegt`,
+        summaryEn: `Exercise mandate "${definition.mandate.titleEn || definition.mandate.title}" created`,
         data: { legalBasis: definition.mandate.legalBasis },
       });
     }
@@ -480,6 +513,23 @@ export class PlatformNode {
   }
 
   /**
+   * English names and descriptions of seeded sources stored before the seed had them (the archive
+   * is seeded once, so a node seeded earlier would otherwise never get them).
+   */
+  private async addSeedEnglish(): Promise<void> {
+    const dir = this.cfg.seedDir;
+    if (!dir) return;
+    let seed: SeedFile | null;
+    try {
+      seed = await readJson<SeedFile | null>(path.join(dir, 'seed.json'), null);
+    } catch {
+      // An unreadable seed file is reported by seedArchive; the English texts are a nicety.
+      return;
+    }
+    for (const source of seed?.sources ?? []) this.sources.addEnglish(source.id, source);
+  }
+
+  /**
    * Fills the archive of a fresh demonstration node from its seed directory (once). Peers in a
    * demonstration need footage of their own so that federated questions have something to find.
    */
@@ -501,6 +551,7 @@ export class PlatformNode {
           kind: source.kind,
           owner: source.owner,
           description: source.description,
+          ...(source.descriptionEn !== undefined ? { descriptionEn: source.descriptionEn } : {}),
           lat: source.lat,
           lon: source.lon,
           mode: 'archive',
@@ -547,6 +598,7 @@ export class PlatformNode {
       mandateId: null,
       action: 'archive.seed',
       summary: `Vorführbestand eingespielt: ${count} Aufzeichnungen`,
+      summaryEn: `Demonstration archive loaded: ${count} ${count === 1 ? 'recording' : 'recordings'}`,
       data: { recordings: count, sources: seed.sources.map((s) => s.id) },
     });
     this.log(`Seeded archive with ${count} recordings`);
@@ -603,14 +655,17 @@ export class PlatformNode {
     return can(ctx.user.role, permission);
   }
 
-  /** Writes a ledger entry on behalf of a user. */
-  record(ctx: RequestContext, action: string, summary: string, data: Record<string, unknown> = {}): Promise<unknown> {
+  /**
+   * Writes a ledger entry on behalf of a user. `summary` in both languages: the German line is the
+   * wording on record, the English one goes into `summaryEn` for the console's English view.
+   */
+  record(ctx: RequestContext, action: string, summary: string | Bilingual, data: Record<string, unknown> = {}): Promise<unknown> {
     return this.ledger.append({
       actor: ctx.user.id,
       role: ctx.user.role,
       mandateId: ctx.mandate?.id ?? null,
       action,
-      summary,
+      ...ledgerSummary(summary),
       data,
     });
   }
@@ -689,6 +744,7 @@ export class PlatformNode {
           mandateId: null,
           action: 'retention.delete',
           summary: `Aufzeichnung „${entry.info.name}“ nach Ablauf der Löschfrist (${days} Tage) gelöscht`,
+          summaryEn: `Recording "${entry.info.name}" deleted after the retention period (${days} ${days === 1 ? 'day' : 'days'})`,
           data: { videoId: entry.info.id, capturedAt: entry.info.capturedAt, days },
         });
       }
@@ -718,11 +774,7 @@ export class PlatformNode {
       // A fresh demonstration node gets a trial mandate so that own test footage can be evaluated.
       this.mandates.create(
         {
-          title: 'Erprobung',
-          titleEn: 'Evaluation',
-          legalBasis: 'Kein Echtbetrieb: Erprobung mit eigenem, frei verwendbarem Material',
-          purpose:
-            'Funktionsprüfung des Systems mit eigenem, frei verwendbarem Material ohne personenbezogene Echtdaten. Beschreibungen von Personen nach Geschlecht, Altersgruppe oder Kleidung sind für diese Erprobung ausdrücklich zugelassen.',
+          ...TRIAL_MANDATE,
           issuedBy: 'System',
           validFrom: Date.now(),
           validTo: null,
@@ -738,10 +790,14 @@ export class PlatformNode {
         mandateId: 'md_erprobung',
         action: 'mandate.create',
         summary: 'Mandat „Erprobung“ für den Testbetrieb angelegt',
+        summaryEn: 'Mandate "Evaluation" created for test operation',
         data: {},
       });
     }
+    // Stored before the mandate had English texts.
+    this.mandates.addEnglish('md_erprobung', TRIAL_MANDATE);
     await this.sources.open();
+    await this.addSeedEnglish();
     try {
       await this.datum.truths?.open();
     } catch (err: unknown) {
@@ -817,6 +873,7 @@ export class PlatformNode {
       mandateId: null,
       action: 'node.start',
       summary: `Knoten ${this.cfg.name} gestartet (Version ${VERSION})`,
+      summaryEn: `Node ${this.cfg.name} started (version ${VERSION})`,
       data: { videos: this.store.all().length, masking: this.shared.faces.ready },
     });
   }

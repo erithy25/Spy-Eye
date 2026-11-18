@@ -18,8 +18,11 @@ import {
   refineStreetLevel,
   selectSpread,
   splitBbox,
+  streetImagePath,
   streetLevelEvidence,
+  publicAuthor,
   usableLicense,
+  withStreetImagePaths,
   type FetchLike,
   type StreetLevelListing,
   type StreetLevelOptions,
@@ -347,7 +350,7 @@ test('a standing-out picture is found, located, attributed and cached', async ()
     assert.ok((result.stats?.gap ?? 0) > 0.9);
     // User-Agent on every request, no credential anywhere.
     for (const s of seen) {
-      assert.match(s.headers['User-Agent'] ?? '', /^DATUM-Erprobung\/0\.5/);
+      assert.match(s.headers['User-Agent'] ?? '', /^DATUM\/0\.5 \(Ortung von Videos\)$/);
       assert.equal(s.headers['Authorization'], undefined);
     }
     const thumbs = seen.filter((s) => s.url.startsWith('https://thumbs.example.org/')).length;
@@ -363,8 +366,18 @@ test('a standing-out picture is found, located, attributed and cached', async ()
     assert.equal(evidence.length, Math.min(3, result.top.length));
     const first = evidence[0];
     assert.ok(first);
-    assert.equal(first.kind, 'landmark');
-    assert.equal(first.refImage, 'https://thumbs.example.org/red-1/thumb.jpg');
+    assert.equal(first.kind, 'streetlevel');
+    // The remote thumbnail is only named; the console gets the node's proxy path from the engine.
+    assert.equal(first.refImage, undefined);
+    assert.equal(first.refSource, 'https://thumbs.example.org/red-1/thumb.jpg');
+    assert.match(first.refUrl ?? '', /^https:\/\/api\.panoramax\.xyz\/#focus=pic&pic=red-1/);
+    const proxied = withStreetImagePaths('vid_abc', evidence);
+    assert.deepEqual(
+      proxied.map((e) => e.refImage),
+      evidence.map((_e, i) => streetImagePath('vid_abc', i)),
+    );
+    assert.equal(proxied[0]?.refImage, '/api/datum/fixes/vid_abc/street/0');
+    for (const e of evidence) assert.ok(e.label && e.labelEn && e.detail && e.detailEn);
     assert.equal(first.refLabel, '© jdupont, CC BY-SA 4.0, Panoramax');
     assert.ok(first.labelEn && first.detailEn && first.detail.includes('Panoramax'));
     assert.ok(Math.abs(evidence.reduce((s, e) => s + e.weight, 0) - result.location.confidence) < 1e-9);
@@ -649,4 +662,138 @@ test('a large Mapillary search box is split below 0.01 square degrees', async ()
   }
   const whole = bboxAreaDeg2(planSearchTiles(CENTRE, 5, 1)[0] as readonly [number, number, number, number]);
   assert.ok(Math.abs(total - whole) < 1e-6);
+});
+
+// ------------------------------------------------------------------ key from the settings, redirects, address checks, attribution
+
+test('the Mapillary key comes from the caller or the node settings; env still wins inside the settings', async () => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-streetlevel-key-'));
+  const saved = process.env['MAPILLARY_TOKEN'];
+  delete process.env['MAPILLARY_TOKEN'];
+  try {
+    const seen: { url: string; auth: string | undefined }[] = [];
+    const fetchImpl: FetchLike = async (url, init) => {
+      seen.push({ url, auth: (init.headers as Record<string, string>)['Authorization'] });
+      return url.startsWith('https://graph.mapillary.com/') ? new Response(JSON.stringify({ data: [] }), { status: 200 }) : new Response(JSON.stringify({ features: [] }), { status: 200 });
+    };
+    const input = { frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 0.5 }], model: new ColourEmbedder(), options: { ...BASE, providers: ['mapillary'] as const, maxTilesPerCandidate: 1 } };
+
+    // Given by the caller (what the engine does with settings.mapillaryKey()).
+    await refineStreetLevel(input, { fetch: fetchImpl, mapillaryKey: TOKEN });
+    assert.ok(seen.some((s) => s.auth === `OAuth ${TOKEN}`));
+
+    // From the settings of the node: nothing stored, no request to Mapillary, and the note says why.
+    seen.length = 0;
+    const none = await refineStreetLevel(input, { fetch: fetchImpl, dataDir });
+    assert.equal(seen.length, 0);
+    assert.match(none.providers[0]?.note ?? '', /Kein Mapillary-Schlüssel hinterlegt/);
+    assert.match(none.providers[0]?.noteEn ?? '', /No Mapillary key stored/);
+
+    // Stored by an operator: used.
+    const { datumSettings } = await import('../src/datum/settings.js');
+    const store = datumSettings(dataDir);
+    const stored = await store.setMapillaryKey(TOKEN);
+    assert.ok('view' in stored);
+    await refineStreetLevel(input, { fetch: fetchImpl, dataDir });
+    assert.ok(seen.some((s) => s.auth === `OAuth ${TOKEN}`));
+
+    // MAPILLARY_TOKEN in the environment wins over the stored key.
+    seen.length = 0;
+    process.env['MAPILLARY_TOKEN'] = 'MLY|99|fromtheenvironment000';
+    await refineStreetLevel(input, { fetch: fetchImpl, dataDir });
+    assert.ok(seen.length > 0 && seen.every((s) => s.auth === 'OAuth MLY|99|fromtheenvironment000'));
+
+    // A null key from the caller means none, whatever is stored.
+    seen.length = 0;
+    await refineStreetLevel(input, { fetch: fetchImpl, dataDir, mapillaryKey: null });
+    assert.equal(seen.length, 0);
+  } finally {
+    if (saved === undefined) delete process.env['MAPILLARY_TOKEN'];
+    else process.env['MAPILLARY_TOKEN'] = saved;
+    await fs.rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('redirects are followed one by one, re-checked, and never carry the key to another host', async () => {
+  const red = await jpeg(230, 20, 20);
+  const grey = await jpeg(120, 120, 120);
+  const pictures = fakePictures();
+  const seen: { url: string; headers: Record<string, string>; redirect: RequestRedirect | undefined }[] = [];
+  const fetchImpl: FetchLike = async (url, init) => {
+    seen.push({ url, headers: { ...(init.headers as Record<string, string>) }, redirect: init.redirect });
+    const u = new URL(url);
+    if (u.hostname === 'graph.mapillary.com') {
+      const b = bboxOf(url);
+      const data = pictures
+        .filter((p) => inBbox(p, b))
+        .map((p) => ({ id: String(1000 + pictures.indexOf(p)), computed_geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, thumb_256_url: `https://thumbs.mapillary.example/${p.red ? 'red' : 'grey'}-${p.id}.jpg` }));
+      return new Response(JSON.stringify({ data }), { status: 200 });
+    }
+    // The thumbnail host sends every picture on to a storage host; the red one goes via an internal address.
+    if (u.hostname === 'thumbs.mapillary.example') {
+      const target = u.pathname.startsWith('/red') ? 'https://10.0.0.7/red.jpg' : `https://storage.example.net${u.pathname}`;
+      return new Response(null, { status: 302, headers: { location: target } });
+    }
+    if (u.hostname === 'storage.example.net') return new Response(new Uint8Array(u.pathname.startsWith('/red') ? red : grey), { status: 200, headers: { 'content-type': 'image/jpeg' } });
+    if (u.hostname === '10.0.0.7') return new Response(new Uint8Array(red), { status: 200, headers: { 'content-type': 'image/jpeg' } });
+    return new Response('?', { status: 404 });
+  };
+  const result = await refineStreetLevel(
+    { frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 1.5 }], model: new ColourEmbedder(), options: { ...BASE, providers: ['mapillary'] } },
+    { fetch: fetchImpl, mapillaryKey: TOKEN },
+  );
+  // The red picture was never fetched from the internal address: no match from it.
+  assert.equal(seen.filter((s) => s.url.startsWith('https://10.')).length, 0);
+  assert.ok(seen.filter((s) => s.url.startsWith('https://storage.example.net/')).length > 0);
+  assert.notEqual(result.top[0]?.id, '1020');
+  for (const s of seen) {
+    assert.equal(s.redirect, 'manual');
+    if (!s.url.startsWith('https://graph.mapillary.com/')) assert.equal(s.headers['Authorization'], undefined, `key sent to ${s.url}`);
+  }
+
+  // More than two hops are refused.
+  let hops = 0;
+  const loop: FetchLike = async (url) => {
+    if (url.startsWith('https://api.panoramax.xyz/')) {
+      return new Response(JSON.stringify({ type: 'FeatureCollection', features: pictures.slice(0, 1).map((p) => panoramaxFeature(p)) }), { status: 200 });
+    }
+    hops++;
+    return new Response(null, { status: 301, headers: { location: `https://thumbs.example.org/hop-${hops}.jpg` } });
+  };
+  await refineStreetLevel({ frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 1.5 }], model: new ColourEmbedder(), options: BASE }, { fetch: loop, env: {} });
+  assert.ok(hops >= 1 && hops <= 3, `${hops} requests for one picture`);
+});
+
+test('with an address check, hosts that resolve to internal addresses are not asked', async () => {
+  const { fetchImpl, seen } = await fakeServices();
+  const result = await refineStreetLevel(
+    { frameVectors: landmarkFrames(), dim: 8, candidates: [{ ...CENTRE, radiusKm: 1.5 }], model: new ColourEmbedder(), options: BASE },
+    { fetch: fetchImpl, env: {}, lookup: async (host) => (host === 'thumbs.example.org' ? ['192.168.1.20'] : ['203.0.114.10']) },
+  );
+  assert.equal(seen.filter((s) => s.url.startsWith('https://thumbs.example.org/')).length, 0);
+  assert.equal(result.matched, false);
+  assert.ok(seen.some((s) => s.url.startsWith('https://api.panoramax.xyz/')));
+});
+
+test('a producer name that is an e-mail address is replaced by the instance in the attribution', () => {
+  assert.equal(publicAuthor('jdupont', 'IGN'), 'jdupont');
+  assert.equal(publicAuthor('jean.dupont@example.fr', 'IGN'), 'IGN');
+  assert.equal(publicAuthor('Jean <jean@example.fr>', null), null);
+  assert.equal(publicAuthor(null, 'IGN'), null);
+  const withHost = {
+    ...panoramaxFeature({ id: 'mail-1', lat: 48.85, lon: 2.29, red: false }),
+    providers: [
+      { name: 'IGN', roles: ['host', 'licensor'] },
+      { name: 'jean.dupont@example.fr', roles: ['producer'] },
+    ],
+  };
+  const withoutHost = { ...panoramaxFeature({ id: 'mail-2', lat: 48.85, lon: 2.29, red: false }), providers: [{ name: 'someone@example.org', roles: ['producer'] }] };
+  const [a, b] = parsePanoramaxSearch({ type: 'FeatureCollection', features: [withHost, withoutHost] });
+  assert.equal(a?.author, 'IGN');
+  assert.equal(a?.attribution, '© IGN, CC BY-SA 4.0, Panoramax');
+  assert.equal(b?.author, 'thumbs.example.org');
+  for (const p of [a, b]) assert.ok(!JSON.stringify(p).includes('@'), JSON.stringify(p));
+  const mly = parseMapillarySearch({ data: [{ id: '5', computed_geometry: { type: 'Point', coordinates: [2.29, 48.85] }, thumb_256_url: 'https://scontent.example.net/a.jpg', creator: { username: 'x@y.example' } }] });
+  assert.equal(mly[0]?.author, null);
+  assert.equal(mly[0]?.attribution, 'CC BY-SA 4.0, Mapillary');
 });

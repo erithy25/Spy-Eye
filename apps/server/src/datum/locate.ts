@@ -9,6 +9,12 @@
  *   3. Zero-shot country prior — the text tower is asked which country the frames look like; it
  *      weighs the candidates softly and carries the answer alone when retrieval finds nothing.
  *
+ *   4. World model (GeoCLIP, see geoclip.ts) — the frames scored against 100 000 places on Earth.
+ *      Where it puts almost none of its probability near the gallery's answer (less than
+ *      geoclip.minAgree within geoclip.agreeKm), its own best point becomes the answer; otherwise
+ *      the gallery's answer stays and GeoCLIP confirms it. It reaches places the gallery has no
+ *      picture of, which is where the gallery alone fails.
+ *
  * The confidence is meant literally: the estimated probability that the true place lies within
  * the stated radius. It is a logistic function of the match strength and the margin to the
  * second-best place, fitted on one half of the DATUM test videos and checked on the other.
@@ -22,6 +28,7 @@ import { decodeFrame, tileLayout, writeTile, type PixelRect } from '../ml/prepro
 import type { DetailLevel } from '../types.js';
 import type { CountryProb, Evidence, FixCandidate, FixLocation } from './contract.js';
 import { galleryImageUrl, type Gallery, type GalleryNeighbour, type ImageEmbedder } from './gallery.js';
+import { massWithin, type GeoclipPrediction } from './geoclip.js';
 import { filenameHints, readMetadata, type FilenameHints, type VideoMetadata } from './metadata.js';
 import { frameStatsFromJpeg, type FrameStats } from './time.js';
 import { DEFAULT_PRIOR_PARAMS, greatCircleKm, loadWorld, type CountryPriorParams, type EmbedTexts, type World } from './world.js';
@@ -91,7 +98,8 @@ export interface LocateParams {
   /**
    * Logistic model of P(error <= radius) over the best similarity, the margin to the second
    * mode, the share of the best mode, indicators of a country- or continent-level answer and the
-   * probability of the chosen country (or continent).
+   * probability of the chosen country (or continent); with the world model also an indicator of
+   * its answer, how concentrated it is, and how much of its mass confirms a gallery answer.
    */
   confidence: {
     bias: number;
@@ -103,6 +111,35 @@ export interface LocateParams {
     continent: number;
     countryP: number;
     agreement: number;
+    worldModel: number;
+    concentration: number;
+    agreeMass: number;
+  };
+  /**
+   * Fusion with the world model (the "agree" recipe of scripts/datum/evaluateGeoclip.ts, chosen
+   * on the train half: docs/measurements/datum-geoclip.json).
+   */
+  geoclip: {
+    /** The gallery's answer stands when GeoCLIP puts at least minAgree of its mass within agreeKm of it. */
+    agreeKm: number;
+    minAgree: number;
+    /** Tiers of the gallery's answer that GeoCLIP may replace (no answer at all counts as 'continent'). */
+    replaceTiers: readonly RadiusTier[];
+    /** GeoCLIP's mass within this distance of its answer is its concentration (sets the radius). */
+    concentrationKm: number;
+    /** Stated radius of a GeoCLIP answer by concentration, strongest first; the last starts at 0. */
+    radius: readonly { minConcentration: number; radiusKm: number }[];
+    /** GeoCLIP's modes join the candidates when farther than this from every candidate (km). */
+    candidateKm: number;
+    /** Most GeoCLIP modes added to the candidates, and the least mass a mode needs for it. */
+    candidateModes: number;
+    candidateMinMass: number;
+    /**
+     * The confidence model used when a prediction is there (fitted on the fused train answers).
+     * Without one (no weights, gallery still being built) the gallery's own model above applies,
+     * which was fitted without GeoCLIP: each is calibrated for the situation it was fitted in.
+     */
+    confidence: LocateParams['confidence'];
   };
 }
 
@@ -133,8 +170,54 @@ export const DEFAULT_LOCATE_PARAMS: LocateParams = {
   agreementMin: 0,
   radiusKm: { strong: 3, recognised: 7500, similar: 1500, countryFactor: 3, continentFactor: 1 },
   prior: DEFAULT_PRIOR_PARAMS,
-  confidence: { bias: 0.157, topSim: 0.295, gap: -0.077, margin: -0.596, share: 0.324, region: 1.086, continent: -0.952, countryP: 1.328, agreement: -0.119 },
+  confidence: {
+    bias: 0.157,
+    topSim: 0.295,
+    gap: -0.077,
+    margin: -0.596,
+    share: 0.324,
+    region: 1.086,
+    continent: -0.952,
+    countryP: 1.328,
+    agreement: -0.119,
+    worldModel: 0,
+    concentration: 0,
+    agreeMass: 0,
+  },
+  geoclip: {
+    agreeKm: 200,
+    minAgree: 0.05,
+    replaceTiers: ['strong', 'recognised', 'similar', 'country', 'continent'],
+    concentrationKm: 25,
+    radius: [
+      { minConcentration: 0.2, radiusKm: 25 },
+      { minConcentration: 0, radiusKm: 1500 },
+    ],
+    candidateKm: 25,
+    candidateModes: 3,
+    candidateMinMass: 0.02,
+    confidence: {
+      bias: 1.572,
+      topSim: 0.333,
+      gap: -0.015,
+      margin: -0.56,
+      share: 0.052,
+      region: 0.237,
+      continent: 0,
+      countryP: 0.335,
+      agreement: -0.589,
+      worldModel: -0.939,
+      concentration: 0.123,
+      agreeMass: 1.011,
+    },
+  },
 };
+
+/** Stated radius of a world-model answer of the given concentration (see LocateParams.geoclip). */
+export function worldModelRadiusKm(tiers: LocateParams['geoclip']['radius'], concentration: number): number {
+  for (const t of tiers) if (concentration >= t.minConcentration) return t.radiusKm;
+  return tiers[tiers.length - 1]?.radiusKm ?? 1500;
+}
 
 export interface LocateInput {
   videoPath: string;
@@ -160,6 +243,12 @@ export interface LocateInput {
   fileName?: string;
   /** The file's tags when the caller has read them already (null: none); read from the file otherwise. */
   metadata?: VideoMetadata | null;
+  /**
+   * The world model's prediction for the same frames (compact, see compactPrediction), or a
+   * promise of it: it is awaited only after the gallery search, so the two run side by side
+   * (the world model in its thread, the search on this one). null or absent: without it.
+   */
+  geoclip?: GeoclipPrediction | null | Promise<GeoclipPrediction | null>;
 }
 
 export interface LocateResult {
@@ -173,8 +262,8 @@ export interface LocateResult {
 
 export interface LocateDiagnostics {
   features: ConfidenceFeatures;
-  /** Granularity of the visual answer; null when there is none. */
-  level: 'landmark' | 'country' | 'continent' | null;
+  /** Granularity of the visual answer ('worldmodel': GeoCLIP's point); null when there is none. */
+  level: 'landmark' | 'country' | 'continent' | 'worldmodel' | null;
   /** Evidence tier that sets the radius (see LocateParams.radiusKm); null without an answer. */
   radiusTier: RadiusTier | null;
   /** The evidence-based part of the radius: spread of the supporting references (landmark
@@ -186,9 +275,23 @@ export interface LocateDiagnostics {
   topSimilarity: number;
   margin: number;
   share: number;
-  method: 'metadata' | 'landmark' | 'region' | 'none';
-  /** The visual estimate, also when metadata decided the location. */
+  method: 'metadata' | 'landmark' | 'region' | 'worldmodel' | 'none';
+  /** The visual estimate (after the world model), also when metadata decided the location. */
   visual: FixLocation | null;
+  /** The gallery's own answer, before the world model had its say. */
+  gallery: FixLocation | null;
+  /** What the world model did; null without a prediction. */
+  worldModel: {
+    /** Whether its point replaced the gallery's answer. */
+    replaced: boolean;
+    /** Its mass within agreeKm of the gallery's answer (0 without one). */
+    agreeMass: number;
+    /** Its mass within concentrationKm of its own answer. */
+    concentration: number;
+    /** Mass of its strongest mode. */
+    modeMass: number;
+    best: { lat: number; lon: number };
+  } | null;
   zeroShotTop: CountryProb[];
 }
 
@@ -361,7 +464,8 @@ function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
 }
 
-export type RadiusTier = 'strong' | 'recognised' | 'similar' | 'country' | 'continent';
+/** Evidence tier of the stated radius; 'worldmodel' for an answer of GeoCLIP's (see LocateParams.geoclip). */
+export type RadiusTier = 'strong' | 'recognised' | 'similar' | 'country' | 'continent' | 'worldmodel';
 
 /** Share of the rows whose best match lies within `km` of a point. */
 export function frameAgreement(rows: readonly GalleryNeighbour[][], lat: number, lon: number, km = 25): number {
@@ -390,20 +494,21 @@ export interface ConfidenceFeatures {
   countryP: number;
   /** Share of the frames whose best match lies within 25 km of the answer. */
   agreement: number;
+  /** 1 when the answer is the world model's point. */
+  worldModel: number;
+  /** For a world-model answer: its mass within concentrationKm of the answer; else 0. */
+  concentration: number;
+  /** For a gallery answer the world model confirmed: its mass within agreeKm of it; else 0. */
+  agreeMass: number;
 }
+
+/** The feature names of the confidence model, in a fixed order (fit and report). */
+export const CONFIDENCE_FEATURES = ['topSim', 'gap', 'margin', 'share', 'region', 'continent', 'countryP', 'agreement', 'worldModel', 'concentration', 'agreeMass'] as const;
 
 /** P(true place within the radius), clamped: nothing visual is ever certain. */
 export function confidenceFrom(f: ConfidenceFeatures, c: LocateParams['confidence']): number {
-  const z =
-    c.bias +
-    c.topSim * f.topSim +
-    c.gap * f.gap +
-    c.margin * f.margin +
-    c.share * f.share +
-    c.region * f.region +
-    c.continent * f.continent +
-    c.countryP * f.countryP +
-    c.agreement * f.agreement;
+  let z = c.bias;
+  for (const k of CONFIDENCE_FEATURES) z += c[k] * f[k];
   return Math.min(0.95, Math.max(0.02, sigmoid(z)));
 }
 
@@ -441,6 +546,8 @@ export interface LocateEvidence {
   frameNumbers: readonly number[];
   metadata: VideoMetadata | null;
   hints: FilenameHints | null;
+  /** The world model's prediction for the same frames; null or absent: without it. */
+  geoclip?: GeoclipPrediction | null;
 }
 
 /** ISO code of a reference: the gallery's own code if it is one, else from the coordinates. */
@@ -658,7 +765,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   const margin = first ? (second ? 1 - second.score / first.score : 1) : 0;
   const share = first && totalScore > 0 ? first.score / totalScore : 0;
 
-  const candidates: FixCandidate[] = scored.slice(0, params.maxCandidates).map((c) => {
+  let candidates: FixCandidate[] = scored.slice(0, params.maxCandidates).map((c) => {
     const spread = weightedSpreadKm(
       c.mode.members.map((j) => refs[j] as WeightedRef),
       c.mode.lat,
@@ -679,7 +786,10 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
 
   const continents = continentPosterior(world, countries);
   let agreement = 0;
-  const features = (level: 'landmark' | 'country' | 'continent'): ConfidenceFeatures => ({
+  // Set by the world model below (0 without it, which leaves the model as it was before it).
+  let agreeMass = 0;
+  let concentration = 0;
+  const features = (level: 'landmark' | 'country' | 'continent' | 'worldmodel'): ConfidenceFeatures => ({
     topSim: topSimilarity,
     gap: topGap,
     margin,
@@ -688,11 +798,16 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     continent: level === 'continent' ? 1 : 0,
     countryP: level === 'continent' ? (continents[0]?.p ?? 0) : (countries[0]?.p ?? 0),
     agreement,
+    worldModel: level === 'worldmodel' ? 1 : 0,
+    concentration: level === 'worldmodel' ? concentration : 0,
+    agreeMass: level === 'worldmodel' ? 0 : agreeMass,
   });
   let radiusTier: RadiusTier | null = null;
   let radiusBaseKm = 0;
-  let level: 'landmark' | 'country' | 'continent' = 'landmark';
-  const confidenceOf = (l: typeof level): number => confidenceFrom(features(l), params.confidence);
+  let level: 'landmark' | 'country' | 'continent' | 'worldmodel' = 'landmark';
+  // The gallery's own confidence model; the fused one once the world model has had its say.
+  let confidenceModel = params.confidence;
+  const confidenceOf = (l: typeof level): number => confidenceFrom(features(l), confidenceModel);
 
   let visual: FixLocation | null = null;
   let method: LocateDiagnostics['method'] = 'none';
@@ -778,6 +893,85 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     }
   }
 
+  // ---- world model (GeoCLIP)
+  const galleryAnswer = visual;
+  const geo = ev.geoclip ?? null;
+  let countriesOut = countries;
+  let worldModel: LocateDiagnostics['worldModel'] = null;
+  if (geo && geo.top.length > 0) {
+    const gp = params.geoclip;
+    const best = geo.best;
+    const modeMass = geo.modes[0]?.p ?? 0;
+    agreeMass = galleryAnswer ? massWithin(geo, galleryAnswer.lat, galleryAnswer.lon, gp.agreeKm) : 0;
+    concentration = massWithin(geo, best.lat, best.lon, gp.concentrationKm);
+    confidenceModel = gp.confidence;
+    // No gallery answer at all is the weakest case there is ('continent' in the recipe's terms).
+    const replaceable = gp.replaceTiers.includes(radiusTier ?? 'continent');
+    const replaced = replaceable && (!galleryAnswer || agreeMass < gp.minAgree);
+    worldModel = { replaced, agreeMass, concentration, modeMass, best: { lat: best.lat, lon: best.lon } };
+    const name = placeLabel(world, best.lat, best.lon, null);
+    if (replaced) {
+      const at = world.countryNear(best.lat, best.lon);
+      level = 'worldmodel';
+      radiusTier = 'worldmodel';
+      const radiusKm = worldModelRadiusKm(gp.radius, concentration);
+      radiusBaseKm = radiusKm;
+      method = 'worldmodel';
+      // The country distribution of the answer is GeoCLIP's (gallery mass per country).
+      if (geo.countries.length > 0) countriesOut = geo.countries;
+      const iso = at?.iso ?? countriesOut[0]?.iso ?? null;
+      visual = {
+        lat: best.lat,
+        lon: best.lon,
+        radiusKm,
+        confidence: confidenceOf('worldmodel'),
+        method: 'worldmodel',
+        label: name.de,
+        labelEn: name.en,
+        country: iso,
+        countryName: iso ? (world.country(iso)?.name_de ?? iso) : null,
+      };
+    } else if (galleryAnswer) {
+      // The gallery's answer stands; how much of GeoCLIP's mass confirms it enters its confidence.
+      visual = { ...galleryAnswer, confidence: confidenceOf(level) };
+    }
+    candidates = withWorldModelCandidates(world, candidates, geo, params, replaced);
+
+    const coords: Named = { de: formatCoord(best.lat, best.lon), en: formatCoordEn(best.lat, best.lon) };
+    const agreeText: Named = !galleryAnswer
+      ? { de: 'Die Referenzgalerie gab keinen Ort; das Weltmodell gibt ihn.', en: 'The reference gallery gave no place; the world model gives it.' }
+      : replaced
+        ? {
+            de: `Nur ${pct(agreeMass)} seiner Wahrscheinlichkeit liegen im Umkreis von ${gp.agreeKm} km um das Ergebnis der Referenzgalerie (${galleryAnswer.label}); es ersetzt dieses Ergebnis.`,
+            en: `Only ${pctEn(agreeMass)} of its probability lies within ${gp.agreeKm} km of the reference gallery's result (${galleryAnswer.labelEn ?? galleryAnswer.label}); it replaces that result.`,
+          }
+        : replaceable
+          ? {
+              de: `${pct(agreeMass)} seiner Wahrscheinlichkeit liegen im Umkreis von ${gp.agreeKm} km um das Ergebnis der Referenzgalerie (${galleryAnswer.label}); es bestätigt dieses Ergebnis, das bestehen bleibt.`,
+              en: `${pctEn(agreeMass)} of its probability lies within ${gp.agreeKm} km of the reference gallery's result (${galleryAnswer.labelEn ?? galleryAnswer.label}); it confirms that result, which stands.`,
+            }
+          : {
+              de: `${pct(agreeMass)} seiner Wahrscheinlichkeit liegen im Umkreis von ${gp.agreeKm} km um das Ergebnis der Referenzgalerie; deren Ergebnis ist zu stark, um ersetzt zu werden, und bleibt.`,
+              en: `${pctEn(agreeMass)} of its probability lies within ${gp.agreeKm} km of the reference gallery's result; that result is too strong to be replaced and stands.`,
+            };
+    const metaText: Named = metaLocation
+      ? { de: ' Die GPS-Angabe der Datei bestimmt den Ort.', en: ' The GPS position in the file decides the place.' }
+      : { de: '', en: '' };
+    evidence.push({
+      kind: 'worldmodel',
+      label: `Weltmodell (GeoCLIP): ${name.de} (${pct(modeMass)})`,
+      labelEn: `World model (GeoCLIP): ${name.en} (${pctEn(modeMass)})`,
+      detail: `Die ${geo.frames} Bilder wurden mit 100 000 Orten der Erde verglichen (GeoCLIP). Bester Ort: ${name.de} (${coords.de}); seine stärkste Häufung trägt ${pct(modeMass)} der Wahrscheinlichkeit, ${pct(concentration)} liegen im Umkreis von ${gp.concentrationKm} km. ${agreeText.de}${metaText.de}`,
+      detailEn: `The ${geo.frames} frames were compared with 100,000 places on Earth (GeoCLIP). Best place: ${name.en} (${coords.en}); its strongest cluster carries ${pctEn(modeMass)} of the probability, ${pctEn(concentration)} lies within ${gp.concentrationKm} km. ${agreeText.en}${metaText.en}`,
+      // Its share of the decision: the answer itself when it replaced the gallery's, a
+      // confirmation as strong as the mass it puts there when it agreed.
+      weight: metaLocation ? 0.05 : replaced ? Math.min(0.9, 0.5 + 0.4 * Math.max(modeMass, concentration)) : Math.min(0.6, 0.1 + 0.5 * agreeMass),
+      refLabel: name.de,
+      refLat: best.lat,
+      refLon: best.lon,
+    });
+  }
+
   // ---- evidence: reference matches
   const topRefs = [...refs].sort((a, b) => b.bestSimilarity - a.bestSimilarity).slice(0, 3);
   const totalWeight = refs.reduce((s, r) => s + r.weight, 0);
@@ -848,13 +1042,14 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   return {
     location,
     candidates,
-    countries,
+    countries: countriesOut,
     evidence,
     diagnostics: {
       features: features(level),
       level: visual ? level : null,
       radiusTier: visual ? radiusTier : null,
       radiusBaseKm,
+      // The gallery's posterior: the cut-offs of country-level answers are tuned on it.
       countryTop: countries[0] ? { iso: countries[0].iso, p: countries[0].p } : null,
       continentTop: continents[0] ?? null,
       topSimilarity,
@@ -862,9 +1057,74 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       share,
       method: metaLocation ? 'metadata' : method,
       visual,
+      gallery: galleryAnswer,
+      worldModel,
       zeroShotTop: zeroShot.slice(0, 5),
     },
   };
+}
+
+/**
+ * The candidates with the world model's view: GeoCLIP's strongest modes that lie farther than
+ * candidateKm from every gallery candidate join the list, and the scores are mixed, half and
+ * half when GeoCLIP gave the answer (its point first), a quarter for GeoCLIP when the gallery's
+ * answer stood (that one stays first). Scores stay normalised (sum <= 1).
+ */
+function withWorldModelCandidates(world: World, gallery: FixCandidate[], geo: GeoclipPrediction, params: LocateParams, replaced: boolean): FixCandidate[] {
+  const gp = params.geoclip;
+  const share = replaced ? 0.5 : 0.25;
+  const out: FixCandidate[] = gallery.map((c) => ({
+    ...c,
+    // A gallery candidate keeps its share and gains what GeoCLIP puts around it.
+    score: (1 - share) * c.score + share * massWithin(geo, c.lat, c.lon, gp.candidateKm),
+  }));
+  const galleryLead = out[0] ?? null;
+  const near = (lat: number, lon: number): boolean => out.some((c) => greatCircleKm(c.lat, c.lon, lat, lon) <= gp.candidateKm);
+  let added = 0;
+  let answer: FixCandidate | null = null;
+  if (replaced) {
+    // GeoCLIP's answer close to a gallery candidate: that candidate stands for it.
+    let bestKm = gp.candidateKm;
+    for (const c of out) {
+      const d = greatCircleKm(c.lat, c.lon, geo.best.lat, geo.best.lon);
+      if (d <= bestKm) {
+        bestKm = d;
+        answer = c;
+      }
+    }
+  }
+  for (const m of geo.modes) {
+    if (added >= gp.candidateModes || m.p < gp.candidateMinMass) break;
+    // The mode holding GeoCLIP's answer stands for it with that point, the others with their peak.
+    const holdsBest = greatCircleKm(m.lat, m.lon, geo.best.lat, geo.best.lon) <= gp.candidateKm;
+    const at = holdsBest ? geo.best : m.peak;
+    if (near(at.lat, at.lon)) continue;
+    const name = placeLabel(world, at.lat, at.lon, null);
+    const candidate: FixCandidate = {
+      lat: at.lat,
+      lon: at.lon,
+      label: name.de,
+      labelEn: name.en,
+      country: world.countryNear(at.lat, at.lon)?.iso ?? null,
+      score: share * massWithin(geo, at.lat, at.lon, gp.candidateKm),
+      radiusKm: Math.max(1, Math.min(gp.candidateKm, m.spreadKm)),
+    };
+    out.push(candidate);
+    added++;
+    if (holdsBest) answer = candidate;
+  }
+  out.sort((a, b) => b.score - a.score);
+  // The answer leads the list: GeoCLIP's point when it replaced the gallery's answer, else the
+  // gallery's first candidate (which is its answer). It takes the top score, so the order holds.
+  const lead = replaced ? answer : galleryLead;
+  if (lead && out[0] !== lead) {
+    out.splice(out.indexOf(lead), 1);
+    lead.score = Math.max(lead.score, out[0]?.score ?? 0);
+    out.unshift(lead);
+  }
+  const sum = out.reduce((s, c) => s + c.score, 0);
+  if (sum > 1) for (const c of out) c.score /= sum;
+  return out.slice(0, params.maxCandidates);
 }
 
 /**
@@ -885,18 +1145,23 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
   const hints = filenameHints(input.fileName ?? path.basename(input.videoPath));
   const tiles = params.tilePooling !== 'whole' ? input.tiles : undefined;
   await breathe();
+  // The world model works in its own thread meanwhile; it is awaited only now. A failure there
+  // costs the fix the world model, never the fix.
+  const prediction = async (): Promise<GeoclipPrediction | null> => (input.geoclip ? await Promise.resolve(input.geoclip).catch(() => null) : null);
   if (tiles && tiles.frameRow.length > 0) {
     const neighbours = input.gallery.search(tiles.vectors, params.k, search);
     await breathe();
+    const geoclip = await prediction();
     return decideLocation(
       world,
-      { neighbours, rowFrame: tiles.frameRow, rowTile: tiles.tile, countryCosines, frameNumbers: input.frameNumbers, metadata, hints },
+      { neighbours, rowFrame: tiles.frameRow, rowTile: tiles.tile, countryCosines, frameNumbers: input.frameNumbers, metadata, hints, geoclip },
       params,
     );
   }
   const neighbours = input.gallery.search(input.frameVectors, params.k, search);
   await breathe();
-  return decideLocation(world, { neighbours, countryCosines, frameNumbers: input.frameNumbers, metadata, hints }, params);
+  const geoclip = await prediction();
+  return decideLocation(world, { neighbours, countryCosines, frameNumbers: input.frameNumbers, metadata, hints, geoclip }, params);
 }
 
 // ------------------------------------------------------------------ frame sampling
@@ -910,6 +1175,8 @@ export interface SampledFrames {
   tiles?: { vectors: Float32Array; frameRow: number[]; tile: number[] };
   /** Light statistics of every kept frame, in row order (only with opts.frameStats). */
   stats?: FrameStats[];
+  /** The JPEG bytes of every kept frame, in row order: what the world model looks at. */
+  jpegs: Buffer[];
 }
 
 function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
@@ -935,45 +1202,97 @@ function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
   });
 }
 
-/**
- * Takes `count` evenly spaced frames (at the middle of equal segments), embeds the whole frame
- * with the same preprocessing as the pipeline and the gallery, and returns the vectors.
- */
-export async function sampleAndEmbedFrames(
-  videoPath: string,
-  model: ImageEmbedder,
-  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string; detail?: DetailLevel; frameStats?: boolean } = {},
-): Promise<SampledFrames> {
-  const detail = opts.detail ?? 'fast';
-  const count = opts.count ?? 6;
-  let duration = opts.durationSec ?? null;
-  let fps = opts.fps ?? null;
+/** Times (s) of `count` frames at the middle of equal segments, with the video's fps. */
+async function frameTimes(videoPath: string, count: number, durationSec: number | null | undefined, fpsIn: number | null | undefined): Promise<{ times: number[]; fps: number | null }> {
+  let duration = durationSec ?? null;
+  let fps = fpsIn ?? null;
   if (duration === null || fps === null) {
     const meta = await readMetadata(videoPath).catch(() => null);
     duration ??= meta?.durationSec ?? null;
     fps ??= meta?.fps ?? null;
   }
-  const times = Array.from({ length: count }, (_, i) => (duration !== null ? (duration * (i + 0.5)) / count : i));
+  return { times: Array.from({ length: count }, (_, i) => (duration !== null ? (duration * (i + 0.5)) / count : i)), fps };
+}
+
+/** Writes the frames at `times` as f0.jpg, f1.jpg, ... into `dir` (one ffmpeg run). */
+async function extractFrameFiles(videoPath: string, times: readonly number[], dir: string): Promise<void> {
+  const args = ['-hide_banner', '-nostdin', '-loglevel', 'error', '-y'];
+  for (const t of times) args.push('-ss', t.toFixed(3), '-protocol_whitelist', 'file', '-i', videoPath);
+  times.forEach((_, i) => {
+    args.push(
+      '-map', `${i}:v:0`,
+      '-frames:v', '1',
+      '-an', '-sn',
+      '-vf', `scale=w='min(${FRAME_WIDTH},iw)':h=-2:flags=bicubic`,
+      '-pix_fmt', 'yuvj420p',
+      '-q:v', '3',
+      path.join(dir, `f${i}.jpg`),
+    );
+  });
+  await runFfmpeg(args, 120_000);
+}
+
+/**
+ * The frames sampleAndEmbedFrames keeps, as JPEG bytes only (same times, same scaling, the frames
+ * that decode): what the world model sees, without the image model. For the evaluation.
+ */
+export async function sampleFrameJpegs(
+  videoPath: string,
+  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string } = {},
+): Promise<{ jpegs: Buffer[]; frameNumbers: number[]; times: number[] }> {
+  const count = opts.count ?? 6;
+  const { times, fps } = await frameTimes(videoPath, count, opts.durationSec, opts.fps);
   const dir = await fs.mkdtemp(path.join(opts.tmpDir ?? os.tmpdir(), 'datum-frames-'));
   try {
-    const args = ['-hide_banner', '-nostdin', '-loglevel', 'error', '-y'];
-    for (const t of times) args.push('-ss', t.toFixed(3), '-protocol_whitelist', 'file', '-i', videoPath);
-    times.forEach((_, i) => {
-      args.push(
-        '-map', `${i}:v:0`,
-        '-frames:v', '1',
-        '-an', '-sn',
-        '-vf', `scale=w='min(${FRAME_WIDTH},iw)':h=-2:flags=bicubic`,
-        '-pix_fmt', 'yuvj420p',
-        '-q:v', '3',
-        path.join(dir, `f${i}.jpg`),
-      );
-    });
-    await runFfmpeg(args, 120_000);
+    await extractFrameFiles(videoPath, times, dir);
+    const jpegs: Buffer[] = [];
+    const kept: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const file = path.join(dir, `f${i}.jpg`);
+      try {
+        await decodeFrame(file);
+        jpegs.push(await fs.readFile(file));
+        kept.push(i);
+      } catch {
+        // A seek past the last frame writes no picture.
+      }
+    }
+    return { jpegs, frameNumbers: kept.map((i) => (fps !== null ? Math.round((times[i] as number) * fps) : i)), times: kept.map((i) => times[i] as number) };
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Takes `count` evenly spaced frames (at the middle of equal segments), embeds the whole frame
+ * with the same preprocessing as the pipeline and the gallery, and returns the vectors and the
+ * JPEG bytes of the frames. `onFrames` receives those bytes as soon as the frames are read,
+ * before the image model runs, so that the world model can work on them meanwhile.
+ */
+export async function sampleAndEmbedFrames(
+  videoPath: string,
+  model: ImageEmbedder,
+  opts: {
+    count?: number;
+    durationSec?: number | null;
+    fps?: number | null;
+    tmpDir?: string;
+    detail?: DetailLevel;
+    frameStats?: boolean;
+    onFrames?: (jpegs: Buffer[]) => void;
+  } = {},
+): Promise<SampledFrames> {
+  const detail = opts.detail ?? 'fast';
+  const count = opts.count ?? 6;
+  const { times, fps } = await frameTimes(videoPath, count, opts.durationSec, opts.fps);
+  const dir = await fs.mkdtemp(path.join(opts.tmpDir ?? os.tmpdir(), 'datum-frames-'));
+  try {
+    await extractFrameFiles(videoPath, times, dir);
     const size = model.imageSize;
     const plane = 3 * size * size;
     const kept: number[] = [];
     const stats: FrameStats[] = [];
+    const jpegs: Buffer[] = [];
     // Every tile of every readable frame, whole frame first (the pipeline's layout).
     const rects: { frameRow: number; tile: number; pixels: Float32Array }[] = [];
     for (let i = 0; i < count; i++) {
@@ -989,7 +1308,10 @@ export async function sampleAndEmbedFrames(
         }
         // The same statistics the time engine reads from the analysis frames, so that the quick
         // stage can estimate the time before the analysis has written any frame.
-        if (opts.frameStats) stats.push(await frameStatsFromJpeg(file));
+        const frameStats = opts.frameStats ? await frameStatsFromJpeg(file) : null;
+        const bytes = await fs.readFile(file);
+        if (frameStats) stats.push(frameStats);
+        jpegs.push(bytes);
         rects.push(...frameRects);
         kept.push(i);
       } catch {
@@ -997,6 +1319,11 @@ export async function sampleAndEmbedFrames(
       }
     }
     if (kept.length === 0) throw new Error('Aus dem Video konnten keine Bilder gelesen werden.');
+    try {
+      opts.onFrames?.(jpegs);
+    } catch {
+      // The listener's failure must not cost the image model's vectors.
+    }
     // The image model runs on the node's only thread (onnxruntime-node executes a run
     // synchronously): one call with all 48 crops would hold every request of the console for
     // seconds. Calls of EMBED_CHUNK pictures, the analysis pipeline's batch, with a turn of the
@@ -1023,6 +1350,7 @@ export async function sampleAndEmbedFrames(
         ? { tiles: { vectors: tileVectors, frameRow: rects.map((r) => r.frameRow), tile: rects.map((r) => r.tile) } }
         : {}),
       ...(opts.frameStats ? { stats } : {}),
+      jpegs,
     };
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

@@ -222,7 +222,7 @@ export async function caseReport(input: {
     ${input.ledger
       .map(
         (e) =>
-          `<tr><td>${e.seq}</td><td>${stamp(Date.parse(e.ts), lang)}</td><td>${esc(e.actor)}</td><td>${esc(e.summary)}</td><td class="hash">${e.hash.slice(0, 16)}…</td></tr>`,
+          `<tr><td>${e.seq}</td><td>${stamp(Date.parse(e.ts), lang)}</td><td>${esc(e.actor)}</td><td>${esc(de ? e.summary : (e.summaryEn ?? e.summary))}</td><td class="hash">${e.hash.slice(0, 16)}…</td></tr>`,
       )
       .join('\n')}
   </table>`);

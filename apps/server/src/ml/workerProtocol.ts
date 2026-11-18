@@ -14,7 +14,16 @@ export type ServiceName = 'siglip' | 'yunet' | 'depth' | 'check';
 export interface WorkerBoot {
   service: ServiceName;
   options: unknown;
+  /**
+   * One Int32 in shared memory: THREAD_RUNNING until the thread has finished its last call and
+   * released its sessions, then THREAD_CLOSED. The main thread waits on it while the process
+   * exits (see drainAtExit in workerHost.ts), when no message can be received any more.
+   */
+  closed: Int32Array;
 }
+
+export const THREAD_RUNNING = 0;
+export const THREAD_CLOSED = 1;
 
 /** An error as it crosses the thread boundary; structured clone would drop its class and stack. */
 export interface SerializedError {

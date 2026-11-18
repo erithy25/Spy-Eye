@@ -23,7 +23,8 @@ import type { NodeConnection } from '../useNode';
 const SPEEDS = [1, 2, 4, 8];
 export const HAZARD_LABEL: Record<string, string> = { flood: 'Überflutung', fire: 'Brand', collapse: 'Einsturz', normal: 'Unauffällig' };
 
-export function alertTarget(alert: Alert, watches: Watch[]): FrameTarget {
+/** `pick` words the source in the console language (sourceNameEn where the node sends one). */
+export function alertTarget(alert: Alert, watches: Watch[], pick: (de: string, en?: string | null) => string): FrameTarget {
   const watch = watches.find((w) => w.id === alert.watchId);
   return {
     videoId: alert.videoId,
@@ -32,7 +33,7 @@ export function alertTarget(alert: Alert, watches: Watch[]): FrameTarget {
     time: null,
     sceneIndex: null,
     at: alert.lastSeen,
-    sourceName: alert.sourceName,
+    sourceName: pick(alert.sourceName, alert.sourceNameEn),
     lat: alert.lat,
     lon: alert.lon,
     // A text watch can show where in the picture it responded.
@@ -210,7 +211,7 @@ function AlertRow({ alert, node, onOpen }: { alert: Alert; node: NodeConnection;
   const cls = alert.status === 'dismissed' ? 'alert alert-off' : alert.status === 'new' && alert.active ? 'alert alert-new' : 'alert';
   // The alert keeps the name its source had when it was raised; the list shows the name in the chosen language.
   const source = node.intel?.sources.find((s) => s.id === alert.sourceId);
-  const sourceName = source ? pick(source.name, source.nameEn) : alert.sourceName;
+  const sourceName = source ? pick(source.name, source.nameEn) : pick(alert.sourceName, alert.sourceNameEn);
   return (
     <li className={cls}>
       <Frame src={alert.frameUrl} box={alert.box} onClick={onOpen} />
@@ -329,7 +330,7 @@ export function Lage({ node, openFrame }: ViewProps) {
     if (fresh.length === 0) return;
     for (const a of fresh) known.add(a.id);
     const newest = fresh.reduce((best, a) => (a.firstSeen > best.firstSeen ? a : best));
-    setAnnouncement(`${t('Neue Meldung')}: ${pick(newest.watchName, newest.watchNameEn)} · ${newest.sourceName}`);
+    setAnnouncement(`${t('Neue Meldung')}: ${pick(newest.watchName, newest.watchNameEn)} · ${pick(newest.sourceName, newest.sourceNameEn)}`);
   }, [intel, alerts, pick, t]);
 
   const severityBySource = useMemo(() => {
@@ -385,7 +386,7 @@ export function Lage({ node, openFrame }: ViewProps) {
     () => [...incidents].sort((a, b) => Number(a.status === 'closed') - Number(b.status === 'closed') || b.severity - a.severity || b.lastSeen - a.lastSeen),
     [incidents],
   );
-  const alertTargets = useMemo(() => sortedAlerts.map((a) => alertTarget(a, watches)), [sortedAlerts, watches]);
+  const alertTargets = useMemo(() => sortedAlerts.map((a) => alertTarget(a, watches, pick)), [sortedAlerts, watches, pick]);
 
   const source: SourceInfo | null = sources.find((s) => s.id === selectedSource) ?? null;
   const sourceFeed: FeedState | null = source ? (feeds.get(source.id) ?? null) : null;
@@ -455,7 +456,7 @@ export function Lage({ node, openFrame }: ViewProps) {
               </div>
               {source.description !== '' && (
                 <div className="alert-line low" style={{ whiteSpace: 'normal' }}>
-                  {source.description}
+                  {pick(source.description, source.descriptionEn)}
                 </div>
               )}
               {sourceFeed?.label ? (

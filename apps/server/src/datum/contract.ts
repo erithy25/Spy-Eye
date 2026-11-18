@@ -298,6 +298,12 @@ export interface Fix {
    */
   stage?: 'quick' | 'full';
   /**
+   * True on the slimmed fixes of the list (GET /api/datum/fixes?slim=1): evidence [], no trace,
+   * only the middle keyframe, the top 5 candidates and countries, no sun path and no horizon
+   * profile. The full fix is GET /api/datum/fix/:id. Absent on full fixes.
+   */
+  slim?: boolean;
+  /**
    * Ground truth, present for videos of the reference dataset (source 'referenz') and for uploaded
    * videos whose true place was given with the upload (source 'eigene', POST /api/datum/truth).
    * `url` names where a reference truth comes from (Wikimedia Commons or Wikidata); own truths

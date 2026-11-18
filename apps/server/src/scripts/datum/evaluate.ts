@@ -3,6 +3,7 @@
  *
  *   SICHT_OFFLINE=1 npx tsx src/scripts/datum/evaluate.ts [--dataset datasets/datum] [--frames 12]
  *       [--detail standard] [--limit N] [--out docs/measurements/datum-geolocation.json]
+ *       [--no-geoclip] [--params tuned|default]
  *
  * For every test video: 12 evenly spaced frames are embedded with the pipeline's tiling (tile 0
  * is the whole frame, the others square crops; the live engine reads the same vectors from the
@@ -16,6 +17,15 @@
  * Thresholds and temperatures are tuned only on the videos with even index ("train"); the
  * videos with odd index ("test") are reported separately and never used for a decision.
  * The result is written to docs/measurements/datum-geolocation.json and printed as a table.
+ *
+ * World model: the same frames go through GeoCLIP in its worker thread (geoclipService.ts, as in
+ * the node); its image embeddings are cached per clip (.cache/datum/geoclip-eval-int8-12.json,
+ * the cache of scripts/datum/evaluateGeoclip.ts). The gallery's parameters are tuned without it
+ * (as before), then decideLocation fuses GeoCLIP with LocateParams.geoclip, the radius of its
+ * concentrated answers is chosen on the train half and the confidence model is fitted again on
+ * the fused train answers. Reported are both: the gallery alone ("before") and fused ("after").
+ * --no-geoclip leaves the world model out; --params default takes DEFAULT_LOCATE_PARAMS for the
+ * gallery instead of tuning them again.
  */
 process.env['SICHT_OFFLINE'] ??= '1';
 
@@ -29,9 +39,11 @@ const { Gallery, modelSlug } = await import('../../datum/gallery.js');
 const { World, greatCircleKm } = await import('../../datum/world.js');
 const { readMetadata, filenameHints } = await import('../../datum/metadata.js');
 const { decodeFrame, writeTile } = await import('../../ml/preprocess.js');
-const { DEFAULT_LOCATE_PARAMS, decideLocation, poolTileRows, sampleAndEmbedFrames, weightNeighbours } = await import(
+const { CONFIDENCE_FEATURES, DEFAULT_LOCATE_PARAMS, decideLocation, poolTileRows, sampleAndEmbedFrames, sampleFrameJpegs, weightNeighbours } = await import(
   '../../datum/locate.js'
 );
+const { WorldModelService } = await import('../../datum/geoclipService.js');
+type GeoclipPrediction = import('../../datum/geoclip.js').GeoclipPrediction;
 type DetailLevel = import('../../types.js').DetailLevel;
 type LocateParams = import('../../datum/locate.js').LocateParams;
 type LocateEvidence = import('../../datum/locate.js').LocateEvidence;
@@ -88,6 +100,8 @@ interface Prepared {
   hasGps: boolean;
   metadata: Awaited<ReturnType<typeof readMetadata>> | null;
   timing: { framesMs: number; locateMs: number; totalMs: number };
+  /** The world model's prediction for the same frames (compact), null without it. */
+  geoclip: GeoclipPrediction | null;
 }
 
 interface ModeOutcome {
@@ -113,6 +127,10 @@ interface ModeOutcome {
   features: ConfidenceFeatures;
   radiusTier: string | null;
   radiusBaseKm: number;
+  /** Which source gave the answer. */
+  source: 'gallery' | 'worldmodel' | 'none';
+  /** GeoCLIP's mass within concentrationKm of its answer (world-model answers), else null. */
+  concentration: number | null;
 }
 
 function median(values: number[]): number {
@@ -132,6 +150,7 @@ function summarise(outcomes: ModeOutcome[]): Record<string, number> {
   out['withinRadius'] = round(outcomes.filter((o) => o.withinRadius).length / Math.max(1, outcomes.length), 3);
   out['countryLevelAnswers'] = outcomes.filter((o) => o.level === 'country').length;
   out['continentLevelAnswers'] = outcomes.filter((o) => o.level === 'continent').length;
+  out['worldModelAnswers'] = outcomes.filter((o) => o.level === 'worldmodel').length;
   out['noAnswer'] = outcomes.filter((o) => o.level === null).length;
   return out;
 }
@@ -149,7 +168,7 @@ function objective(outcomes: ModeOutcome[]): number {
   return s / THRESHOLDS_KM.length;
 }
 
-function evidenceFor(p: Prepared, mode: Mode, withMetadata: boolean): LocateEvidence {
+function evidenceFor(p: Prepared, mode: Mode, withMetadata: boolean, withGeo = false): LocateEvidence {
   return {
     neighbours: p.neighbours[mode],
     rowFrame: p.rowFrame,
@@ -158,13 +177,14 @@ function evidenceFor(p: Prepared, mode: Mode, withMetadata: boolean): LocateEvid
     frameNumbers: p.frameNumbers,
     metadata: withMetadata ? p.metadata : null,
     hints: filenameHints(path.basename(p.video.file)),
+    geoclip: withGeo ? p.geoclip : null,
   };
 }
 
-function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams): ModeOutcome {
+function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams, withGeo = false): ModeOutcome {
   // The evaluation measures the picture: GPS in the file would answer trivially, so metadata
   // is reported but the visual estimate is scored.
-  const ev = evidenceFor(p, mode, true);
+  const ev = evidenceFor(p, mode, true, withGeo);
   const neighbours = ev.neighbours.map((row) => row.slice(0, params.k));
   const r = decideLocation(world, { ...ev, neighbours }, params);
   const loc = r.diagnostics.visual;
@@ -197,13 +217,15 @@ function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams): 
     features: r.diagnostics.features,
     radiusTier: r.diagnostics.radiusTier,
     radiusBaseKm: r.diagnostics.radiusBaseKm,
+    source: !loc ? 'none' : r.diagnostics.worldModel?.replaced ? 'worldmodel' : 'gallery',
+    concentration: r.diagnostics.worldModel?.replaced ? r.diagnostics.worldModel.concentration : null,
   };
 }
 
-function runAll(world: WorldT, items: Prepared[], params: LocateParams): Record<Mode, ModeOutcome[]> {
+function runAll(world: WorldT, items: Prepared[], params: LocateParams, withGeo = false): Record<Mode, ModeOutcome[]> {
   return {
-    open: items.map((p) => runMode(world, p, 'open', params)),
-    unknown: items.map((p) => runMode(world, p, 'unknown', params)),
+    open: items.map((p) => runMode(world, p, 'open', params, withGeo)),
+    unknown: items.map((p) => runMode(world, p, 'unknown', params, withGeo)),
   };
 }
 
@@ -313,13 +335,14 @@ function precisionThreshold(rows: { p: number; correct: boolean }[], target: num
 
 /** Logistic regression (L2) of "error within the stated radius" on the confidence features. */
 function fitConfidence(rows: { f: ConfidenceFeatures; hit: boolean }[]): LocateParams['confidence'] {
-  const keys = ['topSim', 'gap', 'margin', 'share', 'region', 'continent', 'countryP', 'agreement'] as const;
-  const w = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0, agreement: 0 };
+  const keys = CONFIDENCE_FEATURES;
+  const zero = (): LocateParams['confidence'] => ({ bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0, agreement: 0, worldModel: 0, concentration: 0, agreeMass: 0 });
+  const w = zero();
   if (rows.length < 10) return DEFAULT_LOCATE_PARAMS.confidence;
   const lr = 0.5;
   const lambda = 0.01;
   for (let iter = 0; iter < 6000; iter++) {
-    const g = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0, agreement: 0 };
+    const g = zero();
     for (const r of rows) {
       let z = w.bias;
       for (const k of keys) z += w[k] * r.f[k];
@@ -330,16 +353,28 @@ function fitConfidence(rows: { f: ConfidenceFeatures; hit: boolean }[]): LocateP
     w.bias -= (lr * g.bias) / rows.length;
     for (const k of keys) w[k] -= lr * (g[k] / rows.length + lambda * w[k]);
   }
+  const out = zero();
+  out.bias = round(w.bias, 3);
+  for (const k of keys) out[k] = round(w[k], 3);
+  return out;
+}
+
+/** Log-loss and Brier score of the stated confidence against "truth within the radius". */
+function calibrationScore(outcomes: ModeOutcome[]): { n: number; logLoss: number; brier: number; meanConfidence: number; hitRate: number } {
+  const n = Math.max(1, outcomes.length);
+  let ll = 0;
+  let brier = 0;
+  for (const o of outcomes) {
+    const p = Math.min(1 - 1e-6, Math.max(1e-6, o.confidence));
+    ll -= o.withinRadius ? Math.log(p) : Math.log(1 - p);
+    brier += (p - (o.withinRadius ? 1 : 0)) ** 2;
+  }
   return {
-    bias: round(w.bias, 3),
-    topSim: round(w.topSim, 3),
-    gap: round(w.gap, 3),
-    margin: round(w.margin, 3),
-    share: round(w.share, 3),
-    region: round(w.region, 3),
-    continent: round(w.continent, 3),
-    countryP: round(w.countryP, 3),
-    agreement: round(w.agreement, 3),
+    n: outcomes.length,
+    logLoss: round(ll / n, 4),
+    brier: round(brier / n, 4),
+    meanConfidence: round(outcomes.reduce((s, o) => s + o.confidence, 0) / n, 3),
+    hitRate: round(outcomes.filter((o) => o.withinRadius).length / n, 3),
   };
 }
 
@@ -386,7 +421,7 @@ function calibrateRadii(rows: ModeOutcome[]): LocateParams['radiusKm'] & { count
 /** Within-radius share per tier (for the report). */
 function coverageByTier(outcomes: ModeOutcome[]): Record<string, { n: number; withinRadius: number; medianRadiusKm: number }> {
   const out: Record<string, { n: number; withinRadius: number; medianRadiusKm: number }> = {};
-  for (const t of ['strong', 'recognised', 'similar', 'country', 'continent']) {
+  for (const t of ['strong', 'recognised', 'similar', 'country', 'continent', 'worldmodel']) {
     const c = outcomes.filter((o) => o.radiusTier === t);
     if (c.length === 0) continue;
     out[t] = { n: c.length, withinRadius: round(c.filter((o) => o.withinRadius).length / c.length, 3), medianRadiusKm: round(median(c.map((o) => o.radiusKm)), 1) };
@@ -435,6 +470,8 @@ const limit = Number(argument('limit', '0'));
 const outFile = path.resolve(repoRoot, argument('out', 'docs/measurements/datum-geolocation.json'));
 // The same vector cache as the live node (datum/shared.ts): the gallery is embedded once.
 const cacheDir = path.resolve(repoRoot, argument('cache', '.cache/datum'));
+const withGeoclip = !process.argv.includes('--no-geoclip');
+const paramSource = argument('params', 'tuned') === 'default' ? 'default' : 'tuned';
 
 const manifest = JSON.parse(await fs.readFile(path.join(datasetDir, 'manifest.json'), 'utf8')) as { videos: ManifestVideo[] };
 let videos = manifest.videos.filter(
@@ -600,6 +637,7 @@ for (let i = 0; i < videos.length; i++) {
       hasGps: metadata?.location != null,
       metadata,
       timing: { framesMs: t1 - t0, locateMs: 0, totalMs: 0 },
+      geoclip: null,
     };
     // One full decision as the server would make it (open gallery), for the time per video.
     const t2 = performance.now();
@@ -617,6 +655,89 @@ await fs.rm(tmpDir, { recursive: true, force: true });
 if (frameCacheDirty) {
   await fs.mkdir(cacheDir, { recursive: true });
   await fs.writeFile(frameCacheFile, JSON.stringify(frameCache));
+}
+
+// ---- world model: GeoCLIP on the engine's frames, in its worker thread as in the node
+// Image embeddings are cached per clip in the format of scripts/datum/evaluateGeoclip.ts (the
+// frames are the same: sampleFrameJpegs takes them as sampleAndEmbedFrames does).
+interface GeoEmbedEntry {
+  bytes: number;
+  frames: number;
+  times: number[];
+  embeds: string;
+  preprocessMs: number;
+  inferMs: number;
+}
+interface GeoEmbedCache {
+  version: 1;
+  precision: string;
+  frames: number;
+  videos: Record<string, GeoEmbedEntry>;
+  stats: unknown;
+}
+const geoTiming = { precision: '', threads: 0, galleryReadyMs: 0, embeddedVideos: 0, cachedVideos: 0, embedMsPerFrame: [] as number[], predictMs: [] as number[] };
+let geoclipUsed = false;
+if (withGeoclip) {
+  const worldModel = new WorldModelService({ log: (m) => say(`  ${m}`) });
+  if (!(await worldModel.available())) {
+    say('GeoCLIP-Gewichte fehlen (pnpm models:download): Messung ohne Weltmodell.');
+  } else {
+    const precision = worldModel.boot.precision;
+    geoTiming.precision = precision;
+    geoTiming.threads = worldModel.boot.threads;
+    const geoCacheFile = path.join(cacheDir, `geoclip-eval-${precision}-${frameCount}.json`);
+    const loaded = await fs
+      .readFile(geoCacheFile, 'utf8')
+      .then((t) => JSON.parse(t) as GeoEmbedCache)
+      .catch(() => null);
+    const geoCache: GeoEmbedCache = loaded && loaded.version === 1 && loaded.precision === precision && loaded.frames === frameCount ? loaded : { version: 1, precision, frames: frameCount, videos: {}, stats: null };
+    let geoDirty = false;
+    const tg = performance.now();
+    try {
+      await worldModel.ensureGallery();
+      geoTiming.galleryReadyMs = performance.now() - tg;
+      const geoTmp = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-eval-geo-'));
+      try {
+        for (const p of prepared) {
+          const file = path.join(datasetDir, p.video.file);
+          const bytes = (await fs.stat(file)).size;
+          let entry = geoCache.videos[p.video.id];
+          if (!entry || entry.bytes !== bytes) {
+            const frames = await sampleFrameJpegs(file, { count: frameCount, durationSec: p.metadata?.durationSec ?? null, fps: p.metadata?.fps ?? null, tmpDir: geoTmp });
+            const t0 = performance.now();
+            const embeds = await worldModel.embed(frames.jpegs);
+            const ms = performance.now() - t0;
+            entry = { bytes, frames: frames.jpegs.length, times: frames.times, embeds: toB64(embeds), preprocessMs: 0, inferMs: ms };
+            geoCache.videos[p.video.id] = entry;
+            geoDirty = true;
+            geoTiming.embeddedVideos++;
+            geoTiming.embedMsPerFrame.push(ms / Math.max(1, frames.jpegs.length));
+          } else {
+            geoTiming.cachedVideos++;
+          }
+          const result = await worldModel.predictEmbeddings(fromB64(entry.embeds), entry.frames);
+          geoTiming.predictMs.push(result.ms);
+          p.geoclip = result.prediction;
+          if (!result.prediction) say(`  ${p.video.id}: kein GeoCLIP-Ergebnis (${result.reason?.de ?? result.state})`);
+        }
+      } finally {
+        await fs.rm(geoTmp, { recursive: true, force: true });
+      }
+      geoclipUsed = prepared.some((p) => p.geoclip !== null);
+    } catch (err: unknown) {
+      say(`GeoCLIP nicht nutzbar: ${err instanceof Error ? err.message : String(err)}; Messung ohne Weltmodell.`);
+    } finally {
+      await worldModel.close();
+    }
+    if (geoDirty) {
+      await fs.mkdir(cacheDir, { recursive: true });
+      await fs.writeFile(geoCacheFile, JSON.stringify(geoCache));
+    }
+    say(
+      `GeoCLIP (${precision}, ${geoTiming.threads} Threads): ${geoTiming.cachedVideos} Videos aus dem Cache, ${geoTiming.embeddedVideos} neu eingebettet; ` +
+        `Galerie bereit nach ${(geoTiming.galleryReadyMs / 1000).toFixed(1)} s, Vorhersage im Median ${(median(geoTiming.predictMs) / 1000).toFixed(2)} s je Video.`,
+    );
+  }
 }
 
 const train = prepared.filter((p) => p.split === 'train');
@@ -640,7 +761,7 @@ const START: LocateParams = {
   countryMinP: 0.3,
   continentMinP: 0.4,
   prior: { temperature: 0.01, uniformMix: 0.01, populationExponent: 1 },
-  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1, agreement: 0 },
+  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1, agreement: 0, worldModel: 0, concentration: 0, agreeMass: 0 },
   strongGap: 0.1,
   agreementMin: 0.5,
   radiusKm: { strong: 0.5, recognised: 0.5, similar: 25, countryFactor: 1, continentFactor: 1 },
@@ -661,12 +782,13 @@ const zeroShot = {
   },
   withoutPopulationPrior: { all: zeroShotAccuracy(world, prepared, { ...params.prior, populationExponent: 0 }) },
 };
-const tuned = tune(world, train, params);
+// --params default: the gallery's parameters as the engine runs them, nothing tuned again.
+const tuned = paramSource === 'default' ? { params: { ...DEFAULT_LOCATE_PARAMS }, log: ['DEFAULT_LOCATE_PARAMS übernommen (--params default)'] } : tune(world, train, params);
 params = tuned.params;
 say(`Abstimmung (nur Abstimmungshälfte): ${tuned.log.join('; ')}`);
 // Country- and continent-level answers only where the training half shows they are right at
 // least half of the time (the coarse-answer cut-offs are not fitted to the Im2GPS objective).
-{
+if (paramSource === 'tuned') {
   const rows = [...train.map((p) => runMode(world, p, 'unknown', params)), ...train.map((p) => runMode(world, p, 'open', params))];
   params = {
     ...params,
@@ -674,12 +796,14 @@ say(`Abstimmung (nur Abstimmungshälfte): ${tuned.log.join('; ')}`);
     continentMinP: precisionThreshold(rows.map((o) => ({ p: o.continentTopP, correct: o.continentCorrect })), 0.5, params.continentMinP),
   };
 }
-const trainOpen = train.map((p) => runMode(world, p, 'open', params));
-params = { ...params, landmarkSimilarity: landmarkThreshold(trainOpen, params.landmarkSimilarity) };
+if (paramSource === 'tuned') {
+  const trainOpen = train.map((p) => runMode(world, p, 'open', params));
+  params = { ...params, landmarkSimilarity: landmarkThreshold(trainOpen, params.landmarkSimilarity) };
+}
 // Radii: the agreement cut-off that gives the smallest median stated radius on train, each tier
 // calibrated to cover the truth in RADIUS_TARGET of its training cases.
 let radiusCalibration: ReturnType<typeof calibrateRadii> | null = null;
-{
+if (paramSource === 'tuned') {
   let best: { median: number; strongGap: number; agreementMin: number; radii: ReturnType<typeof calibrateRadii> } | null = null;
   for (const strongGap of [params.recognitionGap, 0.1, 0.12, 0.14]) {
     for (const agreementMin of [0, 0.34, 0.5, 0.67, 0.8]) {
@@ -701,22 +825,79 @@ let radiusCalibration: ReturnType<typeof calibrateRadii> | null = null;
     radiusCalibration = best.radii;
   }
 }
-const trainRuns = runAll(world, train, params);
-params = {
-  ...params,
-  confidence: fitConfidence([...trainRuns.open, ...trainRuns.unknown].map((o) => ({ f: o.features, hit: o.withinRadius }))),
-};
+if (paramSource === 'tuned') {
+  const trainRuns = runAll(world, train, params);
+  params = {
+    ...params,
+    confidence: fitConfidence([...trainRuns.open, ...trainRuns.unknown].map((o) => ({ f: o.features, hit: o.withinRadius }))),
+  };
+}
+/** The gallery alone: the state before the world model ("before"). */
+const galleryParams: LocateParams = params;
+// Shown with the tuned parameters: the gallery's confidence model is the one runs without the
+// world model use (fitted again in tuned mode, DEFAULT_LOCATE_PARAMS' otherwise).
+
+// ---- world model: fusion recipe, radius of its answers and confidence, on the train half
+// The recipe itself (agreeKm, minAgree, replaceTiers, concentrationKm) is the one chosen on the
+// train half by scripts/datum/evaluateGeoclip.ts. Here the radius of concentrated answers
+// (concentration >= 0.2) is chosen between 1 km and 25 km: the one whose train coverage lies
+// nearer the RADIUS_TARGET (as every tier is calibrated), 25 km on a tie (five train cases cannot
+// tell a 1 km circle from a 25 km one when no case lies between them). The radius of the other
+// answers stays the recipe's (1500 km, calibrated by evaluateGeoclip.ts); its train coverage and
+// the radius the 70 % rule would give for those cases alone are reported.
+let worldModelChoice: Record<string, unknown> | null = null;
+if (geoclipUsed) {
+  const concentratedFrom = params.geoclip.radius[0]?.minConcentration ?? 0.2;
+  const probe: LocateParams = { ...params, geoclip: { ...params.geoclip, radius: [{ minConcentration: concentratedFrom, radiusKm: 25 }, { minConcentration: 0, radiusKm: 1500 }] } };
+  const probeRuns = runAll(world, train, probe, true);
+  const geoTrain = [...probeRuns.open, ...probeRuns.unknown].filter((o) => o.source === 'worldmodel');
+  const concentrated = geoTrain.filter((o) => (o.concentration ?? 0) >= concentratedFrom);
+  const diffuse = geoTrain.filter((o) => (o.concentration ?? 0) < concentratedFrom);
+  const coverage = (rows: ModeOutcome[], km: number): number => rows.filter((o) => o.errorKm <= km).length / Math.max(1, rows.length);
+  const c1 = coverage(concentrated, 1);
+  const c25 = coverage(concentrated, 25);
+  const concentratedKm = concentrated.length >= 4 && Math.abs(c1 - RADIUS_TARGET) < Math.abs(c25 - RADIUS_TARGET) - 1e-9 ? 1 : 25;
+  const diffuseKm = params.geoclip.radius[params.geoclip.radius.length - 1]?.radiusKm ?? 1500;
+  const diffuseRuleKm = RADIUS_GRID_KM.find((r) => coverage(diffuse, r) >= RADIUS_TARGET) ?? (RADIUS_GRID_KM[RADIUS_GRID_KM.length - 1] as number);
+  params = { ...params, geoclip: { ...params.geoclip, radius: [{ minConcentration: concentratedFrom, radiusKm: concentratedKm }, { minConcentration: 0, radiusKm: diffuseKm }] } };
+  // The fused answers get a confidence model of their own (the gallery's stays for runs without
+  // the world model).
+  const fusedTrain = runAll(world, train, params, true);
+  params = { ...params, geoclip: { ...params.geoclip, confidence: fitConfidence([...fusedTrain.open, ...fusedTrain.unknown].map((o) => ({ f: o.features, hit: o.withinRadius }))) } };
+  worldModelChoice = {
+    recipe: { agreeKm: params.geoclip.agreeKm, minAgree: params.geoclip.minAgree, replaceTiers: params.geoclip.replaceTiers, concentrationKm: params.geoclip.concentrationKm },
+    trainWorldModelAnswers: geoTrain.length,
+    concentrated: {
+      minConcentration: concentratedFrom,
+      trainCases: concentrated.length,
+      trainCoverage1km: round(c1, 3),
+      trainCoverage25km: round(c25, 3),
+      trainErrorsKm: concentrated.map((o) => round(o.errorKm, 2)).sort((a, b) => a - b),
+      chosenKm: concentratedKm,
+      rule: `radius whose train coverage lies nearer ${RADIUS_TARGET}; 25 km on a tie or with fewer than 4 cases`,
+    },
+    diffuse: { trainCases: diffuse.length, chosenKm: diffuseKm, trainCoverageChosen: round(coverage(diffuse, diffuseKm), 3), radiusBy70PercentRuleKm: diffuseRuleKm },
+  };
+  say(`Weltmodell: Radius konzentrierter Antworten ${concentratedKm} km (Abstimmungshälfte: ${concentrated.length} Fälle, im Kreis bei 1 km ${(c1 * 100).toFixed(0)} %, bei 25 km ${(c25 * 100).toFixed(0)} %); übrige ${diffuseKm} km (${diffuse.length} Fälle).`);
+}
 
 // ---- final run with the tuned parameters
-const final = runAll(world, prepared, params);
+const finalGallery = runAll(world, prepared, galleryParams, false);
+const final = geoclipUsed ? runAll(world, prepared, params, true) : finalGallery;
 // Confidence is recomputed with the fitted model by decideLocation itself (params.confidence).
-const bySplit = (mode: Mode, split: 'train' | 'test' | 'all'): ModeOutcome[] =>
-  final[mode].filter((_, i) => split === 'all' || (prepared[i] as Prepared).split === split);
+const pick = (runs: Record<Mode, ModeOutcome[]>, mode: Mode, split: 'train' | 'test' | 'all'): ModeOutcome[] =>
+  runs[mode].filter((_, i) => split === 'all' || (prepared[i] as Prepared).split === split);
+const bySplit = (mode: Mode, split: 'train' | 'test' | 'all'): ModeOutcome[] => pick(final, mode, split);
 
 const summary: Record<string, Record<string, Record<string, number>>> = {};
+const summaryGallery: Record<string, Record<string, Record<string, number>>> = {};
 for (const mode of MODES) {
   summary[mode] = {};
-  for (const split of ['train', 'test', 'all'] as const) (summary[mode] as Record<string, Record<string, number>>)[split] = summarise(bySplit(mode, split));
+  summaryGallery[mode] = {};
+  for (const split of ['train', 'test', 'all'] as const) {
+    (summary[mode] as Record<string, Record<string, number>>)[split] = summarise(bySplit(mode, split));
+    (summaryGallery[mode] as Record<string, Record<string, number>>)[split] = summarise(pick(finalGallery, mode, split));
+  }
 }
 // Baselines for orientation: zero-shot country only (centroid answer), on the test half.
 const baseline = (() => {
@@ -757,9 +938,27 @@ const report = {
   zeroShotCountryPrior: zeroShot,
   tuned: {
     params,
+    paramSource,
     prior,
     log: tuned.log,
   },
+  worldModel: geoclipUsed
+    ? {
+        model: 'GeoCLIP (Xenova/geoclip-large-patch14, MIT), int8 image tower unless DATUM_GEOCLIP_PRECISION=fp32, in its worker thread (datum/geoclipService.ts)',
+        precision: geoTiming.precision,
+        threads: geoTiming.threads,
+        caveat: 'the reference landmarks are likely in GeoCLIP\'s Flickr training data: the gain on landmark videos may be larger than on arbitrary footage',
+        choice: worldModelChoice,
+        timing: {
+          galleryReadyMs: round(geoTiming.galleryReadyMs, 0),
+          embeddedVideos: geoTiming.embeddedVideos,
+          cachedVideos: geoTiming.cachedVideos,
+          embedMsPerFrameMedian: geoTiming.embedMsPerFrame.length > 0 ? round(median(geoTiming.embedMsPerFrame), 0) : null,
+          predictFromEmbeddingsMsMedian: round(median(geoTiming.predictMs), 0),
+          note: 'predictFromEmbeddings = scoring against the 100 000 gallery points, modes, refinement and countries in the worker; embedding of the 12 frames comes on top in the node (embedMsPerFrame, from this run or the evaluateGeoclip cache)',
+        },
+      }
+    : null,
   timing: {
     galleryEmbedImagesPerSec: round(galleryReport.imagesPerSec, 1),
     embedThroughputImagesPerSec: round(throughput, 1),
@@ -775,6 +974,7 @@ const report = {
     note: 'framesMs = sampling and embedding of all tiles (taken from the evaluation cache when present); the live engine reuses the stored tile vectors, so it pays only search and decision',
   },
   summary,
+  summaryGalleryOnly: summaryGallery,
   baselineZeroShotCentroidTestUnknown: baseline,
   radius: {
     meaning: `stated radius per evidence tier, calibrated on the train half to cover the truth in ${RADIUS_TARGET * 100} % of its cases (both modes)`,
@@ -787,6 +987,13 @@ const report = {
   calibration: {
     meaning: 'confidence = estimated probability that the true place lies within radiusKm',
     test: { open: calibration(bySplit('open', 'test')), unknown: calibration(bySplit('unknown', 'test')) },
+    scores: {
+      fused: { train: calibrationScore([...bySplit('open', 'train'), ...bySplit('unknown', 'train')]), test: calibrationScore([...bySplit('open', 'test'), ...bySplit('unknown', 'test')]) },
+      galleryOnly: {
+        train: calibrationScore([...pick(finalGallery, 'open', 'train'), ...pick(finalGallery, 'unknown', 'train')]),
+        test: calibrationScore([...pick(finalGallery, 'open', 'test'), ...pick(finalGallery, 'unknown', 'test')]),
+      },
+    },
   },
   videos: prepared.map((p, i) => ({
     id: p.video.id,
@@ -798,6 +1005,7 @@ const report = {
     timeMs: round(p.timing.totalMs, 0),
     open: compact(final.open[i] as ModeOutcome),
     unknown: compact(final.unknown[i] as ModeOutcome),
+    ...(geoclipUsed ? { galleryOnly: { open: compact(finalGallery.open[i] as ModeOutcome), unknown: compact(finalGallery.unknown[i] as ModeOutcome) } } : {}),
   })),
 };
 
@@ -824,6 +1032,8 @@ function compact(o: ModeOutcome): Record<string, unknown> {
     continentTop: o.continentTop,
     continentTopP: round(o.continentTopP, 3),
     zeroShotCountry: o.zeroShotCountry,
+    source: o.source,
+    ...(o.concentration !== null ? { concentration: round(o.concentration, 3) } : {}),
   };
 }
 
@@ -840,17 +1050,22 @@ for (const [i, p] of prepared.entries()) {
     `${p.video.id.slice(0, 12).padEnd(12)} ${p.video.label.slice(0, 21).padEnd(21)} ${p.split.padEnd(5)}  ${o.errorKm.toFixed(1).padStart(10)}  ${o.method.padEnd(8)} ${o.confidence.toFixed(2)}  | ${u.errorKm.toFixed(1).padStart(10)}  ${u.method.padEnd(8)} ${u.confidence.toFixed(2)}`,
   );
 }
-say('');
-say('Modus     Teil    n   Median km   ≤1 km  ≤25 km  ≤200 km  ≤750 km  ≤2500 km  Land   im Radius  Konf');
-for (const mode of MODES) {
-  for (const split of ['train', 'test', 'all'] as const) {
-    const s = (summary[mode] as Record<string, Record<string, number>>)[split] as Record<string, number>;
-    const pc = (v: number | undefined): string => `${((v ?? 0) * 100).toFixed(0)} %`.padStart(7);
-    say(
-      `${mode.padEnd(9)} ${split.padEnd(5)} ${String(s['n']).padStart(4)} ${String(s['medianKm']).padStart(10)} ${pc(s['acc1km'])} ${pc(s['acc25km'])} ${pc(s['acc200km'])} ${pc(s['acc750km'])} ${pc(s['acc2500km'])} ${pc(s['countryAcc'])} ${pc(s['withinRadius'])}  ${(s['meanConfidence'] ?? 0).toFixed(2)}`,
-    );
+const printSummary = (title: string, table: Record<string, Record<string, Record<string, number>>>): void => {
+  say('');
+  say(title);
+  say('Modus     Teil    n   Median km   ≤1 km  ≤25 km  ≤200 km  ≤750 km  ≤2500 km  Land   im Radius  Konf');
+  for (const mode of MODES) {
+    for (const split of ['train', 'test', 'all'] as const) {
+      const s = (table[mode] as Record<string, Record<string, number>>)[split] as Record<string, number>;
+      const pc = (v: number | undefined): string => `${((v ?? 0) * 100).toFixed(0)} %`.padStart(7);
+      say(
+        `${mode.padEnd(9)} ${split.padEnd(5)} ${String(s['n']).padStart(4)} ${String(s['medianKm']).padStart(10)} ${pc(s['acc1km'])} ${pc(s['acc25km'])} ${pc(s['acc200km'])} ${pc(s['acc750km'])} ${pc(s['acc2500km'])} ${pc(s['countryAcc'])} ${pc(s['withinRadius'])}  ${(s['meanConfidence'] ?? 0).toFixed(2)}`,
+      );
+    }
   }
-}
+};
+if (geoclipUsed) printSummary('Vorher: Referenzgalerie allein', summaryGallery);
+printSummary(geoclipUsed ? 'Nachher: mit Weltmodell (GeoCLIP)' : 'Referenzgalerie (ohne Weltmodell)', summary);
 say('');
 say(`Zeit pro Video: Median ${(median(times) / 1000).toFixed(2)} s (Bilder ${(report.timing.perVideoFramesMedianMs / 1000).toFixed(2)} s, Entscheidung ${report.timing.perVideoLocateMedianMs} ms).`);
 say(

@@ -6,6 +6,7 @@
  */
 import { parentPort, workerData } from 'node:worker_threads';
 import {
+  THREAD_CLOSED,
   serializeError,
   type HostMessage,
   type InferenceService,
@@ -32,7 +33,33 @@ async function loadService(name: ServiceName): Promise<InferenceService> {
   }
 }
 
-const post = (message: ThreadMessage, transfer: ArrayBuffer[] = []): void => port.postMessage(message, transfer);
+function post(message: ThreadMessage): void {
+  try {
+    port?.postMessage(message);
+  } catch {
+    // The port is closed (the host is ending this thread): nobody waits for the answer.
+  }
+}
+
+/**
+ * Sends a result. The host waits for exactly one answer per call (and every other model waits
+ * behind it), so a result that cannot be moved is copied, and one that cannot be sent at all
+ * becomes an error answer.
+ */
+function answer(id: number, value: unknown, transfer: ArrayBuffer[]): void {
+  const message: ThreadMessage = { type: 'result', id, value };
+  try {
+    port?.postMessage(message, transfer);
+    return;
+  } catch {
+    // Not transferable (memory owned by native code): try a copy.
+  }
+  try {
+    port?.postMessage(message);
+  } catch (err: unknown) {
+    post({ type: 'error', id, error: serializeError(err) });
+  }
+}
 
 /** Set once init has succeeded: only then are calls answered. */
 let service: InferenceService | null = null;
@@ -40,12 +67,22 @@ let service: InferenceService | null = null;
 let loaded: InferenceService | null = null;
 let chain: Promise<void> = Promise.resolve();
 let closing = false;
+/** Settles when init has (a session must not be created after the thread released its sessions). */
+let initDone: Promise<unknown> = Promise.resolve();
 
+/**
+ * Finishes the call under way, releases the sessions and ends the thread. A session that is
+ * still running when the process tears the thread down makes onnxruntime's binding throw a C++
+ * exception during teardown, which aborts the whole process (seen as SIGABRT on node shutdown).
+ */
 async function close(): Promise<void> {
   if (closing) return;
   closing = true;
+  await initDone.catch(() => undefined);
   await chain;
   await loaded?.dispose().catch(() => undefined);
+  Atomics.store(boot.closed, 0, THREAD_CLOSED);
+  Atomics.notify(boot.closed, 0);
   // Without the port nothing keeps this thread's event loop alive: it ends by itself.
   port?.close();
 }
@@ -63,7 +100,7 @@ port.on('message', (message: HostMessage) => {
     }
     try {
       const reply = await service.call(op, args);
-      post({ type: 'result', id, value: reply.value }, reply.transfer);
+      answer(id, reply.value, reply.transfer);
     } catch (err: unknown) {
       post({ type: 'error', id, error: serializeError(err) });
     }
@@ -72,7 +109,9 @@ port.on('message', (message: HostMessage) => {
 
 try {
   loaded = await loadService(boot.service);
-  const info = await loaded.init(boot.options, (event) => post({ type: 'event', event }));
+  const init = loaded.init(boot.options, (event) => post({ type: 'event', event }));
+  initDone = init;
+  const info = await init;
   service = loaded;
   post({ type: 'ready', info });
 } catch (err: unknown) {

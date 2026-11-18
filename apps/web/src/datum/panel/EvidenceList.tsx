@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import type { Evidence, EvidenceKind } from '../../../../server/src/datum/contract';
+import type { Evidence, EvidenceKind, GeoPoint } from '../../../../server/src/datum/contract';
 import { useLang } from '../../i18n';
+import { haversineKm } from '../../map/geo';
 import { pressable } from '../../ui';
 import { rel } from '../api';
-import { KIND_CODE, KIND_METHOD, Meter, fmtCoord, fmtScore } from './common';
+import { Meter, fmtCoord, fmtKm, fmtScore, kindCode, kindMethod, kindRank, webLink } from './common';
 import './panel.css';
 
 export interface EvidenceListProps {
   evidence: Evidence[];
   /** Optional: an entry was chosen (Enter, space or click), e.g. to jump to its frame. */
   onSelect?: (item: Evidence) => void;
+  /** Place of the fix; with it a street-level picture says how far from the fix it was taken. */
+  at?: GeoPoint | null;
 }
-
-const ORDER: EvidenceKind[] = ['metadata', 'landmark', 'horizon', 'sun', 'region', 'season', 'text', 'filename'];
 
 interface Group {
   kind: EvidenceKind;
@@ -29,44 +30,85 @@ function groupEvidence(evidence: Evidence[]): Group[] {
     groups.set(item.kind, group);
   }
   for (const group of groups.values()) group.items.sort((a, b) => b.weight - a.weight);
-  // What decided the fix first; equal weight keeps the order of the contract.
-  return [...groups.values()].sort((a, b) => b.total - a.total || ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
+  // What decided the fix first; equal weight keeps the order of KIND_ORDER.
+  return [...groups.values()].sort((a, b) => b.total - a.total || kindRank(a.kind) - kindRank(b.kind));
 }
 
-function Reference({ item }: { item: Evidence }) {
+/**
+ * The reference picture of an entry with what it says: a gallery picture (landmark) with its name,
+ * or a public street-level picture with its attribution under it. The picture always comes from
+ * the node (`refImage`); a street-level picture is fetched by the node from its source, never by
+ * the browser. `refUrl` opens the picture at its source, on a click only.
+ */
+function Reference({ item, at }: { item: Evidence; at: GeoPoint | null }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
-  if (!item.refImage) return null;
+  const page = webLink(item.refUrl);
+  const street = item.kind === 'streetlevel';
+  if (!item.refImage && !page) return null;
   const name = item.refLabel ?? item.label;
+  const hasPicture = item.refImage !== undefined && item.refImage !== '' && !failed;
+  // A street-level picture the source no longer has (an expired Mapillary link, a deleted
+  // Panoramax picture) is said as such; the link to its page may still work.
+  const none = street ? (item.refImage ? t('Bild nicht mehr verfügbar') : t('kein Bild')) : t('kein Bild');
+  const distanceKm = street && at && item.refLat !== undefined && item.refLon !== undefined ? haversineKm(at.lat, at.lon, item.refLat, item.refLon) : null;
   return (
-    <div className={open ? 'dp-ref dp-ref-open' : 'dp-ref'}>
-      <button
-        type="button"
-        className="dp-ref-thumb"
-        aria-expanded={open}
-        aria-label={open ? t('Referenzbild verkleinern: {name}', { name }) : t('Referenzbild vergrößern: {name}', { name })}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {/* The server names the gallery picture with a leading slash; relative, it also loads when
-            the console is served under a path prefix. */}
-        {failed ? <span className="dp-ref-none">{t('kein Bild')}</span> : <img src={rel(item.refImage)} alt="" loading="lazy" onError={() => setFailed(true)} />}
-      </button>
+    <div className={open && hasPicture ? 'dp-ref dp-ref-open' : 'dp-ref'}>
+      <div className="dp-ref-fig">
+        {hasPicture ? (
+          <button
+            type="button"
+            className="dp-ref-thumb"
+            aria-expanded={open}
+            aria-label={open ? t('Referenzbild verkleinern: {name}', { name }) : t('Referenzbild vergrößern: {name}', { name })}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {/* The server names the picture with a leading slash; relative, it also loads when the
+                console is served under a path prefix. */}
+            <img src={rel(item.refImage)} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+          </button>
+        ) : (
+          <span className="dp-ref-thumb dp-ref-thumb-none">
+            <span className="dp-ref-none">{none}</span>
+          </span>
+        )}
+        {/* The licence of a street-level picture asks for its attribution wherever it is shown. */}
+        {street && item.refLabel && <span className="dp-ref-attr">{item.refLabel}</span>}
+      </div>
       <div className="dp-ref-cap">
-        <span className="dp-ref-name">{name}</span>
+        {!street && <span className="dp-ref-name">{name}</span>}
         {item.similarity !== undefined && (
           <span>
             <span className="dp-low">{t('Ähnlichkeit')} </span>
             {fmtScore(item.similarity)}
           </span>
         )}
+        {distanceKm !== null && (
+          <span>
+            {distanceKm < 0.05 ? t('am Ort des Fixes') : t('{d} vom Fix', { d: fmtKm(distanceKm) })}
+          </span>
+        )}
         {item.refLat !== undefined && item.refLon !== undefined && <span className="dp-low">{fmtCoord(item.refLat, item.refLon)}</span>}
+        {page && (
+          <a
+            className="dp-link dp-ref-link"
+            href={page}
+            target="_blank"
+            rel="noopener noreferrer"
+            referrerPolicy="no-referrer"
+            title={t('Öffnet die Seite des Bildes bei seiner Quelle.')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {t('Quelle öffnen')}
+          </a>
+        )}
       </div>
     </div>
   );
 }
 
-export function EvidenceList({ evidence, onSelect }: EvidenceListProps) {
+export function EvidenceList({ evidence, onSelect, at = null }: EvidenceListProps) {
   const { t, pick } = useLang();
   const groups = groupEvidence(evidence);
   return (
@@ -81,8 +123,8 @@ export function EvidenceList({ evidence, onSelect }: EvidenceListProps) {
       {groups.map((group) => (
         <div className="dp-ev-group" key={group.kind}>
           <div className="dp-ev-kind">
-            <span className="dp-code">{t(KIND_CODE[group.kind])}</span>
-            <span className="dp-ev-kind-name">{t(KIND_METHOD[group.kind])}</span>
+            <span className="dp-code">{t(kindCode(group.kind))}</span>
+            <span className="dp-ev-kind-name">{t(kindMethod(group.kind))}</span>
             {group.items.length > 1 && <span className="dp-ev-sum">Σ {fmtScore(group.total)}</span>}
           </div>
           <ul className="dp-ev-items">
@@ -103,7 +145,9 @@ export function EvidenceList({ evidence, onSelect }: EvidenceListProps) {
                     {pick(item.detail, item.detailEn)}
                     {item.frame !== undefined && <span className="dp-ev-frame"> · {t('Bild {n}', { n: item.frame })}</span>}
                   </p>
-                  <Reference item={item} />
+                  {/* Keyed by the picture: a new result at the same place in the list starts without the
+                      failure state of the picture before it. */}
+                  <Reference key={item.refImage ?? item.refUrl ?? ''} item={item} at={at} />
                 </li>
               );
             })}

@@ -436,6 +436,7 @@ export class WatchEngine {
       severity: watch.severity,
       sourceId: source.id,
       sourceName: source.name,
+      ...(source.nameEn !== undefined ? { sourceNameEn: source.nameEn } : {}),
       sourceKind: source.kind,
       lat: source.lat,
       lon: source.lon,
@@ -471,6 +472,7 @@ export class WatchEngine {
         mandateId: watch.mandateId,
         action: 'alert.raise',
         summary: `Meldung „${watch.name}“ von ${source.name} (${Math.round(alert.confidence * 100)} %)`,
+        summaryEn: `Alert "${watch.nameEn ?? watch.name}" from ${source.nameEn ?? source.name} (${Math.round(alert.confidence * 100)} %)`,
         data: { alertId: alert.id, watchId: watch.id, sourceId: source.id, videoId: alert.videoId, frame: alert.frameNumber, confidence: alert.confidence },
       })
       .catch((err: unknown) => {

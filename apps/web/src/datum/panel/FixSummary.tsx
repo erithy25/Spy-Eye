@@ -3,7 +3,7 @@ import { formatDateTime, formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
 import { haversineKm, toMgrs } from '../../map/geo';
 import { placeText } from '../labels';
-import { KIND_CODE, KIND_METHOD, Meter, coordParts, fmtCoord, fmtKm, fmtScore } from './common';
+import { Meter, coordParts, fmtCoord, fmtKm, fmtScore, kindCode, kindMethod } from './common';
 import './panel.css';
 
 export interface FixSummaryProps {
@@ -196,7 +196,7 @@ export function FixSummary({ fix }: FixSummaryProps) {
         <div>
           <dt>{t('Methode')}</dt>
           <dd>
-            <span className="dp-code">{t(KIND_CODE[loc.method])}</span> {t(KIND_METHOD[loc.method])}
+            <span className="dp-code">{t(kindCode(loc.method))}</span> {t(kindMethod(loc.method))}
           </dd>
         </div>
         <div>

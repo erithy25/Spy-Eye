@@ -176,6 +176,7 @@ export class SearchEngine {
         playable: entry.info.playable,
         sourceId: source.id,
         sourceName: source.name,
+        ...(source.nameEn !== undefined ? { sourceNameEn: source.nameEn } : {}),
         sourceKind: source.kind,
         lat: source.lat,
         lon: source.lon,

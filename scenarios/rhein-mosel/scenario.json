@@ -16,7 +16,9 @@
     "title": "Übung RHEIN-MOSEL",
     "titleEn": "Exercise RHEIN-MOSEL",
     "legalBasis": "Übungsanordnung der Übungsleitung · kein Echtbetrieb, keine Echtdaten",
+    "legalBasisEn": "Exercise order of the exercise control · no live operation, no real data",
     "purpose": "Erprobung der Bildauswertung für das Lagebild in einer Stabsrahmenübung. Ausgewertet wird ausschließlich frei lizenziertes Archivmaterial.",
+    "purposeEn": "Trial of the image analysis for the situation picture in a command post exercise. Only freely licensed archive footage is analysed.",
     "issuedBy": "Übungsleitung"
   },
   "sources": [
@@ -27,6 +29,7 @@
       "kind": "drone",
       "owner": "Feuerwehr · Drohneneinheit",
       "description": "Erkundungsflug entlang der Mosel zwischen Güls und Moselweiß.",
+      "descriptionEn": "Reconnaissance flight along the Moselle between Güls and Moselweiß.",
       "lat": 50.3497,
       "lon": 7.5612,
       "playlist": [
@@ -51,6 +54,7 @@
       "kind": "drone",
       "owner": "Feuerwehr · Drohneneinheit",
       "description": "Erkundungsflug über dem Rheinvorland bei Neuendorf und Wallersheim.",
+      "descriptionEn": "Reconnaissance flight over the Rhine floodplain near Neuendorf and Wallersheim.",
       "lat": 50.3806,
       "lon": 7.6108,
       "playlist": [
@@ -75,6 +79,7 @@
       "kind": "drone",
       "owner": "Technisches Hilfswerk · Trupp UL",
       "description": "Verkehrsbeobachtung an der B 9 zwischen Lützel und Bubenheim.",
+      "descriptionEn": "Traffic observation on the B 9 between Lützel and Bubenheim.",
       "lat": 50.3792,
       "lon": 7.5778,
       "playlist": [
@@ -99,6 +104,7 @@
       "kind": "drone",
       "owner": "Feuerwehr · Drohneneinheit",
       "description": "Beobachtung des Gewerbegebiets am Rheinhafen.",
+      "descriptionEn": "Observation of the business park at the Rhine port.",
       "lat": 50.3918,
       "lon": 7.5996,
       "playlist": [
@@ -119,6 +125,7 @@
       "kind": "fixed",
       "owner": "Straßenverkehrsbehörde",
       "description": "Festkamera an der B 9 in Höhe Oberwerth.",
+      "descriptionEn": "Fixed camera on the B 9 at Oberwerth.",
       "lat": 50.3448,
       "lon": 7.5935,
       "playlist": [
@@ -139,6 +146,7 @@
       "kind": "fixed",
       "owner": "Straßenverkehrsbehörde",
       "description": "Festkamera im Straßentunnel auf der rechten Rheinseite.",
+      "descriptionEn": "Fixed camera in the road tunnel on the right bank of the Rhine.",
       "lat": 50.3562,
       "lon": 7.6128,
       "playlist": [
@@ -163,6 +171,7 @@
       "kind": "fixed",
       "owner": "Stadt · Umweltamt",
       "description": "Blick talaufwärts über das Stadtgebiet.",
+      "descriptionEn": "View up the valley over the city.",
       "lat": 50.3652,
       "lon": 7.6156,
       "playlist": [
@@ -179,6 +188,7 @@
       "kind": "bodycam",
       "owner": "Freiwillige Feuerwehr",
       "description": "Erkundungstrupp mit Handkamera im Stadtteil Güls.",
+      "descriptionEn": "Scout team with a hand-held camera in the Güls district.",
       "lat": 50.3412,
       "lon": 7.5529,
       "playlist": [
@@ -207,6 +217,7 @@
       "kind": "bodycam",
       "owner": "Freiwillige Feuerwehr",
       "description": "Erkundungstrupp mit Handkamera im Stadtteil Lützel.",
+      "descriptionEn": "Scout team with a hand-held camera in the Lützel district.",
       "lat": 50.3711,
       "lon": 7.5918,
       "playlist": [
@@ -235,6 +246,7 @@
       "kind": "bodycam",
       "owner": "Berufsfeuerwehr",
       "description": "Erkundungstrupp mit Handkamera am Rheinhafen.",
+      "descriptionEn": "Scout team with a hand-held camera at the Rhine port.",
       "lat": 50.3871,
       "lon": 7.6042,
       "playlist": [
@@ -259,6 +271,7 @@
       "kind": "citizen",
       "owner": "Stadt · Hinweisportal",
       "description": "Von Bürgerinnen und Bürgern eingesandte Aufnahmen; Standort laut Einsender.",
+      "descriptionEn": "Footage sent in by members of the public; location as stated by the sender.",
       "lat": 50.3601,
       "lon": 7.5971,
       "playlist": [

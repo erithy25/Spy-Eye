@@ -14,14 +14,25 @@
  *     Dense in France, sparse elsewhere. The licence travels with every picture (mostly
  *     CC-BY-SA-4.0 or Licence Ouverte 2.0); pictures without a licence or with a non-commercial
  *     one are skipped.
- *   - Mapillary API v4, only when MAPILLARY_TOKEN is set (a free client token). The token goes in
- *     the Authorization header, never into a URL, a log line or an error text. Its bbox search
- *     must stay under 0.01 square degrees, so larger boxes are split.
+ *   - Mapillary API v4, only with a key (a free client token "MLY|…"): MAPILLARY_TOKEN in the
+ *     environment, or the key an operator stored in the console (settings.ts). The key goes in
+ *     the Authorization header, never into a URL, a log line or an error text, and is not sent
+ *     along when a redirect leaves the host. Its bbox search must stay under 0.01 square degrees,
+ *     so larger boxes are split.
+ *
+ * Whether the stage runs at all is the node's setting (settings.ts `streetLevelEnabled`); this
+ * module does not check it, the engine does before calling.
  *
  * What is kept: the vectors of the pictures (on disk, per provider and picture id, under
  * .cache/datum/streetlevel/), and in the result the id, position, thumbnail URL and attribution of
  * the best pictures. The pictures themselves are downloaded into memory only and dropped after
- * embedding; nothing is unblurred, nothing is copied in bulk.
+ * embedding; nothing is unblurred, nothing is copied in bulk. The evidence of a fix names the
+ * remote thumbnail in `refSource` and the viewer page in `refUrl`; the console shows the picture
+ * through the node (streetImage.ts), never from the remote host.
+ *
+ * Every URL is checked before it is asked (https, named public host, see streetImage.ts
+ * `isSafeRemoteUrl`), redirects are followed one by one (at most two) with the same check, and
+ * with the real network the host's addresses must be public.
  *
  * Every network step runs under a per-request timeout and a total budget; at the end of the
  * budget the stage decides on what it has. No network error leaves this module as an exception:
@@ -35,6 +46,10 @@ import { config, repoRoot } from '../config.js';
 import { tileLayout, writeTile, type DecodedFrame, type PixelRect } from '../ml/preprocess.js';
 import type { Evidence, EvidenceKind, FixLocation, GeoPoint } from './contract.js';
 import { modelSlug, type ImageEmbedder } from './gallery.js';
+import { datumSettings, envMapillaryToken } from './settings.js';
+import { checkHost, defaultLookup, isSafeRemoteUrl, type HostLookup } from './streetImage.js';
+
+export { isSafeRemoteUrl, streetImagePath, withStreetImagePaths } from './streetImage.js';
 
 // ------------------------------------------------------------------ public types
 
@@ -251,7 +266,8 @@ export interface StreetLevelOptions {
   returnAll: boolean;
 }
 
-export const STREETLEVEL_USER_AGENT = 'DATUM-Erprobung/0.5 (Ortung von Videos; offline evaluation)';
+/** Generic on purpose: it names the software, nothing about the installation or its people. */
+export const STREETLEVEL_USER_AGENT = 'DATUM/0.5 (Ortung von Videos)';
 
 /**
  * Defaults. The decision thresholds were chosen on the tuning half of the reference videos with
@@ -330,8 +346,21 @@ export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
 export interface StreetLevelDeps {
   fetch?: FetchLike;
-  /** Environment to read MAPILLARY_TOKEN from; default process.env. */
+  /**
+   * The Mapillary key to use (null: none). When absent, the key comes from `env` if that is given
+   * (MAPILLARY_TOKEN, as before the settings existed), else from the settings of the node with
+   * `dataDir` (MAPILLARY_TOKEN first, then the key stored from the console).
+   */
+  mapillaryKey?: string | null;
+  /** Data directory of the node whose settings provide the key; default config.dataDir. */
+  dataDir?: string;
+  /** Environment to read MAPILLARY_TOKEN from instead of the settings (tests). */
   env?: Readonly<Record<string, string | undefined>>;
+  /**
+   * Address check of each host before a request. Default: the system resolver with the real
+   * fetch; none with a mock fetch (it has no network to protect).
+   */
+  lookup?: HostLookup | null;
   /** Progress lines (never contain a credential). */
   log?: (line: string) => void;
   /** Cancels the whole call (the result is still returned, never thrown). */
@@ -461,6 +490,19 @@ export function usableLicense(license: string | null): boolean {
   return !/(^|[^a-z])nc([^a-z]|$)/i.test(license) && !/proprietary|all rights reserved|unknown/i.test(license);
 }
 
+/** Something that contains an e-mail address. */
+const EMAIL = /[^\s@<>()"',;]+@[^\s@<>()"',;]+\.[a-z]{2,}/i;
+
+/**
+ * The author as an attribution may name them: a producer name that is (or contains) an e-mail
+ * address is personal contact data the producer did not publish as a name, so `fallback` (the
+ * instance that hosts the picture) stands in for it.
+ */
+export function publicAuthor(name: string | null, fallback: string | null): string | null {
+  if (name === null) return null;
+  return EMAIL.test(name) ? fallback : name;
+}
+
 function attributionLine(author: string | null, license: string, provider: string): string {
   return `${author ? `© ${author}, ` : ''}${licenseLabel(license)}, ${provider}`;
 }
@@ -484,24 +526,6 @@ function httpsUrl(v: unknown): string | null {
   return isSafeRemoteUrl(v) ? v : null;
 }
 
-/**
- * Only https URLs on named hosts are fetched: a federated instance must not be able to point the
- * node at an address on its own network (no IP literals, no localhost).
- */
-export function isSafeRemoteUrl(raw: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (url.protocol !== 'https:' || url.username !== '' || url.password !== '') return false;
-  const host = url.hostname.toLowerCase();
-  if (host === '' || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return false;
-  if (/^[0-9.]+$/.test(host) || host.includes(':') || host.startsWith('[')) return false;
-  return host.includes('.');
-}
-
 /** Listings of a Panoramax STAC search response (FeatureCollection of pictures). */
 export function parsePanoramaxSearch(raw: unknown): StreetLevelListing[] {
   if (!isRecord(raw) || !Array.isArray(raw['features'])) return [];
@@ -522,13 +546,16 @@ export function parsePanoramaxSearch(raw: unknown): StreetLevelListing[] {
     const thumbUrl = httpsUrl(thumbAsset?.['href']) ?? httpsUrl(props['geovisio:thumbnail']);
     if (!thumbUrl) continue;
     const providers = Array.isArray(f['providers']) ? f['providers'] : [];
-    const producer = providers.find((p) => isRecord(p) && Array.isArray(p['roles']) && p['roles'].includes('producer'));
-    const author =
-      isRecord(producer) && typeof producer['name'] === 'string' && producer['name'] !== ''
-        ? producer['name']
-        : typeof props['geovisio:producer'] === 'string' && props['geovisio:producer'] !== ''
-          ? props['geovisio:producer']
-          : null;
+    const withRole = (role: string): string | null => {
+      const p = providers.find((x) => isRecord(x) && Array.isArray(x['roles']) && x['roles'].includes(role));
+      return isRecord(p) && typeof p['name'] === 'string' && p['name'].trim() !== '' ? p['name'].trim() : null;
+    };
+    const producer =
+      withRole('producer') ?? (typeof props['geovisio:producer'] === 'string' && props['geovisio:producer'].trim() !== '' ? props['geovisio:producer'].trim() : null);
+    // The instance: its host provider entry, else the host name of the thumbnail.
+    const hostName = withRole('host');
+    const instance = hostName !== null && !EMAIL.test(hostName) ? hostName : new URL(thumbUrl).hostname;
+    const author = publicAuthor(producer, instance);
     const links = Array.isArray(f['links']) ? f['links'] : [];
     const licenseLink = links.find((l) => isRecord(l) && l['rel'] === 'license');
     const captured = typeof props['datetime'] === 'string' ? Date.parse(props['datetime']) : Number.NaN;
@@ -570,7 +597,7 @@ export function parseMapillarySearch(raw: unknown, preferLarge = false): StreetL
     const thumbUrl = preferLarge ? (large ?? small) : (small ?? large);
     if (!thumbUrl) continue;
     const creator = isRecord(item['creator']) ? item['creator'] : null;
-    const author = creator && typeof creator['username'] === 'string' && creator['username'] !== '' ? creator['username'] : null;
+    const author = publicAuthor(creator && typeof creator['username'] === 'string' && creator['username'].trim() !== '' ? creator['username'].trim() : null, null);
     const captured = item['captured_at'];
     const heading = item['compass_angle'];
     const license = 'CC-BY-SA-4.0';
@@ -767,6 +794,33 @@ interface CallContext {
   log: (line: string) => void;
   requests: number;
   budgetHit: boolean;
+  /** Address check of hosts (null: none), with the verdicts of this call. */
+  lookup: HostLookup | null;
+  hosts: Map<string, Promise<'ok' | 'refused' | 'error'>>;
+}
+
+/** Most redirects followed for one request; each target is checked like the first URL. */
+const MAX_REDIRECTS = 2;
+
+class RefusedUrlError extends Error {
+  constructor() {
+    super('Adresse nicht erlaubt');
+  }
+}
+
+/** The host of `url` may be contacted (checked once per host and call). */
+async function allowedHost(ctx: CallContext, url: string): Promise<void> {
+  if (!isSafeRemoteUrl(url)) throw new RefusedUrlError();
+  if (!ctx.lookup) return;
+  const host = new URL(url).hostname;
+  let verdict = ctx.hosts.get(host);
+  if (!verdict) {
+    verdict = checkHost(url, ctx.lookup);
+    ctx.hosts.set(host, verdict);
+  }
+  const v = await verdict;
+  if (v === 'refused') throw new RefusedUrlError();
+  if (v === 'error') throw new Error('Name nicht auflösbar');
 }
 
 /** Removes every credential from a text (error messages may quote request details). */
@@ -779,6 +833,7 @@ export function redact(text: string, secrets: readonly string[]): string {
 function errorText(err: unknown, secrets: readonly string[]): string {
   if (err instanceof BudgetError) return 'Zeitbudget erschöpft';
   if (err instanceof HttpError) return err.message;
+  if (err instanceof RefusedUrlError) return err.message;
   const e = err as { name?: unknown; message?: unknown; cause?: { message?: unknown } } | null;
   if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) return 'Zeitüberschreitung';
   const msg = e && typeof e.message === 'string' ? e.message : String(err);
@@ -811,7 +866,30 @@ async function httpGet(
     if (tracker) tracker.requests++;
     const signal = AbortSignal.any([ctx.abort.signal, AbortSignal.timeout(Math.max(1, Math.floor(Math.min(ctx.opts.requestTimeoutMs, remaining))))]);
     try {
-      const res = await ctx.fetch(url, { headers: { 'User-Agent': ctx.opts.userAgent, ...headers }, signal, redirect: 'follow' });
+      // Redirects are followed here, one by one: every target passes the same address check, and
+      // the key (Authorization) is not sent to another host.
+      let current = url;
+      let sent: Record<string, string> = { 'User-Agent': ctx.opts.userAgent, ...headers };
+      let res: Response;
+      for (let hop = 0; ; hop++) {
+        await allowedHost(ctx, current);
+        res = await ctx.fetch(current, { headers: sent, signal, redirect: 'manual' });
+        const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+        if (location === null) break;
+        await res.body?.cancel().catch(() => undefined);
+        let next: URL;
+        try {
+          next = new URL(location, current);
+        } catch {
+          throw new RefusedUrlError();
+        }
+        if (hop >= MAX_REDIRECTS) throw new Error('Zu viele Weiterleitungen');
+        if (next.origin !== new URL(current).origin) {
+          const { Authorization: _dropped, ...rest } = sent;
+          sent = rest;
+        }
+        current = next.href;
+      }
       const declared = Number(res.headers.get('content-length') ?? '');
       if (Number.isFinite(declared) && declared > maxBytes) {
         await res.body?.cancel().catch(() => undefined);
@@ -920,10 +998,25 @@ function mapillary(token: string): Provider {
   };
 }
 
-/** A token is used only when it looks like one: printable, no spaces (it goes into a header). */
-function validToken(raw: string | undefined): string | null {
-  const t = raw?.trim() ?? '';
-  return t.length >= 8 && t.length <= 512 && /^[\x21-\x7e]+$/.test(t) ? t : null;
+/** Where the key of a call comes from, and whether a key was given that cannot be used. */
+interface KeyChoice {
+  key: string | null;
+  /** A key was configured but is malformed (it is not used). */
+  malformed: boolean;
+}
+
+function chooseKey(deps: StreetLevelDeps): KeyChoice {
+  if (deps.mapillaryKey !== undefined) {
+    // Given by the caller (the engine, from the settings): still checked, it goes into a header.
+    const checked = deps.mapillaryKey === null ? { set: false, key: null } : envMapillaryToken({ MAPILLARY_TOKEN: deps.mapillaryKey });
+    return { key: checked.key, malformed: checked.set && checked.key === null };
+  }
+  if (deps.env) {
+    const fromEnv = envMapillaryToken(deps.env);
+    return { key: fromEnv.key, malformed: fromEnv.set && fromEnv.key === null };
+  }
+  const settings = datumSettings(deps.dataDir ?? config.dataDir);
+  return { key: settings.mapillaryKey(), malformed: settings.envKeyMalformed() };
 }
 
 // ------------------------------------------------------------------ pixels and vectors
@@ -1098,18 +1191,25 @@ function emptyResult(reasonCode: StreetLevelReasonCode, reason: string, reasonEn
  */
 export async function refineStreetLevel(input: StreetLevelInput, deps: StreetLevelDeps = {}): Promise<StreetLevelResult> {
   const started = performance.now();
-  const env = deps.env ?? process.env;
-  const token = validToken(env['MAPILLARY_TOKEN']);
-  const secrets = [env['MAPILLARY_TOKEN']?.trim() ?? ''].filter((s) => s !== '');
+  let choice: KeyChoice;
   try {
-    return await run(input, deps, started, token, secrets);
+    choice = chooseKey(deps);
+  } catch {
+    // Unreadable settings: go on without Mapillary rather than fail the whole stage.
+    choice = { key: null, malformed: false };
+  }
+  const raw = deps.mapillaryKey ?? deps.env?.['MAPILLARY_TOKEN'] ?? null;
+  const secrets = [choice.key ?? '', raw?.trim() ?? ''].filter((s) => s !== '');
+  try {
+    return await run(input, deps, started, choice, secrets);
   } catch (err) {
     const text = errorText(err, secrets);
     return emptyResult('error', `Straßenbilder nicht auswertbar: ${text}.`, `Street-level pictures could not be compared: ${text}.`, started);
   }
 }
 
-async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: number, token: string | null, secrets: string[]): Promise<StreetLevelResult> {
+async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: number, choice: KeyChoice, secrets: string[]): Promise<StreetLevelResult> {
+  const token = choice.key;
   const opts: StreetLevelOptions = { ...DEFAULT_STREETLEVEL_OPTIONS, ...input.options };
   const log = (line: string): void => deps.log?.(redact(line, secrets));
   const { model, dim } = input;
@@ -1122,9 +1222,16 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
     active.push(panoramax);
   }
   if (opts.providers.includes('mapillary')) {
-    const rawSet = (deps.env ?? process.env)['MAPILLARY_TOKEN'];
-    const note = token ? null : rawSet ? 'MAPILLARY_TOKEN hat kein gültiges Format; Mapillary nicht gefragt.' : 'Kein MAPILLARY_TOKEN gesetzt; Mapillary nicht gefragt.';
-    const noteEn = token ? null : rawSet ? 'MAPILLARY_TOKEN is malformed; Mapillary not asked.' : 'No MAPILLARY_TOKEN set; Mapillary not asked.';
+    const note = token
+      ? null
+      : choice.malformed
+        ? 'Der Mapillary-Schlüssel (MAPILLARY_TOKEN) hat kein gültiges Format; Mapillary nicht gefragt.'
+        : 'Kein Mapillary-Schlüssel hinterlegt (Einstellungen oder MAPILLARY_TOKEN); Mapillary nicht gefragt.';
+    const noteEn = token
+      ? null
+      : choice.malformed
+        ? 'The Mapillary key (MAPILLARY_TOKEN) is malformed; Mapillary not asked.'
+        : 'No Mapillary key stored (settings or MAPILLARY_TOKEN); Mapillary not asked.';
     states.push({ name: 'mapillary', enabled: token !== null, note, noteEn, requests: 0, errors: 0, listed: 0, lastError: null, stopped: false });
     if (token) active.push(mapillary(token));
   }
@@ -1172,6 +1279,9 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
     log,
     requests: 0,
     budgetHit: false,
+    // The real network gets the address check; a mock fetch has no network to protect.
+    lookup: deps.lookup !== undefined ? deps.lookup : deps.fetch ? null : defaultLookup,
+    hosts: new Map(),
   };
   // At the end of the budget every request still running is cut off.
   const timer = setTimeout(() => {
@@ -1531,12 +1641,15 @@ export function streetLevelNote(result: StreetLevelResult): { de: string; en: st
 }
 
 /**
- * Evidence entries for a fix. With a match: one entry per top picture (refImage = the remote
- * thumbnail, refLabel = the attribution, weights sum to the confidence). Without one: a single
- * entry of weight 0 that says why, without a picture.
+ * Evidence entries for a fix, kind 'streetlevel'. With a match: one entry per top picture, best
+ * first (refSource = the remote thumbnail, refUrl = the provider's viewer page, refLabel = the
+ * attribution, weights sum to the confidence). refImage is left out: the engine sets it to the
+ * node's proxy path (`withStreetImagePaths`, `streetImagePath`), because the console never loads a
+ * picture from the remote host. Without a match: a single entry of weight 0 that says why,
+ * without a picture.
  */
 export function streetLevelEvidence(result: StreetLevelResult, opts: { kind?: EvidenceKind } = {}): Evidence[] {
-  const kind = opts.kind ?? 'landmark';
+  const kind = opts.kind ?? 'streetlevel';
   if (!result.matched || !result.location || !result.stats) {
     if (result.reasonCode === 'no-candidates' || result.reasonCode === 'no-providers') return [];
     const label: Record<StreetLevelReasonCode, { de: string; en: string }> = {
@@ -1580,8 +1693,9 @@ export function streetLevelEvidence(result: StreetLevelResult, opts: { kind?: Ev
       detailEn: `${frameEn} resembles a street-level picture from ${provider}${when ? ` (taken ${when})` : ''} with a cosine of ${fmtEn(p.similarity)}, ${distEn}. The typical picture of the area reaches ${fmtEn(stats.typical)}; ${stats.pictures} pictures compared. ${p.attribution}.`,
       weight: (loc.confidence * (weights[i] as number)) / wSum,
       ...(p.frame !== undefined ? { frame: p.frame } : {}),
-      refImage: p.thumbUrl,
       refLabel: p.attribution,
+      ...(p.pageUrl !== '' ? { refUrl: p.pageUrl } : {}),
+      refSource: p.thumbUrl,
       refLat: p.lat,
       refLon: p.lon,
       similarity: p.similarity,

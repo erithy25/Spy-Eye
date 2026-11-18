@@ -10,6 +10,8 @@ import type { Store, VideoEntry } from '../src/store.js';
 import type { ServerEvent, VideoInfo } from '../src/types.js';
 import type { Fix } from '../src/datum/contract.js';
 import type { Gallery, GalleryNeighbour } from '../src/datum/gallery.js';
+import type { GeoclipPrediction } from '../src/datum/geoclip.js';
+import type { GalleryState, WorldModel, WorldModelResult } from '../src/datum/geoclipService.js';
 
 /**
  * The quick stage of DATUM: a recording is located from its file before the analysis has run,
@@ -79,6 +81,37 @@ const gallery = {
     return Array.from({ length: rows }, () => row.slice(0, k));
   },
 } as unknown as Gallery;
+
+/**
+ * Stand-in for the world model: a prediction concentrated at the Deutsches Eck (it agrees with
+ * the gallery), counting how often it is asked and for how many frames.
+ */
+class WorldStandIn implements WorldModel {
+  calls: number[] = [];
+  galleryState: GalleryState = 'ready';
+  warm(): void {}
+  onGallerySettled(listener: (ready: boolean) => void): () => void {
+    listener(true);
+    return () => undefined;
+  }
+  async predict(jpegs: readonly Buffer[]): Promise<WorldModelResult> {
+    this.calls.push(jpegs.length);
+    const prediction: GeoclipPrediction = {
+      frames: jpegs.length,
+      aggregation: 'mixture',
+      probs: new Float32Array([0.7, 0.3]),
+      coords: new Float32Array([50.3644, 7.6062, 50.37, 7.6]),
+      support: new Uint32Array([0, 1]),
+      top: [{ lat: 50.3644, lon: 7.6062, p: 0.7 }],
+      modes: [{ lat: 50.366, lon: 7.604, p: 1, peak: { lat: 50.3644, lon: 7.6062, p: 0.7 }, spreadKm: 0.4 }],
+      refined: null,
+      best: { lat: 50.3644, lon: 7.6062 },
+      countries: [{ iso: 'DE', name: 'Deutschland', p: 1 }],
+      timing: { embedMs: 1, scoreMs: 1, refineMs: 0 },
+    };
+    return { state: 'ok', prediction, reason: null, ms: 5 };
+  }
+}
 
 class MemoryStore {
   readonly entries = new Map<string, VideoEntry>();
@@ -165,6 +198,7 @@ interface Setup {
   engine: InstanceType<typeof DatumEngine>;
   events: Fix[];
   background: Set<string>;
+  world: WorldStandIn;
   dispose: () => Promise<void>;
 }
 
@@ -173,6 +207,7 @@ async function setup(): Promise<Setup> {
   const store = new MemoryStore(root);
   const events: Fix[] = [];
   const background = new Set<string>();
+  const world = new WorldStandIn();
   const hub = {
     broadcast: (event: ServerEvent): void => {
       if (event.type === 'datum-fix') events.push(event.fix);
@@ -186,12 +221,14 @@ async function setup(): Promise<Setup> {
     log: () => undefined,
     holdout: false,
     background: (id) => background.has(id),
+    worldModel: world,
   });
   return {
     store,
     engine,
     events,
     background,
+    world,
     dispose: async () => {
       engine.stop();
       await fs.rm(root, { recursive: true, force: true });
@@ -304,6 +341,7 @@ test('background jobs wait while a person\'s recording is being analysed; the pe
       holdout: false,
       background: (id) => id.startsWith('ref'),
       foregroundElsewhere: () => analysing,
+      worldModel: null,
     });
     const order: string[] = [];
     replace(engine, async (entry) => {
@@ -341,7 +379,7 @@ test('background jobs wait while a person\'s recording is being analysed; the pe
 });
 
 test('quick stage: located from the file alone, before the analysis, every text in both languages', async () => {
-  const { store, engine, events, dispose } = await setup();
+  const { store, engine, events, world, dispose } = await setup();
   try {
     const entry = recording('v1', 'queued', 'Ausflug.mp4');
     await add(store, entry);
@@ -369,7 +407,15 @@ test('quick stage: located from the file alone, before the analysis, every text 
       assert.doesNotMatch(e.detailEn, /\b(der|die|das|und|nicht|Bild)\b/, `English detail is English: ${e.detailEn}`);
     }
     for (const step of fix.trace ?? []) if (step.detail) assert.ok(step.detailEn, `trace "${step.label}" has an English detail`);
-    assert.deepEqual(fix.trace?.map((s) => s.label), ['Metadaten gelesen', 'Bilder für die Ortung gezogen', 'Mit der Referenzgalerie verglichen', 'Licht und Sonnenstand bestimmt']);
+    assert.deepEqual(fix.trace?.map((s) => s.label), ['Metadaten gelesen', 'Bilder für die Ortung gezogen', 'Mit der Referenzgalerie verglichen', 'Weltmodell befragt', 'Licht und Sonnenstand bestimmt']);
+    // The world model looked at the sampled frames once, and agreed with the gallery.
+    assert.equal(world.calls.length, 1);
+    assert.ok((world.calls[0] ?? 0) > 0);
+    const worldEvidence = fix.evidence.find((e) => e.kind === 'worldmodel');
+    assert.ok(worldEvidence, 'the world model is part of the evidence');
+    assert.match(worldEvidence.detail, /bestätigt/);
+    assert.match(worldEvidence.detailEn ?? '', /confirms/);
+    assert.equal(fix.location.method, 'landmark', 'the gallery answer stands where GeoCLIP agrees');
     assert.equal(fix.time.notesEn?.length, fix.time.notes.length);
     // Stored next to the recording with its stage.
     const stored = JSON.parse(await fs.readFile(path.join(store.videoDir('v1'), 'datum', 'fix.json'), 'utf8')) as Fix & { engineVersion: number };
@@ -397,6 +443,10 @@ test('quick stage: located from the file alone, before the analysis, every text 
     const full = engine.get('v1')!;
     assert.equal(full.location?.label, fix.location.label, 'same frames, same place');
     assert.ok(full.trace?.some((s) => s.label === 'Bilder für die Ortung gezogen' && /Schnellortung/.test(s.detail ?? '') && /quick localisation/.test(s.detailEn ?? '')));
+    // The full stage takes the world model's answer over instead of asking again.
+    assert.equal(world.calls.length, 1, 'the world model is not asked twice for the same frames');
+    assert.ok(full.trace?.some((s) => s.label === 'Weltmodell befragt' && /Schnellortung/.test(s.detail ?? '') && /quick localisation/.test(s.detailEn ?? '')));
+    assert.ok(full.evidence.some((e) => e.kind === 'worldmodel'));
     assert.ok(full.keyframes.length > 0);
     for (const e of full.evidence) assert.ok(e.labelEn && e.detailEn, `full evidence ${e.kind} has English texts`);
     for (const step of full.trace ?? []) if (step.detail) assert.ok(step.detailEn, `full trace "${step.label}" has an English detail`);

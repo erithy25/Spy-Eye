@@ -3,8 +3,8 @@ import { useLang } from '../../i18n';
 import { fetchTerrain, rel, type Fix, type TerrainGrid } from '../api';
 import { SpaceView } from '../space/SpaceView';
 import { TerrainView } from '../space/TerrainView';
-import { caseLabel, placeText } from '../labels';
-import { bestWindowText, kmText, useFullFix } from '../useFixes';
+import { caseLabel, placeText, radiusText } from '../labels';
+import { bestWindowText, useFullFix } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
 type Mode = 'video' | 'gelaende';
@@ -21,7 +21,7 @@ function headingFrame(fix: Fix): number | null {
 
 export function Raum({ videos, byId, selected, go }: DatumViewProps) {
   const lang = useLang();
-  const { t, locale } = lang;
+  const { t } = lang;
   const summary = selected ? byId.get(selected) : undefined;
   const { fix } = useFullFix(selected, summary);
   const [mode, setMode] = useState<Mode>('video');
@@ -90,7 +90,7 @@ export function Raum({ videos, byId, selected, go }: DatumViewProps) {
           </div>
         )}
         <span className="low" style={{ marginLeft: 'auto' }}>
-          {loc ? `${placeText(lang, loc, fix)} · ± ${kmText(loc.radiusKm, locale)}` : t('Ort unbestimmt')}
+          {loc ? `${placeText(lang, loc, fix)} · ${radiusText(lang, loc)}` : t('Ort unbestimmt')}
           {bestWindowText(fix) ? ` · ${bestWindowText(fix)}` : ''}
         </span>
         <button type="button" className="text-btn" onClick={() => go('befund')}>

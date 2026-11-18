@@ -3,7 +3,7 @@ import { fetchLedger, sampleLedger, verifyLedger, type LedgerEntryInfo, type Led
 import type { ViewProps } from '../App';
 import { formatDecimal, shortHash } from '../format';
 import { useLang } from '../i18n';
-import { ledgerSummaryEn } from '../ledgerText';
+import { ledgerEnglish } from '../ledgerText';
 import { pressable, useAction } from '../ui';
 
 const FILTERS: { action: string; label: string }[] = [
@@ -18,8 +18,9 @@ const FILTERS: { action: string; label: string }[] = [
 
 function EntryRows({ entries, open, onToggle }: { entries: LedgerEntryInfo[]; open: number | null; onToggle: (seq: number) => void }) {
   const { locale, lang, t } = useLang();
-  // The recorded text stays in the tooltip; the row shows it in the console language.
-  const summary = (e: LedgerEntryInfo): string => (lang === 'en' ? ledgerSummaryEn(e.summary, t) : e.summary);
+  // The recorded text stays in the tooltip; the row shows it in the console language: the English
+  // version the node recorded with the entry, or for older entries the console's own wording.
+  const summary = (e: LedgerEntryInfo): string => (lang === 'en' ? ledgerEnglish(e, t) : e.summary);
   return (
     <>
       {entries.map((e) => (

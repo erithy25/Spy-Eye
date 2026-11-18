@@ -1,6 +1,7 @@
-import type { Fix, TerrainGrid } from '../../../server/src/datum/contract';
+import type { DatumSettings, Fix, TerrainGrid } from '../../../server/src/datum/contract';
+import { ApiRequestError } from '../api';
 
-export type { Fix, TerrainGrid };
+export type { DatumSettings, Fix, TerrainGrid };
 
 /** Accuracy of the fixes against one set of truths. */
 export interface TruthAccuracy {
@@ -56,18 +57,30 @@ export interface CountryShape {
   polygons: [number, number][][];
 }
 
-async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { credentials: 'same-origin', ...(signal ? { signal } : {}) });
-  if (!response.ok) {
-    let message = `HTTP ${response.status}`;
-    try {
-      const body = (await response.json()) as { error?: string };
-      if (body.error) message = body.error;
-    } catch {
-      // keep the status line
-    }
-    throw new Error(message);
+/**
+ * The error of a failed request: the node's message (in the session's language) and the status,
+ * so that a caller can tell a route an older node does not have (404) from a refusal.
+ */
+async function failure(response: Response): Promise<ApiRequestError> {
+  let message = `HTTP ${response.status}`;
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    if (typeof body.error === 'string' && body.error !== '') message = body.error;
+  } catch {
+    // keep the status line
   }
+  return new ApiRequestError(message, response.status);
+}
+
+async function getJson<T>(url: string, signal?: AbortSignal, cache?: RequestCache): Promise<T> {
+  const response = await fetch(url, { credentials: 'same-origin', ...(signal ? { signal } : {}), ...(cache ? { cache } : {}) });
+  if (!response.ok) throw await failure(response);
+  return (await response.json()) as T;
+}
+
+async function sendJson<T>(method: 'POST' | 'PUT', url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!response.ok) throw await failure(response);
   return (await response.json()) as T;
 }
 
@@ -77,7 +90,13 @@ export function rel(url: string | null | undefined): string {
   return url.startsWith('/') ? url.slice(1) : url;
 }
 
-export const fetchFixes = (signal?: AbortSignal): Promise<Fix[]> => getJson('api/datum/fixes', signal);
+/**
+ * The list of fixes, slimmed (?slim=1: no evidence, trace, sun path or horizon profile, one
+ * keyframe, the top five candidates and countries); the detail views read the full fix. An older
+ * node ignores the parameter and sends the same shape in full. 'no-cache' keeps the browser's copy
+ * but asks the node each time with its ETag, which answers 304 without a body when nothing changed.
+ */
+export const fetchFixes = (signal?: AbortSignal): Promise<Fix[]> => getJson('api/datum/fixes?slim=1', signal, 'no-cache');
 export const fetchFix = (id: string, signal?: AbortSignal): Promise<Fix> => getJson(`api/datum/fix/${id}`, signal);
 export const fetchSummary = (signal?: AbortSignal): Promise<DatumSummary> => getJson('api/datum/summary', signal);
 export const fetchDataset = (signal?: AbortSignal): Promise<DatasetRow[]> => getJson('api/datum/dataset', signal);
@@ -110,22 +129,18 @@ export interface TruthResult {
  * Gives the node the true places of own recordings (POST /api/datum/truth). They are compared with
  * the fixes on MESSUNG and never go into the localisation.
  */
-export async function postTruth(entries: { name: string; lat: number; lon: number; label?: string }[]): Promise<TruthResult> {
-  const response = await fetch('api/datum/truth', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ entries }),
-  });
-  if (!response.ok) {
-    let message = `HTTP ${response.status}`;
-    try {
-      const body = (await response.json()) as { error?: string };
-      if (body.error) message = body.error;
-    } catch {
-      // keep the status line
-    }
-    throw new Error(message);
-  }
-  return (await response.json()) as TruthResult;
+export function postTruth(entries: { name: string; lat: number; lon: number; label?: string }[]): Promise<TruthResult> {
+  return sendJson<TruthResult>('POST', 'api/datum/truth', { entries });
 }
+
+/** The engine settings of the node (GET /api/datum/settings); never the Mapillary key itself. */
+export const fetchSettings = (signal?: AbortSignal): Promise<DatumSettings> => getJson('api/datum/settings', signal, 'no-store');
+
+/** Street-level comparison on or off; the supervisor only (permission datum.settings). */
+export const putStreetLevel = (enabled: boolean): Promise<DatumSettings> => sendJson('PUT', 'api/datum/settings/streetlevel', { enabled });
+
+/**
+ * Stores a Mapillary key on the node, or removes the stored one with an empty string. The key goes
+ * to the node only, in the body; the answer says whether one is stored, never which.
+ */
+export const putMapillaryKey = (key: string): Promise<DatumSettings> => sendJson('PUT', 'api/datum/settings/mapillary-key', { key });

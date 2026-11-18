@@ -192,7 +192,7 @@ export function Quellen({ node, openFrame }: ViewProps) {
               const feed = feeds.get(s.id);
               return (
                 <tr key={s.id} className={`clickable${target === s.id ? ' sel' : ''}`} {...pressable(() => { if (s.mode === 'archive') setTarget(s.id); }, target === s.id)}>
-                  <td className="strong" title={t(s.description)}>
+                  <td className="strong" title={pick(s.description, s.descriptionEn)}>
                     <Glyph kind={s.kind} /> {pick(s.name, s.nameEn)}
                   </td>
                   <td className="dim">{t(KIND_LABEL[s.kind])}</td>

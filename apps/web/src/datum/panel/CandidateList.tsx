@@ -3,6 +3,7 @@ import type { Fix, FixCandidate } from '../../../../server/src/datum/contract';
 import { useLang } from '../../i18n';
 import { placeText } from '../labels';
 import { pressable } from '../../ui';
+import { CheckLinks } from './CheckLinks';
 import { fmtCoord, fmtKm, fmtScore } from './common';
 import './panel.css';
 
@@ -59,8 +60,11 @@ export function CandidateList({ candidates, selected, onSelect, fix }: Candidate
               </span>
               <span className="dp-cand-score">{fmtScore(c.score)}</span>
               <span className="dp-cand-pos">
-                {fmtCoord(c.lat, c.lon)}
-                <span className="dp-low"> · ± {fmtKm(c.radiusKm)}</span>
+                <span className="dp-cand-coord">
+                  {fmtCoord(c.lat, c.lon)}
+                  <span className="dp-low"> · ± {fmtKm(c.radiusKm)}</span>
+                </span>
+                <CheckLinks lat={c.lat} lon={c.lon} compact />
               </span>
               <span className="dp-cand-bar" aria-hidden="true">
                 <span style={{ width: `${Math.max(0, Math.min(1, c.score)) * 100}%` }} />

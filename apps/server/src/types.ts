@@ -176,6 +176,8 @@ export interface SearchResult {
   playable: boolean;
   sourceId: string;
   sourceName: string;
+  /** English display name of the source, when it has one. */
+  sourceNameEn?: string;
   sourceKind: SourceKind;
   lat: number | null;
   lon: number | null;
@@ -281,8 +283,12 @@ export interface Mandate {
   titleEn?: string;
   /** Legal basis as cited by the authority, e.g. a section of a disaster-control act. */
   legalBasis: string;
+  /** English version of legalBasis; only for mandates the node seeds itself (older data has none). */
+  legalBasisEn?: string;
   /** What the system may be used for under this mandate. */
   purpose: string;
+  /** English version of purpose; only for mandates the node seeds itself (older data has none). */
+  purposeEn?: string;
   issuedBy: string;
   validFrom: number;
   validTo: number | null;
@@ -332,7 +338,10 @@ export interface LedgerEntryInfo {
   role: string;
   mandateId: string | null;
   action: string;
+  /** The wording on record (German). */
   summary: string;
+  /** English version of summary; absent on entries written before it existed. */
+  summaryEn?: string;
   data: Record<string, unknown>;
   prev: string;
   hash: string;
@@ -370,6 +379,8 @@ export interface SourceInfo {
   /** Organisation that owns the sensor. */
   owner: string;
   description: string;
+  /** English version of description; seeded sources have one, sources created in the console not. */
+  descriptionEn?: string;
   lat: number | null;
   lon: number | null;
   /** archive: uploaded recordings · exercise: driven by the scenario clock · live: connected stream. */
@@ -475,6 +486,8 @@ export interface Alert {
   severity: Severity;
   sourceId: string;
   sourceName: string;
+  /** English display name of the source, when it has one; absent on older alerts. */
+  sourceNameEn?: string;
   sourceKind: SourceKind;
   lat: number | null;
   lon: number | null;

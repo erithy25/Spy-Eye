@@ -195,7 +195,7 @@ function Detail({ watch, node, openFrame, onChanged, onRemoved }: { watch: Watch
     [node.intel?.alerts, watch.id],
   );
   const watches = node.intel?.watches ?? [];
-  const targets = useMemo(() => alerts.map((a) => alertTarget(a, watches)), [alerts, watches]);
+  const targets = useMemo(() => alerts.map((a) => alertTarget(a, watches, pick)), [alerts, watches, pick]);
 
   const patch = (change: Parameters<typeof updateWatch>[1]): void => {
     void action.run(async () => onChanged(await updateWatch(watch.id, change)));
@@ -334,7 +334,7 @@ function Detail({ watch, node, openFrame, onChanged, onRemoved }: { watch: Watch
               <div key={a.id} style={{ opacity: a.status === 'dismissed' ? 0.4 : 1 }}>
                 <Frame src={a.frameUrl} box={a.box} onClick={() => openFrame(targets[i] as (typeof targets)[number], targets)} />
                 <div className="thumb-line">
-                  <span title={a.sourceName}>{a.sourceName}</span>
+                  <span title={pick(a.sourceName, a.sourceNameEn)}>{pick(a.sourceName, a.sourceNameEn)}</span>
                   <span>{formatScore(a.confidence)}</span>
                 </div>
                 <div className="thumb-line low">

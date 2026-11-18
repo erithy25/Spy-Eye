@@ -39,3 +39,8 @@ datasets/datum/clips/selection-pool.json
 datasets/datum/gallery/
 datasets/datum/terrain/
 .goal-start-a
+
+# DATUM: the Mapillary key an operator stores in the console (<dataDir>/datum/mapillary-key) is a
+# secret wherever the data directory lives; never version it.
+**/mapillary-key
+**/mapillary-key.*.tmp

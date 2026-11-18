@@ -280,6 +280,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
         mandateId: null,
         action: 'auth.failed',
         summary: 'Anmeldung abgelehnt',
+        summaryEn: 'Sign-in refused',
         data: {},
       });
       return sendError(reply, 401, lang === 'en' ? 'Unknown user or wrong password.' : 'Unbekannter Benutzer oder falsches Passwort.');
@@ -297,6 +298,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       mandateId: result.session.mandateId,
       action: 'auth.login',
       summary: `${result.user.name} angemeldet`,
+      summaryEn: `${result.user.name} signed in`,
       data: {},
     });
     return ctx ? node.sessionInfo(ctx) : { user: result.user, permissions: [], mandate: null };
@@ -306,7 +308,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const ctx = node.contextOf(request);
     if (ctx) {
       auth.logout(ctx.session.token);
-      await node.record(ctx, 'auth.logout', `${ctx.user.name} abgemeldet`);
+      await node.record(ctx, 'auth.logout', { de: `${ctx.user.name} abgemeldet`, en: `${ctx.user.name} signed out` });
     }
     return reply.header('Set-Cookie', node.sessionCookie(null)).code(204).send();
   });
@@ -342,7 +344,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       exercise: body.flag('exercise', false),
       personDescriptions: body.flag('personDescriptions', false),
     });
-    await node.record({ ...ctx, mandate }, 'mandate.create', `Mandat „${title}“ angelegt`, {
+    await node.record({ ...ctx, mandate }, 'mandate.create', { de: `Mandat „${title}“ angelegt`, en: `Mandate "${title}" created` }, {
       legalBasis,
       purpose,
       validHours: hours,
@@ -356,7 +358,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!ctx) return reply;
     const mandate = mandates.close(request.params.id);
     if (!mandate) return sendError(reply, 404, say(ctx, 'Mandat nicht gefunden.', 'Mandate not found.'));
-    await node.record({ ...ctx, mandate }, 'mandate.close', `Mandat „${mandate.title}“ geschlossen`);
+    await node.record({ ...ctx, mandate }, 'mandate.close', { de: `Mandat „${mandate.title}“ geschlossen`, en: `Mandate "${mandate.titleEn ?? mandate.title}" closed` });
     return mandate;
   });
 
@@ -369,7 +371,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       return sendError(reply, 404, say(ctx, 'Mandat nicht gefunden oder nicht mehr gültig.', 'Mandate not found or no longer valid.'));
     }
     ctx.session.mandateId = mandate.id;
-    await node.record({ ...ctx, mandate }, 'mandate.select', `Arbeit unter Mandat „${mandate.title}“ aufgenommen`);
+    await node.record({ ...ctx, mandate }, 'mandate.select', { de: `Arbeit unter Mandat „${mandate.title}“ aufgenommen`, en: `Work started under mandate "${mandate.titleEn ?? mandate.title}"` });
     return node.sessionInfo({ ...ctx, mandate });
   });
 
@@ -456,7 +458,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
           pipeline.enqueue(id);
           response.accepted.push(entry.info);
           hub.broadcast({ type: 'video', video: entry.info, stats: store.stats(), queueLength: pipeline.queueLength });
-          await node.record(ctx, 'recording.upload', `Aufzeichnung „${name}“ übernommen (${source.name})`, { videoId: id, bytes: size, sourceId: source.id });
+          await node.record(ctx, 'recording.upload', { de: `Aufzeichnung „${name}“ übernommen (${source.name})`, en: `Recording "${name}" taken in (${source.nameEn ?? source.name})` }, { videoId: id, bytes: size, sourceId: source.id });
         } catch (err: unknown) {
           await fs.rm(store.videoDir(id), RM_OPTIONS);
           response.rejected.push({ name, reason: err instanceof Error ? err.message : String(err) });
@@ -494,7 +496,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       );
     }
     // The entry first: a deletion that is not on record must not happen.
-    await node.record(ctx, 'recording.delete', `Aufzeichnung „${entry.info.name}“ gelöscht`, { videoId: id });
+    await node.record(ctx, 'recording.delete', { de: `Aufzeichnung „${entry.info.name}“ gelöscht`, en: `Recording "${entry.info.name}" deleted` }, { videoId: id });
     pipeline.cancel(id);
     await store.remove(id);
     // Its fix goes too (a compute still running for it is discarded by the engine).
@@ -569,7 +571,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
 
     const verdict = screenPrompt(query, guardOptions(ctx));
     if (!verdict.allowed) {
-      await node.record(ctx, 'search.refused', `Anfrage abgelehnt (${verdict.rule})`, { query, rule: verdict.rule });
+      await node.record(ctx, 'search.refused', { de: `Anfrage abgelehnt (${verdict.rule})`, en: `Query refused (${verdict.rule})` }, { query, rule: verdict.rule });
       return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
     }
 
@@ -578,7 +580,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (wantFederated && federation.count > 0) {
       response.federated = await federation.search(query, 12, ctx.user, ctx.mandate);
     }
-    await node.record(ctx, 'search.query', `Suche „${query}“: ${response.matched} Treffer`, {
+    await node.record(ctx, 'search.query', { de: `Suche „${query}“: ${response.matched} Treffer`, en: `Search "${query}": ${response.matched} ${response.matched === 1 ? 'hit' : 'hits'}` }, {
       query,
       matched: response.matched,
       scenesSearched: response.scenesSearched,
@@ -603,7 +605,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     }
     const verdict = screenPrompt(query, guardOptions(ctx));
     if (!verdict.allowed) {
-      await node.record(ctx, 'search.refused', `Anfrage abgelehnt (${verdict.rule})`, { query, rule: verdict.rule, via: 'explain' });
+      await node.record(ctx, 'search.refused', { de: `Anfrage abgelehnt (${verdict.rule})`, en: `Query refused (${verdict.rule})` }, { query, rule: verdict.rule, via: 'explain' });
       return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
     }
     const result = await search.explain({ videoId, frameNumber, query });
@@ -614,7 +616,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       watches.listWatches().some((watch) => watch.prompt === query) ||
       ledger.list({ limit: 200, actor: ctx.user.id, action: 'search.query' }).some((entry) => entry.data['query'] === query);
     if (!onRecord) {
-      await node.record(ctx, 'search.explain', `Fundstelle zu „${query}“ in einem Bild gezeigt`, { query, videoId, frame: frameNumber, flags: verdict.flags });
+      await node.record(ctx, 'search.explain', { de: `Fundstelle zu „${query}“ in einem Bild gezeigt`, en: `Match for "${query}" shown in a frame` }, { query, videoId, frame: frameNumber, flags: verdict.flags });
     }
     return result;
   });
@@ -690,7 +692,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       shared: body.flag('shared', false),
     });
     if (streamUrl !== '') await node.connectStream(source.id, streamUrl);
-    await node.record(ctx, 'source.create', `Quelle „${name}“ angelegt`, {
+    await node.record(ctx, 'source.create', { de: `Quelle „${name}“ angelegt`, en: `Source "${name}" created` }, {
       sourceId: source.id,
       kind,
       shared: source.shared,
@@ -715,7 +717,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (body.has('lon')) patch.lon = body.nullableNumber('lon', -180, 180);
     const source = sources.update(request.params.id, patch);
     if (!source) return sendError(reply, 404, say(ctx, 'Quelle nicht gefunden.', 'Source not found.'));
-    await node.record(ctx, 'source.update', `Quelle „${source.name}“ geändert`, { sourceId: source.id, ...patch });
+    await node.record(ctx, 'source.update', { de: `Quelle „${source.name}“ geändert`, en: `Source "${source.nameEn ?? source.name}" changed` }, { sourceId: source.id, ...patch });
     return source;
   });
 
@@ -736,7 +738,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
         // What the stream delivered stays as the archive of this source.
         source.mode = 'archive';
         sources.update(source.id, {});
-        await node.record(ctx, 'source.disconnect', `Direktbild „${source.name}“ getrennt`, { sourceId: source.id });
+        await node.record(ctx, 'source.disconnect', { de: `Direktbild „${source.name}“ getrennt`, en: `Live feed "${source.nameEn ?? source.name}" disconnected` }, { sourceId: source.id });
         node.broadcastFeeds();
         return reply.code(200).send(source);
       }
@@ -744,7 +746,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       return sendError(reply, 409, say(ctx, 'Der Quelle sind noch Aufzeichnungen zugeordnet.', 'The source still has recordings.'));
     }
     sources.remove(source.id);
-    await node.record(ctx, 'source.delete', `Quelle „${source.name}“ entfernt`, { sourceId: source.id });
+    await node.record(ctx, 'source.delete', { de: `Quelle „${source.name}“ entfernt`, en: `Source "${source.nameEn ?? source.name}" removed` }, { sourceId: source.id });
     return reply.code(204).send();
   });
 
@@ -755,17 +757,18 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const speedRaw = body.number('speed', 1, 1, 8);
     const speed = EXERCISE_SPEEDS.includes(speedRaw) ? speedRaw : 1;
     const title = scenario.definition?.title ?? 'Übung';
+    const titleEn = scenario.definition?.titleEn || (scenario.definition?.title ?? 'Exercise');
     try {
       switch (request.params.action) {
         case 'install':
           await scenario.installFootage();
-          await node.record(ctx, 'exercise.install', `Übungsmaterial „${title}“ eingespielt`);
+          await node.record(ctx, 'exercise.install', { de: `Übungsmaterial „${title}“ eingespielt`, en: `Exercise footage "${titleEn}" installed` });
           break;
         case 'start':
           // Watches must be in place before the first picture of the exercise arrives.
           await node.settled;
           scenario.start(speed);
-          await node.record(ctx, 'exercise.start', `Übung „${title}“ gestartet (${speed}×)`, { speed });
+          await node.record(ctx, 'exercise.start', { de: `Übung „${title}“ gestartet (${speed}×)`, en: `Exercise "${titleEn}" started (${speed}×)` }, { speed });
           break;
         case 'pause':
           scenario.pause();
@@ -778,11 +781,11 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
           break;
         case 'stop':
           scenario.stop();
-          await node.record(ctx, 'exercise.stop', `Übung „${title}“ beendet, Ergebnisse verworfen`);
+          await node.record(ctx, 'exercise.stop', { de: `Übung „${title}“ beendet, Ergebnisse verworfen`, en: `Exercise "${titleEn}" ended, results discarded` });
           break;
         case 'uninstall':
           await scenario.uninstall();
-          await node.record(ctx, 'exercise.uninstall', `Übungsmaterial „${title}“ entfernt`);
+          await node.record(ctx, 'exercise.uninstall', { de: `Übungsmaterial „${title}“ entfernt`, en: `Exercise footage "${titleEn}" removed` });
           break;
         default:
           return sendError(reply, 404, 'Unbekannte Aktion.');
@@ -838,14 +841,14 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     for (const text of [prompt, ...exclude]) {
       const verdict = screenPrompt(text, guardOptions(ctx));
       if (!verdict.allowed) {
-        await node.record(ctx, 'watch.refused', `Wache abgelehnt (${verdict.rule})`, { prompt: text, rule: verdict.rule, via: 'preview' });
+        await node.record(ctx, 'watch.refused', { de: `Wache abgelehnt (${verdict.rule})`, en: `Watch refused (${verdict.rule})` }, { prompt: text, rule: verdict.rule, via: 'preview' });
         return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
       }
     }
     // Trying a description on the stock answers with a count and sample pictures: that is a
     // search, and it is recorded as one before the answer goes out.
     const preview = await watches.preview(prompt, exclude);
-    await node.record(ctx, 'watch.preview', `Beschreibung am Bestand geprüft: „${prompt}“, ${preview.matches} von ${preview.framesChecked} Bildern`, {
+    await node.record(ctx, 'watch.preview', { de: `Beschreibung am Bestand geprüft: „${prompt}“, ${preview.matches} von ${preview.framesChecked} Bildern`, en: `Description tested on the archive: "${prompt}", ${preview.matches} of ${preview.framesChecked} frames` }, {
       prompt,
       exclude,
       matches: preview.matches,
@@ -864,12 +867,12 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       if (text === '') continue;
       const verdict = screenPrompt(text, guardOptions(ctx));
       if (!verdict.allowed) {
-        await node.record(ctx, 'watch.refused', `Wache abgelehnt (${verdict.rule})`, { prompt: text, rule: verdict.rule });
+        await node.record(ctx, 'watch.refused', { de: `Wache abgelehnt (${verdict.rule})`, en: `Watch refused (${verdict.rule})` }, { prompt: text, rule: verdict.rule });
         return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
       }
     }
     const watch = await watches.create(input, ctx.user, ctx.mandate.id);
-    await node.record(ctx, 'watch.create', `Wache „${watch.name}“ aufgestellt`, {
+    await node.record(ctx, 'watch.create', { de: `Wache „${watch.name}“ aufgestellt`, en: `Watch "${watch.nameEn ?? watch.name}" set up` }, {
       watchId: watch.id,
       kind: watch.kind,
       prompt: watch.prompt,
@@ -892,7 +895,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (body.has('severity')) patch.severity = Math.round(body.number('severity', 2, 1, 3)) as Severity;
     const watch = watches.update(request.params.id, patch);
     if (!watch) return sendError(reply, 404, say(ctx, 'Wache nicht gefunden.', 'Watch not found.'));
-    await node.record(ctx, 'watch.update', `Wache „${watch.name}“ geändert`, { watchId: watch.id, ...patch });
+    await node.record(ctx, 'watch.update', { de: `Wache „${watch.name}“ geändert`, en: `Watch "${watch.nameEn ?? watch.name}" changed` }, { watchId: watch.id, ...patch });
     return watch;
   });
 
@@ -902,7 +905,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const watch = watches.getWatch(request.params.id);
     if (!watch) return sendError(reply, 404, say(ctx, 'Wache nicht gefunden.', 'Watch not found.'));
     watches.remove(watch.id);
-    await node.record(ctx, 'watch.delete', `Wache „${watch.name}“ abgezogen`, { watchId: watch.id });
+    await node.record(ctx, 'watch.delete', { de: `Wache „${watch.name}“ abgezogen`, en: `Watch "${watch.nameEn ?? watch.name}" withdrawn` }, { watchId: watch.id });
     return reply.code(204).send();
   });
 
@@ -914,7 +917,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const previousVersion = before.version ?? 1;
     const watch = watches.retrainNow(before.id);
     if (!watch) return sendError(reply, 409, say(ctx, 'Für diese Wache liegen keine Rückmeldungen vor.', 'There is no feedback for this watch yet.'));
-    await node.record(ctx, 'watch.retrain', `Wache „${watch.name}“ nachgeschärft (Version ${previousVersion} → ${watch.version})`, {
+    await node.record(ctx, 'watch.retrain', { de: `Wache „${watch.name}“ nachgeschärft (Version ${previousVersion} → ${watch.version})`, en: `Watch "${watch.nameEn ?? watch.name}" refined (version ${previousVersion} → ${watch.version})` }, {
       watchId: watch.id,
       fromVersion: previousVersion,
       toVersion: watch.version,
@@ -929,7 +932,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!ctx) return reply;
     const watch = watches.resetLearning(request.params.id);
     if (!watch) return sendError(reply, 404, say(ctx, 'Wache nicht gefunden.', 'Watch not found.'));
-    await node.record(ctx, 'watch.reset', `Gelerntes der Wache „${watch.name}“ verworfen (Version ${watch.version})`, { watchId: watch.id, toVersion: watch.version });
+    await node.record(ctx, 'watch.reset', { de: `Gelerntes der Wache „${watch.name}“ verworfen (Version ${watch.version})`, en: `Training of watch "${watch.nameEn ?? watch.name}" discarded (version ${watch.version})` }, { watchId: watch.id, toVersion: watch.version });
     return watch;
   });
 
@@ -943,7 +946,10 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     await node.record(
       ctx,
       `alert.${verdictRaw === 'confirmed' ? 'confirm' : 'dismiss'}`,
-      `Meldung „${alert.watchName}“ von ${alert.sourceName} ${verdictRaw === 'confirmed' ? 'bestätigt' : 'verworfen'}`,
+      {
+        de: `Meldung „${alert.watchName}“ von ${alert.sourceName} ${verdictRaw === 'confirmed' ? 'bestätigt' : 'verworfen'}`,
+        en: `Alert "${alert.watchNameEn ?? alert.watchName}" from ${alert.sourceNameEn ?? alert.sourceName} ${verdictRaw === 'confirmed' ? 'confirmed' : 'dismissed'}`,
+      },
       { alertId: alert.id, watchId: alert.watchId },
     );
     return { alert, watch: watches.getWatch(alert.watchId) ?? null };
@@ -956,7 +962,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (status !== 'open' && status !== 'acknowledged' && status !== 'closed') return sendError(reply, 400, 'status: open | acknowledged | closed');
     const incident = incidents.setStatus(request.params.id, status);
     if (!incident) return sendError(reply, 404, say(ctx, 'Lage nicht gefunden.', 'Incident not found.'));
-    await node.record(ctx, 'incident.status', `Lage „${incident.title}“: ${status}`, { incidentId: incident.id, status });
+    await node.record(ctx, 'incident.status', { de: `Lage „${incident.title}“: ${status}`, en: `Incident "${incident.titleEn || incident.title}": ${status}` }, { incidentId: incident.id, status });
     return incident;
   });
 
@@ -973,7 +979,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const title = new Body(request.body).text('title', 140);
     if (title.length < 3) return sendError(reply, 400, say(ctx, 'Titel fehlt.', 'Title is missing.'));
     const file = await cases.create(title, ctx.mandate.id, ctx.user);
-    await node.record(ctx, 'case.create', `Vorgang „${title}“ angelegt`, { caseId: file.id });
+    await node.record(ctx, 'case.create', { de: `Vorgang „${title}“ angelegt`, en: `Case "${title}" opened` }, { caseId: file.id });
     return reply.code(201).send(file);
   });
 
@@ -1002,7 +1008,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       ctx.user,
     );
     if (!item) return sendError(reply, 409, say(ctx, 'Vorgang nicht gefunden, versiegelt oder Bild unbekannt.', 'Case not found, sealed, or frame unknown.'));
-    await node.record(ctx, 'case.evidence', `Beweisstück zu Vorgang ${request.params.id} genommen`, {
+    await node.record(ctx, 'case.evidence', { de: `Beweisstück zu Vorgang ${request.params.id} genommen`, en: `Evidence added to case ${request.params.id}` }, {
       caseId: request.params.id,
       videoId,
       frame: frameNumber,
@@ -1017,7 +1023,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!ctx) return reply;
     const removed = await cases.removeItem(request.params.id, request.params.itemId);
     if (!removed) return sendError(reply, 409, say(ctx, 'Nicht entfernbar.', 'Cannot be removed.'));
-    await node.record(ctx, 'case.evidence-removed', `Beweisstück aus Vorgang ${request.params.id} entfernt`, { caseId: request.params.id, itemId: request.params.itemId });
+    await node.record(ctx, 'case.evidence-removed', { de: `Beweisstück aus Vorgang ${request.params.id} entfernt`, en: `Evidence removed from case ${request.params.id}` }, { caseId: request.params.id, itemId: request.params.itemId });
     return cases.get(request.params.id);
   });
 
@@ -1028,7 +1034,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (text.length < 1) return sendError(reply, 400, say(ctx, 'Text fehlt.', 'Text is missing.'));
     const file = await cases.addNote(request.params.id, text, ctx.user);
     if (!file) return sendError(reply, 409, say(ctx, 'Vorgang nicht gefunden oder versiegelt.', 'Case not found or sealed.'));
-    await node.record(ctx, 'case.note', `Vermerk zu Vorgang ${file.id}`, { caseId: file.id });
+    await node.record(ctx, 'case.note', { de: `Vermerk zu Vorgang ${file.id}`, en: `Note on case ${file.id}` }, { caseId: file.id });
     return file;
   });
 
@@ -1038,7 +1044,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!ctx) return reply;
     const file = await cases.seal(request.params.id, ctx.user);
     if (!file) return sendError(reply, 409, say(ctx, 'Vorgang nicht gefunden oder bereits versiegelt.', 'Case not found or already sealed.'));
-    await node.record(ctx, 'case.seal', `Vorgang „${file.title}“ versiegelt`, { caseId: file.id, sealHash: file.sealHash, items: file.items.length });
+    await node.record(ctx, 'case.seal', { de: `Vorgang „${file.title}“ versiegelt`, en: `Case "${file.title}" sealed` }, { caseId: file.id, sealHash: file.sealHash, items: file.items.length });
     return file;
   });
 
@@ -1064,7 +1070,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       // Oversight may read case files but never sees imagery; its copy lists the exhibits without pictures.
       pictures: node.allowed(ctx, 'media'),
     });
-    await node.record(ctx, 'case.export', `Vorgang „${file.title}“ als Bericht ausgegeben`, { caseId: file.id, pictures: node.allowed(ctx, 'media') });
+    await node.record(ctx, 'case.export', { de: `Vorgang „${file.title}“ als Bericht ausgegeben`, en: `Case "${file.title}" exported as a report` }, { caseId: file.id, pictures: node.allowed(ctx, 'media') });
     return reply.type('text/html; charset=utf-8').send(html);
   });
 
@@ -1085,7 +1091,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       author: `${ctx.user.name} (${ctx.user.unit})`,
       store,
     });
-    await node.record(ctx, 'report.situation', 'Lagebericht erzeugt', { incidents: incidents.list().filter((i) => i.status !== 'closed').length });
+    await node.record(ctx, 'report.situation', { de: 'Lagebericht erzeugt', en: 'Situation report generated' }, { incidents: incidents.list().filter((i) => i.status !== 'closed').length });
     return reply.type('text/html; charset=utf-8').send(html);
   });
 
@@ -1115,7 +1121,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       ledgerHead: ledger.headHash,
       ledgerLength: ledger.length,
     });
-    await node.record(ctx, 'report.measurement', 'Messbericht erzeugt', {
+    await node.record(ctx, 'report.measurement', { de: 'Messbericht erzeugt', en: 'Measurement report generated' }, {
       detected: metrics.evaluation?.detected ?? null,
       events: metrics.evaluation?.total ?? null,
       falseAlarms: metrics.evaluation?.falseAlarms ?? null,
@@ -1151,7 +1157,10 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const ctx = need(request, reply, null);
     if (!ctx) return reply;
     const result = await ledger.verify();
-    await node.record(ctx, 'ledger.verify', `Protokoll geprüft: ${result.ok ? 'unversehrt' : 'BESCHÄDIGT'} (${result.entries} Einträge)`, {
+    await node.record(ctx, 'ledger.verify', {
+      de: `Protokoll geprüft: ${result.ok ? 'unversehrt' : 'BESCHÄDIGT'} (${result.entries} Einträge)`,
+      en: `Ledger verified: ${result.ok ? 'intact' : 'DAMAGED'} (${result.entries} ${result.entries === 1 ? 'entry' : 'entries'})`,
+    }, {
       ok: result.ok,
       entries: result.entries,
       brokenAt: result.brokenAt,
@@ -1162,7 +1171,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   app.get('/api/ledger/export', async (request, reply) => {
     const ctx = need(request, reply, 'ledger.read');
     if (!ctx) return reply;
-    await node.record(ctx, 'ledger.export', 'Protokoll exportiert', { entries: ledger.length });
+    await node.record(ctx, 'ledger.export', { de: 'Protokoll exportiert', en: 'Ledger exported' }, { entries: ledger.length });
     return reply
       .type('application/x-ndjson; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="sicht-ledger-${node.info.id}.jsonl"`)
@@ -1178,7 +1187,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const QUERIES = ['search.query', 'search.refused', 'search.explain', 'watch.preview', 'watch.refused', 'federation.inbound', 'federation.refused'];
     // Drawn from the whole ledger file, so that old queries cannot be pushed out of reach by new ones.
     const { population, entries: sample } = await ledger.sample((e) => QUERIES.includes(e.action), size);
-    await node.record(ctx, 'audit.sample', `Stichprobe gezogen: ${sample.length} von ${population} Abfragen`, { entries: sample.map((e) => e.seq) });
+    await node.record(ctx, 'audit.sample', { de: `Stichprobe gezogen: ${sample.length} von ${population} Abfragen`, en: `Sample drawn: ${sample.length} of ${population} queries` }, { entries: sample.map((e) => e.seq) });
     return { population, entries: sample };
   });
 
@@ -1208,7 +1217,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
           source: node.info.id,
         },
       }));
-    await node.record(ctx, 'export.geojson', `Lagen als GeoJSON ausgegeben (${features.length})`, { incidents: features.length });
+    await node.record(ctx, 'export.geojson', { de: `Lagen als GeoJSON ausgegeben (${features.length})`, en: `Incidents exported as GeoJSON (${features.length})` }, { incidents: features.length });
     return reply.type('application/geo+json; charset=utf-8').send({ type: 'FeatureCollection', features });
   });
 
@@ -1253,7 +1262,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   </info>
 </alert>
 `;
-    await node.record(ctx, 'export.cap', `Lage „${incident.title}“ als CAP-Meldung ausgegeben`, { incidentId: incident.id });
+    await node.record(ctx, 'export.cap', { de: `Lage „${incident.title}“ als CAP-Meldung ausgegeben`, en: `Incident "${incident.titleEn || incident.title}" exported as a CAP message` }, { incidentId: incident.id });
     return reply.type('application/cap+xml; charset=utf-8').send(cap);
   });
 
@@ -1330,6 +1339,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
           mandateId: null,
           action: 'federation.throttled',
           summary: `Fremdanfragen von ${peer.name} ausgesetzt: mehr als ${PEER_BUDGET} in ${PEER_BUDGET_WINDOW_MS / 60000} Minuten`,
+          summaryEn: `Peer queries from ${peer.name} suspended: more than ${PEER_BUDGET} in ${PEER_BUDGET_WINDOW_MS / 60000} minutes`,
           data: { limit: PEER_BUDGET, windowMinutes: PEER_BUDGET_WINDOW_MS / 60000 },
         });
       }
@@ -1370,6 +1380,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
         mandateId: null,
         action: 'federation.refused',
         summary: `Fremdanfrage von ${peer.name} abgelehnt (${verdict.rule})`,
+        summaryEn: `Peer query from ${peer.name} refused (${verdict.rule})`,
         data: { query, rule: verdict.rule, user: requester.id, mandate: mandate.title },
       });
       return sendError(reply, 422, verdict.reason ?? 'Anfrage nicht zulässig.', { code: 'refused', rule: verdict.rule });
@@ -1409,6 +1420,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       mandateId: null,
       action: 'federation.inbound',
       summary: `Fremdanfrage von ${peer.name}: „${query}“, ${hits.length} Treffer freigegeben`,
+      summaryEn: `Peer query from ${peer.name}: "${query}", ${hits.length} ${hits.length === 1 ? 'hit' : 'hits'} released`,
       data: {
         query,
         released: hits.length,
@@ -1451,17 +1463,17 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const approver = auth.verify(approverId, body.text('password', 200));
     if (!approver || !['supervisor'].includes(approver.role)) {
       if (!approver) noteFailure(approverKey);
-      await node.record(ctx, 'privacy.unmask-denied', 'Aufhebung der Maskierung abgelehnt: Freigabe ungültig', { videoId, approver: approverId });
+      await node.record(ctx, 'privacy.unmask-denied', { de: 'Aufhebung der Maskierung abgelehnt: Freigabe ungültig', en: 'Unmasking refused: approval invalid' }, { videoId, approver: approverId });
       return sendError(reply, 403, say(ctx, 'Freigabe ungültig: Kennung oder Passwort der freigebenden Person stimmt nicht, oder ihr fehlt die Berechtigung.', 'Approval invalid: wrong credentials, or the approver lacks the permission.'));
     }
     failures.delete(approverKey);
     if (approver.id === ctx.user.id) {
-      await node.record(ctx, 'privacy.unmask-denied', 'Aufhebung der Maskierung abgelehnt: Freigabe durch die anfragende Person selbst', { videoId, approver: approver.id });
+      await node.record(ctx, 'privacy.unmask-denied', { de: 'Aufhebung der Maskierung abgelehnt: Freigabe durch die anfragende Person selbst', en: 'Unmasking refused: approved by the requesting person themselves' }, { videoId, approver: approver.id });
       return sendError(reply, 403, say(ctx, 'Vier-Augen-Prinzip: Die Freigabe muss von einer zweiten Person kommen.', 'Four-eyes principle: approval must come from a second person.'));
     }
     // The entry first, the grant after it: no original is shown under a grant that is not on record.
     const grant = { id: newId('gr'), videoId, userId: ctx.user.id, approver: approver.id, expires: Date.now() + UNMASK_TTL_MS };
-    await node.record(ctx, 'privacy.unmask', `Maskierung für „${entry.info.name}“ aufgehoben (Freigabe: ${approver.name})`, {
+    await node.record(ctx, 'privacy.unmask', { de: `Maskierung für „${entry.info.name}“ aufgehoben (Freigabe: ${approver.name})`, en: `Masking lifted for "${entry.info.name}" (approved by ${approver.name})` }, {
       videoId,
       reason,
       approver: approver.id,

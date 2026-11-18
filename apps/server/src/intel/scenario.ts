@@ -29,7 +29,7 @@ export interface ScenarioDefinition {
   /** Sampling for the clips of this scenario. */
   sampleFps: number;
   detail: DetailLevel;
-  mandate: { title: string; titleEn: string; legalBasis: string; purpose: string; issuedBy: string };
+  mandate: { title: string; titleEn: string; legalBasis: string; legalBasisEn?: string; purpose: string; purposeEn?: string; issuedBy: string };
   sources: {
     id: string;
     name: string;
@@ -37,6 +37,7 @@ export interface ScenarioDefinition {
     kind: SourceKind;
     owner: string;
     description: string;
+    descriptionEn?: string;
     lat: number;
     lon: number;
     /** What the source shows from which second of the exercise on; the last entry runs to the end. */
@@ -257,6 +258,7 @@ export class ScenarioEngine {
         kind: source.kind,
         owner: source.owner,
         description: source.description,
+        ...(source.descriptionEn !== undefined ? { descriptionEn: source.descriptionEn } : {}),
         lat: source.lat,
         lon: source.lon,
         mode: 'exercise',

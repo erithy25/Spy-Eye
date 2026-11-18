@@ -11,8 +11,10 @@
  *      with the most sky for the skyline match, date-only file tags no longer taken as an instant.
  *   6: quick stage (`Fix.stage`), every text in German and English (labelEn, detailEn, notesEn),
  *      truth source 'referenz' / 'eigene' with the reference URL in `truth.url`.
+ *   7: world model (GeoCLIP): evidence kind 'worldmodel', location method 'worldmodel' where it
+ *      replaces the gallery's answer, its modes among the candidates, refitted confidence.
  */
-export const ENGINE_VERSION = 6;
+export const ENGINE_VERSION = 7;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;
