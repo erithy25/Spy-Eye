@@ -88,12 +88,13 @@ function Harness() {
             label="Bild 0142 · 00:05,7 · synthetisch"
             headingDeg={fx.street.headingDeg}
             fovDeg={fx.street.fovDeg}
+            pitchDeg={fx.street.pitchDeg}
             sun={fx.sun}
             onExit={() => setExits((n) => n + 1)}
           />
         )}
         {fx && view === 'space-relative' && (
-          <SpaceView key="space-relative" gridUrl={fx.street.gridUrl} imageUrl={fx.street.imageUrl} label="ohne Blickrichtung" />
+          <SpaceView key="space-relative" gridUrl={fx.street.gridUrl} imageUrl={fx.street.imageUrl} pitchDeg={fx.street.pitchDeg} label="ohne Blickrichtung" />
         )}
         {fx && view === 'space-error' && (
           <SpaceView key="space-error" gridUrl="/does-not-exist.dsg" imageUrl={fx.street.imageUrl} label="Fehlerfall" onExit={() => setExits((n) => n + 1)} />

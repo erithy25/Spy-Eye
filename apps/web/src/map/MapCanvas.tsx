@@ -317,9 +317,12 @@ function drawShapes(
   shapes: MapShape[],
   toScreen: (lat: number, lon: number) => { x: number; y: number },
   zoom: number,
+  width: number,
+  height: number,
 ): void {
   if (shapes.length === 0) return;
-  const { width, height } = ctx.canvas;
+  // toScreen works in CSS pixels; width and height are the CSS size of the view.
+  const world = worldSize(zoom);
   const label = (text: string, x: number, y: number, align: CanvasTextAlign = 'left'): void => {
     ctx.font = `500 9px ${FONT}`;
     setSpacing(ctx, '0.12em');
@@ -339,8 +342,17 @@ function drawShapes(
     let prev: { x: number; y: number } | null = null;
     for (const [lat, lon] of pts) {
       const p = toScreen(lat, lon);
-      if (prev === null || Math.abs(p.x - prev.x) > width) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
+      if (prev === null) ctx.moveTo(p.x, p.y);
+      else if (Math.abs(p.x - prev.x) > world / 2) {
+        // The short way between the two points crosses ±180°: on screen they sit at opposite edges
+        // of the world. The step is drawn out over one edge and in again over the other, never as
+        // a line across the whole map. The test uses the world width, not the view: zoomed out,
+        // the world is narrower than the view.
+        const shift = p.x > prev.x ? -world : world;
+        ctx.lineTo(p.x + shift, p.y);
+        ctx.moveTo(prev.x - shift, prev.y);
+        ctx.lineTo(p.x, p.y);
+      } else ctx.lineTo(p.x, p.y);
       prev = p;
     }
   };
@@ -392,7 +404,9 @@ function drawShapes(
         const end = toScreen(pts[24]![0], pts[24]![1]);
         if (s.arrow) {
           const before = toScreen(pts[22]![0], pts[22]![1]);
-          const ang = Math.atan2(end.y - before.y, end.x - before.x);
+          // A ray ending just past ±180° has its last points at opposite edges of the world.
+          const bx = Math.abs(end.x - before.x) > world / 2 ? before.x + (end.x > before.x ? world : -world) : before.x;
+          const ang = Math.atan2(end.y - before.y, end.x - bx);
           ctx.setLineDash([]);
           ctx.beginPath();
           ctx.moveTo(end.x - 9 * Math.cos(ang - 0.35), end.y - 9 * Math.sin(ang - 0.35));
@@ -708,7 +722,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const { width, height, dpr } = size.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom);
+      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom, width, height);
       const list = markersRef.current;
       const positions = new Map<string, { x: number; y: number }>();
       for (const m of list) positions.set(m.id, toScreen(m.lat, m.lon));
@@ -897,10 +911,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       return;
     }
     const from = { ...state.current };
-    // Shortest way around the world for the x coordinate.
-    let dx = target.x - from.x;
-    if (dx > 0.5) dx -= 1;
-    if (dx < -0.5) dx += 1;
+    // Straight across the map, never the short way over ±180°: the map draws one copy of the
+    // world, so a flight over its edge would show empty space and then cut to the other side.
+    // The centre is interpolated without wrapping, so a flight that starts outside [0, 1), where
+    // dragging or the arrow keys may leave it, does not jump either; it still ends on the target.
+    const dx = target.x - from.x;
     const dy = target.y - from.y;
     const dist = Math.hypot(dx, dy);
     const fit = Math.log2((size.current.width * 0.7) / Math.max(1e-9, dist * worldSize(0)));
@@ -912,7 +927,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const u = Math.min(1, (now - started) / duration);
       const e = ease(u);
       const zoom = u < 0.5 ? from.zoom + (mid - from.zoom) * ease(u * 2) : mid + (target.zoom - mid) * ease((u - 0.5) * 2);
-      state.current = { x: (((from.x + dx * e) % 1) + 1) % 1, y: from.y + dy * e, zoom };
+      state.current = { x: from.x + dx * e, y: from.y + dy * e, zoom };
       setZoomShown(zoom);
       schedule('both');
       flight.current = u < 1 ? requestAnimationFrame(step) : null;

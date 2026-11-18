@@ -14,6 +14,11 @@ const { horizonProfile, horizonProfileFromSampler, matchSkyline, imageRay, refin
 const DEUTSCHES_ECK = { lat: 50.3644, lon: 7.6058 };
 const DEG = Math.PI / 180;
 
+// The real-tile tests need the Koblenz elevation tiles of the map extraction; a fresh checkout
+// (CI) has none. They are skipped with the reason instead of failing on missing data.
+const KOBLENZ = (await terrainAvailable(DEUTSCHES_ECK.lat, DEUTSCHES_ECK.lon)) !== null;
+const needsTiles = { skip: KOBLENZ ? false : 'no Koblenz elevation tiles in .cache/map/terrain (pnpm --filter @sicht/server map:extract)' };
+
 function meanDeg(profile: number[], from: number, to: number): number {
   let sum = 0;
   for (let a = from; a <= to; a++) sum += profile[a] as number;
@@ -24,7 +29,7 @@ function meanDeg(profile: number[], from: number, to: number): number {
 // Real tiles (Koblenz)
 // ------------------------------------------------------------------------------------------------
 
-test('Terrarium heights at Koblenz', async () => {
+test('Terrarium heights at Koblenz', needsTiles, async () => {
   const eck = await heightAt(DEUTSCHES_ECK.lat, DEUTSCHES_ECK.lon);
   assert.ok(eck !== null, 'Deutsches Eck has elevation data');
   // Rhine and Moselle meet at about 60-65 m above sea level.
@@ -37,7 +42,7 @@ test('Terrarium heights at Koblenz', async () => {
   assert.equal(await heightAt(-40, -140), null);
 });
 
-test('terrain grid around Koblenz', async () => {
+test('terrain grid around Koblenz', needsTiles, async () => {
   const grid = await terrainGrid(DEUTSCHES_ECK, 5, 65);
   assert.ok(grid, 'grid');
   assert.equal(grid.size, 65);
@@ -56,7 +61,7 @@ test('terrain grid around Koblenz', async () => {
   assert.equal(await terrainGrid({ lat: -40, lon: -140 }, 5), null);
 });
 
-test('horizon at Deutsches Eck shows the Ehrenbreitstein ridge to the east', async () => {
+test('horizon at Deutsches Eck shows the Ehrenbreitstein ridge to the east', needsTiles, async () => {
   const profile = await horizonProfile(DEUTSCHES_ECK.lat, DEUTSCHES_ECK.lon);
   assert.ok(profile, 'profile');
   assert.equal(profile.length, 360);
@@ -203,7 +208,7 @@ test('matchSkyline gives no heading over nearly flat ground (city roofs, plains)
   assert.ok(real.score > 0.3, `score ${real.score}`);
 });
 
-test('refinePosition finds the place and heading of a skyline seen at Deutsches Eck', async () => {
+test('refinePosition finds the place and heading of a skyline seen at Deutsches Eck', needsTiles, async () => {
   const profile = await horizonProfile(DEUTSCHES_ECK.lat, DEUTSCHES_ECK.lon);
   assert.ok(profile);
   const aspect = 16 / 9;

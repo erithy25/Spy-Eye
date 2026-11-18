@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
 import { DEFAULT_LOCATE_PARAMS, decideLocation, frameAgreement, poolTileRows, voteModes, weightNeighbours, type WeightedRef } from '../src/datum/locate.js';
-import { filenameHints, judgeCreationTime, metadataFromProbe, parseIso6709, parseTagDate } from '../src/datum/metadata.js';
+import { filenameHints, judgeCreationTime, metadataFromProbe, parseIso6709, parseTagDate, parseTagDay } from '../src/datum/metadata.js';
 import { World, greatCircleKm, pointInRing, type LonLat } from '../src/datum/world.js';
 import { interleaveByContinent } from '../src/scripts/datum/selection.js';
 
@@ -222,6 +222,47 @@ test('metadata from ffprobe tags: GPS, device, bogus times', () => {
   assert.equal(metadataFromProbe({ format: { tags: { location: '+48.8584+002.2945/' } } }, null, now).location?.lat, 48.8584);
 });
 
+test('a date or a year without a time of day is no recording instant', () => {
+  const now = Date.UTC(2026, 0, 1);
+  // Date.parse would make each of these midnight UTC, reported as the exact recording time.
+  for (const value of ['2018', '2019-07', '2019-07-04', 'July 4, 2019', '2019-07-04+02:00']) assert.equal(parseTagDate(value), null, value);
+  // Values with a time of day still parse, in all the forms seen in files.
+  assert.equal(parseTagDate('2018-06-17T14:34:56+0200'), Date.UTC(2018, 5, 17, 12, 34, 56));
+  assert.equal(parseTagDate('2018-06-17 12:34'), Date.UTC(2018, 5, 17, 12, 34));
+  assert.equal(parseTagDate('Thu Jul 04 12:00:00 2019'), new Date('Thu Jul 04 12:00:00 2019').getTime());
+  assert.equal(parseTagDay('2019-07-04'), '2019-07-04');
+  assert.equal(parseTagDay('2019:07:04'), '2019-07-04');
+  assert.equal(parseTagDay('2019'), null);
+  assert.equal(parseTagDay('2019-02-30'), null);
+
+  // The reviewer's case: creation_time rejected as a transcode stamp, a date-only "date" tag.
+  const mtime = Date.UTC(2025, 5, 1, 10, 0);
+  const transcoded = metadataFromProbe(
+    { format: { tags: { encoder: 'Lavf58.29.100', creation_time: new Date(mtime - 5 * 60_000).toISOString(), date: '2019-07-04' } } },
+    mtime,
+    now,
+  );
+  assert.equal(transcoded.creationUtc, null);
+  assert.ok(transcoded.creationRejected);
+  // The day is kept as a date hint (like a date in the file name), never as an instant.
+  assert.equal(transcoded.creationDate, '2019-07-04');
+
+  // A camera AVI: ICRD maps to "date" and holds a date only.
+  assert.deepEqual(
+    (({ creationUtc, creationDate }) => ({ creationUtc, creationDate }))(metadataFromProbe({ format: { tags: { date: '2019-07-04' } } }, null, now)),
+    { creationUtc: null, creationDate: '2019-07-04' },
+  );
+  // A year alone says nothing usable; a day in the future is not believed.
+  assert.equal(metadataFromProbe({ format: { tags: { date: '2018' } } }, null, now).creationDate, null);
+  assert.equal(metadataFromProbe({ format: { tags: { date: '2026-03-01' } } }, null, now).creationDate, null);
+  // The day a transcoder rewrote the file is its stamp, not the recording date.
+  assert.equal(metadataFromProbe({ format: { tags: { encoder: 'HandBrake 1.6', date: '2025-06-01' } } }, mtime, now).creationDate, null);
+  // With an exact instant the date hint is not needed.
+  const both = metadataFromProbe({ format: { tags: { date: '2019-07-04', creationdate: '2019-07-04T12:00:00Z' } } }, null, now);
+  assert.equal(both.creationUtc, Date.UTC(2019, 6, 4, 12));
+  assert.equal(both.creationDate, null);
+});
+
 test('dates and places in file names', () => {
   assert.equal(filenameHints('2018-06-17 Deutsches Eck.mp4').date, '2018-06-17');
   assert.equal(filenameHints('2018-06-17 Deutsches Eck.mp4').place, 'Deutsches Eck');
@@ -292,7 +333,7 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
     countryCosines: cos,
     frameNumbers: [1],
     metadata: {
-      creationUtc: null, location: { lat: 48.8584, lon: 2.2945 }, altitude: null, device: null, raw: {},
+      creationUtc: null, creationDate: null, location: { lat: 48.8584, lon: 2.2945 }, altitude: null, device: null, raw: {},
       durationSec: null, fps: null, width: null, height: null,
     },
     hints: null,

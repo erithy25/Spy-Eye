@@ -83,7 +83,10 @@ export interface TimeEstimate {
   method: 'metadata' | 'sun' | 'none';
   /** Exact instant when known (metadata), else null. */
   utc: number | null;
-  /** Calendar date when known from metadata or file name (YYYY-MM-DD), else null. */
+  /**
+   * Calendar date when known from metadata or file name (YYYY-MM-DD), else null. A date from the
+   * metadata without a time of day (a date-only tag) comes with method 'sun' or 'none'.
+   */
   date: string | null;
   /** Where the date came from. */
   dateSource: 'metadata' | 'filename' | 'season' | 'none';
@@ -133,20 +136,44 @@ export interface SunReport {
 }
 
 export interface Heading {
-  /** Viewing direction of the camera at the keyframe (azimuth). */
+  /** Viewing direction of the camera at the keyframe (azimuth of the image centre). */
   deg: number;
   /** Horizontal field of view assumed or measured. */
   fovDeg: number;
   method: 'horizon' | 'landmark' | 'sun' | 'metadata';
   confidence: number;
+  /**
+   * Camera pitch solved together with the heading (degrees): positive = looking up (the horizon
+   * then lies below the image centre), 0 = level, negative = looking down. The heading holds only
+   * with this pitch, on the keyframe `frame`, with the aspect `aspect`. Set for method 'horizon'.
+   *
+   * Projection used by the match (pinhole, square pixels, no roll; see horizon.ts `imageRay`):
+   * a point at u (0..1, left to right) and y (0..1, top to bottom) of the frame has, with
+   * f = 0.5 / tan(fovDeg / 2), X = (u − 0.5) / f, Y = (y − 0.5) / (aspect · f), p = pitchDeg,
+   * forward = Y·sin p + cos p and up = sin p − Y·cos p:
+   *   azimuth   = deg + atan2(X, forward)
+   *   elevation = atan2(up, hypot(X, forward))   (degrees above the horizon)
+   */
+  pitchDeg?: number;
+  /** `Keyframe.frame` of the keyframe whose skyline the heading was matched on. */
+  frame?: number;
+  /** Image aspect (width / height) the match assumed for that keyframe. */
+  aspect?: number;
 }
 
 export interface HorizonMatch {
-  /** Whether the skyline of the video matched the terrain horizon at the fix. */
+  /** Whether the skyline of the video matched the terrain horizon around the fix. */
   matched: boolean;
   /** Mean angular error of the match (degrees). */
   errorDeg: number | null;
-  /** Terrain horizon at the fix: elevation angle (deg) for azimuth 0..359. */
+  /**
+   * Point the profile was computed at, and with it the skyline match and the heading. After a
+   * match it is the best point of the search grid around the fix (up to about 4 km from
+   * `Fix.location`, which keeps its place); without a match it is the fix location. A camera that
+   * shows this profile or the heading belongs here. Absent in fixes of older engine versions.
+   */
+  at?: GeoPoint;
+  /** Terrain horizon at `at`: elevation angle (deg) for azimuth 0..359. */
   profile: number[] | null;
 }
 
@@ -159,6 +186,22 @@ export interface Keyframe {
   spaceUrl: string | null;
   /** Skyline: per column (left to right) the normalised y of the sky boundary (0 = top, 1 = bottom), null if no sky. */
   skyline: number[] | null;
+  /**
+   * Camera pitch the space grid was built with (degrees): positive = looking up (the horizon
+   * lies below the image centre), 0 = level, negative = looking down. Absent when no grid was
+   * built. Estimated from the picture by space.ts, independently of `Heading.pitchDeg`.
+   *
+   * The grid's distances run along the rays of this pitched camera. To place a grid point in a
+   * level world frame (x right, y up, the camera at the origin looking along −z at yaw 0, as in
+   * three.js), take the point p in the camera frame (x right, y up, viewing direction −z) and
+   * rotate it about the x axis by θ = pitchDeg:
+   *   x_w = p.x
+   *   y_w = p.y · cos θ − p.z · sin θ
+   *   z_w = p.y · sin θ + p.z · cos θ
+   * (the same as a three.js camera with rotation.x = θ). The flat ground the grid was scaled with
+   * then lies at y_w = −1.6 m (EYE_HEIGHT_M below the camera).
+   */
+  pitchDeg?: number;
 }
 
 /** One step of the analysis, as it ran (shown live in the console). */
@@ -213,6 +256,7 @@ export interface Fix {
  *                values >= far mark sky / unknown
  *   uint8[w*h]   sky mask (1 = sky)
  * The colour comes from `Keyframe.imageUrl`, sampled with the same normalised coordinates.
+ * The rays are those of the pitched camera; the grid carries no pitch, see `Keyframe.pitchDeg`.
  */
 export const SPACE_GRID_MAGIC = 'DSG1';
 

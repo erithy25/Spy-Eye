@@ -12,6 +12,7 @@
       "dataDir": "data-datum",
       "peers": [],
       "seed": "datasets/datum",
+      "keepSeed": true,
       "exercise": false
     }
   ]

@@ -154,17 +154,44 @@ function profileAt(profile: number[], az: number): number {
   return (profile[i % 360] ?? 0) * (1 - f) + (profile[(i + 1) % 360] ?? 0) * f;
 }
 
-/** The skyline a level camera with this heading and field of view would see (normalised y per column). */
-export function skylineFromProfile(profile: number[], headingDeg: number, hfovDeg: number, aspect = 16 / 9, columns = 160): number[] {
-  const tx = Math.tan((hfovDeg / 2) * (Math.PI / 180));
-  const ty = tx / aspect;
+/**
+ * The skyline a camera with this heading, field of view, aspect and pitch (degrees, positive =
+ * up) would see: per column the normalised y of the topmost terrain point. Uses the camera model
+ * of the server's skyline match (horizon.ts `imageRay`) and its column centres (c + 0.5) / n; with
+ * a pitched camera a column does not hold one azimuth, so each column is searched from the top.
+ */
+export function skylineFromProfile(profile: number[], headingDeg: number, hfovDeg: number, aspect = 16 / 9, columns = 160, pitchDeg = 0): number[] {
+  const rad = Math.PI / 180;
+  const f = 0.5 / Math.tan((hfovDeg / 2) * rad);
+  const sp = Math.sin(pitchDeg * rad);
+  const cp = Math.cos(pitchDeg * rad);
+  // Elevation of the ray through (u, y) above the terrain horizon in its direction.
+  const above = (u: number, y: number): number => {
+    const X = (u - 0.5) / f;
+    const Y = (y - 0.5) / (aspect * f);
+    const forward = Y * sp + cp;
+    const up = sp - Y * cp;
+    const az = headingDeg + Math.atan2(X, forward) / rad;
+    return Math.atan2(up, Math.hypot(X, forward)) / rad - profileAt(profile, az);
+  };
   const out: number[] = [];
   for (let c = 0; c < columns; c++) {
-    const u = c / (columns - 1);
-    const x = (2 * u - 1) * tx;
-    const az = headingDeg + (Math.atan(x) * 180) / Math.PI;
-    const el = (profileAt(profile, az) * Math.PI) / 180;
-    const y = 0.5 - (Math.tan(el) * Math.hypot(1, x)) / (2 * ty);
+    const u = (c + 0.5) / columns;
+    let y = 1;
+    const steps = 200;
+    for (let r = 1; r <= steps; r++) {
+      if (above(u, r / steps) > 0) continue;
+      let lo = (r - 1) / steps;
+      let hi = r / steps;
+      for (let k = 0; k < 20; k++) {
+        const mid = (lo + hi) / 2;
+        if (above(u, mid) > 0) lo = mid;
+        else hi = mid;
+      }
+      y = hi;
+      break;
+    }
+    if (above(u, 0) <= 0) y = 0;
     out.push(Math.max(0, Math.min(1, y + (hash(c, 7) - 0.5) * 0.004)));
   }
   return out;
@@ -298,20 +325,25 @@ export interface StreetScene {
   gridUrl: string;
   headingDeg: number;
   fovDeg: number;
+  /** Pitch the camera was held at (degrees, positive = up); the grid's rays are the pitched ones. */
+  pitchDeg: number;
   sun: { azimuthDeg: number; elevationDeg: number };
   width: number;
   height: number;
 }
 
 /**
- * Renders the street and its grid. The camera looks along -z at eye height 1.6 m; mountains far
- * behind follow the terrain horizon in the direction of view, so both viewers tell one story.
+ * Renders the street and its grid. The camera looks along -z at eye height 1.6 m, pitched by
+ * `pitchDeg` as a hand-held phone is; mountains far behind follow the terrain horizon in the
+ * direction of view, so both viewers tell one story. Like a DSG1 grid from the server, the grid
+ * holds distances along the rays of the pitched camera.
  */
 export async function makeStreetScene(options: {
   headingDeg: number;
   sun: { azimuthDeg: number; elevationDeg: number };
   profile: number[];
   fovDeg?: number;
+  pitchDeg?: number;
   width?: number;
   height?: number;
   gridWidth?: number;
@@ -339,7 +371,15 @@ export async function makeStreetScene(options: {
     return { kind: 'sky' };
   };
 
-  const rayDir = (u: number, v: number): Vec3 => vec3.normalize([(2 * u - 1) * tx, (1 - 2 * v) * ty, -1]);
+  // Camera-frame ray turned about x by the pitch into the level world frame (contract.ts,
+  // `Keyframe.pitchDeg`).
+  const pitchDeg = options.pitchDeg ?? 0;
+  const cp = Math.cos((pitchDeg * Math.PI) / 180);
+  const sp = Math.sin((pitchDeg * Math.PI) / 180);
+  const rayDir = (u: number, v: number): Vec3 => {
+    const [x, y, z] = vec3.normalize([(2 * u - 1) * tx, (1 - 2 * v) * ty, -1]);
+    return [x, y * cp - z * sp, y * sp + z * cp];
+  };
 
   // Picture.
   const canvas = document.createElement('canvas');
@@ -412,6 +452,7 @@ export async function makeStreetScene(options: {
     gridUrl: URL.createObjectURL(gridBlob),
     headingDeg: options.headingDeg,
     fovDeg: fov,
+    pitchDeg,
     sun: options.sun,
     width: W,
     height: H,
@@ -423,7 +464,7 @@ export async function makeStreetScene(options: {
 export interface Fixtures {
   street: StreetScene;
   terrain: TerrainGrid;
-  camera: { lat: number; lon: number; headingDeg: number; fovDeg: number };
+  camera: { lat: number; lon: number; headingDeg: number; fovDeg: number; pitchDeg: number; aspect: number };
   sun: { azimuthDeg: number; elevationDeg: number };
   sunPath: SunPathPoint[];
   horizonProfile: number[];
@@ -443,14 +484,17 @@ export async function makeFixtures(): Promise<Fixtures> {
   for (const p of path) if (p.t > noon.t && Math.abs(p.el - 14) < Math.abs(at.el - 14)) at = p;
   const sun = { azimuthDeg: at.az, elevationDeg: at.el };
   const headingDeg = Math.round(at.az - 24);
-  const street = await makeStreetScene({ headingDeg, sun, profile, fovDeg });
+  // Held a little downwards, as phones usually are: the space and the skyline must be levelled.
+  const pitchDeg = -8;
+  const aspect = 16 / 9;
+  const street = await makeStreetScene({ headingDeg, sun, profile, fovDeg, pitchDeg });
   return {
     street,
     terrain,
-    camera: { lat, lon, headingDeg, fovDeg },
+    camera: { lat, lon, headingDeg, fovDeg, pitchDeg, aspect },
     sun,
     sunPath: path,
     horizonProfile: profile,
-    skyline: skylineFromProfile(profile, headingDeg, fovDeg),
+    skyline: skylineFromProfile(profile, headingDeg, fovDeg, aspect, 160, pitchDeg),
   };
 }

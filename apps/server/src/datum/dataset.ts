@@ -73,6 +73,11 @@ export async function truthForName(name: string): Promise<ManifestVideo | null> 
 /**
  * Writes `datasets/datum/seed.json`: the dataset as seed footage of a fresh DATUM node (one
  * source, neutral names). Returns the number of clips that exist on disk.
+ *
+ * The node seeds once and never again, so the clips must not fall to retention ("daysAgo" makes
+ * them look a day old): nodes.datum.json sets `keepSeed`, which exempts exactly these recordings
+ * (this source, these names) from deletion, while other recordings on the node keep the normal
+ * retention (see NodeConfig.keepSeed and PlatformNode.enforceRetention).
  */
 export async function writeSeed(): Promise<{ clips: number; missing: number }> {
   const videos = await loadManifest();

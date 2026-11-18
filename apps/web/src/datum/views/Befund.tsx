@@ -20,10 +20,18 @@ export function Befund({ node, byId, selected, go }: DatumViewProps) {
   useEffect(() => {
     void fetchCountries().then(setCountries);
   }, []);
-  useEffect(() => {
-    setKeyIndex(0);
+  // Key frame and candidate index belong to one result: another recording, or a new result after
+  // "Neu orten", starts again at the first ones. Reset while rendering, so that no frame shows an
+  // index into the old candidate list applied to the new one.
+  const resultKey = `${selected ?? ''}:${fix?.computedAt ?? ''}`;
+  const [resultShown, setResultShown] = useState(resultKey);
+  if (resultShown !== resultKey) {
+    setResultShown(resultKey);
+    // Open on the keyframe the heading was matched on, if any.
+    const matched = fix?.heading ? (fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null) : null;
+    setKeyIndex(Math.max(0, fix?.keyframes.findIndex((k) => k.frame === matched) ?? 0));
     setCandidate(0);
-  }, [selected]);
+  }
 
   const shapes = useMemo(() => (fix ? fixShapes(fix, fix, countries, false, t) : []), [fix, countries, t]);
   const markers = useMemo<MapMarker[]>(() => {
@@ -44,6 +52,10 @@ export function Befund({ node, byId, selected, go }: DatumViewProps) {
 
   const key = fix.keyframes[Math.min(keyIndex, Math.max(0, fix.keyframes.length - 1))] ?? null;
   const focus = fix.candidates[candidate] ?? fix.location;
+  // The heading was matched on one keyframe; on the others its horizon would be drawn over a
+  // picture it was not measured on. Older fixes name the frame only in the horizon evidence.
+  const matchedFrame = fix.heading ? (fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null) : null;
+  const headingHere = fix.heading && key !== null && (matchedFrame === null || matchedFrame === key.frame) ? fix.heading : null;
 
   return (
     <div className="dt-befund">
@@ -62,7 +74,7 @@ export function Befund({ node, byId, selected, go }: DatumViewProps) {
         {key && (
           <section className="dt-section">
             <div className="label">{t('Himmelslinie und Horizont')}</div>
-            <SkylineFrame imageUrl={rel(key.imageUrl)} skyline={key.skyline} horizonProfile={fix.horizon?.profile ?? null} heading={fix.heading} />
+            <SkylineFrame imageUrl={rel(key.imageUrl)} skyline={key.skyline} horizonProfile={fix.horizon?.profile ?? null} heading={headingHere} />
             {fix.keyframes.length > 1 && (
               <div className="dt-keys">
                 {fix.keyframes.map((k, i) => (
@@ -130,7 +142,7 @@ export function Befund({ node, byId, selected, go }: DatumViewProps) {
             {focus ? (
               <MapCanvas
                 view={{ lat: focus.lat, lon: focus.lon, zoom: zoomForRadius(Math.max(0.3, (focus as { radiusKm: number }).radiusKm), focus.lat) - 0.6 }}
-                viewKey={`${fix.videoId}:${candidate}`}
+                viewKey={`${fix.videoId}:${fix.computedAt}:${candidate}`}
                 markers={markers}
                 shapes={shapes}
                 minZoom={1}

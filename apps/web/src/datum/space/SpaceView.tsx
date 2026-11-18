@@ -5,6 +5,12 @@
  * keyframe as texture; seen from the original camera the first view equals the frame. From there
  * the viewer walks through the space in first person. Everything is drawn with the WebGL2 code in
  * ./gl.ts, the HUD with ./hud.ts; no third-party 3D code.
+ *
+ * Frames: the grid's rays are those of the camera as it was pitched when the frame was taken
+ * (`Keyframe.pitchDeg`). The scene is built in a level world frame instead (x right, y up, the
+ * camera at the origin looking along −z at yaw 0): every point is turned from the camera frame
+ * about x by the pitch, so the ground the grid was scaled with lies at y = −EYE_HEIGHT, under the
+ * ground grid, and walking stays horizontal. The start pose looks along the original camera axis.
  */
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -58,6 +64,11 @@ export interface SpaceViewProps {
   headingDeg?: number | null;
   /** Horizontal field of view, used when the grid does not carry one. */
   fovDeg?: number;
+  /**
+   * Camera pitch the grid was built with (`Keyframe.pitchDeg`, degrees, positive = looking up).
+   * Missing means level, as grids of older engine versions were shown.
+   */
+  pitchDeg?: number;
   /** Sun at the determined time; drawn when the heading is known as well. */
   sun?: { azimuthDeg: number; elevationDeg: number } | null;
   onExit?: () => void;
@@ -239,6 +250,9 @@ interface SpaceScene {
   /** tan of the half field of view, horizontally and vertically. */
   tx: number;
   ty: number;
+  /** Pitch of the original camera (radians, positive = up): camera frame → level world frame. */
+  pitch: number;
+  /** World positions (level frame, see the header comment). */
   positions: Float32Array;
   uvs: Float32Array;
   /** 0 sky, 1 measured surface, 2 beyond the far distance / unknown. */
@@ -260,15 +274,31 @@ function toSet(b: LineBuilder): LineSet {
 }
 
 /**
+ * Turns a point or direction about the x axis by `pitch` radians. With +pitch it goes from the
+ * pitched camera frame to the level world frame (as a three.js camera with rotation.x = pitch);
+ * with −pitch back. x is unchanged, lengths are kept.
+ */
+function pitchAboutX(p: Vec3, pitch: number): Vec3 {
+  if (pitch === 0) return p;
+  const c = Math.cos(pitch);
+  const s = Math.sin(pitch);
+  return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c];
+}
+
+/**
  * Builds the mesh from a grid. Vertex (i, j) lies on the ray through the normalised image point
  * (i / (w - 1), j / (h - 1)) at its measured distance, and samples the image at the same point,
- * so that the original camera sees exactly the frame.
+ * so that the original camera sees exactly the frame. The rays are those of the camera pitched by
+ * `pitchDeg` (positive = up); positions are turned into the level world frame.
  */
-export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFovDeg: number): SpaceScene {
+export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFovDeg: number, pitchDeg = 0): SpaceScene {
   const { width: w, height: h, distance, sky, far } = grid;
   const fov = grid.fovDeg > 0 ? grid.fovDeg : fallbackFovDeg;
   const tx = Math.tan(((fov / 2) * Math.PI) / 180);
   const ty = tx / imageAspect;
+  const pitch = Number.isFinite(pitchDeg) ? (pitchDeg * Math.PI) / 180 : 0;
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
   const n = w * h;
   const positions = new Float32Array(n * 3);
   const uvs = new Float32Array(n * 2);
@@ -293,9 +323,13 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
         pointList.push(k);
       } else kind[k] = 2;
       range[k] = r;
-      positions[k * 3] = (rx / len) * r;
-      positions[k * 3 + 1] = (ry / len) * r;
-      positions[k * 3 + 2] = (-1 / len) * r;
+      // Camera frame (ray (rx, ry, −1)), turned about x by the pitch into the world frame.
+      const cx = (rx / len) * r;
+      const cy = (ry / len) * r;
+      const cz = (-1 / len) * r;
+      positions[k * 3] = cx;
+      positions[k * 3 + 1] = cy * cp - cz * sp;
+      positions[k * 3 + 2] = cy * sp + cz * cp;
       uvs[k * 2] = u;
       uvs[k * 2 + 1] = v;
     }
@@ -406,6 +440,7 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
     grid,
     tx,
     ty,
+    pitch,
     positions,
     uvs,
     kind,
@@ -420,8 +455,10 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
   };
 }
 
-/** Signed distance along the original ray between a point and the surface behind it, or null. */
-function surfaceGap(scene: SpaceScene, p: Vec3): number | null {
+/** Signed distance along the original ray between a world point and the surface behind it, or null. */
+function surfaceGap(scene: SpaceScene, world: Vec3): number | null {
+  // Back into the frame of the original camera, whose image the grid is.
+  const p = pitchAboutX(world, -scene.pitch);
   const z = -p[2];
   if (z < 1e-3) return null;
   const u = (p[0] / z / scene.tx + 1) / 2;
@@ -449,8 +486,9 @@ function surfaceGap(scene: SpaceScene, p: Vec3): number | null {
   return vec3.length(p) - d;
 }
 
-/** Kind of the grid cell the original camera saw in a direction (0 sky, 1 surface, 2 far), or null. */
-function cellKind(scene: SpaceScene, dir: Vec3): number | null {
+/** Kind of the grid cell the original camera saw in a world direction (0 sky, 1 surface, 2 far), or null. */
+function cellKind(scene: SpaceScene, worldDir: Vec3): number | null {
+  const dir = pitchAboutX(worldDir, -scene.pitch);
   const z = -dir[2];
   if (z < 1e-3) return null;
   const u = (dir[0] / z / scene.tx + 1) / 2;
@@ -589,7 +627,9 @@ class SpaceEngine {
       far: scene.grid.far,
     };
 
-    this.controls = new FirstPersonControls(wrap, { position: [0, 0, 0], yaw: 0, pitch: 0 }, { speed: 1.5, runFactor: 4.5 });
+    // Start (and R) along the original camera axis, so the first view equals the frame and the
+    // pitch readout shows the camera's real tilt.
+    this.controls = new FirstPersonControls(wrap, { position: [0, 0, 0], yaw: 0, pitch: scene.pitch }, { speed: 1.5, runFactor: 4.5 });
     this.detach = this.controls.attach();
     canvas.addEventListener('webglcontextlost', this.onLost);
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -625,19 +665,20 @@ class SpaceEngine {
     if (key === this.extrasKey) return;
     this.extrasKey = key;
     const b = new LineBuilder();
-    const { tx, ty } = this.scene;
+    const { tx, ty, pitch } = this.scene;
     // The original camera: a pyramid to a frame 0.8 m in front, which from the start pose
-    // coincides with the border of the picture.
+    // coincides with the border of the picture. Drawn in the camera frame, turned by its pitch.
     const s = 0.8;
+    const cam = (p: Vec3): Vec3 => pitchAboutX(p, pitch);
     const corners: Vec3[] = [
-      [-tx * s, ty * s, -s],
-      [tx * s, ty * s, -s],
-      [tx * s, -ty * s, -s],
-      [-tx * s, -ty * s, -s],
+      cam([-tx * s, ty * s, -s]),
+      cam([tx * s, ty * s, -s]),
+      cam([tx * s, -ty * s, -s]),
+      cam([-tx * s, -ty * s, -s]),
     ];
     for (const c of corners) b.segment([0, 0, 0], c, 0.45);
     b.polyline(corners, 0.7, true);
-    b.polyline([[-tx * s * 0.25, ty * s * 1.06, -s], [0, ty * s * 1.28, -s], [tx * s * 0.25, ty * s * 1.06, -s]], 0.7, true);
+    b.polyline([cam([-tx * s * 0.25, ty * s * 1.06, -s]), cam([0, ty * s * 1.28, -s]), cam([tx * s * 0.25, ty * s * 1.06, -s])], 0.7, true);
     // The foot of the camera on the ground plane.
     const y = -EYE_HEIGHT;
     for (let i = 0; i < 48; i++) {
@@ -1001,7 +1042,7 @@ function setText(el: HTMLElement | null, text: string): void {
   if (el && el.textContent !== text) el.textContent = text;
 }
 
-export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg, sun = null, onExit }: SpaceViewProps) {
+export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg, pitchDeg = 0, sun = null, onExit }: SpaceViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<SpaceEngine | null>(null);
@@ -1079,7 +1120,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
         const [grid, image] = await Promise.all([gridP, imageP]);
         if (cancelled) return;
         const aspect = image.naturalWidth > 0 && image.naturalHeight > 0 ? image.naturalWidth / image.naturalHeight : grid.width / grid.height;
-        const scene = buildSpaceScene(grid, aspect, fovDeg ?? 60);
+        const scene = buildSpaceScene(grid, aspect, fovDeg ?? 60, pitchDeg);
         if (scene.triangles.length === 0 && scene.points.length === 0) throw new Error('Das Raster enthält keine vermessenen Flächen.');
         engine = new SpaceEngine(wrap, canvas, hud, scene, image, {
           settings: () => settings.current,
@@ -1115,7 +1156,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
       engineRef.current = null;
       canvas.remove();
     };
-  }, [gridUrl, imageUrl, fovDeg, onReadout, restore]);
+  }, [gridUrl, imageUrl, fovDeg, pitchDeg, onReadout, restore]);
 
   useEffect(() => {
     engineRef.current?.invalidate();

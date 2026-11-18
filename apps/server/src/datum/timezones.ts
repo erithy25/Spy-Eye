@@ -77,6 +77,16 @@ type Rule = (lat: number, lon: number) => string | null;
 
 const between = (v: number, lo: number, hi: number): boolean => v >= lo && v < hi;
 
+/** Latitude of a polyline of [lon, lat] vertices (west to east) at `lon`; null outside its span. */
+function polylineLat(line: ReadonlyArray<readonly [number, number]>, lon: number): number | null {
+  for (let i = 1; i < line.length; i++) {
+    const [x0, y0] = line[i - 1]!;
+    const [x1, y1] = line[i]!;
+    if (lon >= x0 && lon <= x1) return y0 + ((lon - x0) / (x1 - x0)) * (y1 - y0);
+  }
+  return null;
+}
+
 /** Contiguous US and outlying parts reported under "US". */
 const US: Rule = (lat, lon) => {
   if (lat < 23 && lon < -154) return 'Pacific/Honolulu';
@@ -106,8 +116,12 @@ const US: Rule = (lat, lon) => {
   // Central / Eastern border.
   let centralWestOf: number;
   if (lat < 31) centralWestOf = -85.0; // Florida panhandle
-  else if (lat < 35) centralWestOf = -85.2; // Alabama / Georgia
-  else if (lat < 37) centralWestOf = -84.8; // Tennessee
+  // Alabama / Georgia. North of West Point the state line runs straight from 32.9° N, 85.2° W to
+  // Nickajack (35° N, 85.6° W), so the Georgian suburbs of Chattanooga stay Eastern.
+  else if (lat < 35) centralWestOf = lat >= 32.9 ? -85.605 + (35 - lat) * 0.2 : -85.2;
+  // Tennessee: the line follows the Marion/Hamilton, Bledsoe/Rhea and Cumberland/Roane county lines
+  // diagonally, so Chattanooga, Cleveland and Dayton are Eastern; north of 35.9° N it is near 84.8° W.
+  else if (lat < 37) centralWestOf = Math.min(-84.8, -85.47 + (lat - 35) * 0.75);
   else if (lat < 39.2) centralWestOf = -86.0; // Kentucky
   else if (lat < 41.0) centralWestOf = -87.5; // Indiana / Illinois
   else if (lat < 41.8) centralWestOf = -86.8; // north-west Indiana
@@ -141,6 +155,27 @@ const CA: Rule = (lat, lon) => {
   return 'America/Iqaluit';
 };
 
+/**
+ * Southern edge, as [lon, lat] from west to east, of the municipalities of Coahuila, Nuevo León
+ * and Tamaulipas along the Rio Grande that keep US daylight saving (America/Matamoros). The rest
+ * of Mexico dropped daylight saving in 2022. The vertices keep the border towns (Acuña, Piedras
+ * Negras, Allende, Nava, Anáhuac, Nuevo Laredo, Mier, Reynosa, Valle Hermoso, Matamoros) north of
+ * the line and their inland neighbours (Sabinas, Progreso, Lampazos, Parás, Los Aldamas, Méndez,
+ * Monterrey) south of it.
+ */
+const MX_US_DST_EDGE: ReadonlyArray<readonly [number, number]> = [
+  [-103.3, 29.0], // meets the Chihuahua rules (Ojinaga) at 103.3° W
+  [-101.1, 28.2],
+  [-100.75, 27.9],
+  [-100.2, 27.1],
+  [-99.5, 26.85],
+  [-99.2, 26.25],
+  [-98.8, 26.0],
+  [-98.3, 25.7],
+  [-97.8, 25.45],
+  [-96.9, 25.15],
+];
+
 const MX: Rule = (lat, lon) => {
   // Baja California (north): Pacific time with US rules.
   if (lat >= 30.5 && lon < -114.85) return 'America/Tijuana';
@@ -152,9 +187,14 @@ const MX: Rule = (lat, lon) => {
   // Sinaloa (coast) and Nayarit.
   if (between(lat, 22.4, 27) && lon < -105.4 - (lat - 22.4) * 0.52) return 'America/Mazatlan';
   if (between(lat, 20.75, 22.4) && lon < -104.0) return 'America/Mazatlan';
-  // Chihuahua: Ciudad Juárez follows the US, the rest central time.
+  // Chihuahua: Ciudad Juárez follows US mountain time, Ojinaga and its neighbours on the Rio Grande
+  // US central time (both with US daylight saving), the rest central time without daylight saving.
   if (lat > 31.2 && between(lon, -107.2, -106.0)) return 'America/Ciudad_Juarez';
+  if (between(lat, 28.8, 30.4) && between(lon, -105.2, -103.3)) return 'America/Ojinaga';
   if (lat >= 25.6 && between(lon, -109, -103.3)) return 'America/Chihuahua';
+  // Rio Grande border strip of Coahuila, Nuevo León and Tamaulipas: US daylight saving.
+  const usDstEdge = polylineLat(MX_US_DST_EDGE, lon);
+  if (usDstEdge !== null && lat > usDstEdge) return 'America/Matamoros';
   // Quintana Roo: eastern standard time all year.
   if (between(lat, 17.8, 21.7) && lon > -87.6 - ((21.6 - lat) * 1.6) / 3.8) return 'America/Cancun';
   if (lat > 24 && lon > -101.0 && lon < -97) return 'America/Monterrey';
@@ -213,7 +253,8 @@ const AU: Rule = (lat, lon) => {
   }
   if (lat < -39.5) return 'Australia/Hobart';
   if (lon < 138 && lat > -26) return 'Australia/Darwin';
-  if (lon < 141) return 'Australia/Adelaide';
+  // South Australia ends at 26° S; north of it, 138–141° E is western Queensland (Brisbane, below).
+  if (lon < 141 && lat <= -26) return 'Australia/Adelaide';
   if (between(lat, -33.5, -29) && lon < 142) return 'Australia/Broken_Hill';
   if (lat > -29.0 + (lon > 151 ? 0.8 : 0)) return 'Australia/Brisbane';
   if (lat < -36 && lon < 148) return 'Australia/Melbourne';

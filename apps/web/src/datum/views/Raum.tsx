@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useLang } from '../../i18n';
-import { fetchTerrain, rel, type TerrainGrid } from '../api';
+import { fetchTerrain, rel, type Fix, type TerrainGrid } from '../api';
 import { SpaceView } from '../space/SpaceView';
 import { TerrainView } from '../space/TerrainView';
 import { bestWindowText, kmText, useFullFix } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
 type Mode = 'video' | 'gelaende';
+
+/**
+ * `Keyframe.frame` of the keyframe the heading was matched on; the heading (absolute compass,
+ * sun) holds only for that frame's picture and skyline. Fixes of older engine versions record it
+ * only on the horizon evidence. Null when there is no heading or the frame is unknown.
+ */
+function headingFrame(fix: Fix): number | null {
+  if (!fix.heading) return null;
+  return fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null;
+}
 
 export function Raum({ node, byId, selected, go }: DatumViewProps) {
   const { t, locale } = useLang();
@@ -21,10 +31,13 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
   const key = spaces[Math.min(keyIndex, Math.max(0, spaces.length - 1))] ?? null;
   const loc = fix?.location ?? null;
   const terrainKey = loc ? `${loc.lat.toFixed(5)},${loc.lon.toFixed(5)}` : '';
+  const matchedFrame = fix ? headingFrame(fix) : null;
+  const matchedIndex = matchedFrame === null ? -1 : spaces.findIndex((k) => k.frame === matchedFrame);
 
+  // Open on the keyframe the heading belongs to, where the compass and the sun are absolute.
   useEffect(() => {
-    setKeyIndex(0);
-  }, [selected]);
+    setKeyIndex(Math.max(0, matchedIndex));
+  }, [selected, matchedIndex]);
 
   useEffect(() => {
     if (mode !== 'gelaende' || !loc || terrain?.key === terrainKey) return;
@@ -42,6 +55,14 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
   if (!fix) return <div className="dt-empty-view">{t('Raum wird aufgebaut …')}</div>;
 
   const sun = fix.sun?.at ? { azimuthDeg: fix.sun.at.azimuthDeg, elevationDeg: fix.sun.at.elevationDeg } : null;
+  // The heading is applied to the keyframe it was matched on only; the other keyframes keep a
+  // relative compass. Without a recorded frame (older fixes) it is applied as before.
+  const heading = fix.heading && key && (matchedFrame === null || matchedFrame === key.frame) ? fix.heading : null;
+  // The skyline the heading was matched with, for the terrain view (which has no keyframe choice).
+  const matchedKey = matchedFrame === null ? key : (fix.keyframes.find((k) => k.frame === matchedFrame) ?? null);
+  // The horizon profile and the heading were computed at `horizon.at`, which may lie a few
+  // kilometres from the fix location; the terrain camera stands there.
+  const standpoint = fix.horizon?.at ?? loc;
 
   return (
     <div className="dt-raum">
@@ -82,8 +103,9 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
               gridUrl={rel(key.spaceUrl)}
               imageUrl={rel(key.imageUrl)}
               label={loc?.label ?? video.name}
-              headingDeg={fix.heading?.deg ?? null}
+              headingDeg={heading?.deg ?? null}
               fovDeg={fix.heading?.fovDeg ?? 62}
+              pitchDeg={key.pitchDeg ?? 0}
               sun={sun}
               onExit={() => go('befund')}
             />
@@ -91,15 +113,22 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
             <div className="dt-empty-view">{t('Für diese Aufnahme ist kein Raum berechnet.')}</div>
           ))}
         {mode === 'gelaende' &&
-          (terrain?.grid && loc ? (
+          (terrain?.grid && loc && standpoint ? (
             <TerrainView
               key={terrainKey}
               terrain={terrain.grid}
-              camera={{ lat: loc.lat, lon: loc.lon, headingDeg: fix.heading?.deg ?? null, fovDeg: fix.heading?.fovDeg ?? 62 }}
+              camera={{
+                lat: standpoint.lat,
+                lon: standpoint.lon,
+                headingDeg: fix.heading?.deg ?? null,
+                fovDeg: fix.heading?.fovDeg ?? 62,
+                pitchDeg: fix.heading?.pitchDeg,
+                aspect: fix.heading?.aspect,
+              }}
               sun={sun}
               sunPath={fix.sun?.path ?? []}
               horizonProfile={fix.horizon?.profile ?? null}
-              skyline={key?.skyline ?? null}
+              skyline={matchedKey?.skyline ?? null}
               label={loc.label}
             />
           ) : (

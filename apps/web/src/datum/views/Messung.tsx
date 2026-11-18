@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../../i18n';
 import { pressable } from '../../ui';
 import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '../api';
@@ -45,12 +45,21 @@ function evalRows(evaluation: unknown, t: (s: string) => string): EvalRow[] {
   return rows;
 }
 
-export function Messung({ node, select, go }: DatumViewProps) {
+export function Messung({ fixes, select, go }: DatumViewProps) {
   const { t, locale } = useLang();
   const [summary, setSummary] = useState<DatumSummary | null>(null);
   const [rows, setRows] = useState<DatasetRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const version = Object.keys(node.fixes).length;
+  // The figures are read again when a fix starts, ends or is replaced by a recomputation. The
+  // steps announced while a fix runs keep status and computedAt and do not count.
+  const version = useMemo(
+    () =>
+      fixes
+        .map((f) => `${f.videoId}:${f.status}:${f.computedAt}`)
+        .sort()
+        .join('|'),
+    [fixes],
+  );
 
   useEffect(() => {
     const ctrl = new AbortController();

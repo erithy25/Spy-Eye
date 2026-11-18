@@ -11,6 +11,11 @@ import type { GeoPoint } from './contract.js';
 export interface VideoMetadata {
   /** Recording instant (epoch ms, UTC), null when absent or implausible. */
   creationUtc: number | null;
+  /**
+   * Recording date without a time of day (YYYY-MM-DD) from a tag that holds only a date (AVI
+   * ICRD, MP4 ©day); null when there is none or when `creationUtc` is known. A day, not an instant.
+   */
+  creationDate: string | null;
   location: GeoPoint | null;
   /** Metres above sea level from the ISO 6709 string, if given. */
   altitude: number | null;
@@ -156,7 +161,7 @@ const MIN_PLAUSIBLE = Date.UTC(1990, 0, 1);
 
 /**
  * Parses a date tag ("2018-06-17T12:34:56.000000Z", "2018-06-17T14:34:56+0200",
- * "2018:06:17 12:34:56") to epoch ms; null when unreadable.
+ * "2018:06:17 12:34:56") to epoch ms; null when unreadable or when it has no time of day.
  */
 export function parseTagDate(value: string): number | null {
   let v = value.trim();
@@ -166,10 +171,23 @@ export function parseTagDate(value: string): number | null {
   // "+0200" → "+02:00"
   v = v.replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
   if (/^\d{4}-\d{2}-\d{2} \d/.test(v)) v = v.replace(' ', 'T');
+  // A date or a year alone ("2019-07-04", "2018", "July 4, 2019") is no recording instant:
+  // Date.parse would turn it into midnight UTC, and that would be reported as the exact time.
+  // (A zone offset such as "+02:00" is no time of day.)
+  if (!/\d{1,2}:\d{2}/.test(v.replace(/[+-]\d{2}:\d{2}$/, ''))) return null;
   // Without a zone, QuickTime and ffmpeg mean UTC.
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) v += 'Z';
   const t = Date.parse(v);
   return Number.isFinite(t) ? t : null;
+}
+
+/**
+ * A tag that holds a full calendar date and nothing else ("2019-07-04", "2019:07:04") as
+ * YYYY-MM-DD; null for anything else, including a year or a month alone.
+ */
+export function parseTagDay(value: string): string | null {
+  const m = /^(\d{4})[-:](\d{2})[-:](\d{2})$/.exec(value.trim());
+  return m ? validDate(Number(m[1]), Number(m[2]), Number(m[3])) : null;
 }
 
 /**
@@ -230,13 +248,22 @@ export function metadataFromProbe(probe: ProbeJson, fileMtimeMs: number | null, 
   }
 
   const encoder = raw['encoder'] ?? raw['com.apple.quicktime.software'] ?? raw['software'] ?? null;
+  const nowMs = now ?? Date.now();
   let creationUtc: number | null = null;
+  let creationDate: string | null = null;
   let creationRejected: string | undefined;
   for (const key of CREATION_KEYS) {
     const v = raw[key];
     if (!v) continue;
     const t = parseTagDate(v);
-    if (t === null) continue;
+    if (t === null) {
+      // A date without a time of day still names the day (for the sun path), as a date in the
+      // file name does. Not one in the future, and not the day a transcoder rewrote the file.
+      const day = parseTagDay(v);
+      const rewriteDay = encoder && TRANSCODER.test(encoder) && fileMtimeMs !== null ? new Date(fileMtimeMs).toISOString().slice(0, 10) : null;
+      if (day !== null && Date.parse(`${day}T00:00:00Z`) <= nowMs + 24 * 3600_000 && day !== rewriteDay) creationDate ??= day;
+      continue;
+    }
     const reason = judgeCreationTime(t, { encoder, fileMtimeMs, ...(now !== undefined ? { now } : {}) });
     if (reason) {
       creationRejected ??= reason;
@@ -260,6 +287,7 @@ export function metadataFromProbe(probe: ProbeJson, fileMtimeMs: number | null, 
 
   return {
     creationUtc,
+    creationDate: creationUtc === null ? creationDate : null,
     location,
     altitude,
     device,

@@ -41,6 +41,12 @@ export interface NodeConnection {
   live: LiveFeed;
   /** DATUM fixes announced by the node since the console connected (summaries, by video id). */
   fixes: Record<string, Fix>;
+  /**
+   * Increments whenever announcements may have been missed, so the full list of fixes has to be
+   * read again: the event stream (re)connected (the node replays no events), or the state was
+   * polled because the stream is not getting through.
+   */
+  fixesEpoch: number;
   can: (permission: string) => boolean;
   signIn: (user: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -78,6 +84,7 @@ export function useNode(): NodeConnection {
   const [connected, setConnected] = useState(false);
   const [indexVersion, setIndexVersion] = useState(0);
   const [fixes, setFixes] = useState<Record<string, Fix>>({});
+  const [fixesEpoch, setFixesEpoch] = useState(0);
   const listeners = useRef(new Set<LiveListener>());
   const statuses = useRef(new Map<string, VideoStatus>());
   const coarse = useRef(new Set<string>());
@@ -132,6 +139,8 @@ export function useNode(): NodeConnection {
       setApp(null);
       setIntel(null);
       setLedger(null);
+      // Announcements of an ended session must not outlive it (the node may have been restarted).
+      setFixes({});
       return;
     }
     let lastStreamMessage = 0;
@@ -162,12 +171,14 @@ export function useNode(): NodeConnection {
       if (changed) bump();
     };
 
-    const poll = (withIntel: boolean): void => {
+    const poll = (withIntel: boolean, withFixes = false): void => {
       fetchState()
         .then((next) => {
           if (disposed) return;
           applySnapshot(next);
           setConnected(true);
+          // Without the stream no fix is announced; the fixes are read again with every poll.
+          if (withFixes) setFixesEpoch((n) => n + 1);
         })
         .catch((err: unknown) => {
           if (disposed) return;
@@ -189,7 +200,7 @@ export function useNode(): NodeConnection {
     };
     poll(true);
     const pollTimer = window.setInterval(() => {
-      if (Date.now() - lastStreamMessage > STREAM_SILENCE_MS) poll(true);
+      if (Date.now() - lastStreamMessage > STREAM_SILENCE_MS) poll(true, true);
     }, POLL_INTERVAL_MS);
 
     const source = new EventSource('api/events');
@@ -207,6 +218,9 @@ export function useNode(): NodeConnection {
           break;
         case 'state':
           applySnapshot(event.state);
+          // The node sends the state only when a stream (re)connects and replays no events:
+          // fixes announced while the console was not connected are only in the full list.
+          setFixesEpoch((n) => n + 1);
           break;
         case 'model': {
           const model = event.model;
@@ -308,6 +322,7 @@ export function useNode(): NodeConnection {
       indexVersion,
       live: live.current,
       fixes,
+      fixesEpoch,
       can,
       signIn,
       signOut,
@@ -319,6 +334,6 @@ export function useNode(): NodeConnection {
         setIntel((current) => (current ? { ...current, incidents: upsert(current.incidents, incident, true) } : current)),
       patchWatch: (watch) => setIntel((current) => (current ? { ...current, watches: upsert(current.watches, watch, false) } : current)),
     }),
-    [phase, info, session, app, intel, ledger, connected, indexVersion, fixes, can, signIn, signOut, refreshIntel],
+    [phase, info, session, app, intel, ledger, connected, indexVersion, fixes, fixesEpoch, can, signIn, signOut, refreshIntel],
   );
 }

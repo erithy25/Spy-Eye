@@ -68,9 +68,16 @@ export interface NodeConfig {
   seedDir?: string;
   /** false: the node never receives the exercise footage (DATUM reference node). */
   exercise?: boolean;
+  /**
+   * true: the recordings that came from the seed footage are exempt from retention. For the
+   * DATUM reference set, which is the ground truth of the evaluation: it is seeded once (see
+   * `seedArchive`) and would otherwise be deleted for good when the retention period runs out.
+   * Everything else on the node, uploads included, keeps the normal retention.
+   */
+  keepSeed?: boolean;
 }
 
-interface SeedFile {
+export interface SeedFile {
   sources: {
     id: string;
     name: string;
@@ -84,6 +91,22 @@ interface SeedFile {
     /** `name` is the file name the recording gets in the node (neutral names for reference sets). */
     clips: { file: string; name?: string; daysAgo?: number }[];
   }[];
+}
+
+/** Key of a recording by its source and its name in the node. */
+export function seedKey(sourceId: string, name: string): string {
+  return JSON.stringify([sourceId, name]);
+}
+
+/**
+ * The recordings a seed puts into a node (see `seedArchive`), as `seedKey` values. A recording
+ * is identified by both: an upload into another source, or under another name, is not part of
+ * the seed.
+ */
+export function seedRecordingKeys(seed: SeedFile): Set<string> {
+  const keys = new Set<string>();
+  for (const source of seed.sources) for (const clip of source.clips) keys.add(seedKey(source.id, clip.name ?? clip.file));
+  return keys;
 }
 
 /** Things every node in this process shares: the models are loaded once. */
@@ -144,6 +167,8 @@ export class PlatformNode {
   settled: Promise<void> = Promise.resolve();
   private app: FastifyInstance | null = null;
   private retentionTimer: NodeJS.Timeout | null = null;
+  /** Seed recordings exempt from retention, see `keptSeedRecordings`. */
+  private keptSeed: Promise<Set<string>> | null = null;
   private readonly cookieName: string;
   /** Whether the session cookie is marked `Secure`: the node speaks TLS, or TLS ends in front of it. */
   private secure = config.cookieSecure;
@@ -326,7 +351,9 @@ export class PlatformNode {
 
   /** A finished upload is run past every watch, in recording order, like a delayed live feed. */
   private onRecordingReady(entry: VideoEntry): void {
-    this.datum.enqueue(entry.info.id);
+    // The pipeline has just (re)built the index (first analysis, other model, broken vectors):
+    // a fix stored before was computed from the old one and is located again.
+    this.datum.enqueue(entry.info.id, true);
     void this.enforceRetention();
     this.watches.recalibrateAll();
     if (entry.info.scenario !== null) {
@@ -564,18 +591,43 @@ export class PlatformNode {
     return false;
   }
 
+  /** The seed recordings that retention leaves alone (`keepSeed`), read once from the seed file. */
+  private keptSeedRecordings(): Promise<Set<string>> {
+    const dir = this.cfg.seedDir;
+    if (!this.cfg.keepSeed || !dir) return Promise.resolve(new Set<string>());
+    this.keptSeed ??= readJson<SeedFile | null>(path.join(dir, 'seed.json'), null).then(
+      (seed) => (seed ? seedRecordingKeys(seed) : new Set<string>()),
+      (err: unknown) => {
+        // Not kept: the next run reads the file again.
+        this.keptSeed = null;
+        throw err;
+      },
+    );
+    return this.keptSeed;
+  }
+
   /**
    * Applies the retention rule: sets the deletion date of every archive recording and deletes
-   * those that are due. Recordings referenced by a case are held for as long as the case exists.
+   * those that are due. Recordings referenced by a case are held for as long as the case exists;
+   * the seed recordings of a node with `keepSeed` (the DATUM reference set) are never due.
    */
   async enforceRetention(): Promise<void> {
     const days = config.retentionDays;
+    let seed: Set<string>;
+    try {
+      seed = await this.keptSeedRecordings();
+    } catch (err: unknown) {
+      // Without the seed file the reference recordings cannot be told apart: nothing is deleted.
+      this.log(`Löschfristen ausgesetzt, Vorführbestand nicht lesbar: ${err instanceof Error ? err.message : String(err)}`, true);
+      return;
+    }
     const held = new Set<string>();
     for (const file of this.cases.list()) for (const item of file.items) held.add(item.videoId);
     const now = Date.now();
     for (const entry of this.store.all()) {
       if (entry.info.scenario !== null) continue;
-      const due = days > 0 && !held.has(entry.info.id) ? entry.info.capturedAt + days * 86_400_000 : null;
+      const kept = held.has(entry.info.id) || seed.has(seedKey(entry.info.sourceId, entry.info.name));
+      const due = days > 0 && !kept ? entry.info.capturedAt + days * 86_400_000 : null;
       if (entry.info.deleteAfter !== due) {
         entry.info.deleteAfter = due;
         this.hub.broadcast({ type: 'video', video: entry.info, stats: this.store.stats(), queueLength: this.pipeline.queueLength });
@@ -583,6 +635,7 @@ export class PlatformNode {
       if (due !== null && due <= now && entry.info.status !== 'processing') {
         this.pipeline.cancel(entry.info.id);
         await this.store.remove(entry.info.id);
+        this.datum.forget(entry.info.id);
         this.hub.broadcast({ type: 'video-removed', videoId: entry.info.id, stats: this.store.stats() });
         await this.ledger.append({
           actor: 'system',
@@ -594,6 +647,9 @@ export class PlatformNode {
         });
       }
     }
+    // Recordings deleted another way (the delete route, removing an exercise) leave their fix
+    // in the DATUM engine; this regular sweep drops those as well.
+    this.datum.prune();
   }
 
   appState(): AppState {

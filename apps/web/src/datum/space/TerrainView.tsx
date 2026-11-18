@@ -56,12 +56,24 @@ export interface TerrainViewProps {
   terrain: TerrainGrid | null;
   /** True while the grid is still being fetched. */
   loading?: boolean;
-  camera: { lat: number; lon: number; headingDeg: number | null; fovDeg: number };
+  /**
+   * The camera point (where the horizon profile and the heading were computed) and the camera
+   * as the skyline match solved it: heading, horizontal field of view, pitch (degrees, positive =
+   * looking up; missing = level) and image aspect (width / height; missing = 16:9).
+   */
+  camera: {
+    lat: number;
+    lon: number;
+    headingDeg: number | null;
+    fovDeg: number;
+    pitchDeg?: number | undefined;
+    aspect?: number | undefined;
+  };
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   sunPath?: SunPathPoint[];
   /** Terrain horizon at the camera: elevation angle (deg) for azimuth 0..359. */
   horizonProfile?: number[] | null;
-  /** Skyline of the video: per column the normalised y of the sky boundary. */
+  /** Skyline of the keyframe the heading was matched on: per column the normalised y of the sky boundary. */
   skyline?: number[] | null;
   label?: string;
 }
@@ -70,6 +82,24 @@ type ViewMode = 'orbit' | 'walk';
 
 const EYE = 1.7;
 const BG = 0.0196;
+const DEG = Math.PI / 180;
+
+/**
+ * Direction of a point of the video frame, with the camera model of the server's skyline match
+ * (horizon.ts `imageRay`, documented at `Heading.pitchDeg`): pinhole, square pixels, no roll.
+ * u runs 0..1 left to right, y 0..1 top to bottom. Returns the azimuth offset from the heading and
+ * the elevation above the horizon, in degrees.
+ */
+function imageRay(u: number, y: number, aspect: number, fovDeg: number, pitchDeg: number): { azOff: number; el: number } {
+  const f = 0.5 / Math.tan((fovDeg / 2) * DEG);
+  const X = (u - 0.5) / f;
+  const Y = (y - 0.5) / (aspect * f);
+  const sp = Math.sin(pitchDeg * DEG);
+  const cp = Math.cos(pitchDeg * DEG);
+  const forward = Y * sp + cp;
+  const up = sp - Y * cp;
+  return { azOff: Math.atan2(X, forward) / DEG, el: Math.atan2(up, Math.hypot(X, forward)) / DEG };
+}
 
 /* ------------------------------------------------------------------ model */
 
@@ -267,9 +297,21 @@ interface Live {
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   headingDeg: number | null;
   fovDeg: number;
+  /** Camera pitch of the skyline match (degrees, positive = up). */
+  pitchDeg: number;
+  /** Image aspect the match assumed (width / height). */
+  aspect: number;
   sunPath: SunPathPoint[];
   horizonProfile: number[] | null;
   skyline: number[] | null;
+}
+
+/** Cheap content signature of a number array, so that a replaced array of the same length is noticed. */
+function signature(values: number[] | null): number {
+  if (!values) return -1;
+  let s = values.length;
+  for (let i = 0; i < values.length; i++) s += (values[i] ?? 0) * ((i % 7) + 1);
+  return s;
 }
 
 interface Readout {
@@ -551,7 +593,18 @@ class TerrainEngine {
   }
 
   private rebuildLines(live: Live): void {
-    const key = JSON.stringify([live.exag, live.dome, live.sun, live.headingDeg, live.fovDeg, live.sunPath.length, live.horizonProfile?.length ?? 0, live.skyline?.length ?? 0]);
+    const key = JSON.stringify([
+      live.exag,
+      live.dome,
+      live.sun,
+      live.headingDeg,
+      live.fovDeg,
+      live.pitchDeg,
+      live.aspect,
+      live.sunPath.length,
+      signature(live.horizonProfile),
+      signature(live.skyline),
+    ]);
     if (key === this.linesKey) return;
     this.linesKey = key;
     const m = this.model;
@@ -659,19 +712,15 @@ class TerrainEngine {
           b.segment(onDome(az, 0), onDome(az, prof[i] ?? 0), 0.12);
         }
       }
-      // The skyline of the video, placed with the heading and field of view (level camera, 16:9).
+      // The skyline of the video, placed with the camera the match solved (heading, field of
+      // view, pitch, aspect) and the match's column centres, so that it lies on the terrain
+      // horizon wherever the match says it fits.
       const sky = live.skyline;
       if (sky && sky.length > 1 && live.headingDeg !== null) {
-        const tx = Math.tan(((live.fovDeg / 2) * Math.PI) / 180);
-        const ty = tx / (16 / 9);
         const pts: Vec3[] = [];
         for (let c = 0; c < sky.length; c++) {
-          const u = c / (sky.length - 1);
-          const x = (2 * u - 1) * tx;
-          const az = live.headingDeg + (Math.atan(x) * 180) / Math.PI;
-          const yv = (1 - 2 * (sky[c] ?? 0.5)) * ty;
-          const el = (Math.atan(yv / Math.hypot(1, x)) * 180) / Math.PI;
-          pts.push(onDome(az, el));
+          const ray = imageRay((c + 0.5) / sky.length, sky[c] ?? 0.5, live.aspect, live.fovDeg, live.pitchDeg);
+          pts.push(onDome(live.headingDeg + ray.azOff, ray.el));
         }
         for (let i = 0; i + 1 < pts.length; i += 2) b.segment(pts[i]!, pts[i + 1]!, 1);
       }
@@ -1096,6 +1145,8 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
     sun: sun ?? null,
     headingDeg: camera.headingDeg,
     fovDeg: camera.fovDeg,
+    pitchDeg: camera.pitchDeg !== undefined && Number.isFinite(camera.pitchDeg) ? camera.pitchDeg : 0,
+    aspect: camera.aspect !== undefined && camera.aspect > 0 ? camera.aspect : 16 / 9,
     sunPath: sunPath ?? [],
     horizonProfile: horizonProfile ?? null,
     skyline: skyline ?? null,
@@ -1110,6 +1161,8 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
     prev.sun?.elevationDeg !== next.sun?.elevationDeg ||
     prev.headingDeg !== next.headingDeg ||
     prev.fovDeg !== next.fovDeg ||
+    prev.pitchDeg !== next.pitchDeg ||
+    prev.aspect !== next.aspect ||
     prev.sunPath !== next.sunPath ||
     prev.horizonProfile !== next.horizonProfile ||
     prev.skyline !== next.skyline
@@ -1187,7 +1240,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
 
   useEffect(() => {
     engineRef.current?.invalidate();
-  }, [exag, shadows, dome, sun?.azimuthDeg, sun?.elevationDeg, camera.headingDeg, camera.fovDeg, sunPath, horizonProfile, skyline, t]);
+  }, [exag, shadows, dome, sun?.azimuthDeg, sun?.elevationDeg, camera.headingDeg, camera.fovDeg, camera.pitchDeg, camera.aspect, sunPath, horizonProfile, skyline, t]);
 
   const go = (m: ViewMode): void => {
     engineRef.current?.setMode(m);

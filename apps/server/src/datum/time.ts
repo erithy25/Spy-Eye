@@ -45,6 +45,11 @@ export interface TimeInput {
   metadataUtc: number | null;
   /** YYYY-MM-DD */
   filenameDate: string | null;
+  /**
+   * Calendar date from the file's tags when they carry a date but no time of day (YYYY-MM-DD).
+   * Used for the sun path like a date from the file name, which takes precedence.
+   */
+  metadataDate?: string | null;
   now?: number;
   /**
    * Identifies the text model for the per-process cache of prompt embeddings (e.g. the model id).
@@ -546,12 +551,21 @@ export interface LabelledPiece {
   label: string;
 }
 
+/** German labels of the parts of the day; the index addresses the per-bin label mass in coreWindows. */
+const DAY_LABELS = ['Nacht', 'Morgen', 'Vormittag', 'Nachmittag', 'Abend'] as const;
+type DayLabel = (typeof DAY_LABELS)[number];
+
+/** German label of a moment from the sun's elevation, its hour angle and the local clock minute. */
+function labelOfSun(elevationDeg: number, hourAngleDeg: number, localMin: number): DayLabel {
+  if (elevationDeg < -6) return 'Nacht';
+  if (hourAngleDeg < 0) return elevationDeg < 10 || localMin < 9 * 60 ? 'Morgen' : 'Vormittag';
+  return elevationDeg < 10 || localMin >= 18 * 60 ? 'Abend' : 'Nachmittag';
+}
+
 function labelAt(t: number, place: Place): string {
   const p = solarPosition(t, place.lat, place.lon);
-  if (p.elevationDeg < -6) return 'Nacht';
-  const min = localMinutes(t, place.timeZone);
-  if (p.hourAngleDeg < 0) return p.elevationDeg < 10 || min < 9 * 60 ? 'Morgen' : 'Vormittag';
-  return p.elevationDeg < 10 || min >= 18 * 60 ? 'Abend' : 'Nachmittag';
+  // The local minute only matters by day; skip the time-zone lookup at night.
+  return labelOfSun(p.elevationDeg, p.hourAngleDeg, p.elevationDeg < -6 ? 0 : localMinutes(t, place.timeZone));
 }
 
 /**
@@ -637,16 +651,21 @@ export function clockWindows(dates: ReadonlyArray<{ date: string; weight: number
     .sort((a, b) => b.probability - a.probability || a.startMin - b.startMin);
 }
 
-/** Share of the probability mass the core windows hold (highest-density region of the clock). */
+/**
+ * Share of the probability mass the core windows hold at least (highest-density region of the
+ * clock). Plateaus and closed gaps can make the windows hold more; the notes state the actual sum.
+ */
 export const CORE_MASS = 0.6;
 const CORE_STEP_MIN = 5;
 
 /**
  * Core clock windows: the light classes are read as a density over sun elevation (each class
  * spreads its probability evenly over its band), mapped through the sun's course on the possible
- * dates into a density over the local clock, and the smallest set of minutes holding CORE_MASS of
- * it is returned as windows. Narrower than the union of the bands, and still an honest statement:
- * "with about 60 % probability between …".
+ * dates into a density over the local clock, and the smallest set of minutes holding at least
+ * CORE_MASS of it is returned as windows. Narrower than the union of the bands, and still an
+ * honest statement: each window carries the probability mass it actually holds. A window is
+ * labelled by the label that carries most of its density over all its minutes and dates, so a
+ * long night window whose densest minutes lie in the twilight at its ends stays "Nacht".
  */
 export function coreWindows(
   dates: ReadonlyArray<{ date: string; weight: number }>,
@@ -655,18 +674,27 @@ export function coreWindows(
 ): { windows: TimeWindow[]; modeMin: number | null } {
   const steps = 1440 / CORE_STEP_MIN;
   const dens = new Float64Array(steps);
+  // Density per bin and label: labelMass[i * DAY_LABELS.length + k].
+  const labelMass = new Float64Array(steps * DAY_LABELS.length);
   const classes = LIGHT_CLASSES.filter((c) => c.band !== null && (probs[c.id] ?? 0) > 0.01);
   if (classes.length === 0) return { windows: [], modeMin: null };
   for (const { date, weight } of dates) {
     for (let i = 0; i < steps; i++) {
-      const at = localToUtc(date, i * CORE_STEP_MIN + CORE_STEP_MIN / 2, place.timeZone);
-      const el = solarPosition(at, place.lat, place.lon).elevationDeg;
+      const minute = i * CORE_STEP_MIN + CORE_STEP_MIN / 2;
+      const at = localToUtc(date, minute, place.timeZone);
+      const sun = solarPosition(at, place.lat, place.lon);
+      const el = sun.elevationDeg;
       let d = 0;
       for (const c of classes) {
         const [lo, hi] = c.band as [number, number];
         if (el >= lo && el <= hi) d += (probs[c.id] ?? 0) / Math.max(6, hi - lo);
       }
       dens[i] = (dens[i] ?? 0) + weight * d;
+      if (d > 0) {
+        const k = DAY_LABELS.indexOf(labelOfSun(el, sun.hourAngleDeg, minute));
+        const j = i * DAY_LABELS.length + k;
+        labelMass[j] = (labelMass[j] ?? 0) + weight * d;
+      }
     }
   }
   const total = dens.reduce((a, b) => a + b, 0);
@@ -695,7 +723,7 @@ export function coreWindows(
   }
   const start = chosen.findIndex((c) => c === 0);
   if (start < 0) return { windows: [{ startMin: 0, endMin: 1439, label: 'ganztägig', probability: 1 }], modeMin: order[0]! * CORE_STEP_MIN };
-  const runs: Array<{ from: number; len: number; mass: number; peak: number }> = [];
+  const runs: Array<{ from: number; len: number; mass: number }> = [];
   for (let k = 1; k <= steps; k++) {
     const i = (start + k) % steps;
     if (!chosen[i]) continue;
@@ -704,17 +732,22 @@ export function coreWindows(
     if (prev && chosen[j]) {
       prev.len++;
       prev.mass += dens[i]!;
-      if (dens[i]! > dens[prev.peak]!) prev.peak = i;
-    } else runs.push({ from: i, len: 1, mass: dens[i]!, peak: i });
+    } else runs.push({ from: i, len: 1, mass: dens[i]! });
   }
-  const bestDate = dates[Math.floor((dates.length - 1) / 2)]?.date ?? dates[0]!.date;
   const windows = runs
     .filter((r) => r.mass / total >= 0.04)
     .map((r) => {
       const startMin = r.from * CORE_STEP_MIN;
       const endMin = ((r.from + r.len) * CORE_STEP_MIN) % 1440;
-      const mid = r.peak * CORE_STEP_MIN + CORE_STEP_MIN / 2;
-      return { startMin, endMin: endMin === 0 ? 1439 : endMin, label: labelAt(localToUtc(bestDate, mid, place.timeZone), place), probability: r.mass / total };
+      // Density-weighted majority over all bins of the run (closed gaps included) and all dates.
+      const byLabel = new Float64Array(DAY_LABELS.length);
+      for (let n = 0; n < r.len; n++) {
+        const i = (r.from + n) % steps;
+        for (let k = 0; k < DAY_LABELS.length; k++) byLabel[k] = byLabel[k]! + labelMass[i * DAY_LABELS.length + k]!;
+      }
+      let best = 0;
+      for (let k = 1; k < DAY_LABELS.length; k++) if (byLabel[k]! > byLabel[best]!) best = k;
+      return { startMin, endMin: endMin === 0 ? 1439 : endMin, label: DAY_LABELS[best]!, probability: r.mass / total };
     })
     .sort((a, b) => b.probability - a.probability);
   return { windows, modeMin: order[0]! * CORE_STEP_MIN + CORE_STEP_MIN / 2 };
@@ -734,6 +767,34 @@ const dateDe = (ymd: string): string => {
   const { year, month, day } = parseYmd(ymd);
   return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
 };
+
+/**
+ * Clock ranges in which the sun stands in the band, as a German clause ("möglich ist 05:05–06:23
+ * oder 19:53–21:12 Uhr"). Windows that touch or overlap are merged, and a range that ends at
+ * midnight is joined with the one that starts at 00:00, so a night reads 16:36–07:33 instead of
+ * two pieces; the gaps between ranges are never reported as possible.
+ */
+export function possibleClause(windows: ReadonlyArray<TimeWindow>): string {
+  const ranges: Array<{ s: number; e: number }> = [];
+  for (const w of [...windows].sort((a, b) => a.startMin - b.startMin)) {
+    const last = ranges[ranges.length - 1];
+    // Neighbouring windows share their edge minute (or differ by one after rounding).
+    if (last && w.startMin <= last.e + 1) last.e = Math.max(last.e, w.endMin);
+    else ranges.push({ s: w.startMin, e: w.endMin });
+  }
+  const first = ranges[0];
+  const last = ranges[ranges.length - 1];
+  if (!first || !last) return 'möglich ist keine Uhrzeit';
+  if (first === last && first.s === 0 && first.e >= 1439) return 'möglich ist jede Uhrzeit';
+  if (first !== last && first.s === 0 && last.e >= 1439) {
+    // Across midnight: the evening part and the early-morning part are one range.
+    ranges.shift();
+    last.e = first.e;
+  }
+  const parts = ranges.map((r) => `${clock(r.s)}–${clock(r.e)}`);
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} oder ${parts[parts.length - 1]!}` : parts[0]!;
+  return `möglich ist ${list} Uhr`;
+}
 
 function bandText(band: [number, number]): string {
   if (band[1] <= -6 && band[0] <= -80) return `unter ${deg(band[1])}° (Nacht)`;
@@ -847,15 +908,29 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
   // --- 2. Date: file name or season ---------------------------------------------------------
   const notes: string[] = [];
   const year = new Date(now).getUTCFullYear();
+  const inFuture = (ymd: string): boolean => Date.UTC(parseYmd(ymd).year, parseYmd(ymd).month - 1, parseYmd(ymd).day) > now + 86400000;
   let date = validYmd(input.filenameDate);
-  if (date !== null && Date.UTC(parseYmd(date).year, parseYmd(date).month - 1, parseYmd(date).day) > now + 86400000) {
+  let fromTags = false;
+  if (date !== null && inFuture(date)) {
     notes.push(`Datum im Dateinamen (${dateDe(date)}) liegt in der Zukunft und wird nicht verwendet.`);
     date = null;
+  }
+  if (date === null) {
+    const tagged = validYmd(input.metadataDate ?? null);
+    if (tagged !== null && inFuture(tagged)) {
+      notes.push(`Datum in den Metadaten (${dateDe(tagged)}) liegt in der Zukunft und wird nicht verwendet.`);
+    } else if (tagged !== null) {
+      date = tagged;
+      fromTags = true;
+    }
   }
   let monthRange: [number, number] | null = null;
   let dateSource: TimeEstimate['dateSource'] = 'none';
   let seasonNote: string | null = null;
-  if (date !== null) {
+  if (date !== null && fromTags) {
+    dateSource = 'metadata';
+    notes.push(`Datum aus den Metadaten der Datei (ohne Uhrzeit): ${dateDe(date)}.`);
+  } else if (date !== null) {
     dateSource = 'filename';
     notes.push(`Datum aus dem Dateinamen: ${dateDe(date)}.`);
   } else if (seasonProbs) {
@@ -916,9 +991,9 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
   const pm = windows.find((w) => w.label === 'Nachmittag' || w.label === 'Abend');
   if (am && pm) out.push(`${am.label} und ${pm.label} sind aus der Sonnenhöhe allein nicht zu unterscheiden.`);
   if (core.windows.length > 0 && possible.length > 0) {
-    const from = Math.min(...possible.map((w) => w.startMin));
-    const to = Math.max(...possible.map((w) => w.endMin));
-    out.push(`Gezeigt sind die Zeitfenster mit zusammen ${pct(CORE_MASS)} Wahrscheinlichkeit; möglich ist ${clock(from)} bis ${clock(to)} Uhr.`);
+    // The mass the shown windows really hold: plateaus and closed gaps often take it above CORE_MASS.
+    const shownMass = core.windows.reduce((a, w) => a + w.probability, 0);
+    out.push(`Gezeigt sind die Zeitfenster mit zusammen ${pct(shownMass)} Wahrscheinlichkeit; ${possibleClause(possible)}.`);
   }
   if (!place) out.push('Ort unbekannt: Uhrzeiten als Sonnenzeit für 45° nördlicher Breite geschätzt.');
   if (windows.length === 0) out.push('An diesem Ort und Datum erreicht die Sonne diese Höhe nicht; Licht oder Datum prüfen.');

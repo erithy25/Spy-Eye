@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import sharp from 'sharp';
+import type { TimeWindow } from '../src/datum/contract.js';
 import { solarPosition } from '../src/datum/sun.js';
 import {
   LIGHT_CLASSES,
@@ -11,9 +12,11 @@ import {
   type FrameStats,
   type TimeInput,
   clockWindows,
+  coreWindows,
   estimateTime,
   frameStatsFromJpeg,
   monthsOfRange,
+  possibleClause,
   rangeOfMonths,
   readLight,
   readSeason,
@@ -78,6 +81,21 @@ function input(over: Partial<TimeInput>): TimeInput {
 }
 
 const hhmm = (s: string): number => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
+
+/** Light-class probabilities: the given ones, the rest of the mass spread evenly over the others. */
+function lightProbs(over: Partial<Record<LightId, number>>): Record<LightId, number> {
+  const ids = LIGHT_CLASSES.map((c) => c.id);
+  const others = ids.filter((id) => over[id] === undefined);
+  const left = 1 - ids.reduce((a, id) => a + (over[id] ?? 0), 0);
+  return Object.fromEntries(ids.map((id) => [id, over[id] ?? left / others.length])) as Record<LightId, number>;
+}
+
+/** The "zusammen N %" share the notes state, and the sum of the shown windows in percent. */
+function statedAndShownPct(time: { notes: string[]; windows: TimeWindow[] }): [number, number] {
+  const m = /zusammen (\d+) % Wahrscheinlichkeit/.exec(time.notes.join(' '));
+  assert.ok(m, time.notes.join(' | '));
+  return [Number(m[1]), Math.round(time.windows.reduce((a, w) => a + w.probability, 0) * 100)];
+}
 
 test('clockWindows: Berlin 2024-06-21, 20–30° → one morning and one afternoon window', () => {
   const w = clockWindows([{ date: '2024-06-21', weight: 1 }], { ...BERLIN, timeZone: 'Europe/Berlin' }, [20, 30]);
@@ -191,7 +209,10 @@ test('daylight frames with a date in the file name: windows on both sides of noo
   assert.ok(mass >= 0.55 && mass <= 1.0001, String(mass));
   const notes = time.notes.join(' ');
   assert.match(notes, /Datum aus dem Dateinamen: 21\.06\.2024\./);
-  assert.match(notes, /möglich ist 06:2\d bis/);
+  // The possible times are the two separate pieces, not the hull from 06:23 to 19:53.
+  assert.match(notes, /möglich ist 06:2\d–08:5\d oder 1[78]:\d\d–19:5\d Uhr\./);
+  const [stated, shown] = statedAndShownPct(time);
+  assert.equal(stated, shown);
   assert.match(notes, /Sonnenhöhe aus Licht und Schatten: 12 bis 35°/);
   assert.ok(time.notes.length >= 2 && time.notes.length <= 5);
   assert.ok(sun && sun.at);
@@ -212,6 +233,28 @@ test('daylight frames with a date in the file name: windows on both sides of noo
   assert.ok(Math.abs(amP - pmP) < 0.08, `${amP} ${pmP}`);
 });
 
+test('a date from the file tags (no time of day) sets the day, the file name wins over it', async () => {
+  const embed = fakeEmbedder().embed;
+  const tagged = await estimateTime(
+    input({ embedTexts: embed, frameEmbeddings: frames(4, 'daylight', 'summer'), frameStats: [dayStats], filenameDate: null, metadataDate: '2024-06-21' }),
+  );
+  assert.equal(tagged.time.method, 'sun', 'a date alone is no recording instant');
+  assert.equal(tagged.time.utc, null);
+  assert.equal(tagged.time.dateSource, 'metadata');
+  assert.equal(tagged.time.date, '2024-06-21');
+  assert.match(tagged.time.notes.join(' '), /Datum aus den Metadaten der Datei \(ohne Uhrzeit\): 21\.06\.2024\./);
+  const both = await estimateTime(
+    input({ embedTexts: embed, frameEmbeddings: frames(4, 'daylight', 'summer'), frameStats: [dayStats], filenameDate: '2024-03-20', metadataDate: '2024-06-21' }),
+  );
+  assert.equal(both.time.dateSource, 'filename');
+  assert.equal(both.time.date, '2024-03-20');
+  const future = await estimateTime(
+    input({ embedTexts: embed, frameEmbeddings: frames(4, 'daylight', 'summer'), frameStats: [dayStats], filenameDate: null, metadataDate: '2999-01-01' }),
+  );
+  assert.notEqual(future.time.dateSource, 'metadata');
+  assert.match(future.time.notes.join(' '), /in der Zukunft/);
+});
+
 test('night frames: night windows at both ends of the day', async () => {
   const { time } = await estimateTime(
     input({ frameEmbeddings: frames(2, 'night', 'urban'), frameStats: [darkStats], filenameDate: '2024-12-21' }),
@@ -222,6 +265,47 @@ test('night frames: night windows at both ends of the day', async () => {
   assert.ok(time.windows.some((w) => w.startMin > w.endMin || w.startMin <= 5 || w.endMin >= 1435), JSON.stringify(time.windows));
   assert.ok(time.sunElevationBand![1] === -6);
   assert.match(time.notes[0]!, /unter −6°/);
+  // One possible range across midnight (dusk 16:36 to dawn 07:33 CET), not "00:00 bis 23:59".
+  assert.match(time.notes.join(' '), /möglich ist 16:3\d–07:3\d Uhr\./);
+  // The note states the mass of the windows shown (well above the 60 % floor here), not a constant.
+  const [stated, shown] = statedAndShownPct(time);
+  assert.equal(stated, shown);
+  assert.ok(stated > 60, String(stated));
+});
+
+test('coreWindows: a long night window is labelled Nacht although its densest minutes are twilight', () => {
+  const place = { ...BERLIN, timeZone: 'Europe/Berlin' };
+  // Twilight spreads its probability over 6°, night over 84°: a twilight minute is denser, and the
+  // run's peak lies at its ends, where the sun is above −6°.
+  const probs = lightProbs({ night: 0.7, twilight: 0.15 });
+  const months = Array.from({ length: 12 }, (_, i) => ({ date: `2026-${String(i + 1).padStart(2, '0')}-15`, weight: 1 }));
+  for (const dates of [months, [{ date: '2026-03-20', weight: 1 }]]) {
+    const { windows } = coreWindows(dates, place, probs);
+    const acrossMidnight = windows.filter((w) => w.startMin > w.endMin);
+    assert.equal(acrossMidnight.length, 1, JSON.stringify(windows));
+    const night = acrossMidnight[0]!;
+    assert.equal(night.label, 'Nacht', JSON.stringify(windows));
+    assert.ok((night.endMin - night.startMin + 1440) % 1440 >= 8 * 60, JSON.stringify(night));
+  }
+  // Separate morning and evening windows keep their own labels.
+  const golden = coreWindows([{ date: '2024-06-21', weight: 1 }], place, lightProbs({ golden: 0.8 })).windows;
+  assert.deepEqual(golden.map((w) => w.label).sort(), ['Abend', 'Morgen']);
+  // A plateau is taken whole: the windows hold more than the 60 % floor, and say so.
+  const mass = golden.reduce((a, w) => a + w.probability, 0);
+  assert.ok(mass > 0.7 && mass <= 1 + 1e-9, String(mass));
+});
+
+test('possibleClause: real ranges, touching ones merged, a range across midnight joined', () => {
+  const w = (startMin: number, endMin: number): TimeWindow => ({ startMin, endMin, label: 'Nacht', probability: 0.5 });
+  assert.equal(possibleClause([w(1193, 1272), w(305, 383)]), 'möglich ist 05:05–06:23 oder 19:53–21:12 Uhr');
+  assert.equal(possibleClause([w(0, 453), w(996, 1439)]), 'möglich ist 16:36–07:33 Uhr');
+  // Night, dawn and dusk pieces that touch form one range across midnight; the midday gap stays out.
+  assert.equal(possibleClause([w(0, 453), w(453, 642), w(807, 996), w(996, 1439)]), 'möglich ist 13:27–10:42 Uhr');
+  assert.equal(possibleClause([w(600, 660), w(300, 360), w(900, 960), w(620, 700)]), 'möglich ist 05:00–06:00, 10:00–11:40 oder 15:00–16:00 Uhr');
+  assert.equal(possibleClause([w(0, 1439)]), 'möglich ist jede Uhrzeit');
+  // With real windows from the sun: golden hour on 21 June in Berlin, morning and evening apart.
+  const golden = clockWindows([{ date: '2024-06-21', weight: 1 }], { ...BERLIN, timeZone: 'Europe/Berlin' }, [2, 12]);
+  assert.match(possibleClause(golden), /^möglich ist 05:0\d–06:2\d oder 19:5\d–21:1\d Uhr$/);
 });
 
 test('season from vegetation: northern, southern and equatorial latitudes', async () => {

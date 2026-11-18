@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Evidence, EvidenceKind } from '../../../../server/src/datum/contract';
 import { useLang } from '../../i18n';
 import { pressable } from '../../ui';
+import { rel } from '../api';
 import { KIND_CODE, KIND_METHOD, Meter, fmtCoord, fmtScore } from './common';
 import './panel.css';
 
@@ -47,7 +48,9 @@ function Reference({ item }: { item: Evidence }) {
         aria-label={open ? t('Referenzbild verkleinern: {name}', { name }) : t('Referenzbild vergrößern: {name}', { name })}
         onClick={() => setOpen((v) => !v)}
       >
-        {failed ? <span className="dp-ref-none">{t('kein Bild')}</span> : <img src={item.refImage} alt="" loading="lazy" onError={() => setFailed(true)} />}
+        {/* The server names the gallery picture with a leading slash; relative, it also loads when
+            the console is served under a path prefix. */}
+        {failed ? <span className="dp-ref-none">{t('kein Bild')}</span> : <img src={rel(item.refImage)} alt="" loading="lazy" onError={() => setFailed(true)} />}
       </button>
       <div className="dp-ref-cap">
         <span className="dp-ref-name">{name}</span>

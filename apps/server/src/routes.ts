@@ -497,6 +497,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     await node.record(ctx, 'recording.delete', `Aufzeichnung „${entry.info.name}“ gelöscht`, { videoId: id });
     pipeline.cancel(id);
     await store.remove(id);
+    // Its fix goes too (a compute still running for it is discarded by the engine).
+    node.datum.forget(id);
     hub.broadcast({ type: 'video-removed', videoId: id, stats: store.stats() });
     return reply.code(204).send();
   });

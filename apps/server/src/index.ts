@@ -31,6 +31,8 @@ interface NodesFile {
     seed?: string;
     /** false: "--prepare" does not load the exercise footage into this node (DATUM). */
     exercise?: boolean;
+    /** true: the recordings of the seed footage are exempt from retention (DATUM reference set). */
+    keepSeed?: boolean;
   }[];
 }
 
@@ -105,6 +107,7 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
       peers,
       ...(n.seed ? { seedDir: fromRoot(n.seed) } : {}),
       ...(n.exercise === false ? { exercise: false } : {}),
+      ...(n.keepSeed === true ? { keepSeed: true } : {}),
     };
   });
 }

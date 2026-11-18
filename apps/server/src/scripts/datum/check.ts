@@ -14,6 +14,7 @@ import { haversineKm } from '../../core/geo.js';
 import type { Fix } from '../../datum/contract.js';
 import { modelSlug } from '../../datum/gallery.js';
 import { seedFiles } from '../../datum/gallerySeed.js';
+import { ENGINE_VERSION } from '../../datum/version.js';
 
 const DATASET = path.join(repoRoot, 'datasets', 'datum');
 const DATA = path.join(repoRoot, 'data-datum');
@@ -92,26 +93,34 @@ const videosDir = path.join(DATA, 'videos');
 let recordings = 0;
 let analysed = 0;
 let located = 0;
-let failed = 0;
+// Fixes of another engine version: the node discards them at start and locates the recording
+// again, in front of the audience. Only error-free fixes are written to disk, so a failed
+// location shows up as a missing fix.
+let outdated = 0;
 const errors: number[] = [];
 try {
   for (const id of await fs.readdir(videosDir)) {
     const meta = await readJson<{ info: { status: string } }>(path.join(videosDir, id, 'meta.json'));
     if (!meta) continue;
     recordings++;
-    if (meta.info.status === 'ready') analysed++;
-    const fix = await readJson<Fix>(path.join(videosDir, id, 'datum', 'fix.json'));
-    if (fix?.status === 'ready') {
-      located++;
-      if (fix.location && fix.truth) errors.push(haversineKm(fix.location.lat, fix.location.lon, fix.truth.lat, fix.truth.lon));
-    } else if (fix?.status === 'error') failed++;
+    // As in the engine: the fix of a recording that is not (or no longer) analysed is not used.
+    if (meta.info.status !== 'ready') continue;
+    analysed++;
+    const fix = await readJson<Fix & { engineVersion?: number }>(path.join(videosDir, id, 'datum', 'fix.json'));
+    if (fix?.status !== 'ready') continue;
+    if (fix.engineVersion !== ENGINE_VERSION) {
+      outdated++;
+      continue;
+    }
+    located++;
+    if (fix.location && fix.truth) errors.push(haversineKm(fix.location.lat, fix.location.lon, fix.truth.lat, fix.truth.lon));
   }
 } catch {
   // no node data yet
 }
 line(`Aufnahmen im Knoten: ${recordings}`, recordings > 0, 'pnpm datum:prepare');
 line(`Ausgewertet: ${analysed} von ${recordings}`, recordings > 0 && analysed === recordings, 'pnpm datum:prepare');
-line(`Geortet: ${located} von ${analysed}${failed > 0 ? ` (${failed} Fehler)` : ''}`, analysed > 0 && located === analysed, 'pnpm datum:prepare');
+line(`Geortet: ${located} von ${analysed}${outdated > 0 ? ` (${outdated} veraltet)` : ''}`, analysed > 0 && located === analysed, 'pnpm datum:prepare');
 if (errors.length > 0) {
   const sorted = [...errors].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)]!;
