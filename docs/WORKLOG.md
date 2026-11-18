@@ -145,3 +145,20 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   published pictures. Fixed; pictures taken again.
 - Two more papers in the document folder: bill of materials, accessibility.
 
+## 09:30 UTC · T+557 min
+
+- Pictures taken again in real time on the corrected build; website, both decks and
+  `docs/screens` carry them. Captions checked against the pictures; the measurement picture
+  stays because it shows the documented run.
+- Map: reachable with Tab, arrow keys move it, plus and minus zoom. Keyboard-only walk now 24 of
+  24 steps; the rule check still finds nothing in 15 console states.
+- Alert list names sources in the chosen language.
+- Product film and long film cut again from a new take (136.6 s and 66.76 s). Cut ends are now
+  anchored to the mark after them; three cuts begin after their page has changed; one caption
+  was changed because the new take shows the first alert with three frames at first sight.
+- Windows run on the final code state passed every step, including the start through
+  `vorfuehrung.cmd`; the browser was opened by the script.
+- Clean clone on Linux: install, build, type check and 83 tests pass; fetch, prepare, check,
+  evaluation and both ledger verifiers follow in the same run (result below in the final
+  report of the session).
+

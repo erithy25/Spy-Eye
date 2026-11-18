@@ -20,7 +20,7 @@ Unterlagen.
 | Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht, Stückliste, Barrierefreiheit | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
 | Architektur und Sicherheitsdurchsicht | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md), [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) | fertig; 21 Befunde einer unabhängigen Durchsicht, die schweren behoben |
 | Vertriebsvorlagen: Anschreiben, Angebot zur Erprobung | [`docs/vertrieb/`](docs/vertrieb/) | Vorlagen; eckige Klammern und Preis vor dem Versand füllen |
-| Stückliste: jedes Paket, Modell und Datum mit Fassung, Prüfsumme und Lizenz | [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md), maschinenlesbar [`docs/stueckliste/sicht.cdx.json`](docs/stueckliste/sicht.cdx.json), `pnpm sbom` | fertig; kein bekannter Befund in den ausgelieferten Paketen (Abgleich vom 18. November 2026) |
+| Stückliste: jedes Paket, jedes Modell und alle Daten mit Fassung, Prüfsumme und Lizenz | [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md), maschinenlesbar [`docs/stueckliste/sicht.cdx.json`](docs/stueckliste/sicht.cdx.json), `pnpm sbom` | fertig; kein bekannter Befund in den ausgelieferten Paketen (Abgleich vom 18. November 2026) |
 | Barrierefreiheit: automatische Prüfung nach WCAG 2.1 A und AA, Gang nur mit der Tastatur | [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md), Werkzeuge in [`tools/barrierefreiheit/`](tools/barrierefreiheit/) | keine verletzte Regel in 18 Zuständen, 24 von 24 Schritten ohne Maus; kein BITV-Test, kein Test mit Bildschirmleser |
 | Prüfprogramme für das Protokoll, unabhängig von Sicht | [`tools/pruefen/`](tools/pruefen/), `pnpm ledger:verify <Datei>` | fertig; je eines in Node und Python |
 | Wortmarke als Datei | [`brand/`](brand/) | fertig; Name markenrechtlich nicht geprüft |
@@ -51,8 +51,15 @@ git pull
 ```
 
 Bricht `git pull` mit dem Hinweis auf lokale Änderungen ab (meist die Datei `pnpm-lock.yaml`,
-die eine ältere pnpm-Fassung umgeschrieben hat): `git stash`, dann noch einmal `git pull`. Der
-Ordner `data` früherer Fassungen wird nicht angefasst und nicht mehr gebraucht.
+die eine ältere pnpm-Fassung umgeschrieben hat): `git stash`, dann noch einmal `git pull`. Die
+Vorführung benutzt eigene Ordner (`data-koblenz`, `data-trier`, `data-mainz`) und fasst den
+Ordner `data` früherer Fassungen nicht an. Wer mit `pnpm start` das eigene Material von damals
+weiterverwendet: Der Knoten erkennt Aufnahmen, die eine frühere Fassung ausgewertet hat, und
+wertet sie beim Start im Hintergrund neu aus (drei bis vier Minuten für die 44 Aufnahmen der
+ersten Fassung). Geprüft mit genau diesem Bestand: Schon während der Neuauswertung liefern
+„Beach“, „Man with a cup“ und „Black car“ Treffer; für „Green bus“ meldet die Suche „Keine
+Szene über der Schwelle“ und zeigt die Kandidaten darunter, weil in diesem Material kein grüner
+Bus vorkommt.
 
 Der Befehl prüft die Voraussetzungen und nennt, was fehlt; richtet ein und baut; lädt beim ersten
 Mal das Material und wertet es aus (fünf bis zehn Minuten); stellt bei jedem weiteren Mal den
