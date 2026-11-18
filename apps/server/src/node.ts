@@ -68,6 +68,8 @@ async function loadTls(): Promise<{ cert: Buffer; key: Buffer } | null> {
 export interface NodeConfig {
   id: string;
   name: string;
+  /** English name of the node, for the English twins of its ledger texts; without it `name` serves both. */
+  nameEn?: string;
   operator: string;
   region: string;
   lat: number;
@@ -898,7 +900,7 @@ export class PlatformNode {
       mandateId: null,
       action: 'node.start',
       summary: `Knoten ${this.cfg.name} gestartet (Version ${VERSION})`,
-      summaryEn: `Node ${this.cfg.name} started (version ${VERSION})`,
+      summaryEn: `Node ${this.cfg.nameEn ?? this.cfg.name} started (version ${VERSION})`,
       data: { videos: this.store.all().length, masking: this.shared.faces.ready },
     });
   }

@@ -23,7 +23,13 @@ export interface GalleryImage {
   id: string;
   /** Path relative to the dataset directory, e.g. "gallery/Q2981.jpg". */
   file: string;
+  /**
+   * German name of the place: `labelDe` of gallery.json (fetched from Wikidata, see
+   * scripts/datum/fetchLabels.ts), else its single `label`, which may be in either language.
+   */
   label: string;
+  /** English name of the place: `labelEn` of gallery.json, else the same as label. */
+  labelEn: string;
   lat: number;
   lon: number;
   /** ISO 3166-1 alpha-2 code (or whatever the dataset carries), null if unknown. */
@@ -35,7 +41,10 @@ export interface GalleryImage {
 
 export interface GalleryNeighbour {
   id: string;
+  /** German name of the place (GalleryImage.label). */
   label: string;
+  /** English name of the place; absent in stand-ins and older caches, which then use label. */
+  labelEn?: string;
   lat: number;
   lon: number;
   country: string | null;
@@ -169,10 +178,13 @@ function parseGallery(raw: unknown): GalleryImage[] {
     if (!isFiniteNumber(o['lat']) || !isFiniteNumber(o['lon'])) continue;
     if (Math.abs(o['lat']) > 90 || Math.abs(o['lon']) > 180) continue;
     seen.add(id);
+    const text = (key: string): string | null => (typeof o[key] === 'string' && o[key] !== '' ? (o[key] as string) : null);
+    const label = text('labelDe') ?? text('label') ?? id;
     out.push({
       id,
       file,
-      label: typeof o['label'] === 'string' && o['label'] !== '' ? o['label'] : id,
+      label,
+      labelEn: text('labelEn') ?? label,
       lat: o['lat'],
       lon: o['lon'],
       country: typeof o['country'] === 'string' && o['country'] !== '' ? o['country'] : null,
@@ -211,7 +223,7 @@ function allowedRows(images: readonly GalleryImage[], opts: GallerySearchOptions
 }
 
 function neighbour(img: GalleryImage, similarity: number): GalleryNeighbour {
-  return { id: img.id, label: img.label, lat: img.lat, lon: img.lon, country: img.country, wikidata: img.wikidata, similarity };
+  return { id: img.id, label: img.label, labelEn: img.labelEn, lat: img.lat, lon: img.lon, country: img.country, wikidata: img.wikidata, similarity };
 }
 
 /** The search itself on this thread (Gallery.search, and searchAsync when its thread fails). */

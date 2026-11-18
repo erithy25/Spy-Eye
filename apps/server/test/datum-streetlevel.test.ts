@@ -6,11 +6,15 @@ import { beforeEach, test } from 'node:test';
 import sharp from 'sharp';
 import type { ImageEmbedder } from '../src/datum/gallery.js';
 import {
+  DEFAULT_STREETLEVEL_OPTIONS,
   applyStreetLevel,
   bboxAreaDeg2,
   clearStreetLevelSearchCache,
   distanceKm,
+  failedRules,
+  isMatch,
   isSafeRemoteUrl,
+  noMatchText,
   parseMapillarySearch,
   parsePanoramaxSearch,
   planSearchTiles,
@@ -26,6 +30,7 @@ import {
   type FetchLike,
   type StreetLevelListing,
   type StreetLevelOptions,
+  type StreetLevelStats,
 } from '../src/datum/streetlevel.js';
 import type { FixLocation } from '../src/datum/contract.js';
 
@@ -411,6 +416,73 @@ test('a standing-out picture is found, located, attributed and cached', async ()
   } finally {
     await fs.rm(cacheDir, { recursive: true, force: true });
   }
+});
+
+test('a no-match names the condition that failed, in plain words and both languages', () => {
+  const opts = DEFAULT_STREETLEVEL_OPTIONS;
+  // The case seen in the field: the gap is enough, the z rule is not (a landmark seen from afar).
+  const zOnly: StreetLevelStats = { pictures: 46, spreadPictures: 30, best: 0.842, typical: 0.698, spread: 0.0686, gap: 0.144, z: 2.1, agreement: 1 };
+  assert.deepEqual(failedRules(zOnly, opts), ['z']);
+  assert.equal(isMatch(zOnly, opts), false);
+  let text = noMatchText(zOnly, opts);
+  assert.equal(
+    text.de,
+    'Kein Straßenbild passt sicher genug: bestes 0,84, typisch 0,70; der Abstand 0,14 reicht (nötig 0,10), aber das beste Bild sticht nicht deutlich genug aus der Streuung heraus (z 2,1, nötig 3).',
+  );
+  assert.equal(
+    text.en,
+    'No street-level picture matches clearly enough: best 0.84, typical 0.70; the gap of 0.14 is enough (needed 0.10), but the best picture does not stand out clearly enough from the spread (z 2.1, needed 3).',
+  );
+
+  // Gap too small (z then usually fails too): both are named, the gap is not called enough.
+  const small: StreetLevelStats = { ...zOnly, best: 0.75, typical: 0.7, gap: 0.05, spread: 0.03, z: 1.7 };
+  assert.deepEqual(failedRules(small, opts), ['gap', 'z']);
+  text = noMatchText(small, opts);
+  assert.equal(
+    text.de,
+    'Kein Straßenbild hebt sich ab: bestes 0,75, typisch 0,70; der Abstand 0,05 ist zu klein (nötig 0,10) und das beste Bild sticht nicht deutlich genug aus der Streuung heraus (z 1,7, nötig 3).',
+  );
+  assert.match(text.en, /^No street-level picture stands out: .*the gap of 0\.05 is too small \(needed 0\.10\) and the best picture does not stand out/);
+  assert.doesNotMatch(text.de, /reicht/);
+  assert.doesNotMatch(text.en, /is enough/);
+
+  // Gap alone.
+  const gapOnly: StreetLevelStats = { ...zOnly, gap: 0.08, typical: 0.762, spread: 0.01, z: 8 };
+  assert.deepEqual(failedRules(gapOnly, opts), ['gap']);
+  text = noMatchText(gapOnly, opts);
+  assert.match(text.de, /; der Abstand 0,08 ist zu klein \(nötig 0,10\)\.$/);
+  assert.match(text.en, /; the gap of 0\.08 is too small \(needed 0\.10\)\.$/);
+
+  // Minimum best similarity.
+  const weak: StreetLevelStats = { ...zOnly, best: 0.66, typical: 0.5, gap: 0.16, spread: 0.02, z: 8 };
+  assert.deepEqual(failedRules(weak, opts), ['similarity']);
+  text = noMatchText(weak, opts);
+  assert.match(text.de, /der Abstand 0,16 reicht \(nötig 0,10\), aber das beste Bild ist insgesamt zu unähnlich \(0,66, nötig 0,70\)\.$/);
+  assert.match(text.en, /the gap of 0\.16 is enough \(needed 0\.10\), but the best picture is too dissimilar overall \(0\.66, needed 0\.70\)\.$/);
+
+  // Too few pictures for the spread.
+  const few: StreetLevelStats = { ...zOnly, spreadPictures: 5, z: 8 };
+  assert.deepEqual(failedRules(few, opts), ['pictures']);
+  text = noMatchText(few, opts);
+  assert.match(text.de, /aber zu wenige Bilder, um die Streuung zu messen \(5, nötig 8\)\.$/);
+  assert.match(text.en, /but too few pictures to measure the spread \(5, needed 8\)\.$/);
+
+  // Agreement of the next best pictures (off by default, so only with a threshold).
+  const apart: StreetLevelStats = { ...zOnly, z: 8, agreement: 0 };
+  assert.deepEqual(failedRules(apart, opts), []);
+  assert.equal(isMatch(apart, opts), true);
+  const strict = { ...opts, minAgreement: 0.5 };
+  assert.deepEqual(failedRules(apart, strict), ['agreement']);
+  text = noMatchText(apart, strict);
+  assert.match(text.de, /aber die nächstbesten Bilder liegen nicht beim besten \(0 %, nötig 50 %\)\.$/);
+  assert.match(text.en, /but the next best pictures do not lie near the best one \(0%, needed 50%\)\.$/);
+
+  // Several at once: all of them, joined.
+  text = noMatchText({ ...weak, z: 2 }, opts);
+  assert.match(text.de, /aber das beste Bild ist insgesamt zu unähnlich \(0,66, nötig 0,70\) und das beste Bild sticht nicht deutlich genug aus der Streuung heraus \(z 2,0, nötig 3\)\.$/);
+  text = noMatchText({ ...small, spreadPictures: 5, best: 0.6 }, opts);
+  assert.match(text.de, /; zu wenige Bilder, .*\(5, nötig 8\), das beste Bild ist insgesamt zu unähnlich .*, der Abstand 0,05 ist zu klein .* und das beste Bild sticht/);
+  assert.match(text.en, /; too few pictures .*, the best picture is too dissimilar overall .*, the gap of 0\.05 is too small .* and the best picture does not/);
 });
 
 test('without a standing-out picture the stage says so and leaves the place alone', async () => {

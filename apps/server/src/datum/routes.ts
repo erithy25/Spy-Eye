@@ -16,7 +16,7 @@ import type { PlatformNode, RequestContext } from '../node.js';
 import { isValidVideoId } from '../store.js';
 import type { DatumSettings, Fix } from './contract.js';
 import { summarise } from './engine.js';
-import { DATASET_DIR, caseName, loadManifest } from './dataset.js';
+import { DATASET_DIR, caseName, loadManifest, truthNames } from './dataset.js';
 import { datasetIdOf } from './datasets.js';
 import { terrainGrid } from './terrain.js';
 import { horizonProfile } from './horizon.js';
@@ -110,7 +110,10 @@ export interface DatasetRow {
   /** 'referenz': the reference set; 'eigene': an own truth given with POST /api/datum/truth. */
   kind: 'referenz' | 'eigene';
   name: string;
+  /** Name of the true place: German for the reference set, as given for an own truth. */
   label: string;
+  /** English name of a reference place (Wikidata); absent for own truths, whose label serves both. */
+  labelEn?: string;
   country: string | null;
   lat: number;
   lon: number;
@@ -421,7 +424,7 @@ export function registerDatumRoutes(app: FastifyInstance, node: PlatformNode, ne
       const name = caseName(i);
       const info = infos.find((x) => x.name === name) ?? null;
       return row(
-        { kind: 'referenz', name, label: v.label, country: v.country, lat: v.lat, lon: v.lon, source: v.sourceUrl ?? null, license: v.license ?? null },
+        { kind: 'referenz', name, label: truthNames(v).de, labelEn: truthNames(v).en, country: v.country, lat: v.lat, lon: v.lon, source: v.sourceUrl ?? null, license: v.license ?? null },
         info?.id ?? null,
         i + 1,
       );

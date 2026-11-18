@@ -294,7 +294,11 @@ Der Abgleich mit Straßenbildern verrät freien Bilddiensten, welche Gegend unte
 Referenzbestand: 60 Videos aus Wikimedia Commons in 30 Ländern (16 aus Deutschland), deren
 Wikidata-Objekt eine Koordinate trägt. Die Videos gehen unter neutralen Namen (`datum-001.mp4`)
 in den Knoten; der Ort wird erst nach der Ortung zum Vergleich dazugelegt. Galerie: 6 393
-Referenzbilder von Wikidata-Objekten mit Koordinate. Je Video zwölf Bilder, jedes als Ganzes und
+Referenzbilder von Wikidata-Objekten mit Koordinate. Jeder Ort trägt seinen deutschen und seinen
+englischen Namen aus Wikidata (`labelDe`, `labelEn` in `gallery.json` und `manifest.json`;
+`pnpm datum:fetch` holt fehlende einmal nach, `pnpm datum:labels` allein), damit eine Ortung
+„Nowodewitschi-Kloster, Moskau“ und „Novodevichy Convent, Moscow“ heißt, statt die Sprachen zu
+mischen. Je Video zwölf Bilder, jedes als Ganzes und
 in drei quadratischen Ausschnitten (so legt die Analyse sie ohnehin ab). Die Schwellen und Radien
 der Ortung wurden nur an der einen Hälfte der Videos eingestellt (Abstimmungshälfte, gerade
 Nummern); die andere Hälfte (Prüfhälfte, ungerade Nummern) wurde nur gemessen. Gemessen am

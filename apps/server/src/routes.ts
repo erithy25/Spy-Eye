@@ -300,7 +300,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       mandateId: result.session.mandateId,
       action: 'auth.login',
       summary: `${result.user.name} angemeldet`,
-      summaryEn: `${result.user.name} signed in`,
+      // The account's English name where it has one, as the English console shows it.
+      summaryEn: `${result.user.nameEn ?? result.user.name} signed in`,
       data: {},
     });
     return ctx ? node.sessionInfo(ctx) : { user: result.user, permissions: [], mandate: null };
@@ -310,7 +311,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const ctx = node.contextOf(request);
     if (ctx) {
       auth.logout(ctx.session.token);
-      await node.record(ctx, 'auth.logout', { de: `${ctx.user.name} abgemeldet`, en: `${ctx.user.name} signed out` });
+      await node.record(ctx, 'auth.logout', { de: `${ctx.user.name} abgemeldet`, en: `${ctx.user.nameEn ?? ctx.user.name} signed out` });
     }
     return reply.header('Set-Cookie', node.sessionCookie(null)).code(204).send();
   });

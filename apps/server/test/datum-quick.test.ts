@@ -606,6 +606,78 @@ test('start: stored quick fixes are shown, outdated fixes stay on show while the
   }
 });
 
+test('a fix that finishes after stop() is dropped, not stored; the next start computes it again', async () => {
+  const { store, engine, events, world, dispose } = await setup();
+  const fixFile = (id: string): string => path.join(store.videoDir(id), 'datum', 'fix.json');
+  const stored = (id: string): Promise<boolean> => fs.access(fixFile(id)).then(() => true, () => false);
+  /** Another engine on the same recordings (a later start of the node, or a second stage). */
+  const engineOn = (): InstanceType<typeof DatumEngine> =>
+    new DatumEngine({
+      store: store as unknown as Store,
+      model: model as unknown as EmbeddingModel,
+      hub: { broadcast: (event: ServerEvent): void => void (event.type === 'datum-fix' && events.push(event.fix)) } as unknown as EventHub,
+      gallery: async () => gallery,
+      log: () => undefined,
+      holdout: false,
+      worldModel: world,
+    });
+  /** Runs one job of `kind` whose computation ends (with `outcome`) only after the engine stopped. */
+  const finishAfterStop = async (target: InstanceType<typeof DatumEngine>, id: string, kind: 'quick' | 'full', outcome: 'fix' | 'error'): Promise<void> => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let started = false;
+    const compute = async (entry: VideoEntry): Promise<Fix> => {
+      started = true;
+      await gate;
+      // What a stage sees when the world model's thread was closed under it.
+      if (outcome === 'error') throw new Error('Weltmodell: Rechenthread wurde beendet.');
+      return readyFix(entry.info.id, 'zu spät', kind);
+    };
+    replace(target, kind === 'quick' ? compute : null, kind === 'full' ? compute : null);
+    if (kind === 'quick') target.quick(id);
+    else target.enqueue(id, true);
+    await until(() => started);
+    target.stop();
+    release();
+    await until(() => target.queueLength === 0);
+    await settle();
+  };
+  try {
+    await add(store, recording('late-q', 'queued'));
+    await finishAfterStop(engine, 'late-q', 'quick', 'fix');
+    assert.equal(await stored('late-q'), false, 'no quick fix is written after stop()');
+    assert.notEqual(engine.get('late-q')?.status, 'ready');
+    assert.ok(!events.some((f) => f.videoId === 'late-q' && f.status === 'ready'), 'nor announced');
+
+    await add(store, recording('late-f', 'ready'));
+    const full = engineOn();
+    await finishAfterStop(full, 'late-f', 'full', 'fix');
+    assert.equal(await stored('late-f'), false, 'no full fix is written after stop(): it would count as final');
+    assert.notEqual(full.get('late-f')?.status, 'ready');
+
+    // A failure caused by the stop is no error to show either.
+    await add(store, recording('late-e', 'ready'));
+    const failing = engineOn();
+    await finishAfterStop(failing, 'late-e', 'full', 'error');
+    assert.notEqual(failing.get('late-e')?.status, 'error');
+    assert.ok(!events.some((f) => f.videoId === 'late-e' && f.status === 'error'));
+
+    // The next start finds no stored fix and computes them again; a running engine writes as before.
+    const next = engineOn();
+    try {
+      replace(next, null, async (entry) => readyFix(entry.info.id, 'neu', 'full'));
+      await next.init();
+      await until(() => next.get('late-f')?.status === 'ready' && next.get('late-e')?.status === 'ready');
+      assert.equal(next.get('late-f')?.location?.label, 'neu');
+      assert.equal(await stored('late-f'), true);
+    } finally {
+      next.stop();
+    }
+  } finally {
+    await dispose();
+  }
+});
+
 test('cleanup of the test data directory', async () => {
   await fs.rm(dataDir, { recursive: true, force: true });
 });

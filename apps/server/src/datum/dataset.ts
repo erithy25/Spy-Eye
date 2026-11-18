@@ -14,7 +14,11 @@ export interface ManifestVideo {
   id: string;
   file: string;
   title: string;
+  /** The label the selection was made with, in whichever language Wikidata gave it first. */
   label: string;
+  /** German and English names from Wikidata (scripts/datum/fetchLabels.ts); absent before that ran. */
+  labelDe?: string;
+  labelEn?: string;
   wikidata: string;
   lat: number;
   lon: number;
@@ -59,6 +63,12 @@ export async function loadManifest(): Promise<ManifestVideo[]> {
 /** Neutral file name under which the n-th dataset video (0-based) enters a node. */
 export function caseName(index: number): string {
   return `datum-${String(index + 1).padStart(3, '0')}.mp4`;
+}
+
+/** A reference video's place name in both languages (the selection's label where a name is missing). */
+export function truthNames(video: Pick<ManifestVideo, 'label' | 'labelDe' | 'labelEn'>): { de: string; en: string } {
+  const de = video.labelDe || video.label;
+  return { de, en: video.labelEn || de };
 }
 
 /** Ground truth for a recording that came from the reference dataset, by its neutral name. */

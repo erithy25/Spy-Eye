@@ -14,6 +14,8 @@ interface NodesFile {
   nodes: {
     id: string;
     name: string;
+    /** English name of the node (optional), used in the English twins of its ledger texts. */
+    nameEn?: string;
     operator: string;
     region: string;
     lat: number;
@@ -97,6 +99,7 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
     return {
       id: n.id,
       name: n.name,
+      ...(typeof n.nameEn === 'string' && n.nameEn.trim() !== '' ? { nameEn: n.nameEn.trim() } : {}),
       operator: n.operator,
       region: n.region,
       lat: n.lat,
@@ -196,9 +199,11 @@ async function main(): Promise<void> {
     // calls in it while the event loop still runs, and the pipeline then stores a recording that
     // is mid-analysis as failed ("Rechenthread wurde beendet"), which the next start never
     // analyses again. Ending the process right after the nodes leaves that work unfinished, so it
-    // is redone at the next start. The inference threads finish their runs and release their
-    // sessions during the exit itself (drainAtExit in ml/workerHost.ts, synchronous, so nothing
-    // else runs meanwhile); the gallery search thread holds no native resources.
+    // is redone at the next start. The inference threads and the world model's thread finish
+    // their runs and release their sessions during the exit itself (drainAtExit in
+    // ml/workerHost.ts, synchronous, so nothing else runs meanwhile); a fix that finishes after
+    // the engine stopped is not stored (DatumEngine.persist); the gallery search thread holds no
+    // native resources.
     Promise.allSettled(nodes.map((n) => n.stop())).then(
       () => process.exit(0),
       () => process.exit(1),

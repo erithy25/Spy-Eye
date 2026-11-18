@@ -6,6 +6,8 @@ import type { Role, UserInfo } from '../types.js';
 interface UserRecord {
   id: string;
   name: string;
+  /** English name, where the account has one (see UserInfo.nameEn). */
+  nameEn?: string;
   role: Role;
   /** Organisational unit shown next to the name. */
   unit: string;
@@ -55,6 +57,28 @@ function hashPassword(password: string, salt: string): string {
   return scryptSync(password, salt, 32).toString('hex');
 }
 
+/**
+ * The demonstration accounts seeded on first start, with the English names the console shows
+ * for them (apps/web/src/en.ts). Kept here so that the English twins of ledger texts name an
+ * account the way the English console does.
+ */
+const DEMO_ACCOUNTS: readonly { id: string; name: string; nameEn: string; role: Role; unit: string }[] = [
+  { id: 'leitung', name: 'Einsatzleitung', nameEn: 'Operations command', role: 'supervisor', unit: 'Stab · S2 Lage' },
+  { id: 'lage', name: 'Lagedienst', nameEn: 'Situation desk', role: 'operator', unit: 'Stab · S2 Lage' },
+  { id: 'aufsicht', name: 'Aufsicht', nameEn: 'Oversight', role: 'auditor', unit: 'Behördliche Datenschutzaufsicht' },
+];
+
+/**
+ * English name of an account: its own, else the demonstration account's when it is one with its
+ * seeded name (accounts seeded before English names existed carry none in users.json).
+ */
+function englishName(user: UserRecord): string | undefined {
+  if (user.nameEn) return user.nameEn;
+  if (!user.demo) return undefined;
+  const seeded = DEMO_ACCOUNTS.find((a) => a.id === user.id);
+  return seeded && seeded.name === user.name ? seeded.nameEn : undefined;
+}
+
 export class Auth {
   private readonly users: Collection<UserRecord>;
   private readonly sessions = new Map<string, Session>();
@@ -70,14 +94,9 @@ export class Auth {
   async open(demoPassword: string): Promise<void> {
     await this.users.load();
     if (this.users.size === 0) {
-      const seed: [string, string, Role, string][] = [
-        ['leitung', 'Einsatzleitung', 'supervisor', 'Stab · S2 Lage'],
-        ['lage', 'Lagedienst', 'operator', 'Stab · S2 Lage'],
-        ['aufsicht', 'Aufsicht', 'auditor', 'Behördliche Datenschutzaufsicht'],
-      ];
-      for (const [id, name, role, unit] of seed) {
+      for (const { id, name, nameEn, role, unit } of DEMO_ACCOUNTS) {
         const salt = randomBytes(16).toString('hex');
-        this.users.put({ id, name, role, unit, salt, hash: hashPassword(demoPassword, salt), demo: true });
+        this.users.put({ id, name, nameEn, role, unit, salt, hash: hashPassword(demoPassword, salt), demo: true });
       }
       await this.users.flush();
     }
@@ -88,7 +107,8 @@ export class Auth {
   }
 
   info(user: UserRecord): UserInfo {
-    return { id: user.id, name: user.name, role: user.role, unit: user.unit };
+    const nameEn = englishName(user);
+    return { id: user.id, name: user.name, ...(nameEn ? { nameEn } : {}), role: user.role, unit: user.unit };
   }
 
   listUsers(): UserInfo[] {

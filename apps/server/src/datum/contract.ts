@@ -74,7 +74,14 @@ export interface Evidence {
    * attribution (author, licence, service), which the console shows under the picture.
    */
   refImage?: string;
+  /** For a gallery reference and the world model's place: the German name (see refLabelEn). */
   refLabel?: string;
+  /**
+   * English name of the place in `refLabel` (gallery reference, world model's place), so that the
+   * English console does not name a reference in German. Absent for street-level evidence, whose
+   * refLabel is an attribution that reads the same in both languages, and on older fixes.
+   */
+  refLabelEn?: string;
   refLat?: number;
   refLon?: number;
   /** Similarity of the frame to the reference (cosine), if any. */
@@ -342,7 +349,21 @@ export interface Fix {
    * `url` names where a reference truth comes from (Wikimedia Commons or Wikidata); own truths
    * have none.
    */
-  truth: (GeoPoint & { label: string; errorKm: number | null; source: string; url?: string }) | null;
+  truth:
+    | (GeoPoint & {
+        /** Name of the true place: German for a reference truth, as given for an own truth. */
+        label: string;
+        /**
+         * English name of a reference truth (from Wikidata, the same as label where there is no
+         * English one). Absent for own truths, whose label is the analyst's own text and is shown
+         * in both languages, and on fixes of older engine versions.
+         */
+        labelEn?: string;
+        errorKm: number | null;
+        source: string;
+        url?: string;
+      })
+    | null;
 }
 
 /**

@@ -84,7 +84,8 @@ function referenceSearch(images: readonly GalleryImage[], g: Float32Array, dim: 
     out.push(
       top.map((i) => {
         const img = images[i] as GalleryImage;
-        return { id: img.id, label: img.label, lat: img.lat, lon: img.lon, country: img.country, wikidata: img.wikidata, similarity: sims[i] as number };
+        // labelEn: the English name, which neighbours carry since the gallery has both names.
+        return { id: img.id, label: img.label, labelEn: img.labelEn, lat: img.lat, lon: img.lon, country: img.country, wikidata: img.wikidata, similarity: sims[i] as number };
       }),
     );
   }

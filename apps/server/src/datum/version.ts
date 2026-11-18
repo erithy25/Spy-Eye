@@ -13,8 +13,12 @@
  *      truth source 'referenz' / 'eigene' with the reference URL in `truth.url`.
  *   7: world model (GeoCLIP): evidence kind 'worldmodel', location method 'worldmodel' where it
  *      replaces the gallery's answer, its modes among the candidates, refitted confidence.
+ *   8: landmark names in both languages (gallery and truths carry labelDe/labelEn from Wikidata):
+ *      label from the German, labelEn from the English name, `truth.labelEn`, `refLabelEn` on the
+ *      reference evidence; a far reference picture is no longer called a recognition (of the place
+ *      found); the street-level no-match text names the condition that failed.
  */
-export const ENGINE_VERSION = 7;
+export const ENGINE_VERSION = 8;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

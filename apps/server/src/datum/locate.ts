@@ -298,7 +298,10 @@ export interface LocateDiagnostics {
 /** One gallery reference with the evidence the frames give it. */
 export interface WeightedRef {
   id: string;
+  /** German name of the place. */
   label: string;
+  /** English name of the place (absent where the neighbour had none: then label). */
+  labelEn?: string;
   lat: number;
   lon: number;
   country: string | null;
@@ -345,7 +348,7 @@ export function weightNeighbours(
       for (const n of row) {
         const ref = byId.get(n.id);
         if (!ref) {
-          byId.set(n.id, { id: n.id, label: n.label, lat: n.lat, lon: n.lon, country: n.country, weight: 0, bestSimilarity: n.similarity, bestRow: r });
+          byId.set(n.id, { id: n.id, label: n.label, labelEn: n.labelEn ?? n.label, lat: n.lat, lon: n.lon, country: n.country, weight: 0, bestSimilarity: n.similarity, bestRow: r });
         } else if (n.similarity > ref.bestSimilarity) {
           ref.bestSimilarity = n.similarity;
           ref.bestRow = r;
@@ -363,6 +366,7 @@ export function weightNeighbours(
         byId.set(n.id, {
           id: n.id,
           label: n.label,
+          labelEn: n.labelEn ?? n.label,
           lat: n.lat,
           lon: n.lon,
           country: n.country,
@@ -467,8 +471,15 @@ function sigmoid(x: number): number {
 /** Evidence tier of the stated radius; 'worldmodel' for an answer of GeoCLIP's (see LocateParams.geoclip). */
 export type RadiusTier = 'strong' | 'recognised' | 'similar' | 'country' | 'continent' | 'worldmodel';
 
+/**
+ * Distance (km) within which a reference counts as being at the answer: a frame whose best match
+ * lies this close agrees with it (frameAgreement, which decides the 'strong' radius tier), and the
+ * evidence calls only a reference this close a recognition of the place found (referenceStrength).
+ */
+export const AGREEMENT_KM = 25;
+
 /** Share of the rows whose best match lies within `km` of a point. */
-export function frameAgreement(rows: readonly GalleryNeighbour[][], lat: number, lon: number, km = 25): number {
+export function frameAgreement(rows: readonly GalleryNeighbour[][], lat: number, lon: number, km = AGREEMENT_KM): number {
   let n = 0;
   let agree = 0;
   for (const row of rows) {
@@ -607,21 +618,78 @@ function continentPosterior(world: World, countries: readonly CountryProb[]): { 
 }
 
 /**
- * Name of a place in both languages: the landmark (a proper name, the same in both) with its
- * city, else the city, else the country, else the coordinates.
+ * Name of a place in both languages: the landmark with its city, else the city, else the
+ * country, else the coordinates. The landmark comes with its German and English name (the
+ * reference gallery has both, see scripts/datum/fetchLabels.ts), so that a fix reads
+ * "Nowodewitschi-Kloster, Moskau" and "Novodevichy Convent, Moscow" instead of mixing them; a
+ * single string is used for both (a name without a translation).
  */
-export function placeLabel(world: World, lat: number, lon: number, landmark: string | null): Named {
+export function placeLabel(world: World, lat: number, lon: number, landmark: Named | string | null): Named {
   const city = world.nearestCity(lat, lon, { maxKm: 60 });
-  if (landmark && city) {
+  const mark = typeof landmark === 'string' ? { de: landmark, en: landmark } : landmark;
+  if (mark && city) {
     return {
-      de: landmark.includes(city.name) ? landmark : `${landmark}, ${city.name}`,
-      en: landmark.includes(city.nameEn) || landmark.includes(city.name) ? landmark : `${landmark}, ${city.nameEn}`,
+      de: mark.de.includes(city.name) ? mark.de : `${mark.de}, ${city.name}`,
+      en: mark.en.includes(city.nameEn) || mark.en.includes(city.name) ? mark.en : `${mark.en}, ${city.nameEn}`,
     };
   }
-  if (landmark) return { de: landmark, en: landmark };
+  if (mark) return { de: mark.de, en: mark.en };
   if (city) return city.distanceKm < 5 ? { de: city.name, en: city.nameEn } : { de: `bei ${city.name}`, en: `near ${city.nameEn}` };
   const country = world.countryNear(lat, lon);
   return country ? { de: country.name_de, en: country.name_en } : { de: formatCoord(lat, lon), en: formatCoordEn(lat, lon) };
+}
+
+/** A reference picture's place name in both languages. */
+function refName(ref: Pick<WeightedRef, 'label' | 'labelEn'>): Named {
+  return { de: ref.label, en: ref.labelEn ?? ref.label };
+}
+
+/**
+ * How the evidence describes one reference picture: where it lies relative to the answer
+ * (`where`, appended to the sentence on the similarity) and what its similarity means
+ * (`strength`). Only a reference at the answer, within AGREEMENT_KM (the distance at which the
+ * decision counts a match as agreeing with the answer), is called a recognition. One as similar
+ * but farther away is a similar-looking place elsewhere, not a recognition of the place found:
+ * "316 km vom Ergebnis. Das ist eine Wiedererkennung." contradicted the answer it stood under.
+ */
+export function referenceStrength(
+  similarity: number,
+  distanceKm: number | null,
+  params: Pick<LocateParams, 'landmarkSimilarity' | 'regionThreshold'>,
+): { where: Named; strength: Named } {
+  const km = distanceKm === null ? 0 : Math.round(distanceKm);
+  // Decided on the distance as the text shows it: 25.3 km must not read "25 km … keine
+  // Wiedererkennung" when 25.0 km reads "25 km … Das ist eine Wiedererkennung".
+  const far = distanceKm !== null && km > AGREEMENT_KM;
+  // "ähnlich, aber" only for a reference that is similar at all: a weak one far away is just far
+  // ("ähnlich, aber 316 km … Schwache Ähnlichkeit" contradicted itself).
+  const similar = similarity >= params.regionThreshold;
+  const where: Named =
+    distanceKm === null
+      ? { de: '', en: '' }
+      : distanceKm < 1
+        ? { de: '; am Ergebnisort', en: '; at the place found' }
+        : far && similar
+          ? { de: `; ähnlich, aber ${km} km vom Ergebnis entfernt`, en: `; similar, but ${km} km from the result` }
+          : { de: `; ${km} km vom Ergebnis`, en: `; ${km} km from the result` };
+  // Not "keine Wiedererkennung" outright: the far reference may be the true place and the answer
+  // the wrong one (seen on the reference set: "Dorfkirche Rieben", 0.87, 994 km from a wrong
+  // answer). What holds either way is that it does not recognise the place found.
+  const lookAlike: Named = {
+    de: 'Ein ähnlich aussehender Ort anderswo, keine Wiedererkennung des gefundenen Orts.',
+    en: 'A similar-looking place elsewhere, not a recognition of the place found.',
+  };
+  const strength: Named =
+    similarity >= params.landmarkSimilarity
+      ? far
+        ? lookAlike
+        : { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' }
+      : similar
+        ? far
+          ? lookAlike
+          : { de: 'Ähnlichkeit, keine sichere Wiedererkennung.', en: 'A resemblance, not a sure recognition.' }
+        : { de: 'Schwache Ähnlichkeit, zählt kaum.', en: 'A weak resemblance; it hardly counts.' };
+  return { where, strength };
 }
 
 /**
@@ -772,7 +840,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       c.mode.lon,
       params.mergeKm,
     );
-    const name = placeLabel(world, c.mode.lat, c.mode.lon, c.lead.label);
+    const name = placeLabel(world, c.mode.lat, c.mode.lon, refName(c.lead));
     return {
       lat: c.mode.lat,
       lon: c.mode.lon,
@@ -831,7 +899,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     radiusTier = topGap >= params.strongGap && agreement >= params.agreementMin ? 'strong' : recognised ? 'recognised' : 'similar';
     radiusBaseKm = radiusTier === 'similar' ? support : local;
     const radiusKm = Math.max(params.radiusKm[radiusTier], radiusBaseKm, 0.5);
-    const name = placeLabel(world, first.mode.lat, first.mode.lon, first.lead.label);
+    const name = placeLabel(world, first.mode.lat, first.mode.lon, refName(first.lead));
     visual = {
       lat: first.mode.lat,
       lon: first.mode.lon,
@@ -967,6 +1035,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       // confirmation as strong as the mass it puts there when it agreed.
       weight: metaLocation ? 0.05 : replaced ? Math.min(0.9, 0.5 + 0.4 * Math.max(modeMass, concentration)) : Math.min(0.6, 0.1 + 0.5 * agreeMass),
       refLabel: name.de,
+      refLabelEn: name.en,
       refLat: best.lat,
       refLon: best.lon,
     });
@@ -978,26 +1047,19 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   for (const r of topRefs) {
     const distance = visual ? greatCircleKm(visual.lat, visual.lon, r.lat, r.lon) : null;
     const frame = ev.frameNumbers[pooled.frameOfRow[r.bestRow] ?? r.bestRow];
-    const strength: Named =
-      r.bestSimilarity >= params.landmarkSimilarity
-        ? { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' }
-        : r.bestSimilarity >= params.regionThreshold
-          ? { de: 'Ähnlichkeit, keine sichere Wiedererkennung.', en: 'A resemblance, not a sure recognition.' }
-          : { de: 'Schwache Ähnlichkeit, zählt kaum.', en: 'A weak resemblance; it hardly counts.' };
+    const said = referenceStrength(r.bestSimilarity, distance, params);
     evidence.push({
       kind: 'landmark',
       label: `Referenzbild: ${r.label} (${fmt(r.bestSimilarity)})`,
-      labelEn: `Reference picture: ${r.label} (${fmtEn(r.bestSimilarity)})`,
-      detail: `Bild ${frame ?? r.bestRow + 1} gleicht dem Referenzbild mit Kosinus ${fmt(r.bestSimilarity)}${
-        distance !== null ? `; ${distance < 1 ? 'am Ergebnisort' : `${Math.round(distance)} km vom Ergebnis`}` : ''
-      }. ${strength.de}`,
-      detailEn: `Frame ${frame ?? r.bestRow + 1} resembles the reference picture with a cosine of ${fmtEn(r.bestSimilarity)}${
-        distance !== null ? `; ${distance < 1 ? 'at the place found' : `${Math.round(distance)} km from the result`}` : ''
-      }. ${strength.en}`,
+      labelEn: `Reference picture: ${r.labelEn ?? r.label} (${fmtEn(r.bestSimilarity)})`,
+      detail: `Bild ${frame ?? r.bestRow + 1} gleicht dem Referenzbild mit Kosinus ${fmt(r.bestSimilarity)}${said.where.de}. ${said.strength.de}`,
+      detailEn: `Frame ${frame ?? r.bestRow + 1} resembles the reference picture with a cosine of ${fmtEn(r.bestSimilarity)}${said.where.en}. ${said.strength.en}`,
       weight: totalWeight > 0 ? r.weight / totalWeight : 0,
       ...(frame !== undefined ? { frame } : {}),
       refImage: galleryImageUrl(r.id),
       refLabel: r.label,
+      // The English console names the reference by this one (refLabel is the German name).
+      refLabelEn: r.labelEn ?? r.label,
       refLat: r.lat,
       refLon: r.lon,
       similarity: r.bestSimilarity,

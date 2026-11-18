@@ -42,7 +42,7 @@ import type { EmbeddingModel } from '../ml/model.js';
 import type { Store, VideoEntry } from '../store.js';
 import { haversineKm } from '../core/geo.js';
 import type { Evidence, Fix, FixLocation, Keyframe, TimeEstimate, TraceStep } from './contract.js';
-import { truthForName } from './dataset.js';
+import { truthForName, truthNames } from './dataset.js';
 import { Gallery } from './gallery.js';
 import { acquireWorldModel, releaseWorldModel, worldModelFailure, worldModelPrecision, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
 import { reportWorldModel, streetLevelEnabled } from './settings.js';
@@ -181,6 +181,13 @@ function emptyTime(): TimeEstimate {
     notes: [],
     notesEn: [],
   };
+}
+
+/** Ends a fix whose engine stopped while it was computed (runFull drops it without an error). */
+class EngineStopped extends Error {
+  constructor() {
+    super('Ortung angehalten.');
+  }
 }
 
 function pending(videoId: string): Fix {
@@ -790,10 +797,13 @@ export class DatumEngine {
     const errorKm = (lat: number, lon: number): number | null => (location ? haversineKm(location.lat, location.lon, lat, lon) : null);
     const reference = await truthForName(entry.info.name);
     if (reference) {
+      // The place's German and English names (the selection's single label mixed languages).
+      const names = truthNames(reference);
       return {
         lat: reference.lat,
         lon: reference.lon,
-        label: reference.label,
+        label: names.de,
+        labelEn: names.en,
         source: 'referenz',
         url: reference.sourceUrl ?? `https://www.wikidata.org/wiki/${reference.wikidata}`,
         errorKm: errorKm(reference.lat, reference.lon),
@@ -1337,6 +1347,8 @@ export class DatumEngine {
         const aspect = entry.info.frameWidth > 0 && entry.info.frameHeight > 0 ? entry.info.frameWidth / entry.info.frameHeight : 16 / 9;
         if (grid.skyline) bestSky = moreSky(bestSky, { skyline: grid.skyline, aspect, frame: frame.n, skyFraction: grid.skyFraction });
       } catch (err: unknown) {
+        // A stop ends the whole fix, not only this picture's space.
+        if (err instanceof EngineStopped) throw err;
         this.opts.log(`Raum für Bild ${frame.n} von "${entry.info.name}" nicht erzeugt: ${err instanceof Error ? err.message : String(err)}`);
       }
       keyframes.push(key);

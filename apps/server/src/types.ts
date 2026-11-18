@@ -272,6 +272,11 @@ export type Role = 'operator' | 'supervisor' | 'auditor';
 export interface UserInfo {
   id: string;
   name: string;
+  /**
+   * English name of the account, for the English twins of ledger texts ("Operations command
+   * signed in"). Set for the demonstration accounts; other accounts have none and use `name`.
+   */
+  nameEn?: string;
   role: Role;
   unit: string;
 }

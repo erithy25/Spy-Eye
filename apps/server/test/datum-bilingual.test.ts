@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import type { Evidence, TimeEstimate } from '../src/datum/contract.js';
 import { timeEvidence } from '../src/datum/engine.js';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
-import { decideLocation, placeLabel } from '../src/datum/locate.js';
+import { AGREEMENT_KM, DEFAULT_LOCATE_PARAMS, decideLocation, placeLabel, referenceStrength } from '../src/datum/locate.js';
 import { judgeCreationTime, metadataFromProbe } from '../src/datum/metadata.js';
 import { DAY_LABELS_EN, LIGHT_CLASSES, SEASON_CLASSES, estimateTime, possibleClause, possibleClauseEn, type FrameStats, type TimeInput } from '../src/datum/time.js';
 import { World } from '../src/datum/world.js';
@@ -142,6 +142,64 @@ function assertEvidence(evidence: readonly Evidence[], where: string): void {
     assertEnglish([e.labelEn, e.detailEn], `${where} ${e.kind}`);
   }
 }
+
+test('a landmark is named in German and in English; only a reference near the answer is a recognition', () => {
+  const world = fixtureWorld();
+  const ref = (id: string, de: string, en: string, lat: number, lon: number, s: number): GalleryNeighbour => ({ id, label: de, labelEn: en, lat, lon, country: 'DE', wikidata: id, similarity: s });
+  const fix = decideLocation(world, {
+    neighbours: [
+      [
+        ref('Q1', 'Deutsches Eck', 'German Corner', 50.3644, 7.6058, 0.9),
+        // A look-alike about 315 km away, as similar as a recognition.
+        ref('Q2', 'Fernmeldeturm Bremen', 'Bremen TV tower', 53.0959, 8.8, 0.84),
+        ref('Q3', 'Irgendwas', 'Something', 52.5, 13.4, 0.5),
+      ],
+    ],
+    countryCosines: new Float32Array([0.12, 0.08]),
+    frameNumbers: [10],
+    metadata: null,
+    hints: null,
+  });
+  // One language per name: the German name with the German city, the English one with the English.
+  assert.equal(fix.location?.label, 'Deutsches Eck, Koblenz');
+  assert.equal(fix.location?.labelEn, 'German Corner, Koblenz');
+  assert.equal(fix.candidates[0]?.labelEn, 'German Corner, Koblenz');
+  const near = fix.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+  assert.equal(near?.label, 'Referenzbild: Deutsches Eck (0,90)');
+  assert.equal(near?.labelEn, 'Reference picture: German Corner (0.90)');
+  // The console names the reference by refLabel; the English console needs the English name.
+  assert.equal(near?.refLabelEn, 'German Corner');
+  assert.match(near?.detail ?? '', /am Ergebnisort\. Das ist eine Wiedererkennung\.$/);
+  assert.match(near?.detailEn ?? '', /at the place found\. That is a recognition\.$/);
+  const far = fix.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Fernmeldeturm Bremen');
+  assert.equal(far?.labelEn, 'Reference picture: Bremen TV tower (0.84)');
+  assert.match(far?.detail ?? '', /; ähnlich, aber 31\d km vom Ergebnis entfernt\. Ein ähnlich aussehender Ort anderswo, keine Wiedererkennung des gefundenen Orts\.$/);
+  assert.match(far?.detailEn ?? '', /; similar, but 31\d km from the result\. A similar-looking place elsewhere, not a recognition of the place found\.$/);
+  assert.doesNotMatch(far?.detail ?? '', /Das ist eine Wiedererkennung/);
+
+  // The city in the language of the name; a name that already holds the city keeps it alone.
+  assert.deepEqual(placeLabel(world, 50.94, 6.96, { de: 'Hohenzollernbrücke', en: 'Hohenzollern Bridge' }), { de: 'Hohenzollernbrücke, Köln', en: 'Hohenzollern Bridge, Cologne' });
+  assert.deepEqual(placeLabel(world, 50.94, 6.96, { de: 'Kölner Dom', en: 'Cologne Cathedral' }), { de: 'Kölner Dom', en: 'Cologne Cathedral' });
+  assert.deepEqual(placeLabel(world, 50.94, 6.96, 'Zoobrücke'), { de: 'Zoobrücke, Köln', en: 'Zoobrücke, Cologne' });
+
+  // The wording by distance and similarity, at the boundary of AGREEMENT_KM.
+  const p = DEFAULT_LOCATE_PARAMS;
+  assert.deepEqual(referenceStrength(0.84, 316, p), {
+    where: { de: '; ähnlich, aber 316 km vom Ergebnis entfernt', en: '; similar, but 316 km from the result' },
+    // Not "keine Wiedererkennung" outright: a far reference can be the true place under a wrong answer.
+    strength: { de: 'Ein ähnlich aussehender Ort anderswo, keine Wiedererkennung des gefundenen Orts.', en: 'A similar-looking place elsewhere, not a recognition of the place found.' },
+  });
+  assert.equal(referenceStrength(0.84, AGREEMENT_KM, p).strength.de, 'Das ist eine Wiedererkennung.');
+  assert.equal(referenceStrength(0.84, AGREEMENT_KM, p).where.de, `; ${AGREEMENT_KM} km vom Ergebnis`);
+  assert.equal(referenceStrength(0.84, AGREEMENT_KM + 1, p).strength.en, 'A similar-looking place elsewhere, not a recognition of the place found.');
+  assert.equal(referenceStrength(0.84, 0.4, p).where.en, '; at the place found');
+  assert.deepEqual(referenceStrength(0.84, null, p), { where: { de: '', en: '' }, strength: { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' } });
+  assert.equal(referenceStrength(0.5, 316, p).strength.de, 'Schwache Ähnlichkeit, zählt kaum.');
+  // A weak reference far away is not called "ähnlich" right before "Schwache Ähnlichkeit".
+  assert.deepEqual(referenceStrength(0.5, 316, p).where, { de: '; 316 km vom Ergebnis', en: '; 316 km from the result' });
+  // Decided on the distance the text shows: 25.3 km reads "25 km" and is treated as 25 km.
+  assert.deepEqual(referenceStrength(0.84, AGREEMENT_KM + 0.3, p), referenceStrength(0.84, AGREEMENT_KM, p));
+});
 
 test('localisation evidence and place names exist in both languages', () => {
   const world = fixtureWorld();

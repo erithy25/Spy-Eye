@@ -1131,16 +1131,80 @@ export function candidateStats(pictures: readonly StreetLevelPicture[], opts: Pi
   };
 }
 
+/** The thresholds of the decision rule. */
+export type MatchRuleOptions = Pick<StreetLevelOptions, 'minPictures' | 'minSimilarity' | 'minGap' | 'minZ' | 'minAgreement'>;
+
+/** One condition of the decision rule (see isMatch). */
+export type MatchCondition = 'pictures' | 'similarity' | 'gap' | 'z' | 'agreement';
+
+/** The conditions these statistics fail, in the order isMatch checks them; empty for a match. */
+export function failedRules(stats: StreetLevelStats, opts: MatchRuleOptions): MatchCondition[] {
+  const failed: MatchCondition[] = [];
+  if (stats.spreadPictures < opts.minPictures) failed.push('pictures');
+  if (stats.best < opts.minSimilarity) failed.push('similarity');
+  if (stats.gap < opts.minGap) failed.push('gap');
+  if (stats.z < opts.minZ) failed.push('z');
+  if (stats.agreement < opts.minAgreement) failed.push('agreement');
+  return failed;
+}
+
 /** The decision rule on a candidate's statistics. */
-export function isMatch(stats: StreetLevelStats | null, opts: Pick<StreetLevelOptions, 'minPictures' | 'minSimilarity' | 'minGap' | 'minZ' | 'minAgreement'>): boolean {
-  if (!stats) return false;
-  return (
-    stats.spreadPictures >= opts.minPictures &&
-    stats.best >= opts.minSimilarity &&
-    stats.gap >= opts.minGap &&
-    stats.z >= opts.minZ &&
-    stats.agreement >= opts.minAgreement
-  );
+export function isMatch(stats: StreetLevelStats | null, opts: MatchRuleOptions): boolean {
+  return stats !== null && failedRules(stats, opts).length === 0;
+}
+
+/** "a", "a und b", "a, b und c" (and the English "and"). */
+function joinClauses(parts: readonly string[], and: string): string {
+  if (parts.length <= 1) return parts[0] ?? '';
+  return `${parts.slice(0, -1).join(', ')} ${and} ${parts[parts.length - 1] as string}`;
+}
+
+/**
+ * Why a candidate is no match, in plain words and both languages: the best and the typical
+ * similarity, then every condition it failed with its threshold. When the gap held and another
+ * condition failed (most often z: a landmark seen from everywhere gives a large gap but a wide
+ * spread), the text says that the gap was enough, so that it never reads as if the gap had been
+ * too small.
+ */
+export function noMatchText(stats: StreetLevelStats, opts: MatchRuleOptions): { de: string; en: string } {
+  const failed = failedRules(stats, opts);
+  const minZ = fmt(opts.minZ, Number.isInteger(opts.minZ) ? 0 : 1);
+  const minZEn = fmtEn(opts.minZ, Number.isInteger(opts.minZ) ? 0 : 1);
+  const pct = (v: number): string => `${Math.round(v * 100)} %`;
+  const pctEn = (v: number): string => `${Math.round(v * 100)}%`;
+  const clauses: Record<MatchCondition, { de: string; en: string }> = {
+    pictures: {
+      de: `zu wenige Bilder, um die Streuung zu messen (${stats.spreadPictures}, nötig ${opts.minPictures})`,
+      en: `too few pictures to measure the spread (${stats.spreadPictures}, needed ${opts.minPictures})`,
+    },
+    similarity: {
+      de: `das beste Bild ist insgesamt zu unähnlich (${fmt(stats.best)}, nötig ${fmt(opts.minSimilarity)})`,
+      en: `the best picture is too dissimilar overall (${fmtEn(stats.best)}, needed ${fmtEn(opts.minSimilarity)})`,
+    },
+    gap: {
+      de: `der Abstand ${fmt(stats.gap)} ist zu klein (nötig ${fmt(opts.minGap)})`,
+      en: `the gap of ${fmtEn(stats.gap)} is too small (needed ${fmtEn(opts.minGap)})`,
+    },
+    z: {
+      de: `das beste Bild sticht nicht deutlich genug aus der Streuung heraus (z ${fmt(stats.z, 1)}, nötig ${minZ})`,
+      en: `the best picture does not stand out clearly enough from the spread (z ${fmtEn(stats.z, 1)}, needed ${minZEn})`,
+    },
+    agreement: {
+      de: `die nächstbesten Bilder liegen nicht beim besten (${pct(stats.agreement)}, nötig ${pct(opts.minAgreement)})`,
+      en: `the next best pictures do not lie near the best one (${pctEn(stats.agreement)}, needed ${pctEn(opts.minAgreement)})`,
+    },
+  };
+  const gapFailed = failed.includes('gap');
+  const head = gapFailed
+    ? { de: `Kein Straßenbild hebt sich ab: bestes ${fmt(stats.best)}, typisch ${fmt(stats.typical)}`, en: `No street-level picture stands out: best ${fmtEn(stats.best)}, typical ${fmtEn(stats.typical)}` }
+    : { de: `Kein Straßenbild passt sicher genug: bestes ${fmt(stats.best)}, typisch ${fmt(stats.typical)}`, en: `No street-level picture matches clearly enough: best ${fmtEn(stats.best)}, typical ${fmtEn(stats.typical)}` };
+  if (failed.length === 0) return { de: `${head.de}.`, en: `${head.en}.` };
+  const why = { de: joinClauses(failed.map((r) => clauses[r].de), 'und'), en: joinClauses(failed.map((r) => clauses[r].en), 'and') };
+  if (gapFailed) return { de: `${head.de}; ${why.de}.`, en: `${head.en}; ${why.en}.` };
+  return {
+    de: `${head.de}; der Abstand ${fmt(stats.gap)} reicht (nötig ${fmt(opts.minGap)}), aber ${why.de}.`,
+    en: `${head.en}; the gap of ${fmtEn(stats.gap)} is enough (needed ${fmtEn(opts.minGap)}), but ${why.en}.`,
+  };
 }
 
 /** Similarity-weighted position of the pictures close to the best one, with a radius. */
@@ -1647,11 +1711,13 @@ async function run(input: StreetLevelInput, deps: StreetLevelDeps, started: numb
     const mine = scored.filter((p) => p.candidateIndex === chosen.index).sort((a, b) => b.similarity - a.similarity);
     const top = mine.slice(0, 3);
     if (!chosen.matched) {
+      // Names the condition that failed (see noMatchText), not just the gap.
+      const why = noMatchText(stats, opts);
       return finish({
         matched: false,
         reasonCode: 'no-match',
-        reason: `Kein Straßenbild hebt sich ab: bestes ${fmt(stats.best)}, typisch ${fmt(stats.typical)} (Abstand ${fmt(stats.gap)}, nötig ${fmt(opts.minGap)}); ${stats.pictures} Bilder von ${providerList(states, 'de')} verglichen. Der Ort bleibt, wie er ist.${errorsNote.de}${budgetNote.de}`,
-        reasonEn: `No street-level picture stands out: best ${fmtEn(stats.best)}, typical ${fmtEn(stats.typical)} (gap ${fmtEn(stats.gap)}, needed ${fmtEn(opts.minGap)}); ${stats.pictures} pictures from ${providerList(states, 'en')} compared. The place stays as it was.${errorsNote.en}${budgetNote.en}`,
+        reason: `${why.de} ${stats.pictures} Bilder von ${providerList(states, 'de')} verglichen. Der Ort bleibt, wie er ist.${errorsNote.de}${budgetNote.de}`,
+        reasonEn: `${why.en} ${stats.pictures} pictures from ${providerList(states, 'en')} compared. The place stays as it was.${errorsNote.en}${budgetNote.en}`,
         location: null,
         candidateIndex: chosen.index,
         top,

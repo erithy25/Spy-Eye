@@ -4,6 +4,7 @@
     {
       "id": "datum",
       "name": "DATUM · Ortungsstelle",
+      "nameEn": "DATUM · Location desk",
       "operator": "Auswertung (Erprobung)",
       "region": "Referenzbestand",
       "lat": 50.3569,

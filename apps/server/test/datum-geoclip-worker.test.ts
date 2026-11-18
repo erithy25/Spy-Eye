@@ -198,3 +198,43 @@ test('the real model in its thread: the Eiffel Tower frames land in Paris, the m
     await fs.rm(tmp, { recursive: true, force: true });
   }
 });
+
+test('a process that exits while the world model computes ends cleanly, without an abort', { skip: skipReal }, async () => {
+  // Before the exit drain, a process.exit in the middle of a session run (the node's shutdown, a
+  // script's end) took the process down with SIGABRT ("terminate called after throwing an
+  // instance of 'Napi::Error'"): Node tore the thread down inside onnxruntime. Now the exit waits
+  // until the thread has finished its run and released its sessions.
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'geoclip-exit-'));
+  try {
+    const frames: string[] = [];
+    for (const t of [1, 3, 5, 7, 9, 11]) {
+      const out = path.join(tmp, `f${t}.jpg`);
+      const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-ss', String(t), '-i', clip, '-frames:v', '1', '-vf', "scale=w='min(640,iw)':h=-2", '-q:v', '3', out]);
+      assert.equal(r.status, 0, String(r.stderr));
+      frames.push(out);
+    }
+    const service = new URL('../src/datum/geoclipService.ts', import.meta.url).href;
+    const script = path.join(tmp, 'exit-mid-run.mts');
+    await fs.writeFile(
+      script,
+      [
+        "import fs from 'node:fs/promises';",
+        `const { WorldModelService } = await import(${JSON.stringify(service)});`,
+        `const frames = await Promise.all(${JSON.stringify(frames)}.map((f) => fs.readFile(f)));`,
+        "const wm = new WorldModelService({ precision: 'int8', threads: 2 });",
+        'await wm.ensureGallery();',
+        'void wm.predict(frames, { wait: true });',
+        // The image tower's runs start right away; the exit falls into one of them.
+        'setTimeout(() => process.exit(0), Number(process.argv[2]));',
+      ].join('\n'),
+    );
+    for (const delay of [300, 800]) {
+      const r = spawnSync(process.execPath, ['--import', 'tsx', script, String(delay)], { cwd: path.join(import.meta.dirname, '..'), encoding: 'utf8', timeout: 120_000 });
+      assert.equal(r.signal, null, `exit after ${delay} ms: signal ${r.signal}\n${r.stderr}`);
+      assert.equal(r.status, 0, `exit after ${delay} ms: status ${r.status}\n${r.stderr}`);
+      assert.doesNotMatch(r.stderr, /Napi::Error|terminate called/);
+    }
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
