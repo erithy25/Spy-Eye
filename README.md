@@ -310,7 +310,7 @@ media/brand/    Filme: Drehbuch und Schnittwerkzeug
 - [`deliverables/`](deliverables) – Präsentation und Einseiter (deutsch und englisch), Finanzmodell,
   Unterlagenmappe als PDF
 - [`docs/vertrieb/`](docs/vertrieb) – Kurzvorstellung in drei Längen, Anschreiben, Angebot zur Erprobung,
-  die harten Fragen auf Englisch
+  Leitfaden für die ersten zehn Behördengespräche, die harten Fragen auf Englisch
 - [`tools/pruefen/`](tools/pruefen) – zwei Programme, mit denen eine Aufsicht das Protokoll ohne Sicht nachrechnet
 - [`brand/`](brand) – die Wortmarke als Datei
 - [`docs/research/`](docs/research) – Recherche mit Quellen

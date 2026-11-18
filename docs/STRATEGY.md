@@ -278,6 +278,9 @@ Drei Befunde:
 | Juli bis September 2027 | Zweite und dritte Erprobung, eine davon in einem anderen Land. Gespräche mit Fraunhofer IOSB und Eurocommand über eine Zulieferrolle. Förderwege prüfen (Cyberagentur, SPRIND). | Zwei weitere Messberichte; eine Absichtserklärung eines Bestandsanbieters |
 | Oktober bis November 2027 | Erste Knotenlizenz in einen Haushalt für 2028 bringen. Angebot an Bund und Länder als Bildschicht für den Wirkbetrieb des digitalen Lagebilds. Entscheidung über Finanzierung auf Grundlage der Messberichte. | Ein unterschriebener Lizenzvertrag |
 
+Für die Gespräche im Winter gibt es einen Leitfaden mit Fragen je Annahme, Stufen der Zusage und
+einer Auswertung gegen die Abbruchkriterien: `docs/vertrieb/GESPRAECHSLEITFADEN.md`.
+
 Abbruchkriterien:
 
 - Bis Ende März 2027 sagt keine Behörde eine Erprobung zu: Die Nachfragethese ist nicht
