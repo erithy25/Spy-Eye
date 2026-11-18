@@ -50,15 +50,18 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 /* Structure */
 .grow { flex: 1; }
 .split { display: flex; gap: 56px; }
+.split-even { display: flex; gap: 44px; }
 .col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
 .col-fixed { flex: none; display: flex; flex-direction: column; gap: 28px; }
 .side { flex: 1; display: flex; flex-direction: column; gap: 24px; }
 .side-spread { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-.tri { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 36px 48px; }
+.tri { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 36px 60px; }
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
-.w-1040 { width: 1040px; flex: none; }
+.duo-ask { display: grid; grid-template-columns: 788px 1fr; gap: 72px; }
+.w-1052 { width: 1052px; flex: none; }
 .w-900 { width: 900px; flex: none; }
-.w-880 { width: 880px; flex: none; }
+.w-892 { width: 892px; flex: none; }
+.w-872 { width: 872px; flex: none; }
 .gap-16 { gap: 16px; }
 
 /* A labelled point: hairline, label, one sentence */
@@ -92,10 +95,10 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 .row-end { border-bottom: 2px solid #333333; }
 .g-kv { grid-template-columns: 1fr 280px; }
 .g-price { grid-template-columns: 1fr 330px; }
-.g-why { grid-template-columns: 220px 1fr 380px; }
-.g-comp { grid-template-columns: 330px 1fr 1fr; }
+.g-why { grid-template-columns: 220px 1fr 376px; }
+.g-comp { grid-template-columns: 316px 1fr 1fr; }
 .g-buy { grid-template-columns: 170px 1fr; }
-.g-risk { grid-template-columns: 56px 1fr 1fr; }
+.g-risk { grid-template-columns: 72px 1fr 1fr; }
 .g-plan { grid-template-columns: 520px 1fr 1fr 1fr 1fr 1fr; gap: 24px; }
 .cell { font-size: 28px; font-weight: 400; line-height: 1.4; color: #ededed; }
 .cell-s { font-size: 24px; font-weight: 400; line-height: 1.35; color: #ededed; }
@@ -220,7 +223,7 @@ add("ahrtal", "Ahrtal, 14. Juli 2021, 22:14 Uhr", f"""
 <p class="label below-s">Ahrtal · 14. Juli 2021</p>
 <h2 class="claim below-l">22:14 Uhr</h2>
 <div class="split">
-<div class="col-fixed w-1040">
+<div class="col-fixed w-1052">
 <p class="lede">Ein Polizeihubschrauber filmte bis 22:43 Uhr die Orte von Mayschoß bis Schuld: bis zum Dachgeschoss überflutete Häuser und Menschen, die mit Lampen auf sich aufmerksam machten.</p>
 <p class="lede">Die Videos wurden „nicht ordnungsgemäß verbucht“. Bis September 2022 gingen Untersuchungsausschuss und Staatsanwaltschaft davon aus, dass es solche Aufnahmen nicht gibt.</p>
 </div>
@@ -242,7 +245,7 @@ _n = "Zwei weitere amtlich dokumentierte Fälle. In Los Angeles hält der Berich
 add("muster", "Muster: zwei weitere dokumentierte Fälle", f"""
 <section id="muster" data-transition="fade">
 {head("Muster: zwei weitere dokumentierte Fälle")}
-<div class="split">
+<div class="split-even">
 <div class="col">
 <p class="label">Los Angeles · Januar 2025</p>
 <p class="lede">Einsatzkräfte und Einsatzleitungen konnten Echtzeitinformationen nicht verlässlich teilen, unter anderem wegen „various unconnected platforms“.</p>
@@ -391,7 +394,7 @@ product(
     [
         ("Maskiert", "Gesichter werden beim Einspielen verpixelt. Das Original bleibt verschlossen."),
         ("Vier Augen", "Das Original gibt es nur mit Grund und Freigabe einer zweiten Person, für 15 Minuten."),
-        ("Mandat", "Ohne Zweck und Rechtsgrundlage keine Suche, keine Wache, kein Vorgang."),
+        ("Mandat", "Ohne Zweck und Rechtsgrundlage keine Suche, keine neue Wache, kein Vorgang."),
     ],
     "Einzelbild mit maskiertem Gesicht. Frei lizenziertes Archivmaterial.",
     "Gesichter werden beim Einspielen verpixelt. Wer das Original braucht, gibt den Grund an und holt die Freigabe einer zweiten, leitenden Person ein; sie gilt für 15 Minuten und steht im Protokoll. Niemand kann sich selbst freigeben. Wie viele Gesichter der Erkenner übersieht, ist nicht gemessen.",
@@ -405,12 +408,12 @@ def kv(label, value, last=False):
     return f'<div class="{cls}"><p class="cell">{label}</p><p class="val">{value}</p></div>'
 
 
-_n = "Gemessen auf einem Rechner mit vier Kernen ohne Grafikkarte, nachmessbar mit einem Befehl. 13 von 13 Ereignissen des Drehbuchs wurden gemeldet, im Median 1,1 Sekunden nach Eintreffen des ausgewerteten Bildes, bei einer Fehlmeldung; mit einem Direktbild kommt etwa eine halbe Minute Nachlauf hinzu. Zwei Einschränkungen gehören zu jeder dieser Zahlen: Die Wachen wurden an diesem Material formuliert, und das Gefahrenmodell irrt darauf trotz 99 Prozent auf seinem Benchmark. Über die Güte auf echtem Einsatzmaterial sagen die Zahlen nichts."
+_n = "Gemessen auf einem Rechner mit vier Kernen ohne Grafikkarte, nachmessbar mit einem Befehl. 13 von 13 Ereignissen des Drehbuchs wurden gemeldet, im Median 1,1 Sekunden nach Eintreffen des ausgewerteten Bildes, bei einer Fehlmeldung; mit einem Direktbild kommt etwa eine halbe Minute Nachlauf hinzu. Zwei Einschränkungen gehören zu jeder dieser Zahlen: Die Wachen wurden an diesem Material formuliert, und das Gefahrenmodell irrt darauf trotz 99 Prozent auf seinem Benchmark. Über die Güte auf echtem Einsatzmaterial sagen die Zahlen nichts. [Bei beschleunigter Übungsuhr weist der Reiter WIRKUNG höhere Werte aus, bei 8× rund 2,3 s; die 1,1 s stammen aus dem Messlauf in Echtzeit.]"
 add("gemessen", "Messwerte: eine Übung, zwei Einschränkungen", f"""
 <section id="gemessen" data-transition="fade">
 {head("Messwerte: eine Übung, zwei Einschränkungen")}
 <div class="split">
-<div class="rows w-900">
+<div class="rows w-892">
 {kv("Erkannte Ereignisse der Übung", "13 von 13")}
 {kv("Erkennungsverzug, Median", f"1,1{NB}s")}
 {kv("Fehlmeldungen", "1 von 15")}
@@ -472,7 +475,7 @@ add("wettbewerb", "Wettbewerb: der freie Raum ist schmal", f"""
 {head("Wettbewerb: der freie Raum ist schmal")}
 <div class="rows">
 <div class="row-s g-comp"><p class="cell-k">Anbieter</p><p class="cell-k">Was sie haben</p><p class="cell-k">Was ihnen fehlt</p></div>
-{comp("Fraunhofer IOSB", "Lagedarstellung ELD-BS, in Baden-Württemberg im Einsatz; Drohnenbildauswertung", "Freitextsuche; die Bausteine sind getrennte Projekte")}
+{comp("Fraunhofer IOSB", "Lagebild ELD-BS, in Baden-Württemberg im Einsatz; Auswertung von Drohnenbildern", "Freitextsuche; die Bausteine sind getrennte Projekte")}
 {comp("Eurocommand auf Esri", "Stabssoftware CommandX für Feuerwehr und Katastrophenschutz", "Bildsuche über Video in den Quellen nicht gefunden")}
 {comp("Milestone, Axis, Genetec", "Freitextsuche über Video, geliefert oder angekündigt; Axis mit Filter und Protokoll", "Kein Produkt für den Bevölkerungsschutz, kein Lagebild")}
 {comp("Palantir", "Analyseplattformen der Polizei in mehreren Ländern; Zweckabfrage, Protokoll", "Keine dokumentierte Freitextsuche über Video; kein Produkt im Bevölkerungsschutz")}
@@ -480,8 +483,8 @@ add("wettbewerb", "Wettbewerb: der freie Raum ist schmal", f"""
 </div>
 <div class="grow"></div>
 <div class="tri">
-{pt("Eng", "Freitextsuche über Video liefern mehr als zehn Anbieter.")}
-{pt("Bei keinem gefunden", "Im Verbund reist nur die Frage. Begrenzte Suche, kein Beweis.")}
+{pt("Was viele können", "Freitextsuche über Video bieten mehr als zehn Anbieter.")}
+{pt("Nur die Frage reist", "Bei keinem Anbieter gefunden. Begrenzte Suche, kein Beweis.")}
 {pt("Folge", "Sicht ist heute eine Funktion, kein Markt.")}
 </div>
 <p class="src above-s">Quellen: Herstellerangaben und Presse 2025 bis 2026; Einzelnachweise im Strategiepapier, Abschnitt 4.</p>
@@ -503,7 +506,7 @@ add("kaeufer", "Käufer: der Weg zur ersten Erprobung", f"""
 <section id="kaeufer" data-transition="fade">
 {head("Käufer: der Weg zur ersten Erprobung")}
 <div class="split">
-<div class="rows w-880">
+<div class="rows w-872">
 {buy("Bund", "BBK mit dem Gemeinsamen Melde- und Lagezentrum; THW mit 669 Ortsverbänden.", "Vor der Entscheidung 2027 kein Bedarfsträger.")}
 {buy("Länder", "Innenministerien und Landesämter mit ihren Lagezentren.", "Entscheiden landesweit und sind zum Teil festgelegt.")}
 {buy("Kommunen", "400 Kreise und kreisfreie Städte als untere Katastrophenschutzbehörden.", "Kleine Haushalte, Datenschutzprüfung je Kreis.", last=True)}
@@ -632,10 +635,10 @@ add("stand", "Stand: was läuft, was fehlt, was gesucht wird", f"""
 <div class="tri">
 {pt("Läuft", "Einspielen, Maskieren, Suchen, Wachen, Lagen, Vorgänge, Verbund, Protokoll, Messung.")}
 {pt("Im Labor", "Direktbild mit Nachlauf: gebaut, im Labor geprüft, nicht im Feld erprobt.")}
-{pt("Fehlt", "Kopplung an ein Führungssystem. Benutzerverwaltung. Messung an Einsatzmaterial. Kunden, Zulassung, Markenprüfung.")}
+{pt("Fehlt", "Kopplung an Führungssysteme.<br>Benutzerverwaltung.<br>Messung an Einsatzmaterial.<br>Kunden, Zulassung.<br>Markenprüfung des Namens.")}
 </div>
 <div class="grow"></div>
-<div class="duo">
+<div class="duo-ask">
 <div class="pt"><p class="pt-k">Gesucht</p><h3 class="pt-h">Eine Behörde, die Sicht drei Monate in einer Übung erprobt: ein Knoten, ein Messbericht.</h3></div>
 <div class="pt"><p class="pt-k">Finanzierung: offen</p><p class="pt-v">Zwei Wege stehen zur Wahl: bis zum ersten Messbericht aus eigenen Mitteln und Forschungsförderung, oder früher eine Runde. Der Basisfall braucht bis 2031 rund 3,2{NB}Mio.{NB}€ (Annahme).</p></div>
 </div>

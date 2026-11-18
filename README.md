@@ -80,6 +80,21 @@ QUELLEN Aufzeichnungen oder ganze Ordner ablegen. Neue Aufnahmen sind nach einem
 Durchgang sofort durchsuchbar; die dichte Auswertung läuft dahinter weiter. Für die Entwicklung
 startet `pnpm dev` den Knoten (8787) und die Konsole mit Neuladen (5173).
 
+### Als Container
+
+```bash
+docker build -t sicht .
+```
+
+```bash
+docker run -p 8787:8787 -v sicht-data:/srv/data -v sicht-models:/srv/.models -v sicht-scenarios:/srv/scenarios sicht
+```
+
+Das Abbild enthält einen Knoten ohne Übungsmaterial und ohne Modelle; beides wird einmal in die
+Datenträger geladen (Befehle im Kopf des [`Dockerfile`](Dockerfile)). Geprüft ist der Bau bis vor
+die letzte Schicht und der Start desselben Aufbaus außerhalb eines Containers, nicht der Lauf im
+Container selbst.
+
 ## Wie es arbeitet
 
 ```

@@ -1,7 +1,7 @@
 {
   "name": "sicht",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Sicht: the civil operating picture. Sovereign visual intelligence for civil protection, running entirely on local infrastructure.",
   "engines": {
     "node": ">=20.11"

@@ -7,7 +7,8 @@
 // each slide's <section> in order. Two additions make the result usable as a hand-out: the
 // typeface is loaded from the font files of the console, and the uploaded pictures are taken
 // from the repository (tools/blobs.json). A browser preview approximates the Slides viewer;
-// line breaks can differ a little.
+// line breaks can differ a little. --loose lets hyphens break as a plain browser would,
+// --tight lists lines that nearly fill their box.
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -73,13 +74,13 @@ const inside = (root, file) => path.resolve(file).startsWith(path.resolve(root) 
     return route.fulfill({ contentType: types[path.extname(file)] || 'application/octet-stream', body: fs.readFileSync(file) });
   });
   await page.goto('http://deck.invalid/');
-  await page.evaluate(async () => {
+  await page.evaluate(async (keepHyphens) => {
     for (const fragment of document.querySelectorAll('.fragment')) fragment.classList.add('visible');
     // Slides breaks lines at spaces only. A browser also breaks after a hyphen, so hyphens inside
     // words are drawn as non-breaking ones here; the typeface has the glyph.
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (!node.parentElement.closest('aside')) node.nodeValue = node.nodeValue.replace(/(?<=\S)-(?=\S)/g, '\u2011');
+      if (keepHyphens && !node.parentElement.closest('aside')) node.nodeValue = node.nodeValue.replace(/(?<=\S)-(?=\S)/g, '\u2011');
     }
     for (const section of document.querySelectorAll('body > section')) {
       for (const child of section.children) {
@@ -94,7 +95,7 @@ const inside = (root, file) => path.resolve(file).startsWith(path.resolve(root) 
       for (const child of box.children) if (parseFloat(getComputedStyle(child).flexGrow) > 0) child.style.minHeight = '0';
     }
     await document.fonts.ready;
-  });
+  }, !process.argv.includes('--loose'));
   await page.waitForLoadState('networkidle');
 
   // What a reader of the pictures cannot measure by eye: where the content of each slide ends,
@@ -130,6 +131,40 @@ const inside = (root, file) => path.resolve(file).startsWith(path.resolve(root) 
     return out;
   });
   console.log(report.join('\n'));
+
+  // Lines that nearly fill their box: a small difference in text measurement would wrap them.
+  if (process.argv.includes('--tight')) {
+    const tight = await page.evaluate(() => {
+      const out = [];
+      for (const section of document.querySelectorAll('body > section')) {
+        for (const el of section.querySelectorAll('p, h1, h2, h3')) {
+          if (el.closest('aside')) continue;
+          const cs = getComputedStyle(el);
+          const box = el.getBoundingClientRect();
+          const room = box.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const rows = new Map();
+          for (const rect of range.getClientRects()) {
+            const key = Math.round(rect.top);
+            const row = rows.get(key) || { left: rect.left, right: rect.right };
+            row.left = Math.min(row.left, rect.left);
+            row.right = Math.max(row.right, rect.right);
+            rows.set(key, row);
+          }
+          const spacing = parseFloat(cs.letterSpacing) || 0;
+          const step = parseFloat(cs.fontSize) * 0.6 + spacing;
+          for (const row of rows.values()) {
+            const width = row.right - row.left - Math.max(spacing, 0);
+            const free = room - width;
+            if (free < step * 1.5) out.push(`${section.id}: ${el.className || el.tagName} has ${free.toFixed(1)}px free (${(free / step).toFixed(1)} characters)`);
+          }
+        }
+      }
+      return out;
+    });
+    console.log(tight.join('\n') || 'no tight lines');
+  }
 
   if (shotsDir) {
     fs.mkdirSync(shotsDir, { recursive: true });

@@ -27,7 +27,7 @@ function runCapture(args: string[], timeoutMs: number): Promise<{ code: number |
       reject(
         err.code === 'ENOENT'
           ? new FfmpegError(
-              `ffmpeg wurde nicht gefunden ("${config.ffmpegPath}"). Bitte ffmpeg installieren (macOS: "brew install ffmpeg", Ubuntu: "apt install ffmpeg") oder FFMPEG_PATH setzen.`,
+              `ffmpeg wurde nicht gefunden ("${config.ffmpegPath}"). Bitte ffmpeg installieren (Windows: "winget install Gyan.FFmpeg", danach ein neues Terminal öffnen; macOS: "brew install ffmpeg"; Ubuntu: "apt install ffmpeg") oder FFMPEG_PATH setzen.`,
             )
           : err,
       );

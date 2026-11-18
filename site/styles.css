@@ -1731,11 +1731,11 @@ figcaption {
   letter-spacing: 0;
 }
 
-.zoom-close {
+.zoom-nav .zoom-close {
   margin-left: 10px;
   margin-right: -10px;
   border-left: 1px solid var(--line-2);
-  padding-left: 20px !important;
+  padding-left: 20px;
 }
 
 .zoom-stage {

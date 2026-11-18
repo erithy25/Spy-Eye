@@ -287,7 +287,7 @@ window.SICHT_EN = {
     'Sicht runs on a machine owned by the authority. A processor is enough to analyse recordings; by calculation, a machine with four cores analyses about three streams at once. More simultaneous sources need more computing power or a graphics card. At start-up the node compares the results of a graphics card with those of the processor; if they differ, it continues on the processor.',
   'ops2.k': 'Offline',
   'ops2.v':
-    'After a one-time download of the models (about 950&nbsp;MB) the node works without an internet connection. Map, typeface and interface are stored locally.',
+    'After a one-time download of the models (about 950&nbsp;MB) the node works without an internet connection. Map, typeface and interface are stored locally. Connections exist only where the operator sets them up: to peer nodes in the federation and to connected live streams.',
   'ops3.k': 'Freely licensed image model',
   'ops3.v':
     'The image encoder is SigLIP 2 by Google under the Apache 2.0 licence. It understands queries in German and English and can be exchanged. There is no remote service that could be switched off.',
