@@ -1,0 +1,28 @@
+# DATUM — Produktfilm: die Konsole am Referenzbestand, ein durchgehender Mitschnitt.
+# Erzeugt von tools/datum_sequence.py aus media/product/datum-marks.json; nicht von Hand ändern.
+#
+#   cd media/brand && CLIP_W=1728 CLIP_H=972 SEQ=ablauf-datum-produktfilm.txt ./build.sh
+
+set|OUT|datum-produktfilm.mp4
+set|END_WORD|DATUM
+set|END_LINE|JEDES BILD HAT EINEN ORT UND EINE UHRZEIT.
+set|END_NOTE|BILDSCHIRMAUFNAHME DER KONSOLE · REFERENZBESTAND AUS WIKIMEDIA COMMONS · ERPROBUNGSSTAND
+set|MUSIC|audio/bed-lang.mp3
+
+card|d01-titel|3.0||DATUM|ORT UND UHRZEIT AUS EINEM VIDEO.
+card|d02-bestand|3.0|REFERENZBESTAND · WIKIMEDIA COMMONS|60 VIDEOS AUS 30 LÄNDERN.|KEIN GPS. KEINE AUFNAHMEZEIT.
+clip|../product/datum-take.mp4|6.5|3.8|ORTUNG · JEDES VIDEO AUF DER KARTE
+clip|../product/datum-take.mp4|10.8|7.3|ORTUNG · ORT, UHRZEIT, SONNE UND SCHATTEN
+card|d03-beleg|2.4||JEDE AUSSAGE MIT BELEG.
+clip|../product/datum-take.mp4|18.6|6.1|BEFUND · REFERENZBILDER, UHR, ABLAUF DER ORTUNG
+card|d04-raum|2.8||AUS EINEM BILD WIRD EIN RAUM.
+clip|../product/datum-take.mp4|25.2|4.6|RAUM · AUS EINEM EINZIGEN BILD DES VIDEOS
+clip|../product/datum-gehen-x4.mp4|0.0|15.7|RAUM · BEGEHBAR, NUR AUS DEM VIDEO · 4-FACH BESCHLEUNIGT
+
+mark|turn
+card|d05-horizont|3.0||IM GEBIRGE VERRÄT DER HORIZONT|DIE BLICKRICHTUNG.
+clip|../product/datum-take.mp4|94.6|8.6|ORTUNG · HÖHENLINIEN UND BLICKKEGEL
+clip|../product/datum-gelaende-x4.mp4|0.0|15.9|RAUM · GELÄNDE MIT SONNENBAHN · 4-FACH BESCHLEUNIGT
+card|d06-gemessen|2.6||GEMESSEN, NICHT BEHAUPTET.
+clip|../product/datum-take.mp4|169.6|10.1|MESSUNG · ABWEICHUNG GEGEN DIE GRUNDWAHRHEIT
+end|4.4
