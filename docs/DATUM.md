@@ -32,7 +32,7 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | Jahreszeit | Schnee, kahle Bäume, Blüte, Laub; auf der Südhalbkugel gespiegelt | Monatsbereich |
 | Sonne | Sonnenstandsrechnung (NOAA) für Ort und Datum, Zeiten, in denen die Sonne im gemessenen Band steht; Zeitzone aus Land und Länge | Uhrzeitfenster in Ortszeit, Sonnenbahn, Schattenrichtung |
 | Raum | Tiefenschätzung (Depth Anything V2 Small) für drei Schlüsselbilder; Himmel, Boden und Neigung der Kamera; Abstände aus der Annahme einer Augenhöhe von 1,6 m | begehbarer Raum, Himmelslinie |
-| Horizont | Aus Höhendaten berechneter Horizont am Kandidatenort gegen die Himmelslinie des Videos | Blickrichtung und Bildwinkel, wenn das Gelände markant ist |
+| Horizont | Aus Höhendaten berechneter Horizont am Kandidatenort gegen die Himmelslinie des Videos; gewertet nur, wenn der Horizont im Bildausschnitt mindestens 1° Relief hat und die beste Richtung sich deutlich von den übrigen abhebt | Blickrichtung und Bildwinkel, wenn das Gelände markant ist und der Ort stimmt |
 
 ## Bedienung
 
@@ -40,7 +40,7 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | --- | --- |
 | ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit |
 | BEFUND | Video, Himmelslinie, Belege mit Referenzbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
-| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen |
+| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
 | MESSUNG | Abweichung jeder Ortung gegen die Grundwahrheit des Referenzbestands |
@@ -105,8 +105,12 @@ Einordnung:
   unterscheiden, die Konsole zeigt dann beide Fenster.
 - Der Raum ist aus einem Bild geschätzt: geometrisch plausibel, nicht vermessen. Was im Bild
   verdeckt ist, fehlt im Raum.
-- Die Horizontprüfung braucht markantes Gelände und Höhendaten am Ort; in Städten und im
-  Flachland greift sie selten.
+- Die Horizontprüfung braucht markantes Gelände und Höhendaten am Ort; im Flachland greift sie
+  nicht. Sie bestätigt nicht den Ort, sondern setzt ihn voraus: Liegt die Ortung falsch, ist auch
+  die Blickrichtung falsch. In Städten enthalten die Höhendaten teilweise Gebäude, dort kann die
+  Prüfung auf Dachlinien ansprechen. Eine frühere Fassung meldete über flachem Gelände
+  Blickrichtungen ohne Aussagekraft (acht Treffer im Referenzbestand, davon fünf in Städten oder
+  am falschen Ort); seit der Reliefschwelle bleiben drei im Bergland und zwei in Städten.
 - Höhendaten und Kartendetails liegen für die Regionen des Referenzbestands vor, sonst nur grob
   (Welt in Zoomstufe 4).
 - Die Grundwahrheit ist die Koordinate des Wikidata-Objekts (etwa der Mittelpunkt eines
