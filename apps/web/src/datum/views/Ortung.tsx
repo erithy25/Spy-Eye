@@ -4,7 +4,8 @@ import { MapCanvas, type MapMarker, type MapShape } from '../../map/MapCanvas';
 import { formatCoordinate } from '../../map/geo';
 import { pressable } from '../../ui';
 import type { NodeConnection } from '../../useNode';
-import { fetchCountries, rel, type CountryShape, type Fix } from '../api';
+import { fetchCountries, fetchTerrain, rel, type CountryShape, type Fix } from '../api';
+import { terrainContours, type ContourSet } from '../contours';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 
 export interface DatumViewProps {
@@ -109,7 +110,31 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
     return out;
   }, [rows, selected, showTruth, t]);
 
-  const shapes = useMemo<MapShape[]>(() => (current ? fixShapes(current, full, countries, true, t) : []), [current, full, countries, t]);
+  // Terrain outline around a fix that is located to a few kilometres: contour lines from the
+  // local elevation model, under the other geometry.
+  const [contours, setContours] = useState<{ key: string; set: ContourSet | null } | null>(null);
+  const loc = current?.status === 'ready' ? current.location : null;
+  const terrainKey = loc && loc.radiusKm <= 30 ? `${loc.lat.toFixed(4)},${loc.lon.toFixed(4)},${Math.round(loc.radiusKm * 10)}` : null;
+  useEffect(() => {
+    if (!terrainKey || !loc) return;
+    const ctrl = new AbortController();
+    const radiusKm = Math.min(12, Math.max(3, loc.radiusKm * 3));
+    fetchTerrain(loc.lat, loc.lon, radiusKm, ctrl.signal)
+      .then((grid) => setContours({ key: terrainKey, set: terrainContours(grid) }))
+      .catch(() => {
+        if (!ctrl.signal.aborted) setContours({ key: terrainKey, set: null });
+      });
+    return () => ctrl.abort();
+    // loc is read through terrainKey, which captures everything that matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terrainKey]);
+  const terrain = contours && contours.key === terrainKey ? contours.set : null;
+
+  const shapes = useMemo<MapShape[]>(() => {
+    if (!current) return [];
+    const lines: MapShape[] = (terrain?.lines ?? []).map((l) => ({ kind: 'line', points: l.points, style: l.index ? 'contour-index' : 'contour' }));
+    return [...lines, ...fixShapes(current, full, countries, true, t)];
+  }, [current, full, countries, t, terrain]);
 
   const view = current?.location
     ? { lat: current.location.lat, lon: current.location.lon, zoom: zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }
@@ -227,6 +252,15 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
             {sun && (
               <div className="dt-hud-sun">
                 {t('Sonne')} {Math.round(sun.azimuthDeg)}° / {Math.round(sun.elevationDeg)}° · {t('Schatten')} {Math.round(sun.shadowAzimuthDeg)}°
+              </div>
+            )}
+            {terrain && (
+              <div className="dt-hud-sun">
+                {t('Gelände {min}–{max} m · Höhenlinien alle {step} m', {
+                  min: Math.round(terrain.minHeight).toLocaleString(locale),
+                  max: Math.round(terrain.maxHeight).toLocaleString(locale),
+                  step: terrain.interval,
+                })}
               </div>
             )}
             {current.truth?.errorKm != null && (

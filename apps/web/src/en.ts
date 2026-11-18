@@ -472,6 +472,7 @@ export const EN: Record<string, string> = {
   Sonne: 'Sun',
   Schatten: 'Shadow',
   'Abweichung zur Wahrheit': 'Deviation from truth',
+  'Gelände {min}–{max} m · Höhenlinien alle {step} m': 'Terrain {min}–{max} m · contours every {step} m',
   'Ort unbestimmt': 'Place undetermined',
   'Raum betreten': 'Enter the space',
   'Wahrheit zeigen': 'Show truth',

@@ -38,7 +38,7 @@ export type MapShape =
   | { kind: 'line'; points: [number, number][]; style?: ShapeStyle }
   | { kind: 'area'; rings: [number, number][][]; opacity: number; label?: string; labelAt?: [number, number] };
 
-export type ShapeStyle = 'solid' | 'dashed' | 'dotted' | 'faint' | 'strong';
+export type ShapeStyle = 'solid' | 'dashed' | 'dotted' | 'faint' | 'strong' | 'contour' | 'contour-index';
 
 const R_EARTH_KM = 6371.0088;
 
@@ -296,6 +296,14 @@ function strokeStyleFor(ctx: CanvasRenderingContext2D, style: ShapeStyle | undef
       ctx.strokeStyle = 'rgba(237,237,237,0.3)';
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 4]);
+      break;
+    case 'contour':
+      ctx.strokeStyle = 'rgba(237,237,237,0.14)';
+      ctx.lineWidth = 0.8;
+      break;
+    case 'contour-index':
+      ctx.strokeStyle = 'rgba(237,237,237,0.3)';
+      ctx.lineWidth = 1;
       break;
     default:
       ctx.strokeStyle = 'rgba(237,237,237,0.85)';
