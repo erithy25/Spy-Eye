@@ -4,7 +4,7 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 
 /* Type scale: 120 / 56 / 36 / 28 / 24 */
 .claim { font-size: 120px; font-weight: 500; line-height: 1.06; letter-spacing: -3px; color: #ededed; }
-.title { font-size: 56px; font-weight: 500; line-height: 1.12; letter-spacing: -1px; color: #ededed; }
+.title { font-size: 56px; font-weight: 500; line-height: 1.12; letter-spacing: -1px; color: #ededed; padding-bottom: 40px; }
 .statement { font-size: 56px; font-weight: 500; line-height: 1.18; letter-spacing: -1px; color: #ededed; }
 .lede { font-size: 36px; font-weight: 400; line-height: 1.32; color: #ededed; }
 .text { font-size: 28px; font-weight: 400; line-height: 1.4; color: #ededed; }
@@ -13,10 +13,6 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 .mark { font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: 28px; color: #ededed; }
 
 /* Structure */
-.head { padding-bottom: 12px; }
-.gap-s { height: 12px; flex: none; }
-.gap-m { height: 28px; flex: none; }
-.gap-l { height: 44px; flex: none; }
 .grow { flex: 1; }
 .split { display: flex; gap: 56px; }
 .col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
@@ -57,7 +53,7 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 .rows { display: flex; flex-direction: column; }
 .row { display: grid; gap: 32px; padding: 13px 0; border-top: 2px solid #333333; align-items: baseline; }
 .row-s { display: grid; gap: 32px; padding: 8px 0; border-top: 2px solid #333333; align-items: baseline; }
-.row-m { display: grid; gap: 32px; padding: 12px 0; border-top: 2px solid #333333; align-items: baseline; }
+.row-m { display: grid; gap: 32px; padding: 11px 0; border-top: 2px solid #333333; align-items: baseline; }
 .row-end { border-bottom: 2px solid #333333; }
 .g-kv { grid-template-columns: 1fr 280px; }
 .g-price { grid-template-columns: 1fr 330px; }
@@ -94,3 +90,8 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 /* Modifiers last, so they win over the type classes */
 .dim { color: #8a8a8a; }
 .strong { font-weight: 500; }
+.below-s { padding-bottom: 12px; }
+.below-m { padding-bottom: 28px; }
+.below-l { padding-bottom: 44px; }
+.above-s { padding-top: 12px; }
+.above-m { padding-top: 28px; }

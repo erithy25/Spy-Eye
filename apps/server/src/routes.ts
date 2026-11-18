@@ -1190,7 +1190,9 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       // Peers receive a small masked preview, never the stored frame or the recording.
       let thumbnail = '';
       try {
-        const bytes = await sharp(store.framePath(match.videoId, match.frameNumber)).resize({ width: 360 }).jpeg({ quality: 70 }).toBuffer();
+        // Decoded from memory: handing sharp a path keeps the file open on Windows for a while.
+        const stored = await fs.readFile(store.framePath(match.videoId, match.frameNumber));
+        const bytes = await sharp(stored).resize({ width: 360 }).jpeg({ quality: 70 }).toBuffer();
         thumbnail = `data:image/jpeg;base64,${bytes.toString('base64')}`;
       } catch {
         continue;

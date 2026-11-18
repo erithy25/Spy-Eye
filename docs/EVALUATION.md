@@ -129,10 +129,12 @@ einer Luftbildquelle, und frei formulierte Wachen sind der Regelfall.
 pnpm test
 ```
 
-15 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
+27 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
 körperliche Merkmale, Wiederfinden und Verfolgen ab und lässt Lagebeschreibungen durch; die
 Protokollkette erkennt geänderte und entfernte Einträge; Koordinaten werden gegen bekannte
-UTMREF-Werte geprüft. Im Browser geprüft (Abläufe als Leitung, Auswertung und Aufsicht):
+UTMREF-Werte geprüft; Meldungen werden nur bei gleicher Art, Nähe und Zeit zu einer Lage; der
+Verbund weist veränderte, fremd signierte und veraltete Anfragen ab; als Direktbild gelten nur
+Netzadressen, und ihre Zugangsdaten erscheinen nie in der Anzeige. Im Browser geprüft (Abläufe als Leitung, Auswertung und Aufsicht):
 Maskierung, Vier-Augen-Freigabe, Beweissicherung mit Siegel, Verbundfrage mit Beleg, Stichprobe.
 
 ## 6. Was nicht gemessen ist

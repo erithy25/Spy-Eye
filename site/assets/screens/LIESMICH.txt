@@ -1,7 +1,13 @@
-Hier liegen die Bildschirmaufnahmen der Konsole für die Website.
+Hier liegen die Bilder der Konsole, wie die Website sie verwendet: WebP-Dateien, abgeleitet aus
+den Bildschirmaufnahmen in docs/screens (2880 x 1800, 16 : 10).
 
-Erwartet werden sieben PNG-Dateien, Seitenverhältnis 16 : 10 (vorgesehen 2880 x 1800):
+  <name>.webp                    ganze Aufnahme, fuer die grosse Ansicht
+  <name>-1440.webp               halbe Groesse, fuer die Rahmen der Reiter
+  <name>-960.webp                fuer die kleinen Rahmen "Detail"
+  <name>-ausschnitt(-half).webp  Ausschnitt (Maskierung, Freigabe, Original, Ablehnung)
 
-  lage.png  suche.png  wachen.png  vorgaenge.png  verbund.png  protokoll.png  wirkung.png
+Nicht von Hand bearbeiten. Neu erzeugen mit:
+
+  node site/tools/build-screens.mjs
 
 Fehlt eine Datei, zeigt die Seite an ihrer Stelle einen Rahmen mit Passmarke.

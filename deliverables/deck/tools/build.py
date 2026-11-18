@@ -39,7 +39,7 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 
 /* Type scale: 120 / 56 / 36 / 28 / 24 */
 .claim { font-size: 120px; font-weight: 500; line-height: 1.06; letter-spacing: -3px; color: #ededed; }
-.title { font-size: 56px; font-weight: 500; line-height: 1.12; letter-spacing: -1px; color: #ededed; }
+.title { font-size: 56px; font-weight: 500; line-height: 1.12; letter-spacing: -1px; color: #ededed; padding-bottom: 40px; }
 .statement { font-size: 56px; font-weight: 500; line-height: 1.18; letter-spacing: -1px; color: #ededed; }
 .lede { font-size: 36px; font-weight: 400; line-height: 1.32; color: #ededed; }
 .text { font-size: 28px; font-weight: 400; line-height: 1.4; color: #ededed; }
@@ -48,10 +48,6 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 .mark { font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: 28px; color: #ededed; }
 
 /* Structure */
-.head { padding-bottom: 12px; }
-.gap-s { height: 12px; flex: none; }
-.gap-m { height: 28px; flex: none; }
-.gap-l { height: 44px; flex: none; }
 .grow { flex: 1; }
 .split { display: flex; gap: 56px; }
 .col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
@@ -92,7 +88,7 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 .rows { display: flex; flex-direction: column; }
 .row { display: grid; gap: 32px; padding: 13px 0; border-top: 2px solid #333333; align-items: baseline; }
 .row-s { display: grid; gap: 32px; padding: 8px 0; border-top: 2px solid #333333; align-items: baseline; }
-.row-m { display: grid; gap: 32px; padding: 12px 0; border-top: 2px solid #333333; align-items: baseline; }
+.row-m { display: grid; gap: 32px; padding: 11px 0; border-top: 2px solid #333333; align-items: baseline; }
 .row-end { border-bottom: 2px solid #333333; }
 .g-kv { grid-template-columns: 1fr 280px; }
 .g-price { grid-template-columns: 1fr 330px; }
@@ -129,6 +125,11 @@ section { background: #050505; color: #ededed; font-family: 'JetBrains Mono', 'C
 /* Modifiers last, so they win over the type classes */
 .dim { color: #8a8a8a; }
 .strong { font-weight: 500; }
+.below-s { padding-bottom: 12px; }
+.below-m { padding-bottom: 28px; }
+.below-l { padding-bottom: 44px; }
+.above-s { padding-top: 12px; }
+.above-m { padding-top: 28px; }
 """
 
 SLIDES = {}   # id -> html
@@ -152,7 +153,7 @@ def foot(section):
 
 
 def head(title):
-    return f'<div class="head"><h2 class="title">{title}</h2></div>\n<div class="gap-m"></div>'
+    return f'<h2 class="title">{title}</h2>'
 
 
 def pt(label, text):
@@ -171,7 +172,8 @@ def shot(key, alt, tall=True):
     )
 
 
-def product(sid, title, alt, points, caption, notes, tall=True):
+def product(sid, title, alt, points, caption, notes, tall=True, line=None):
+    extra = f'\n<p class="lede strong">{line}</p>' if line else ""
     side = "\n".join(pt(k, v) for k, v in points)
     add(sid, title, f"""
 <section id="{sid}" data-transition="fade">
@@ -179,7 +181,7 @@ def product(sid, title, alt, points, caption, notes, tall=True):
 <div class="split">
 <div class="figure">
 {shot(sid, alt, tall)}
-<p class="cap">{caption}</p>
+<p class="cap">{caption}</p>{extra}
 </div>
 <div class="side-spread">
 {side}
@@ -215,10 +217,8 @@ add("titel", "Titel", f"""
 _n = "An diesem Fall mache ich das Problem fest. Belegt ist, dass der Hubschrauber gefilmt hat und dass die Videos nicht ordnungsgemäß verbucht wurden; Ausschuss und Staatsanwaltschaft wussten bis September 2022 nichts von ihnen. Ob die Aufnahmen die Einsatzleitung erreicht haben, belegt keine Quelle, deshalb behaupte ich es nicht. Die Bilder gab es, ein Lagebild daraus gab es nicht."
 add("ahrtal", "Ahrtal, 14. Juli 2021, 22:14 Uhr", f"""
 <section id="ahrtal" data-transition="fade">
-<p class="label">Ahrtal · 14. Juli 2021</p>
-<div class="gap-s"></div>
-<h2 class="claim">22:14 Uhr</h2>
-<div class="gap-l"></div>
+<p class="label below-s">Ahrtal · 14. Juli 2021</p>
+<h2 class="claim below-l">22:14 Uhr</h2>
 <div class="split">
 <div class="col-fixed w-1040">
 <p class="lede">Ein Polizeihubschrauber filmte bis 22:43 Uhr die Orte von Mayschoß bis Schuld: bis zum Dachgeschoss überflutete Häuser und Menschen, die mit Lampen auf sich aufmerksam machten.</p>
@@ -299,14 +299,11 @@ add("jetzt", "Zeitpunkt: das digitale Lagebild Inland", f"""
 _n = "Sicht ist die Bildschicht für das zivile Lagebild, kein weiteres Führungssystem. Der Zweck ist messbar: die Zeit vom ersten Bild eines Ereignisses bis zur Meldung auf der Lagekarte, und das System weist sie in jeder Übung selbst aus. Zum Stand: Aufzeichnungen sind der erprobte Weg; Direktbilder laufen mit etwa einer halben Minute Nachlauf und sind nur im Labor geprüft."
 add("sicht", "Was Sicht ist", f"""
 <section id="sicht" data-transition="fade">
-<p class="label">Was Sicht ist</p>
-<div class="gap-m"></div>
-<h2 class="statement">Sicht macht das Videomaterial, das Behörden im Einsatz ohnehin erzeugen, in Sekunden durchsuchbar und beobachtet es selbständig auf Gefahrenlagen.</h2>
-<div class="gap-m"></div>
+<p class="label below-m">Was Sicht ist</p>
+<h2 class="statement below-m">Sicht macht das Videomaterial, das Behörden im Einsatz ohnehin erzeugen, in Sekunden durchsuchbar und beobachtet es selbständig auf Gefahrenlagen.</h2>
 <p class="lede dim">Ohne Personen zu identifizieren, ohne Daten zusammenzuführen und mit einem Protokoll, das jede Abfrage nachweist.</p>
 <div class="grow"></div>
-<p class="lede strong">Der messbare Zweck: Zeit von der Aufnahme bis zur Lagekenntnis.</p>
-<div class="gap-m"></div>
+<p class="lede strong below-m">Der messbare Zweck: Zeit von der Aufnahme bis zur Lagekenntnis.</p>
 <div class="tri">
 {pt("Erkennungsverzug", "Sekunden vom ersten Bild eines Ereignisses bis zur Meldung auf der Lagekarte.")}
 {pt("Sichtungsquote", "Anteil der eingegangenen Aufzeichnungen, die vollständig ausgewertet sind.")}
@@ -371,6 +368,7 @@ product(
     "Reiter VERBUND: drei Knoten der Vorführung, alle auf einem Rechner.",
     "Jede Behörde betreibt ihren eigenen Knoten. Im Verbund reist nur die Frage; der Nachbar prüft sie nach seinen Regeln, protokolliert sie und gibt maskierte Vorschaubilder mit einer Belegnummer zurück. Diesen Grundsatz habe ich in der Recherche bei keinem Anbieter gefunden, das ist eine Hypothese aus einer begrenzten Suche. In der Vorführung laufen die drei Knoten auf einem Rechner; ein Verbund über ein echtes Netz ist nicht gemessen.",
     tall=False,
+    line="Das Bild bleibt, wo es aufgenommen wurde.",
 )
 
 product(
@@ -476,7 +474,7 @@ add("wettbewerb", "Wettbewerb: der freie Raum ist schmal", f"""
 <div class="row-s g-comp"><p class="cell-k">Anbieter</p><p class="cell-k">Was sie haben</p><p class="cell-k">Was ihnen fehlt</p></div>
 {comp("Fraunhofer IOSB", "Lagedarstellung ELD-BS, in Baden-Württemberg im Einsatz; Drohnenbildauswertung", "Freitextsuche; die Bausteine sind getrennte Projekte")}
 {comp("Eurocommand auf Esri", "Stabssoftware CommandX für Feuerwehr und Katastrophenschutz", "Bildsuche über Video in den Quellen nicht gefunden")}
-{comp("Milestone, Axis, Genetec", "Freitextsuche im Videomanagement, teils vor Ort, mit Anfragefilter und Protokoll", "Kein Produkt für den Bevölkerungsschutz, kein Lagebild")}
+{comp("Milestone, Axis, Genetec", "Freitextsuche über Video, geliefert oder angekündigt; Axis mit Filter und Protokoll", "Kein Produkt für den Bevölkerungsschutz, kein Lagebild")}
 {comp("Palantir", "Analyseplattformen der Polizei in mehreren Ländern; Zweckabfrage, Protokoll", "Keine dokumentierte Freitextsuche über Video; kein Produkt im Bevölkerungsschutz")}
 {comp("Linker Vision, NVIDIA", "Bild-Sprach-Modelle auf den Kameras der Stadt Kaohsiung, mit Ergebnissen", "Datenschutz und Verbund kommen in den Quellen nicht vor", last=True)}
 </div>
@@ -486,8 +484,7 @@ add("wettbewerb", "Wettbewerb: der freie Raum ist schmal", f"""
 {pt("Bei keinem gefunden", "Im Verbund reist nur die Frage. Begrenzte Suche, kein Beweis.")}
 {pt("Folge", "Sicht ist heute eine Funktion, kein Markt.")}
 </div>
-<div class="gap-m"></div>
-<p class="src">Quellen: Herstellerangaben und Presse 2025 bis 2026; Einzelnachweise im Strategiepapier, Abschnitt 4.</p>
+<p class="src above-s">Quellen: Herstellerangaben und Presse 2025 bis 2026; Einzelnachweise im Strategiepapier, Abschnitt 4.</p>
 {foot("Markt")}
 <aside>{_n}</aside>
 </section>
@@ -557,8 +554,7 @@ add("modell", "Geschäftsmodell: Lizenz je Knoten und Jahr", f"""
 </div>
 <div class="grow"></div>
 <p class="text">Der Kernmarkt ist klein: Er trägt ein profitables Fachunternehmen, aber keine Wagnisfinanzierung, die auf ein Vielfaches des Einsatzes zielt.</p>
-<div class="gap-m"></div>
-<p class="src">Quelle: Finanzmodell, Blätter Annahmen und Markt. Der Knoten läuft auf Rechnern der Behörde.</p>
+<p class="src above-m">Quelle: Finanzmodell, Blätter Annahmen und Markt. Der Knoten läuft auf Rechnern der Behörde.</p>
 {foot("Markt")}
 <aside>{_n}</aside>
 </section>
@@ -568,7 +564,7 @@ add("modell", "Geschäftsmodell: Lizenz je Knoten und Jahr", f"""
 
 
 def plan_row(label, values, last=False, header=False):
-    cls = "row g-plan row-end" if last else "row g-plan"
+    cls = "row-m g-plan row-end" if last else "row-m g-plan"
     if header:
         cells = "".join(f'<p class="num-k">{v}</p>' for v in values)
         return f'<div class="{cls}"><p class="cell-k">{label}</p>{cells}</div>'
@@ -591,13 +587,11 @@ add("plan", "Fünfjahresfall: der Basisfall und seine Annahmen", f"""
 <div class="grow"></div>
 <div class="tri">
 <div class="pt"><p class="pt-k">Umsatz 2031</p><p class="fig">2,3{NB}Mio.{NB}€</p></div>
-<div class="pt"><p class="pt-k">Erstes Plus</p><p class="fig">2031</p></div>
+<div class="pt"><p class="pt-k">Erstes positives Ergebnis</p><p class="fig">2031</p></div>
 <div class="pt"><p class="pt-k">Mittelbedarf bis 2031</p><p class="fig">3,2{NB}Mio.{NB}€</p></div>
 </div>
-<div class="gap-m"></div>
-<p class="text">Der Fall hängt an einem Landesrahmenvertrag 2030. Ohne ihn: Umsatz 2031 1,2{NB}Mio.{NB}€, Ergebnis {MINUS}0,9{NB}Mio.{NB}€, Mittelbedarf 4,6{NB}Mio.{NB}€. Im vorsichtigen Fall trägt sich das Geschäft bis 2031 nicht.</p>
-<div class="gap-s"></div>
-<p class="src">Quelle: Finanzmodell, Szenario Basis. Alle Werte folgen aus Annahmen. Ohne Steuern und Fördermittel.</p>
+<p class="text above-m">Der Fall hängt an einem Landesrahmenvertrag 2030. Ohne ihn: Umsatz 2031 1,2{NB}Mio.{NB}€, Ergebnis {MINUS}0,9{NB}Mio.{NB}€, Mittelbedarf 4,6{NB}Mio.{NB}€. Im vorsichtigen Fall trägt sich das Geschäft bis 2031 nicht.</p>
+<p class="src above-s">Quelle: Finanzmodell, Szenario Basis. Alle Werte folgen aus Annahmen. Ohne Steuern und Fördermittel.</p>
 {foot("Markt")}
 <aside>{_n}</aside>
 </section>

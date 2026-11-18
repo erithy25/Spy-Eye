@@ -116,7 +116,8 @@ const inside = (root, file) => path.resolve(file).startsWith(path.resolve(root) 
         right = Math.max(right, r.right - frame.left);
         if (el.scrollWidth > el.clientWidth + 1) notes.push(`wider than its box: ${el.className}`);
         const one = ['title', 'cap', 'label', 'pt-k', 'cell-k', 'num', 'num-k', 'val', 'fig', 'mark'].some((c) => el.classList.contains(c));
-        const lines = Math.round(r.height / parseFloat(getComputedStyle(el).lineHeight));
+        const cs = getComputedStyle(el);
+        const lines = Math.round((r.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight));
         if (one && lines > 1) notes.push(`${lines} lines: ${el.className}`);
         if (el.tagName === 'IMG' && !(el.complete && el.naturalWidth > 0)) notes.push('picture missing');
         if (el.classList.contains('src') && lines > 1) notes.push(`source on ${lines} lines`);
