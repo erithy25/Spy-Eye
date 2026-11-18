@@ -18,6 +18,26 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location -Path $PSScriptRoot
 
+# Windows hält ein Konsolenprogramm an, sobald im Fenster Text markiert wird (QuickEdit): Der
+# Knoten kann dann nicht weiterschreiben und beantwortet keine Anfrage mehr, der Browser lädt
+# endlos. Für dieses Fenster wird QuickEdit deshalb ausgeschaltet (Einfügen mit Rechtsklick
+# bleibt). Gelingt das nicht (anderes Terminal), läuft alles wie bisher.
+try {
+  Add-Type -Namespace DatumKonsole -Name Modus -ErrorAction Stop -MemberDefinition @'
+[DllImport("kernel32.dll")] public static extern IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll")] public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+[DllImport("kernel32.dll")] public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+'@
+  $eingabe = [DatumKonsole.Modus]::GetStdHandle(-10)
+  [uint32]$modus = 0
+  if ([DatumKonsole.Modus]::GetConsoleMode($eingabe, [ref]$modus)) {
+    # 0x40 = ENABLE_QUICK_EDIT_MODE aus, 0x80 = ENABLE_EXTENDED_FLAGS an (sonst wirkt das Ausschalten nicht).
+    [void][DatumKonsole.Modus]::SetConsoleMode($eingabe, [uint32](($modus -band 0xFFFFFFBF) -bor 0x80))
+  }
+} catch {
+  # Kein klassisches Konsolenfenster: nichts zu tun.
+}
+
 function Sage([string]$Text) { Write-Host $Text }
 function Abbruch([string]$Text) {
   Write-Host ''
