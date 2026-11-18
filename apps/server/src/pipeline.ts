@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { renameRetry } from './core/json.js';
 import type { EventHub } from './events.js';
 import { extractFrames, extractKeyframes, probeVideo, type FrameExtraction } from './media/ffmpeg.js';
+import { readMp4Info } from './media/mp4.js';
 import { GrowableMatrix, dotAt, sigmoid } from './ml/math.js';
 import { pixelate, type FaceDetector } from './ml/faces.js';
 import type { EmbeddingModel, ModelFamily } from './ml/model.js';
@@ -390,7 +391,10 @@ export class Pipeline {
     try {
       const framesDir = store.framesDir(id);
       await fs.mkdir(framesDir, { recursive: true });
-      const probe = await probeVideo(store.sourcePath(entry));
+      // The header of an MP4 file answers this without starting a process; ffmpeg is asked for
+      // everything else and whenever the header leaves the duration open.
+      const header = await readMp4Info(store.sourcePath(entry));
+      const probe = header && header.hasVideo && header.durationSec !== null ? header : await probeVideo(store.sourcePath(entry));
       if (!probe.hasVideo) throw new Error('Die Datei enthält keine Videospur.');
       const duration = probe.durationSec;
       const count =

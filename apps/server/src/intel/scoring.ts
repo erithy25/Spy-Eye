@@ -33,6 +33,35 @@ export function scoreFrame(entry: VideoEntry, frameIdx: number, vector: Float32A
   return { score: best, tile: bestTile };
 }
 
+export interface FrameViews {
+  /** Similarity of the whole picture. */
+  whole: number;
+  /** Best similarity over the tiles of the picture; -1 when it has none. */
+  tile: number;
+  /** Index of that tile (1 or higher); 0 when the picture has no tiles. */
+  tileIdx: number;
+}
+
+/** Similarity of a query vector to the whole picture and to its best tile, kept apart. */
+export function scoreFrameViews(entry: VideoEntry, frameIdx: number, vector: Float32Array): FrameViews {
+  const emb = entry.embeddings;
+  const tiles = entry.info.tilesPerFrame;
+  if (!emb || tiles <= 0 || emb.dim !== vector.length || (frameIdx + 1) * tiles > emb.rows) return { whole: -1, tile: -1, tileIdx: 0 };
+  const base = frameIdx * tiles * emb.dim;
+  const first = dotAt(emb.data, base, vector, 0, emb.dim);
+  const whole = Number.isFinite(first) ? first : -1;
+  let tile = -1;
+  let tileIdx = 0;
+  for (let t = 1; t < tiles; t++) {
+    const raw = dotAt(emb.data, base + t * emb.dim, vector, 0, emb.dim);
+    if (Number.isFinite(raw) && raw > tile) {
+      tile = raw;
+      tileIdx = t;
+    }
+  }
+  return { whole, tile, tileIdx };
+}
+
 /** A set of frames that may be searched, with the wall-clock time each frame stands for. */
 export interface SearchScope {
   entry: VideoEntry;

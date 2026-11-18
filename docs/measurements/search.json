@@ -1,0 +1,83 @@
+{
+  "measuredAt": "2026-11-18T04:06:39.498Z",
+  "machine": {
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "cores": 4,
+    "threads": 4,
+    "device": "cpu"
+  },
+  "model": "onnx-community/siglip2-base-patch32-256-ONNX",
+  "footage": {
+    "recordings": 44,
+    "vectors": 2108,
+    "firstPassSec": 7.5,
+    "completeSec": 169
+  },
+  "queries": {
+    "file": "docs/measurements/search-queries.json",
+    "total": 91
+  },
+  "firstPass": {
+    "queries": 66,
+    "answered": 53,
+    "topCorrect": 64,
+    "expectedRecordings": 104,
+    "expectedFound": 68,
+    "falseMatches": 5,
+    "absentQueries": 25,
+    "absentWithMatches": 2,
+    "medianMs": 123.6,
+    "medianCompareMs": 0.5,
+    "misses": [
+      "„Strand“: bester passender Kandidat female-silhouette-on-the-beach.mp4 (0.14)",
+      "„police“: unpassend gemeldet couple-walking-in-the-street-using-an-umbrella.mp4 (0.69)",
+      "„Polizei“: unpassend gemeldet couple-walking-in-the-street-using-an-umbrella.mp4 (0.66)",
+      "„umbrella“: bester passender Kandidat couple-walking-in-the-street-using-an-umbrella.mp4 (0.30)",
+      "„Regenschirm“: bester passender Kandidat couple-walking-in-the-street-using-an-umbrella.mp4 (0.38)",
+      "„truck“: bester passender Kandidat cargo-truck-driving-on-the-highway.mp4 (0.33)",
+      "„Lastwagen“: bester passender Kandidat cargo-truck-driving-on-the-highway.mp4 (0.34)",
+      "„person riding a bicycle“: unpassend gemeldet street-with-people-walking-at-dusk.mp4 (0.67)",
+      "„rain“: unpassend gemeldet woman-with-black-shoes-leaving-a-car.mp4 (0.76)",
+      "„Regen“: bester passender Kandidat traffic-on-a-rainy-night.mp4 (0.22)",
+      "„kitchen“: bester passender Kandidat man-in-a-suit-works-from-the-kitchen.mp4 (0.01)",
+      "„Küche“: bester passender Kandidat man-in-a-suit-works-from-the-kitchen.mp4 (0.05)",
+      "„office“: bester passender Kandidat exhausted-man-working-in-an-office-overtime.mp4 (0.39)",
+      "„Büro“: bester passender Kandidat exhausted-man-working-in-an-office-overtime.mp4 (0.35)",
+      "„Büro“: unpassend gemeldet children-and-her-teacher-learning-didactically.mp4 (0.62)",
+      "„forest“: bester passender Kandidat a-couple-of-cyclists-riding-calmly-through-nature.mp4 (0.46)",
+      "„Straße bei Nacht“: bester passender Kandidat traffic-on-a-rainy-night.mp4 (0.46)",
+      "„Essen“: bester passender Kandidat cooking-french-fries-in-oil.mp4 (0.23)",
+      "„zebra“ kommt nicht vor, gemeldet: man-on-horseback-trying-to-catch-free-wild-horses-on.mp4",
+      "„Zebra“ kommt nicht vor, gemeldet: man-on-horseback-trying-to-catch-free-wild-horses-on.mp4"
+    ]
+  },
+  "complete": {
+    "queries": 66,
+    "answered": 54,
+    "topCorrect": 64,
+    "expectedRecordings": 104,
+    "expectedFound": 71,
+    "falseMatches": 2,
+    "absentQueries": 25,
+    "absentWithMatches": 2,
+    "medianMs": 103.6,
+    "medianCompareMs": 4.7,
+    "misses": [
+      "„Strand“: bester passender Kandidat a-surfer-walking-on-the-beach-with-a-surfboard.mp4 (0.23)",
+      "„rain“: unpassend gemeldet woman-with-black-shoes-leaving-a-car.mp4 (0.58), yellow-taxis-in-nyc.mp4 (0.52)",
+      "„Regen“: bester passender Kandidat traffic-on-a-rainy-night.mp4 (0.08)",
+      "„kitchen“: bester passender Kandidat man-in-a-suit-works-from-the-kitchen.mp4 (0.03)",
+      "„Küche“: bester passender Kandidat man-in-a-suit-works-from-the-kitchen.mp4 (0.03)",
+      "„office“: bester passender Kandidat exhausted-man-working-in-an-office-overtime.mp4 (0.38)",
+      "„Büro“: bester passender Kandidat exhausted-man-working-in-an-office-overtime.mp4 (0.36)",
+      "„forest“: bester passender Kandidat a-couple-of-cyclists-riding-calmly-through-nature.mp4 (0.22)",
+      "„Wald“: bester passender Kandidat a-couple-of-cyclists-riding-calmly-through-nature.mp4 (0.26)",
+      "„street at night“: bester passender Kandidat traffic-on-a-rainy-night.mp4 (0.46)",
+      "„Straße bei Nacht“: bester passender Kandidat traffic-on-a-rainy-night.mp4 (0.24)",
+      "„food“: bester passender Kandidat cutting-through-a-fresh-pizza.mp4 (0.41)",
+      "„Essen“: bester passender Kandidat cooking-french-fries-in-oil.mp4 (0.13)",
+      "„zebra“ kommt nicht vor, gemeldet: man-on-horseback-trying-to-catch-free-wild-horses-on.mp4",
+      "„Zebra“ kommt nicht vor, gemeldet: man-on-horseback-trying-to-catch-free-wild-horses-on.mp4"
+    ]
+  }
+}

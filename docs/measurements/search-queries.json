@@ -1,0 +1,692 @@
+{
+ "note": "Anfragen für die Messung der allgemeinen Suche. expect: Namensteile der Aufnahmen, die zur Anfrage passen; leer bedeutet, dass das Gesuchte im Material nicht vorkommt. accept: Aufnahmen, die als Treffer vertretbar sind und weder als richtig noch als falsch gezählt werden. Die Namen beziehen sich auf den Datensatz aus 44 frei lizenzierten Aufnahmen (dataset/SOURCES.md).",
+ "queries": [
+  {
+   "q": "Beach",
+   "expect": [
+    "beach"
+   ]
+  },
+  {
+   "q": "a beach",
+   "expect": [
+    "beach"
+   ]
+  },
+  {
+   "q": "Strand",
+   "expect": [
+    "beach"
+   ]
+  },
+  {
+   "q": "Man with a cup",
+   "expect": [
+    "drinking-coffee",
+    "homemade-coffee",
+    "coffee-in-a-cafe"
+   ],
+   "accept": [
+    "works-from-the-kitchen",
+    "cup-of-coffee",
+    "drinking-refre"
+   ]
+  },
+  {
+   "q": "Mann mit Tasse",
+   "expect": [
+    "drinking-coffee",
+    "homemade-coffee",
+    "coffee-in-a-cafe"
+   ],
+   "accept": [
+    "works-from-the-kitchen",
+    "cup-of-coffee",
+    "drinking-refre"
+   ]
+  },
+  {
+   "q": "Black Car",
+   "expect": [
+    "black-car"
+   ],
+   "accept": [
+    "leaving-a-car",
+    "rainy-night",
+    "taxi-lane"
+   ]
+  },
+  {
+   "q": "schwarzes Auto",
+   "expect": [
+    "black-car"
+   ],
+   "accept": [
+    "leaving-a-car",
+    "rainy-night",
+    "taxi-lane"
+   ]
+  },
+  {
+   "q": "Bus",
+   "expect": [
+    "riding-a-bus",
+    "yellow-taxis"
+   ],
+   "accept": [
+    "urban-fashion",
+    "buses-and-cars"
+   ]
+  },
+  {
+   "q": "red sports car",
+   "expect": [
+    "sports-car"
+   ]
+  },
+  {
+   "q": "roter Sportwagen",
+   "expect": [
+    "sports-car"
+   ]
+  },
+  {
+   "q": "dog",
+   "expect": [
+    "dog"
+   ]
+  },
+  {
+   "q": "Hund",
+   "expect": [
+    "dog"
+   ]
+  },
+  {
+   "q": "cats",
+   "expect": [
+    "cats"
+   ]
+  },
+  {
+   "q": "Katzen",
+   "expect": [
+    "cats"
+   ]
+  },
+  {
+   "q": "pizza",
+   "expect": [
+    "pizza"
+   ]
+  },
+  {
+   "q": "train",
+   "expect": [
+    "train"
+   ],
+   "accept": [
+    "riding-a-bus"
+   ]
+  },
+  {
+   "q": "Zug",
+   "expect": [
+    "train"
+   ],
+   "accept": [
+    "riding-a-bus"
+   ]
+  },
+  {
+   "q": "airplane",
+   "expect": [
+    "airplane"
+   ]
+  },
+  {
+   "q": "Flugzeug",
+   "expect": [
+    "airplane"
+   ]
+  },
+  {
+   "q": "yellow taxi",
+   "expect": [
+    "yellow-taxis"
+   ],
+   "accept": [
+    "taxi-lane",
+    "rainy-night"
+   ]
+  },
+  {
+   "q": "police",
+   "expect": [
+    "policemen"
+   ],
+   "accept": [
+    "taxi-lane"
+   ]
+  },
+  {
+   "q": "Polizei",
+   "expect": [
+    "policemen"
+   ]
+  },
+  {
+   "q": "guitar",
+   "expect": [
+    "guitar"
+   ]
+  },
+  {
+   "q": "Gitarre",
+   "expect": [
+    "guitar"
+   ]
+  },
+  {
+   "q": "snow",
+   "expect": [
+    "snowing"
+   ]
+  },
+  {
+   "q": "Schnee",
+   "expect": [
+    "snowing"
+   ]
+  },
+  {
+   "q": "horse",
+   "expect": [
+    "horse"
+   ]
+  },
+  {
+   "q": "Pferd",
+   "expect": [
+    "horse"
+   ]
+  },
+  {
+   "q": "soccer",
+   "expect": [
+    "soccer"
+   ]
+  },
+  {
+   "q": "Fußball",
+   "expect": [
+    "soccer"
+   ]
+  },
+  {
+   "q": "laptop",
+   "expect": [
+    "laptop",
+    "works-from-the-kitchen"
+   ],
+   "accept": [
+    "office"
+   ]
+  },
+  {
+   "q": "bicycle",
+   "expect": [
+    "cyclists",
+    "bicycle"
+   ],
+   "accept": [
+    "motorcycle",
+    "street-with-people"
+   ]
+  },
+  {
+   "q": "Fahrrad",
+   "expect": [
+    "cyclists",
+    "bicycle"
+   ],
+   "accept": [
+    "motorcycle",
+    "street-with-people"
+   ]
+  },
+  {
+   "q": "umbrella",
+   "expect": [
+    "umbrella"
+   ]
+  },
+  {
+   "q": "Regenschirm",
+   "expect": [
+    "umbrella"
+   ]
+  },
+  {
+   "q": "coffee",
+   "expect": [
+    "coffee"
+   ],
+   "accept": [
+    "works-from-the-kitchen"
+   ]
+  },
+  {
+   "q": "Kaffee",
+   "expect": [
+    "coffee"
+   ],
+   "accept": [
+    "works-from-the-kitchen"
+   ]
+  },
+  {
+   "q": "truck",
+   "expect": [
+    "truck"
+   ],
+   "accept": [
+    "buses-and-cars"
+   ]
+  },
+  {
+   "q": "Lastwagen",
+   "expect": [
+    "truck"
+   ],
+   "accept": [
+    "buses-and-cars"
+   ]
+  },
+  {
+   "q": "motorcycle",
+   "expect": [
+    "motorcycle"
+   ]
+  },
+  {
+   "q": "children",
+   "expect": [
+    "children"
+   ]
+  },
+  {
+   "q": "woman drinking coffee",
+   "expect": [
+    "woman-drinking-coffee"
+   ],
+   "accept": [
+    "drinking",
+    "coffee"
+   ]
+  },
+  {
+   "q": "Frau trinkt Kaffee",
+   "expect": [
+    "woman-drinking-coffee"
+   ],
+   "accept": [
+    "drinking",
+    "coffee"
+   ]
+  },
+  {
+   "q": "man typing on a laptop",
+   "expect": [
+    "works-from-the-kitchen",
+    "typing-on-a-laptop"
+   ],
+   "accept": [
+    "office"
+   ]
+  },
+  {
+   "q": "person riding a bicycle",
+   "expect": [
+    "cyclists",
+    "bicycle"
+   ]
+  },
+  {
+   "q": "a red car",
+   "expect": [
+    "sports-car"
+   ],
+   "accept": [
+    "traffic",
+    "taxi"
+   ]
+  },
+  {
+   "q": "ein rotes Auto",
+   "expect": [
+    "sports-car"
+   ],
+   "accept": [
+    "traffic",
+    "taxi"
+   ]
+  },
+  {
+   "q": "people walking on a street",
+   "expect": [
+    "street-with-people",
+    "couple-walking"
+   ],
+   "accept": [
+    "policemen",
+    "snowing",
+    "yellow-taxis",
+    "urban-fashion"
+   ]
+  },
+  {
+   "q": "Menschen auf der Straße",
+   "expect": [
+    "street-with-people",
+    "couple-walking",
+    "policemen"
+   ],
+   "accept": [
+    "snowing",
+    "yellow-taxis",
+    "urban-fashion"
+   ]
+  },
+  {
+   "q": "a bird",
+   "expect": [
+    "bird"
+   ]
+  },
+  {
+   "q": "Vogel",
+   "expect": [
+    "bird"
+   ]
+  },
+  {
+   "q": "sunset",
+   "expect": [
+    "sunset",
+    "female-silhouette"
+   ],
+   "accept": [
+    "airplane",
+    "buses-and-cars",
+    "surfer",
+    "dusk"
+   ]
+  },
+  {
+   "q": "Sonnenuntergang",
+   "expect": [
+    "sunset",
+    "female-silhouette"
+   ],
+   "accept": [
+    "airplane",
+    "buses-and-cars",
+    "surfer",
+    "dusk"
+   ]
+  },
+  {
+   "q": "rain",
+   "expect": [
+    "rainy"
+   ],
+   "accept": [
+    "umbrella"
+   ]
+  },
+  {
+   "q": "Regen",
+   "expect": [
+    "rainy"
+   ],
+   "accept": [
+    "umbrella"
+   ]
+  },
+  {
+   "q": "kitchen",
+   "expect": [
+    "kitchen"
+   ],
+   "accept": [
+    "french-fries",
+    "pizza",
+    "coffee"
+   ]
+  },
+  {
+   "q": "Küche",
+   "expect": [
+    "kitchen"
+   ],
+   "accept": [
+    "french-fries",
+    "pizza",
+    "coffee"
+   ]
+  },
+  {
+   "q": "office",
+   "expect": [
+    "office"
+   ],
+   "accept": [
+    "typing-on-a-laptop",
+    "works-from"
+   ]
+  },
+  {
+   "q": "Büro",
+   "expect": [
+    "office"
+   ],
+   "accept": [
+    "typing-on-a-laptop",
+    "works-from"
+   ]
+  },
+  {
+   "q": "forest",
+   "expect": [
+    "forest",
+    "cyclists",
+    "dry-leaves"
+   ],
+   "accept": [
+    "bird",
+    "horse",
+    "dog"
+   ]
+  },
+  {
+   "q": "Wald",
+   "expect": [
+    "forest",
+    "cyclists",
+    "dry-leaves"
+   ],
+   "accept": [
+    "bird",
+    "horse",
+    "dog"
+   ]
+  },
+  {
+   "q": "street at night",
+   "expect": [
+    "rainy-night",
+    "taxi-lane"
+   ],
+   "accept": [
+    "dusk",
+    "yellow-taxis",
+    "snowing"
+   ]
+  },
+  {
+   "q": "Straße bei Nacht",
+   "expect": [
+    "rainy-night",
+    "taxi-lane"
+   ],
+   "accept": [
+    "dusk",
+    "yellow-taxis",
+    "snowing"
+   ]
+  },
+  {
+   "q": "classroom",
+   "expect": [
+    "children"
+   ]
+  },
+  {
+   "q": "food",
+   "expect": [
+    "pizza",
+    "french-fries"
+   ],
+   "accept": [
+    "coffee"
+   ]
+  },
+  {
+   "q": "Essen",
+   "expect": [
+    "pizza",
+    "french-fries"
+   ],
+   "accept": [
+    "coffee"
+   ]
+  },
+  {
+   "q": "elephant",
+   "expect": []
+  },
+  {
+   "q": "Elefant",
+   "expect": []
+  },
+  {
+   "q": "submarine",
+   "expect": []
+  },
+  {
+   "q": "wedding",
+   "expect": []
+  },
+  {
+   "q": "Hochzeit",
+   "expect": []
+  },
+  {
+   "q": "fire",
+   "expect": []
+  },
+  {
+   "q": "helicopter",
+   "expect": [],
+   "accept": [
+    "airplane"
+   ]
+  },
+  {
+   "q": "Hubschrauber",
+   "expect": [],
+   "accept": [
+    "airplane"
+   ]
+  },
+  {
+   "q": "swimming pool",
+   "expect": []
+  },
+  {
+   "q": "piano",
+   "expect": []
+  },
+  {
+   "q": "giraffe",
+   "expect": []
+  },
+  {
+   "q": "tank",
+   "expect": []
+  },
+  {
+   "q": "Panzer",
+   "expect": []
+  },
+  {
+   "q": "zebra",
+   "expect": []
+  },
+  {
+   "q": "Zebra",
+   "expect": []
+  },
+  {
+   "q": "astronaut",
+   "expect": []
+  },
+  {
+   "q": "birthday cake",
+   "expect": []
+  },
+  {
+   "q": "Geburtstagskuchen",
+   "expect": []
+  },
+  {
+   "q": "skyscraper",
+   "expect": [],
+   "accept": [
+    "yellow-taxis",
+    "street-with-people",
+    "taxi-lane"
+   ]
+  },
+  {
+   "q": "Hochhaus",
+   "expect": [],
+   "accept": [
+    "yellow-taxis",
+    "street-with-people",
+    "taxi-lane"
+   ]
+  },
+  {
+   "q": "tractor",
+   "expect": []
+  },
+  {
+   "q": "Traktor",
+   "expect": []
+  },
+  {
+   "q": "penguin",
+   "expect": []
+  },
+  {
+   "q": "waterfall",
+   "expect": []
+  },
+  {
+   "q": "Wasserfall",
+   "expect": []
+  }
+ ]
+}

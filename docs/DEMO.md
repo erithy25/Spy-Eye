@@ -22,10 +22,22 @@ pnpm exercise:fetch
 pnpm demo:prepare
 ```
 
+```bash
+pnpm demo:check
+```
+
 `exercise:fetch` lädt 45 frei lizenzierte Aufnahmen (rund 300 MB). `demo:prepare` lädt beim ersten
 Mal die Modelle (rund 950 MB) und wertet das gesamte Material aus; auf einem Rechner mit vier
 Kernen ohne Grafikkarte dauert das etwa zehn Minuten. Der Befehl endet mit „Vorbereitet“. Danach
 wird kein Netz mehr gebraucht.
+
+`demo:check` fragt die drei Knoten, was in der Vorführung gefragt wird: Anmeldung, Mandat, eine
+deutsche Suche, die Nachbarn im Verbund, eine Ablehnung, die Protokollkette. Laufen die Knoten
+nicht, startet der Befehl sie für die Prüfung und beendet sie wieder. Jede Zeile endet mit OK oder
+FEHLT und nennt bei FEHLT den nächsten Schritt; am Ende steht „Ergebnis: bereit“. Die Prüfung
+meldet sich als `leitung` an und hinterlässt deshalb Einträge in den Protokollen, wie jede andere
+Nutzung auch. Derselbe Ablauf wird bei jeder Änderung auf einem Windows-Rechner mit PowerShell
+durchgespielt (`.github/workflows/windows.yml`).
 
 ## Am Tag selbst
 

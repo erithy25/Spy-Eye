@@ -53,3 +53,91 @@ export function adaptiveCutoff(scores: Float64Array, cal: RelevanceCalibration):
   const weight = Math.min(1, n / MIN_SAMPLES_FOR_STATS);
   return cal.prior * (1 - weight) + adaptive * weight;
 }
+
+/**
+ * Calibration of the interactive search, per model family.
+ *
+ * A short query such as "beach" or "Hund" scores lower than a descriptive sentence, and a scene
+ * that is represented by many vectors reaches a higher best score by chance than a single
+ * picture. The search therefore judges two views separately, each against its own cut-off:
+ *
+ * - the whole picture: cut-off from `wholeFloorSingle` (one picture) to `wholeFloorPooled`
+ *   (a scene of a dozen pictures or more),
+ * - the tiles of a picture, which find small objects but also produce more chance agreement:
+ *   cut-off `tileFloor`.
+ *
+ * Either cut-off rises by up to `span` when the footage as a whole scores high for the query
+ * (median + k robust standard deviations). What counts is the larger margin of the two views.
+ *
+ * Before comparing, `centring` times the mean text embedding is subtracted from the query. Text
+ * embeddings share a large common component; removing part of it lowers the agreement that every
+ * picture has with every text and noticeably improves the order of the results.
+ *
+ * The figures for SigLIP 2 were fitted on 97 queries over two sets of footage (see
+ * docs/EVALUATION.md). The other families keep their former single cut-off; they have not been
+ * measured again.
+ */
+export interface SearchCalibration {
+  centring: number;
+  wholeFloorSingle: number;
+  wholeFloorPooled: number;
+  tileFloor: number;
+  span: number;
+  k: number;
+  /** Margin that maps to one logit of confidence. */
+  width: number;
+}
+
+const legacySearch = (cal: RelevanceCalibration): SearchCalibration => ({
+  centring: 0,
+  wholeFloorSingle: cal.floor,
+  wholeFloorPooled: cal.floor,
+  tileFloor: cal.floor,
+  span: cal.ceiling - cal.floor,
+  k: cal.k,
+  width: cal.width,
+});
+
+export const SEARCH_CALIBRATION: Readonly<Record<ModelFamily, SearchCalibration>> = {
+  siglip: legacySearch(RELEVANCE.siglip),
+  siglip2: { centring: 0.5, wholeFloorSingle: 0.075, wholeFloorPooled: 0.09, tileFloor: 0.11, span: 0.02, k: 3, width: 0.01 },
+  clip: legacySearch(RELEVANCE.clip),
+  mobileclip: legacySearch(RELEVANCE.mobileclip),
+};
+
+/** Number of pictures from which a scene counts as fully pooled. */
+const POOLED_FRAMES = 12;
+
+/** Lowest cut-off of the whole-picture view for a scene represented by `frames` pictures. */
+export function wholeFloor(cal: SearchCalibration, frames: number): number {
+  if (frames <= 1) return cal.wholeFloorSingle;
+  const share = Math.min(1, Math.log(frames) / Math.log(POOLED_FRAMES));
+  return cal.wholeFloorSingle + (cal.wholeFloorPooled - cal.wholeFloorSingle) * share;
+}
+
+/** Robust location and spread of the best scores of all scenes in one view. */
+export interface ScoreStats {
+  count: number;
+  median: number;
+  /** Standard deviation estimated from the median absolute deviation. */
+  sigma: number;
+}
+
+export function scoreStats(scores: Float64Array): ScoreStats {
+  if (scores.length === 0) return { count: 0, median: 0, sigma: 0 };
+  const sorted = Float64Array.from(scores).sort();
+  const med = median(sorted);
+  const deviations = Float64Array.from(sorted, (v) => Math.abs(v - med)).sort();
+  return { count: scores.length, median: med, sigma: 1.4826 * median(deviations) };
+}
+
+/**
+ * How far a cut-off is raised above `floor` for one query: not at all while the footage scores
+ * low, by at most `span` when it scores high.
+ */
+export function cutoffLift(stats: ScoreStats, floor: number, cal: SearchCalibration): number {
+  if (stats.count === 0) return 0;
+  const lift = Math.min(cal.span, Math.max(0, stats.median + cal.k * stats.sigma - floor));
+  // Statistics over a handful of scenes say little; trust them in proportion to the sample.
+  return lift * Math.min(1, stats.count / MIN_SAMPLES_FOR_STATS);
+}

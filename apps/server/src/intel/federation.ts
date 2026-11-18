@@ -72,6 +72,8 @@ export class Federation {
   private pinger: NodeJS.Timeout | null = null;
   /** Peers that are being greeted out of turn right now. */
   private readonly greeting = new Set<string>();
+  /** Extra rounds made in a row because a peer has not answered yet. */
+  private quickRounds = 0;
 
   constructor(
     file: string,
@@ -84,9 +86,17 @@ export class Federation {
 
   async open(): Promise<void> {
     await this.peers.load();
+  }
+
+  /**
+   * Starts greeting the peers. Called once this node accepts connections itself, because a peer
+   * that is greeted answers by greeting back at once.
+   */
+  start(): void {
+    if (this.pinger) return;
     this.pinger = setInterval(() => void this.pingAll(), 20_000);
     this.pinger.unref();
-    setTimeout(() => void this.pingAll(), 1500).unref();
+    void this.pingAll();
   }
 
   shutdown(): void {
@@ -202,6 +212,15 @@ export class Federation {
 
   async pingAll(): Promise<void> {
     await Promise.all(this.peers.all().map((peer) => this.ping(peer)));
+    // Nodes that are started together come up one after the other. Until every peer has answered
+    // once, ask again after a moment instead of waiting for the next regular round.
+    const missing = this.peers.all().some((peer) => this.status.get(peer.id)?.online !== true);
+    if (!missing) {
+      this.quickRounds = 0;
+    } else if (this.pinger && this.quickRounds < 6) {
+      this.quickRounds++;
+      setTimeout(() => void this.pingAll(), 2500).unref();
+    }
   }
 
   /**

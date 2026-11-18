@@ -53,6 +53,10 @@ pnpm demo:prepare
 ```
 
 ```bash
+pnpm demo:check
+```
+
+```bash
 pnpm demo
 ```
 
@@ -62,6 +66,8 @@ pnpm demo
 - `demo:prepare` lädt beim ersten Mal die Modelle (rund 950 MB) nach `.models/` und wertet das
   gesamte Material aus (etwa zehn Minuten auf vier Kernen ohne Grafikkarte). Danach startet die
   Vorführung ohne Wartezeit und ohne Netz.
+- `demo:check` prüft die vorbereitete Vorführung von Anfang bis Ende (Rechner, Material,
+  Anmeldung, Suche, Verbund, Ablehnung, Protokoll) und endet mit „Ergebnis: bereit“.
 - `demo` startet drei Knoten: Koblenz <http://127.0.0.1:8787>, Trier <http://127.0.0.1:8788>,
   Mainz <http://127.0.0.1:8789>.
 
@@ -132,7 +138,8 @@ Quelle ─► Bilder (ffmpeg) ─► Gesichter maskieren ─► Bildmerkmale (Si
 ## Gemessen
 
 Auf vier Prozessorkernen ohne Grafikkarte; Bedingungen und Einschränkungen in
-[`docs/EVALUATION.md`](docs/EVALUATION.md), nachmessbar mit `pnpm exercise:evaluate`.
+[`docs/EVALUATION.md`](docs/EVALUATION.md), nachmessbar mit `pnpm exercise:evaluate` und
+`pnpm search:evaluate`.
 
 | Größe | Wert |
 | --- | --- |
@@ -140,12 +147,14 @@ Auf vier Prozessorkernen ohne Grafikkarte; Bedingungen und Einschränkungen in
 | Erkennungsverzug | 1,1 s im Median, ab Eintreffen des ausgewerteten Bildes |
 | Fehlmeldungen | 1 von 15 Meldungen; nach Verwerfen und Nachschärfen im Folgelauf keine |
 | Auswertung von Aufzeichnungen | 3,3-fache Echtzeit, mit Maskierung |
-| Erste Durchsuchbarkeit | 14 s für 44 Aufnahmen ab Beginn des Hochladens |
-| Suche im Knoten | 6 ms im Median über 2 268 Vektoren |
+| Erste Durchsuchbarkeit | 8 s für 44 Aufnahmen ab Beginn des Hochladens |
+| Suche auf allgemeinem Material | 54 von 66 Anfragen beantwortet, erster Treffer bei 64 von 66 passend; 2 von 25 Anfragen nach nicht Vorhandenem mit Treffer |
+| Dauer einer neuen Anfrage | 0,1 s im Median, davon 5 ms Vergleich mit 2 108 Vektoren |
 | Gefahrenmodell auf AIDERv2 | 99,1 % auf der Testmenge; auf dem Übungsmaterial irrt es und löst deshalb keine Meldungen aus |
 
-Die Wachen der Übung wurden am Übungsmaterial formuliert. Die Werte zeigen das Betriebsverhalten,
-nicht die Güte auf fremdem Einsatzmaterial.
+Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
+gemessenen Anfragen eingestellt. Die Werte zeigen das Betriebsverhalten, nicht die Güte auf
+fremdem Einsatzmaterial.
 
 ## Grenzen dieses Stands
 
@@ -193,7 +202,9 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `pnpm demo` / `pnpm demo:prepare` | Vorführung mit drei Knoten starten / vorbereiten |
 | `pnpm start` / `pnpm dev` | einzelner Knoten / Entwicklung |
 | `pnpm exercise:fetch` | Übungsmaterial laden |
+| `pnpm demo:check` | vorbereitete Vorführung prüfen; startet die Knoten dafür, wenn sie nicht laufen |
 | `pnpm exercise:evaluate` | Übung ohne Konsole abspielen und auswerten (`--speed 1\|2\|4\|8`) |
+| `pnpm search:evaluate --dir <Ordner>` | Suche auf einem Ordner mit Aufnahmen und beschrifteten Anfragen messen |
 | `pnpm models:download` | Modelle vorab laden |
 | `pnpm selftest` | Rechner, Modell und ffmpeg prüfen, Geschwindigkeit messen |
 | `pnpm test` / `pnpm typecheck` | Prüfungen |

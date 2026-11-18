@@ -203,6 +203,8 @@ export class EmbeddingModel {
   private readonly textLock = new Mutex();
   private readonly listeners = new Set<ProgressListener>();
   private readonly textCache = new Map<string, Float32Array>();
+  /** Share of the mean text embedding that search queries are reduced by; null: none. */
+  private searchCentre: Float32Array | null = null;
   private loadPromise: Promise<void> | null = null;
 
   imageSize = 224;
@@ -466,6 +468,36 @@ export class EmbeddingModel {
     return { images, texts, dim: images.length / PROBE_IMAGES.length };
   }
 
+  /** Empties the cache of query embeddings (for measurements of first-time queries). */
+  forgetQueries(): void {
+    this.textCache.clear();
+  }
+
+  /**
+   * Sets what the search subtracts from every query: `share` times the mean text embedding (see
+   * SearchCalibration.centring). Without it, search queries are compared as they are.
+   */
+  setSearchCentre(meanText: Float32Array, share: number): void {
+    if (share <= 0 || meanText.length !== this.dim) {
+      this.searchCentre = null;
+      return;
+    }
+    this.searchCentre = Float32Array.from(meanText, (v) => v * share);
+  }
+
+  /**
+   * The vector the search compares footage with: the query embedding minus the configured share
+   * of the mean text embedding. Not re-normalised, so that the cut-offs keep their meaning.
+   */
+  async embedSearchQuery(query: string): Promise<Float32Array> {
+    const base = await this.embedQuery(query);
+    const centre = this.searchCentre;
+    if (!centre) return base;
+    const out = new Float32Array(base.length);
+    for (let i = 0; i < out.length; i++) out[i] = (base[i] as number) - (centre[i] as number);
+    return out;
+  }
+
   /**
    * Embeds a free-text search query using a small prompt ensemble.
    * Results are cached (LRU) because the same query is reused for search, heatmaps and the map.
@@ -493,6 +525,18 @@ export class EmbeddingModel {
     }
     return mean;
   }
+}
+
+/** Mean of the rows of a matrix of row vectors. */
+export function meanRow(rows: Float32Array, dim: number): Float32Array {
+  const count = Math.floor(rows.length / dim);
+  const mean = new Float32Array(dim);
+  if (count === 0) return mean;
+  for (let r = 0; r < count; r++) {
+    for (let i = 0; i < dim; i++) mean[i] = (mean[i] as number) + (rows[r * dim + i] as number);
+  }
+  for (let i = 0; i < dim; i++) mean[i] = (mean[i] as number) / count;
+  return mean;
 }
 
 export function normalizeQuery(query: string): string {

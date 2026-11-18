@@ -2,7 +2,8 @@ import path from 'node:path';
 import { config } from './config.js';
 import { FaceDetector } from './ml/faces.js';
 import { HazardHead } from './ml/head.js';
-import { EmbeddingModel } from './ml/model.js';
+import { SEARCH_CALIBRATION } from './ml/calibration.js';
+import { EmbeddingModel, meanRow } from './ml/model.js';
 import { loadVocabulary } from './ml/vocab.js';
 import type { SharedRuntime } from './node.js';
 
@@ -40,6 +41,9 @@ export async function createSharedRuntime(say: (line: string) => void): Promise<
     const vocabulary = await loadVocabulary(model, (done, total) => {
       model.updateState({ message: `Berechne Tag-Vokabular … ${done}/${total}` });
     });
+    // The vocabulary doubles as a sample of ordinary captions: its mean is what search queries
+    // are centred with.
+    model.setSearchCentre(meanRow(vocabulary.embeddings, vocabulary.dim), SEARCH_CALIBRATION[model.family].centring);
     model.updateState({ vocabSize: vocabulary.labels.length, message: 'Bereit' });
     say(`  Modell ${config.modelId} bereit (${model.state.device}, ${model.dim} Dimensionen, ${vocabulary.labels.length} Tags)`);
     if (model.state.notice !== '') say(`  Hinweis: ${model.state.notice}`);

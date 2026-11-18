@@ -649,6 +649,7 @@ export class PlatformNode {
     this.retentionTimer.unref();
 
     await app.listen({ host: this.cfg.host, port: this.cfg.port });
+    this.federation.start();
     await this.ledger.append({
       actor: 'system',
       role: 'system',

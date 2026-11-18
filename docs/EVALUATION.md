@@ -71,7 +71,7 @@ die Schnittstelle des laufenden Knotens.
 | Übungsmaterial | 577 s in 176 s, 3,3-fache Echtzeit | 1 Bild/s, 4 Ausschnitte je Bild, mit Gesichtsmaskierung |
 | Bilder im Verzeichnis | 571 | unveränderte Folgebilder werden übersprungen |
 | Maskierte Gesichter | 37 | YuNet, Schwelle 0,55 |
-| Allgemeiner Datensatz, 44 Aufnahmen, 540 s, 87 MB | durchsuchbar 14 s nach Beginn des Hochladens; vollständig ausgewertet nach 156 s (3,5-fache Echtzeit) | Hochladen über die Schnittstelle, vier Aufnahmen gleichzeitig |
+| Allgemeiner Datensatz, 44 Aufnahmen, 540 s, 87 MB | durchsuchbar 7,6 s nach Beginn des Hochladens; vollständig ausgewertet nach 169 s (3,2-fache Echtzeit) | Hochladen über die Schnittstelle, vier Aufnahmen gleichzeitig; ohne Hochladen (`pnpm search:evaluate`) 7,5 s |
 | Bildkodierer allein | 34 ms je Bild | `pnpm selftest` |
 | Textkodierer | 50 ms je Anfrage | halbe Genauigkeit (fp16), `pnpm selftest` |
 
@@ -97,11 +97,50 @@ Verbindungen, mehrere Ströme gleichzeitig.
 
 ## 3. Suche
 
+### Übungsmaterial und Verbund
+
 | Größe | Wert | Bedingungen |
 | --- | --- | --- |
-| Suchdauer im Knoten | 6 ms im Median | 2 268 Vektoren, nach der Übung |
 | Verbundfrage an zwei Nachbarn | 20 bis 400 ms | alle Knoten auf einem Rechner |
-| Deutsche Anfragen | „überflutete Wiese“ findet die überflutete Wiese an erster Stelle (Sicherheit 1,00) | Übungsmaterial |
+| Deutsche Anfragen | „überflutete Wiese“ findet die überflutete Wiese an erster Stelle (Sicherheit 0,99) | Übungsmaterial |
+
+### Allgemeines Material
+
+Gemessen mit `pnpm search:evaluate --dir dataset` auf dem allgemeinen Datensatz (44 Aufnahmen:
+Alltag, Verkehr, Tiere, Essen) mit 91 beschrifteten Anfragen in Deutsch und Englisch
+(`docs/measurements/search-queries.json`): 66 fragen nach etwas, das im Material vorkommt, 25
+nach etwas, das nicht vorkommt. Eine Anfrage gilt als beantwortet, wenn eine dafür vorgesehene
+Aufnahme über der Schwelle liegt. Ergebnis in `docs/measurements/search.json`.
+
+| Größe | nach dem ersten Durchgang (ein Bild je Aufnahme) | nach der vollständigen Auswertung |
+| --- | --- | --- |
+| Beantwortete Anfragen | 53 von 66 | 54 von 66 |
+| Erster Treffer passt | 64 von 66 | 64 von 66 |
+| Passende Aufnahmen über der Schwelle | 68 von 104 | 71 von 104 |
+| Unpassende Aufnahmen über der Schwelle | 5 | 2 |
+| Anfragen nach nicht Vorhandenem mit Treffer | 2 von 25 | 2 von 25 |
+| Dauer einer neuen Anfrage, Median | 124 ms | 104 ms |
+| davon Vergleich mit dem Verzeichnis | 0,5 ms (44 Vektoren) | 4,7 ms (2 108 Vektoren) |
+
+Die Dauer einer Anfrage ist fast ganz die Kodierung des Textes (drei Formulierungen je Anfrage);
+eine wiederholte Anfrage kostet nur den Vergleich.
+
+Was offen bleibt:
+
+- Gegenstände, Tiere, Fahrzeuge und Handlungen findet die Suche zuverlässig, Orts- und
+  Stimmungsbegriffe schwächer: „Küche“, „Büro“, „Wald“, „Regen“, „Straße bei Nacht“ und „Essen“
+  bleiben unter der Schwelle, obwohl die passende Aufnahme meist an erster Stelle steht.
+- Einzelne deutsche Wörter erreichen niedrigere Werte als ihre englischen Entsprechungen:
+  „beach“ wird gefunden, „Strand“ steht an erster Stelle, aber unter der Schwelle.
+- Verwandtes wird verwechselt: „Zebra“ meldet die Aufnahme mit Wildpferden.
+
+Die Schwellen der Suche (`SEARCH_CALIBRATION` in `apps/server/src/ml/calibration.ts`) wurden an
+genau diesen Anfragen und an 40 weiteren auf dem Übungsmaterial eingestellt. Die Zahlen
+beschreiben deshalb das Verhalten auf bekanntem Material und sind kein Test auf fremdem. Mit der
+vorherigen Einstellung (eine Schwelle für alle Ausschnitte, ohne Zentrierung der Anfrage)
+waren es 37 beantwortete Anfragen nach dem ersten Durchgang und 50 nach der vollständigen
+Auswertung, bei 61 passenden ersten Treffern. Die Wachen verwenden weiter ihre eigene, an der
+Übung gemessene Schwelle.
 
 ## 4. Gefahrenmodell
 

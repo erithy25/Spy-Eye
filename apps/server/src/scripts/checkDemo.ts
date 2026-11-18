@@ -175,9 +175,11 @@ async function checkNode(node: NodeEntry, nodes: NodeEntry[], first: boolean): P
     const best = search.data?.results[0];
     line(
       search.data ? `Suche „${QUERY}“: ${search.data.matched} Treffer${best ? `, bester ${decimal(best.confidence)}` : ''}, ${search.data.tookMs.toFixed(0)} ms` : `Suche „${QUERY}“`,
-      search.data !== null && search.data.matched > 0 && best !== undefined && best.confidence > 0.2,
+      // What is checked is that the encoder separates footage at all; whether the best recording
+      // lies just above or just below the cut-off depends on the footage of the node.
+      search.data !== null && best !== undefined && best.confidence >= 0.3,
       search.data
-        ? 'Die Suche findet im Bestand nichts. Das deutet auf ein Modell, das falsch rechnet: „pnpm selftest“ ausführen und ohne ML_DEVICE starten.'
+        ? 'Die Suche findet im Bestand nichts Passendes. Das deutet auf ein Modell, das falsch rechnet: „pnpm selftest“ ausführen und ohne ML_DEVICE starten.'
         : search.error,
     );
   }

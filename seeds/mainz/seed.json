@@ -6,7 +6,7 @@
       "nameEn": "UAS · Rhine bank",
       "kind": "drone",
       "owner": "Berufsfeuerwehr",
-      "description": "Befliegung des Rheinufers an der Brücke.",
+      "description": "Befliegung des Rheinufers und der überfluteten Aue.",
       "lat": 50.0052,
       "lon": 8.2741,
       "shared": true,
@@ -17,6 +17,13 @@
           "url": "https://assets.mixkit.co/videos/11940/11940-720.mp4",
           "page": "https://mixkit.co/free-stock-video/sailing-below-a-busy-bridge-11940/",
           "daysAgo": 2
+        },
+        {
+          "file": "mixkit-7835.mp4",
+          "credit": "Mixkit · aerial-shot-over-floodlands · Mixkit Stock Video Free License",
+          "url": "https://assets.mixkit.co/videos/7835/7835-720.mp4",
+          "page": "https://mixkit.co/free-stock-video/aerial-shot-over-floodlands-7835/",
+          "daysAgo": 1
         },
         {
           "file": "mixkit-6423.mp4",
@@ -39,7 +46,7 @@
       "name": "Einsatzfahrzeug · A 60",
       "nameEn": "Response vehicle · A 60",
       "kind": "vehicle",
-      "owner": "Autobahnpolizei",
+      "owner": "Autobahnmeisterei",
       "description": "Frontkamera eines Einsatzfahrzeugs.",
       "lat": 49.9654,
       "lon": 8.2603,

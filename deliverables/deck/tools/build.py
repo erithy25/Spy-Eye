@@ -418,8 +418,8 @@ add("gemessen", "Messwerte: eine Übung, zwei Einschränkungen", f"""
 {kv("Erkennungsverzug, Median", f"1,1{NB}s")}
 {kv("Fehlmeldungen", "1 von 15")}
 {kv("Auswertung gegenüber Echtzeit", "3,3-fach")}
-{kv("44 Aufnahmen durchsuchbar nach", f"14{NB}s")}
-{kv("Suche im Knoten, Median", f"6{NB}ms")}
+{kv("44 Aufnahmen durchsuchbar nach", f"8{NB}s")}
+{kv("Neue Suchanfrage, Median", f"0,1{NB}s")}
 {kv("Gefahrenmodell auf AIDERv2", f"99,1{NB}%")}
 {kv("Direktbild: Anschluss bis Meldung", f"29{NB}s", last=True)}
 </div>

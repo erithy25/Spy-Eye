@@ -239,7 +239,7 @@ window.SICHT_EN = {
   // ---------------------------------------------------------------- 06 measured
   'measured.h2': 'Measured, not promised.',
   'measured.intro':
-    'Eight figures from the trial build, measured on 18 November 2026 on four processor cores without a graphics card. What is not listed here has not been measured.',
+    'Nine figures from the trial build, measured on 18 November 2026 on four processor cores without a graphics card. What is not listed here has not been measured.',
   'm.h1': 'Figure',
   'm.h2': 'Statement',
   'm.h3': 'Basis',
@@ -258,16 +258,21 @@ window.SICHT_EN = {
   'm4.fig': '3.3&nbsp;×',
   'm4.k': 'Analysis relative to real time',
   'm4.v': '577&nbsp;s of footage in 176&nbsp;s, at one frame per second, four regions per frame and with face masking.',
-  'm5.fig': '14&nbsp;s',
+  'm5.fig': '8&nbsp;s',
   'm5.k': 'until 44 recordings are searchable',
-  'm5.v': 'From the start of the upload, on the same machine; analysed in full after 156&nbsp;s.',
+  'm5.v': 'From the start of the upload, on the same machine (7.6&nbsp;s measured); analysed in full after 169&nbsp;s.',
   'm6.fig': '29&nbsp;s',
   'm6.k': 'Live stream: first alert after connecting',
   'm6.v':
     'Against a simulated camera that sends a recording of a building fire in a loop (MPEG-TS over TCP), with segments of 10&nbsp;s. With the default of 20&nbsp;s the delay is half to three quarters of a minute. Not tested: real cameras, several streams at once.',
-  'm7.fig': '6&nbsp;ms',
-  'm7.k': 'Search within the node, median',
-  'm7.v': 'Across 2,268 vectors, after the exercise. A federated question to two peers on the same machine: 20 to 400&nbsp;ms.',
+  'm9.fig': '54&nbsp;/&nbsp;66',
+  'm9.k': 'Search queries answered on general footage',
+  'm9.v':
+    '44 recordings of everyday life and traffic, 91 labelled queries in German and English. The first result fits for 64 of 66; of 25 queries for things that are not there, 2 return a match. Words for places and moods such as "kitchen" or "rain" mostly stay below the cut-off. The cut-offs were set on these queries.',
+  'm7.fig': '0.1&nbsp;s',
+  'm7.k': 'Time for a new search query, median',
+  'm7.v':
+    'Almost all of it is encoding the text; comparing against 2,108 vectors takes 5&nbsp;ms of it. A federated question to two peers on the same machine: 20 to 400&nbsp;ms.',
   'm8.fig': '99.1&nbsp;%',
   'm8.k': 'Hazard model on its benchmark',
   'm8.v':

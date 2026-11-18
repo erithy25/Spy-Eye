@@ -13,6 +13,7 @@
     "test": "tsx --test test/*.test.ts",
     "exercise:fetch": "tsx src/scripts/fetchFootage.ts",
     "exercise:evaluate": "tsx src/scripts/runExercise.ts",
+    "search:evaluate": "tsx src/scripts/evaluateSearch.ts",
     "map:extract": "tsx src/scripts/map/extractTiles.ts"
   },
   "dependencies": {

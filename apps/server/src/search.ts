@@ -1,6 +1,6 @@
 import type { Sources } from './intel/sources.js';
-import { scoreFrame, type SearchScope } from './intel/scoring.js';
-import { RELEVANCE, adaptiveCutoff } from './ml/calibration.js';
+import { scoreFrameViews, type SearchScope } from './intel/scoring.js';
+import { SEARCH_CALIBRATION, cutoffLift, scoreStats, wholeFloor } from './ml/calibration.js';
 import { dotAt, pca2, sigmoid } from './ml/math.js';
 import type { EmbeddingModel } from './ml/model.js';
 import { decodeFrame, explainWindows, toNormRect, writeTile, type PixelRect } from './ml/preprocess.js';
@@ -19,12 +19,24 @@ export class SearchError extends Error {
   }
 }
 
+/** Best agreement of one scene with the query, for the whole picture and for its tiles. */
 interface SceneHit {
   scope: SearchScope;
   sceneIndex: number;
-  score: number;
-  frameIdx: number;
+  /** Pictures of the scene that were compared. */
+  frames: number;
+  whole: number;
+  wholeFrame: number;
+  /** Best tile of the picture in which the whole picture agrees best, and its similarity. */
+  wholeTile: number;
+  wholeTileScore: number;
+  tile: number;
+  tileFrame: number;
   tileIdx: number;
+  /** Larger of the two margins over their cut-offs; filled in once the cut-offs are known. */
+  margin: number;
+  /** True when the tile view carries the result. */
+  byTile: boolean;
 }
 
 export class SearchEngine {
@@ -48,7 +60,7 @@ export class SearchEngine {
     if (!this.model.ready) throw new SearchError('Das Modell wird noch geladen.', 503);
     let queryVector: Float32Array;
     try {
-      queryVector = await this.model.embedQuery(params.query);
+      queryVector = await this.model.embedSearchQuery(params.query);
     } catch (err: unknown) {
       throw new SearchError(err instanceof Error ? err.message : String(err), 500);
     }
@@ -69,11 +81,24 @@ export class SearchEngine {
       const perScene = new Map<number, SceneHit>();
       const visit = (f: number): void => {
         if (f < 0 || f >= available) return;
-        const { score, tile } = scoreFrame(entry, f, queryVector);
+        const views = scoreFrameViews(entry, f, queryVector);
         const sceneIndex = (entry.frames[f] as { s: number }).s;
-        const current = perScene.get(sceneIndex);
-        if (!current || score > current.score) {
-          perScene.set(sceneIndex, { scope, sceneIndex, score, frameIdx: f, tileIdx: tile });
+        let hit = perScene.get(sceneIndex);
+        if (!hit) {
+          hit = { scope, sceneIndex, frames: 0, whole: -1, wholeFrame: f, wholeTile: 0, wholeTileScore: -1, tile: -1, tileFrame: f, tileIdx: 0, margin: 0, byTile: false };
+          perScene.set(sceneIndex, hit);
+        }
+        hit.frames++;
+        if (views.whole > hit.whole) {
+          hit.whole = views.whole;
+          hit.wholeFrame = f;
+          hit.wholeTile = views.tileIdx;
+          hit.wholeTileScore = views.tile;
+        }
+        if (views.tile > hit.tile) {
+          hit.tile = views.tile;
+          hit.tileFrame = f;
+          hit.tileIdx = views.tileIdx;
         }
         framesSearched++;
       };
@@ -82,16 +107,34 @@ export class SearchEngine {
       for (const hit of perScene.values()) hits.push(hit);
     }
 
-    const cal = RELEVANCE[this.model.family];
-    const cutoff = adaptiveCutoff(Float64Array.from(hits, (h) => h.score), cal);
-    const confidenceOf = (score: number): number => sigmoid((score - cutoff) / cal.width);
+    // Each view is judged against its own cut-off; the larger margin decides (see SearchCalibration).
+    const cal = SEARCH_CALIBRATION[this.model.family];
+    const wholeStats = scoreStats(Float64Array.from(hits, (h) => h.whole));
+    const tileStats = scoreStats(
+      Float64Array.from(
+        hits.filter((h) => h.tile >= 0),
+        (h) => h.tile,
+      ),
+    );
+    const pooledFloor = wholeFloor(cal, Number.MAX_SAFE_INTEGER);
+    const pooledLift = cutoffLift(wholeStats, pooledFloor, cal);
+    const tileCutoff = cal.tileFloor + cutoffLift(tileStats, cal.tileFloor, cal);
+    for (const hit of hits) {
+      const floor = wholeFloor(cal, hit.frames);
+      const wholeMargin = hit.whole - (floor + cutoffLift(wholeStats, floor, cal));
+      const tileMargin = hit.tile >= 0 ? hit.tile - tileCutoff : Number.NEGATIVE_INFINITY;
+      hit.byTile = tileMargin > wholeMargin;
+      hit.margin = hit.byTile ? tileMargin : wholeMargin;
+    }
+    const cutoff = pooledFloor + pooledLift;
+    const confidenceOf = (margin: number): number => sigmoid(margin / cal.width);
 
     const distribution = new Array<number>(DISTRIBUTION_BINS).fill(0);
     const sceneScores: Record<string, number> = {};
     const sourceScores: Record<string, number> = {};
     let matched = 0;
     for (const hit of hits) {
-      const c = confidenceOf(hit.score);
+      const c = confidenceOf(hit.margin);
       if (c >= 0.5) matched++;
       const bin = Math.min(DISTRIBUTION_BINS - 1, Math.floor(c * DISTRIBUTION_BINS));
       distribution[bin] = (distribution[bin] as number) + 1;
@@ -100,15 +143,20 @@ export class SearchEngine {
       if (rounded > (sourceScores[hit.scope.sourceId] ?? 0)) sourceScores[hit.scope.sourceId] = rounded;
     }
 
-    hits.sort((a, b) => b.score - a.score);
+    hits.sort((a, b) => b.margin - a.margin);
     const results: SearchResult[] = [];
     for (const hit of hits.slice(0, params.limit)) {
       const { entry } = hit.scope;
       const scene = entry.scenes[hit.sceneIndex];
-      const frame = entry.frames[hit.frameIdx];
+      const frameIdx = hit.byTile ? hit.tileFrame : hit.wholeFrame;
+      const frame = entry.frames[frameIdx];
       if (!scene || !frame) continue;
       const layout = this.store.layout(entry);
-      const tile = hit.tileIdx > 0 ? layout[hit.tileIdx] : undefined;
+      // The marked region: the tile that carries the result, or, when the whole picture does,
+      // the tile of that picture which agrees even better than the picture as a whole.
+      const tileIdx = hit.byTile ? hit.tileIdx : hit.wholeTileScore > hit.whole ? hit.wholeTile : 0;
+      const tile = tileIdx > 0 ? layout[tileIdx] : undefined;
+      const score = hit.byTile ? hit.tile : hit.whole;
       const source = this.sources.resolve(hit.scope.sourceId);
       results.push({
         sceneId: sceneId(entry.info.id, scene.index),
@@ -121,8 +169,8 @@ export class SearchEngine {
         frameNumber: frame.n,
         frameUrl: frameUrl(entry.info.id, frame.n),
         time: frame.t,
-        score: Math.round(hit.score * 10000) / 10000,
-        confidence: Math.round(confidenceOf(hit.score) * 1000) / 1000,
+        score: Math.round(score * 10000) / 10000,
+        confidence: Math.round(confidenceOf(hit.margin) * 1000) / 1000,
         box: tile ? toNormRect(tile, entry.info.frameWidth, entry.info.frameHeight) : null,
         tags: scene.tags,
         playable: entry.info.playable,
@@ -131,7 +179,7 @@ export class SearchEngine {
         sourceKind: source.kind,
         lat: source.lat,
         lon: source.lon,
-        at: hit.scope.timeOf(hit.frameIdx),
+        at: hit.scope.timeOf(frameIdx),
       });
     }
 
@@ -186,7 +234,7 @@ export class SearchEngine {
       }
     }
 
-    const queryVector = await this.model.embedQuery(params.query);
+    const queryVector = await this.model.embedSearchQuery(params.query);
     const dim = this.model.dim;
     const { windows, embeddings, width, height } = cached;
     const scores = windows.map((_, i) => dotAt(embeddings, i * dim, queryVector, 0, dim));
@@ -226,7 +274,7 @@ export class SearchEngine {
     }
 
     const box = hotRegion(grid, cols, rows, peak, 0.8);
-    const cal = RELEVANCE[this.model.family];
+    const cal = SEARCH_CALIBRATION[this.model.family];
     const bestScore = Math.max(...scores);
     return {
       videoId: params.videoId,
@@ -236,7 +284,8 @@ export class SearchEngine {
       rows,
       grid,
       box,
-      peakConfidence: Math.round(sigmoid((bestScore - cal.prior) / cal.width) * 1000) / 1000,
+      // The windows are picture regions like the tiles, so their cut-off applies.
+      peakConfidence: Math.round(sigmoid((bestScore - cal.tileFloor) / cal.width) * 1000) / 1000,
       tookMs: Math.round(performance.now() - started),
     };
   }
