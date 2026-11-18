@@ -15,7 +15,7 @@ import type { EventHub } from '../events.js';
 import type { EmbeddingModel } from '../ml/model.js';
 import type { Store, VideoEntry } from '../store.js';
 import { haversineKm } from '../core/geo.js';
-import type { Evidence, Fix, Keyframe, TimeEstimate } from './contract.js';
+import type { Evidence, Fix, Keyframe, TimeEstimate, TraceStep } from './contract.js';
 import { truthForName } from './dataset.js';
 import { Gallery } from './gallery.js';
 import { locate } from './locate.js';
@@ -217,6 +217,16 @@ export class DatumEngine {
   private async compute(entry: VideoEntry): Promise<Fix> {
     const { store, model } = this.opts;
     const id = entry.info.id;
+    const trace: TraceStep[] = [];
+    let last = Date.now();
+    // Each finished step is announced, so that the console can show the analysis as it runs.
+    const mark = (label: string, detail?: string): void => {
+      const now = Date.now();
+      trace.push({ label, ms: now - last, ...(detail ? { detail } : {}) });
+      last = now;
+      const current = this.fixes.get(id) ?? pending(id);
+      this.publish({ ...current, status: 'running', trace: [...trace] });
+    };
     const dim = model.dim;
     const tiles = Math.max(1, entry.info.tilesPerFrame);
     const matrix = entry.embeddings?.view() ?? null;
@@ -230,11 +240,13 @@ export class DatumEngine {
     const framePath = (n: number): string => store.framePath(id, n);
     const embedTexts = this.embedTexts;
 
+    mark('Bildmerkmale übernommen', `${picks.length} Bilder aus der Auswertung, ${dim} Dimensionen`);
     const truthVideo = await truthForName(entry.info.name);
     const gallery = await this.opts.gallery();
     const videoPath = store.sourcePath(entry);
     const meta = await readMetadata(videoPath).catch(() => null);
     const hints = filenameHints(entry.info.name);
+    mark('Metadaten gelesen', meta?.location ? 'GPS in der Datei' : meta?.creationUtc ? 'Aufnahmezeit in der Datei' : 'kein Ort, keine Zeit in der Datei');
 
     const located = await locate({
       videoPath,
@@ -246,6 +258,10 @@ export class DatumEngine {
       fileName: entry.info.name,
       ...(this.opts.holdout && truthVideo ? { excludeWikidata: [truthVideo.wikidata] } : {}),
     });
+    mark(
+      'Mit der Referenzgalerie verglichen',
+      `${gallery.size.toLocaleString('de-DE')} Referenzbilder · ${located.location ? `${located.location.label}, ± ${located.location.radiusKm < 1 ? `${Math.round(located.location.radiusKm * 1000)} m` : `${Math.round(located.location.radiusKm)} km`}` : 'kein Ort'}`,
+    );
 
     // Spaces from keyframes: depth → walkable grid, skyline.
     const keyframes: Keyframe[] = [];
@@ -261,6 +277,7 @@ export class DatumEngine {
         await fs.writeFile(this.spacePath(id, frame.n), grid.buffer);
         key.spaceUrl = `api/datum/space/${id}/${frame.n}`;
         key.skyline = grid.skyline;
+        mark(`Raum aus Bild ${keyframes.length + 1} aufgebaut`, `Tiefe in ${Math.round(disparity.ms)} ms, Himmel ${Math.round(grid.skyFraction * 100)} %, Neigung ${Math.round(grid.pitchDeg)}°`);
         const aspect = entry.info.frameWidth > 0 && entry.info.frameHeight > 0 ? entry.info.frameWidth / entry.info.frameHeight : 16 / 9;
         if (grid.skyline && grid.skyFraction > 0.05 && (!bestSky || grid.skyFraction > 0.05)) {
           bestSky ??= { skyline: grid.skyline, aspect, frame: frame.n };
@@ -299,6 +316,8 @@ export class DatumEngine {
       }
     }
 
+    if (location) mark('Gelände geprüft', heading ? `Horizont passt, Blickrichtung ${Math.round(heading.deg)}°` : horizon?.profile ? 'Horizont berechnet, keine eindeutige Übereinstimmung' : 'kein Höhenmodell oder keine Himmelslinie');
+
     // Time and sun.
     const stats = await Promise.all(frameNumbers.map((n) => frameStatsFromJpeg(framePath(n))));
     const timed = await estimateTime({
@@ -312,6 +331,7 @@ export class DatumEngine {
       filenameDate: hints.date,
       textCacheKey: config.modelId,
     });
+    mark('Licht und Sonnenstand bestimmt', timed.time.windows[0] ? `${timed.time.windows[0].label}, ${timed.time.timezone ?? 'Sonnenzeit'}` : 'keine Uhrzeit');
     if (timed.time.method !== 'none' && timed.time.windows.length > 0) {
       evidence.push({
         kind: timed.time.method === 'metadata' ? 'metadata' : 'sun',
@@ -354,6 +374,7 @@ export class DatumEngine {
       horizon,
       evidence,
       keyframes,
+      trace,
       truth,
     };
   }

@@ -157,7 +157,7 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
                           : video!.status !== 'ready'
                             ? t('Bilder werden ausgewertet …')
                             : fix.status === 'running'
-                              ? t('Ortung läuft …')
+                              ? `${t('Ortung läuft …')}${fix.trace?.length ? ` ${t(fix.trace[fix.trace.length - 1]!.label)}` : ''}`
                               : fix.status === 'ready'
                                 ? t('Kein Ort bestimmbar')
                                 : t('Ortung steht an')}

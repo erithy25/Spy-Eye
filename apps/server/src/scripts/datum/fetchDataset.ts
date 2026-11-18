@@ -10,6 +10,9 @@
  *                                                             reusing the stored selection
  *   --select-only                                             write the manifest, cut no clips
  *   --gallery-minutes=N                                       stop gallery downloads after N minutes
+ *   --extend                                                  add the broad worldwide group (d) to
+ *                                                             the stored selection and load it
+ *   --extra-target=N                                          size of group (d) (default 12000)
  *
  * Output (relative to the repository root):
  *   datasets/datum/manifest.json        selection of test videos with ground truth (committed)
@@ -48,6 +51,8 @@ const FLAG_VIDEOS_ONLY = ARGS.has('--videos-only');
 const FLAG_GALLERY_ONLY = ARGS.has('--gallery-only');
 const FLAG_RESELECT = ARGS.has('--reselect');
 const FLAG_SELECT_ONLY = ARGS.has('--select-only');
+const FLAG_EXTEND = ARGS.has('--extend');
+const EXTRA_TARGET = Number(process.argv.find((a) => a.startsWith('--extra-target='))?.split('=')[1] ?? '12000');
 const GALLERY_MINUTES = Number(
   process.argv.find((a) => a.startsWith('--gallery-minutes='))?.split('=')[1] ?? '60',
 );
@@ -984,8 +989,86 @@ const GERMAN_CLASSES: [string, string, number, number][] = [
   ['Q262166', 'Gemeinde', 20, 200],
 ];
 
+/**
+ * Group (d): a broad worldwide layer chosen only by notability (sitelinks) and class, never by
+ * the position of a test video. Every class is interleaved over the continents, so Europe's
+ * dense coverage on Wikidata does not crowd out the rest of the world.
+ */
+const EXTRA_CLASSES: [string, string, number, number][] = [
+  ['Q515', 'city', 12, 900],
+  ['Q1549591', 'big city', 20, 300],
+  ['Q3957', 'town', 12, 700],
+  ['Q532', 'village', 25, 500],
+  ['Q486972', 'human settlement', 30, 300],
+  ['Q123705', 'neighbourhood', 6, 400],
+  ['Q2983893', 'quarter', 5, 200],
+  ['Q16970', 'church building', 5, 700],
+  ['Q2977', 'cathedral', 4, 400],
+  ['Q32815', 'mosque', 4, 400],
+  ['Q44539', 'temple', 3, 250],
+  ['Q5393308', 'Buddhist temple', 3, 300],
+  ['Q842402', 'Hindu temple', 3, 250],
+  ['Q34627', 'synagogue', 4, 150],
+  ['Q44613', 'monastery', 4, 250],
+  ['Q23413', 'castle', 4, 500],
+  ['Q16560', 'palace', 4, 350],
+  ['Q57821', 'fortification', 4, 250],
+  ['Q1785071', 'fort', 4, 250],
+  ['Q12518', 'tower', 4, 300],
+  ['Q11303', 'skyscraper', 5, 400],
+  ['Q41176', 'building', 8, 400],
+  ['Q12280', 'bridge', 4, 450],
+  ['Q174782', 'square', 4, 450],
+  ['Q79007', 'street', 8, 350],
+  ['Q55488', 'railway station', 5, 450],
+  ['Q44782', 'port', 3, 200],
+  ['Q283202', 'harbour', 3, 150],
+  ['Q40080', 'beach', 3, 300],
+  ['Q8502', 'mountain', 15, 400],
+  ['Q8072', 'volcano', 8, 200],
+  ['Q23397', 'lake', 15, 350],
+  ['Q23442', 'island', 20, 250],
+  ['Q34038', 'waterfall', 4, 150],
+  ['Q12323', 'dam', 5, 150],
+  ['Q39715', 'lighthouse', 4, 200],
+  ['Q4989906', 'monument', 4, 300],
+  ['Q33506', 'museum', 8, 350],
+  ['Q483110', 'stadium', 8, 300],
+  ['Q839954', 'archaeological site', 6, 300],
+  ['Q22698', 'park', 6, 300],
+  ['Q24354', 'theatre building', 5, 200],
+  ['Q153562', 'opera house', 4, 100],
+  ['Q25550691', 'town hall', 3, 200],
+  ['Q82117', 'city gate', 3, 100],
+  ['Q162875', 'mausoleum', 5, 150],
+  ['Q2319498', 'landmark', 3, 200],
+  ['Q570116', 'tourist attraction', 4, 300],
+  ['Q1081138', 'historic site', 4, 200],
+];
+
 const WORLD_TARGET = 2900;
 const GERMAN_TARGET = 1400;
+const CONTINENT_ORDER = ['EU', 'AS', 'NA', 'AF', 'SA', 'OC', 'AN'];
+
+/** Interleaves a list (sorted by notability) over continents: EU, AS, NA, AF, SA, OC, EU, … */
+export function interleaveByContinent<T>(items: readonly T[], continent: (item: T) => string): T[] {
+  const buckets = new Map<string, T[]>();
+  for (const item of items) {
+    const c = continent(item);
+    const list = buckets.get(c) ?? [];
+    list.push(item);
+    buckets.set(c, list);
+  }
+  const order = [...CONTINENT_ORDER, ...[...buckets.keys()].filter((c) => !CONTINENT_ORDER.includes(c)).sort()];
+  const out: T[] = [];
+  for (let i = 0; out.length < items.length; i++) {
+    for (const c of order) {
+      const item = buckets.get(c)?.[i];
+      if (item !== undefined) out.push(item);
+    }
+  }
+  return out;
+}
 
 function classQuery(cls: string, minSitelinks: number, germanyOnly: boolean): string {
   return `SELECT ?item ?sl ?coord ?image ?country ?de ?en WHERE {
@@ -1031,6 +1114,66 @@ function collectHits(rows: SparqlRow[]): ClassHit[] {
   return [...map.values()].sort((a, b) => b.sl - a.sl || a.qid.localeCompare(b.qid));
 }
 
+/**
+ * Adds items of the given classes to `out`, round-robin over the classes (each sorted by
+ * sitelinks, optionally interleaved over continents), until `target` new items are added.
+ */
+async function addFromClasses(
+  out: Map<string, GalleryCandidate>,
+  countries: Map<string, CountryInfo>,
+  classes: [string, string, number, number][],
+  germany: boolean,
+  target: number,
+  group: string,
+  interleave = false,
+): Promise<number> {
+  const lists: ClassHit[][] = new Array<ClassHit[]>(classes.length).fill([]);
+  // Up to three queries at a time (the query service allows five per client).
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const i = next++;
+      if (i >= classes.length) return;
+      const [cls, name, minSl, cap] = classes[i] as [string, string, number, number];
+      try {
+        const rows = await sparqlCached(classQuery(cls, minSl, germany), `${group} ${name}`);
+        let hits = collectHits(rows).filter((h) => isRaster(h.image));
+        if (interleave) hits = interleaveByContinent(hits, (h) => continentOf(pickCountry(h.countries, countries)?.iso ?? null, h.lat, h.lon));
+        lists[i] = hits.slice(0, cap);
+        log(`    ${name.padEnd(28)} ${String(lists[i]?.length ?? 0).padStart(4)} (sitelinks >= ${minSl})`);
+      } catch (err: unknown) {
+        log(`    ${name.padEnd(28)} übersprungen: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: germany || !interleave ? 1 : 3 }, worker));
+  let added = 0;
+  for (let round = 0; added < target; round++) {
+    let any = false;
+    for (const list of lists) {
+      const hit = list[round];
+      if (!hit) continue;
+      any = true;
+      if (out.has(hit.qid) || added >= target) continue;
+      const country = pickCountry(hit.countries, countries);
+      out.set(hit.qid, {
+        id: hit.qid, label: labelOf(hit.de, hit.en, country?.iso ?? null, hit.qid), lat: hit.lat, lon: hit.lon,
+        country: country?.iso ?? null, commonsFile: hit.image, hasVideo: false, group,
+      });
+      added++;
+    }
+    if (!any) break;
+  }
+  return added;
+}
+
+async function addExtraGroup(out: Map<string, GalleryCandidate>, countries: Map<string, CountryInfo>): Promise<number> {
+  log(`  (d) Breite Weltschicht (Ziel ${EXTRA_TARGET}):`);
+  const extra = await addFromClasses(out, countries, EXTRA_CLASSES, false, EXTRA_TARGET, 'extra', true);
+  log(`  (d) ${extra} neue Objekte`);
+  return extra;
+}
+
 async function selectGallery(countries: Map<string, CountryInfo>, videoItems: Map<string, VideoItem>): Promise<GalleryCandidate[]> {
   const out = new Map<string, GalleryCandidate>();
   // (a) every item with a video.
@@ -1045,45 +1188,13 @@ async function selectGallery(countries: Map<string, CountryInfo>, videoItems: Ma
   }
   log(`  (a) Objekte mit Video: ${out.size}`);
 
-  const addFromClasses = async (classes: [string, string, number, number][], germany: boolean, target: number, group: string): Promise<number> => {
-    // Round-robin over classes, each sorted by sitelinks, so that every class contributes.
-    const lists: ClassHit[][] = [];
-    for (const [cls, name, minSl, cap] of classes) {
-      try {
-        const rows = await sparqlCached(classQuery(cls, minSl, germany), `${group} ${name}`);
-        const hits = collectHits(rows).filter((h) => isRaster(h.image)).slice(0, cap);
-        lists.push(hits);
-        log(`    ${name.padEnd(28)} ${String(hits.length).padStart(4)} (sitelinks >= ${minSl})`);
-      } catch (err: unknown) {
-        log(`    ${name.padEnd(28)} übersprungen: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
-    let added = 0;
-    for (let round = 0; added < target; round++) {
-      let any = false;
-      for (const list of lists) {
-        const hit = list[round];
-        if (!hit) continue;
-        any = true;
-        if (out.has(hit.qid) || added >= target) continue;
-        const country = pickCountry(hit.countries, countries);
-        out.set(hit.qid, {
-          id: hit.qid, label: labelOf(hit.de, hit.en, country?.iso ?? null, hit.qid), lat: hit.lat, lon: hit.lon,
-          country: country?.iso ?? null, commonsFile: hit.image, hasVideo: false, group,
-        });
-        added++;
-      }
-      if (!any) break;
-    }
-    return added;
-  };
-
   log('  (b) Sehenswürdigkeiten weltweit:');
-  const world = await addFromClasses(WORLD_CLASSES, false, WORLD_TARGET, 'world');
+  const world = await addFromClasses(out, countries, WORLD_CLASSES, false, WORLD_TARGET, 'world');
   log(`  (b) ${world} neue Objekte`);
   log('  (c) Objekte in Deutschland:');
-  const german = await addFromClasses(GERMAN_CLASSES, true, GERMAN_TARGET, 'germany');
+  const german = await addFromClasses(out, countries, GERMAN_CLASSES, true, GERMAN_TARGET, 'germany');
   log(`  (c) ${german} neue Objekte`);
+  if (EXTRA_TARGET > 0) await addExtraGroup(out, countries);
   return [...out.values()];
 }
 
@@ -1168,6 +1279,12 @@ async function runGallery(countries: () => Promise<Map<string, CountryInfo>>, vi
     if (pruned > 0) log(`  ${pruned} nicht mehr ausgewählte Bilder entfernt.`);
   } else {
     log(`Galerie: gespeicherte Auswahl (${candidates.length} Kandidaten).`);
+    if (FLAG_EXTEND && !candidates.some((c) => c.group === 'extra')) {
+      const out = new Map(candidates.map((c) => [c.id, c]));
+      await addExtraGroup(out, await countries());
+      candidates = [...out.values()];
+      await writeJson(CANDIDATES_PATH, candidates);
+    }
   }
   const manifest = await readJson<Manifest>(MANIFEST_PATH);
   const testItems = new Set(manifest?.videos.map((v) => v.wikidata) ?? []);

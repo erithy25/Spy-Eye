@@ -161,6 +161,14 @@ export interface Keyframe {
   skyline: number[] | null;
 }
 
+/** One step of the analysis, as it ran (shown live in the console). */
+export interface TraceStep {
+  label: string;
+  /** Wall time of the step (ms). */
+  ms: number;
+  detail?: string;
+}
+
 export interface FixLocation extends GeoPoint {
   radiusKm: number;
   /** 0..1 */
@@ -187,6 +195,8 @@ export interface Fix {
   horizon: HorizonMatch | null;
   evidence: Evidence[];
   keyframes: Keyframe[];
+  /** The steps of the analysis with their times; grows while the fix is running. */
+  trace?: TraceStep[];
   /** Ground truth, present only for videos of the reference dataset (evaluation). */
   truth: (GeoPoint & { label: string; errorKm: number | null; source: string }) | null;
 }

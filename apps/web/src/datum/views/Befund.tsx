@@ -8,7 +8,7 @@ import { useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps } from './Ortung';
 
 export function Befund({ node, byId, selected, go }: DatumViewProps) {
-  const { t } = useLang();
+  const { t, locale } = useLang();
   const summary = selected ? byId.get(selected) : undefined;
   const { fix, error } = useFullFix(selected, summary);
   const [keyIndex, setKeyIndex] = useState(0);
@@ -94,6 +94,24 @@ export function Befund({ node, byId, selected, go }: DatumViewProps) {
         <section className="dt-section">
           <FixSummary fix={fix} />
         </section>
+        {(fix.trace?.length ?? 0) > 0 && (
+          <section className="dt-section">
+            <div className="label">
+              {t('Ablauf')} <span className="count">{fix.trace!.length}</span>
+              <span className="low">{(fix.trace!.reduce((a, s) => a + s.ms, 0) / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} s</span>
+            </div>
+            <ol className="dt-trace">
+              {fix.trace!.map((s, i) => (
+                <li key={i}>
+                  <span className="dt-trace-ms">{s.ms < 1000 ? `${s.ms} ms` : `${(s.ms / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} s`}</span>
+                  <span className="dt-trace-label">{t(s.label)}</span>
+                  {s.detail && <span className="dt-trace-detail">{s.detail}</span>}
+                </li>
+              ))}
+              {fix.status === 'running' && <li className="dt-trace-run">{t('läuft …')}</li>}
+            </ol>
+          </section>
+        )}
         <section className="dt-section">
           <ClockDial time={fix.time} sun={fix.sun} />
         </section>
