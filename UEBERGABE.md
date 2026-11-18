@@ -66,6 +66,25 @@ ersten Fassung). Geprüft mit genau diesem Bestand: Schon während der Neuauswer
 Szene über der Schwelle“ und zeigt die Kandidaten darunter, weil in diesem Material kein grüner
 Bus vorkommt.
 
+**Oder frisch in einem neuen Ordner**, wenn `git pull` weiter hängt oder der alte Ordner
+unberührt bleiben soll:
+
+```bash
+git clone -b claude/video-dataset-keyword-search-8h6kxd https://github.com/erithy25/Spy-Eye.git Sicht
+```
+
+```bash
+cd Sicht
+```
+
+```bash
+.\vorfuehrung.cmd
+```
+
+Das ist der Weg, den der Prüflauf auf dem Windows-Rechner von GitHub als „frischer Rechner“
+durchspielt. Er lädt Modelle und Übungsmaterial in den neuen Ordner (zusammen rund 1,3 GB) und
+dauert dort sieben bis neun Minuten.
+
 Der Befehl prüft die Voraussetzungen und nennt, was fehlt; richtet ein und baut; lädt beim ersten
 Mal das Material und wertet es aus (fünf bis zehn Minuten); stellt bei jedem weiteren Mal den
 vorbereiteten Ausgangsstand in einer Sekunde wieder her; prüft die drei Knoten; startet sie und
