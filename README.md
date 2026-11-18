@@ -15,8 +15,10 @@ Commons. Keine Kunden, keine Zulassung, der Name ist markenrechtlich nicht gepr�
 
 ### DATUM starten
 
-Windows, im Ordner des Repositorys (der erste Lauf lädt Modelle, Referenzbestand und Höhendaten
-und wertet alles aus; danach startet der Befehl in unter einer Minute):
+Windows, im Ordner des Repositorys. Der erste Lauf lädt Modelle, Vorschaubilder und Höhendaten
+(Referenzclips und Galerie-Vektoren liegen bei) und startet dann sofort; die 60 Videos werden im
+Hintergrund ausgewertet und geortet, die Karte füllt sich in 15 bis 30 Minuten. Für eine
+Vorführung vorher `.\datum.cmd -NurPruefen` (wertet alles aus und prüft, ohne zu starten):
 
 ```bash
 .\datum.cmd
