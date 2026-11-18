@@ -19,7 +19,7 @@ ist nicht juristisch geprüft.
 | Prüfung | Womit | Umfang | Ergebnis |
 | --- | --- | --- | --- |
 | Automatisch, Regeln der WCAG 2.1 Stufe A und AA | axe-core 4.14.1 in Chromium (`tools/barrierefreiheit/pruefen.cjs`) | Konsole in 15 Zuständen: Anmeldung, Mandat, alle acht Reiter, Suche mit Treffern, Trefferblatt, abgelehnte Anfrage, englische Fassung. Website in drei Zuständen: deutsch und englisch breit, deutsch schmal | Vorher: sechs verletzte Regeln an 364 Elementen. Nachher: keine verletzte Regel |
-| Bedienung ohne Maus | eigener Gang nur mit der Tastatur (`tools/barrierefreiheit/tastatur.cjs`) | 21 Schritte: anmelden, Mandat wählen, Übung starten, eine Lage wählen, Reiter wechseln, Zeilen wählen, einen Protokolleintrag aufklappen, suchen, ein Trefferblatt öffnen und schließen | 21 von 21 Schritten gelingen, der Fokus ist jeweils sichtbar |
+| Bedienung ohne Maus | eigener Gang nur mit der Tastatur (`tools/barrierefreiheit/tastatur.cjs`) | 24 Schritte: anmelden, Mandat wählen, Übung starten, eine Lage wählen, die Karte vergrößern und verschieben, Reiter wechseln, Zeilen wählen, einen Protokolleintrag aufklappen, suchen, ein Trefferblatt öffnen und schließen | 24 von 24 Schritten gelingen, der Fokus ist jeweils sichtbar |
 | Ansage neuer Meldungen | eigener Lauf, 30 Sekunden Übung in achtfacher Geschwindigkeit | der Bereich, den Bildschirmleser vorlesen | vier Meldungen angesagt, jede mit Art und Quelle |
 
 Die 364 Elemente sind über alle Zustände gezählt; ein Element, das in mehreren Zuständen
@@ -44,6 +44,8 @@ Von der automatischen Prüfung nicht gemeldet, beim Gang mit der Tastatur gefund
   ist für Bildschirmleser ausgezeichnet.
 - Eine neue Meldung erschien nur im Bild. Sie wird jetzt zusätzlich in einem Bereich angesagt,
   den Bildschirmleser vorlesen, ohne dass die Person die Liste aufsuchen muss.
+- Die Karte ließ sich nur mit der Maus bewegen. Sie ist jetzt mit der Tabulatortaste erreichbar;
+  die Pfeiltasten verschieben sie, Plus und Minus vergrößern und verkleinern.
 
 Unverändert und schon vorher vorhanden: sichtbarer Fokus an jedem bedienbaren Element; die
 Stufe einer Meldung wird durch die Zahl der hellen Balken gezeigt, nicht durch Farbe; die
@@ -57,7 +59,7 @@ Website hat keinen Sprecher, sein Inhalt steht als Text im Abschnitt danach.
 | --- | --- | --- |
 | Bildschirmleser | Niemand hat die Konsole mit NVDA, JAWS oder VoiceOver bedient. Geprüft sind Namen, Rollen und die Ansage, nicht, ob sich damit arbeiten lässt. | Eine automatische Prüfung findet erfahrungsgemäß nur einen Teil der Barrieren. |
 | Prüfung nach BITV | Kein BITV-Test, keine Prüfstelle, keine Erklärung zur Barrierefreiheit. | Das ist der Nachweis, den eine Behörde verlangt. |
-| Karte | Die Karte ist eine Zeichenfläche. Ihre Marken lassen sich nur mit der Maus wählen, verschieben lässt sie sich nur mit der Maus; vergrößern und verkleinern geht über Schaltflächen. Dieselben Quellen stehen darunter als Schaltflächen, die Lagen daneben als Liste. | Der Inhalt ist auf zweitem Weg erreichbar, die Karte selbst nicht. |
+| Karte | Die Karte ist eine Zeichenfläche. Verschieben und vergrößern geht mit der Tastatur; ihre Marken lassen sich nur mit der Maus wählen, und ein Bildschirmleser erfährt nicht, was sie zeigt. Dieselben Quellen stehen darunter als Schaltflächen, die Lagen daneben als Liste. | Der Inhalt ist auf zweitem Weg erreichbar, das Kartenbild selbst nicht. |
 | Vergrößerung und schmale Fenster | Die Konsole ist für Arbeitsplatzbildschirme gebaut. Vergrößerung auf 200 Prozent und Umbruch bei schmalem Fenster sind nicht geprüft. | WCAG 1.4.4 und 1.4.10. |
 | Text über Bildern | Den Kontrast von Schrift über Bildern und über der Karte kann die automatische Prüfung nicht bestimmen; je Zustand bleiben bis zu 102 Elemente zur Prüfung von Hand. | Betrifft Beschriftungen auf der Karte und in Bildkacheln. |
 | Unterlagen | Die PDF-Dateien und die Präsentationen sind nicht auf Barrierefreiheit geprüft. | Auch Dokumente fallen unter die Pflicht, wenn eine Behörde sie veröffentlicht. |

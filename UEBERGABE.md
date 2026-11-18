@@ -21,7 +21,7 @@ Unterlagen.
 | Architektur und Sicherheitsdurchsicht | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md), [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) | fertig; 21 Befunde einer unabhängigen Durchsicht, die schweren behoben |
 | Vertriebsvorlagen: Anschreiben, Angebot zur Erprobung | [`docs/vertrieb/`](docs/vertrieb/) | Vorlagen; eckige Klammern und Preis vor dem Versand füllen |
 | Stückliste: jedes Paket, Modell und Datum mit Fassung, Prüfsumme und Lizenz | [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md), maschinenlesbar [`docs/stueckliste/sicht.cdx.json`](docs/stueckliste/sicht.cdx.json), `pnpm sbom` | fertig; kein bekannter Befund in den ausgelieferten Paketen (Abgleich vom 18. November 2026) |
-| Barrierefreiheit: automatische Prüfung nach WCAG 2.1 A und AA, Gang nur mit der Tastatur | [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md), Werkzeuge in [`tools/barrierefreiheit/`](tools/barrierefreiheit/) | keine verletzte Regel in 18 Zuständen, 21 von 21 Schritten ohne Maus; kein BITV-Test, kein Test mit Bildschirmleser |
+| Barrierefreiheit: automatische Prüfung nach WCAG 2.1 A und AA, Gang nur mit der Tastatur | [`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md), Werkzeuge in [`tools/barrierefreiheit/`](tools/barrierefreiheit/) | keine verletzte Regel in 18 Zuständen, 24 von 24 Schritten ohne Maus; kein BITV-Test, kein Test mit Bildschirmleser |
 | Prüfprogramme für das Protokoll, unabhängig von Sicht | [`tools/pruefen/`](tools/pruefen/), `pnpm ledger:verify <Datei>` | fertig; je eines in Node und Python |
 | Wortmarke als Datei | [`brand/`](brand/) | fertig; Name markenrechtlich nicht geprüft |
 | Messbericht mit Bedingungen und Einschränkungen | [`docs/EVALUATION.md`](docs/EVALUATION.md) | fertig; nachmessbar |
@@ -130,7 +130,7 @@ ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 | Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen, auch über HTTPS mit selbst ausgestelltem Zertifikat | Verbund über ein echtes Netz, mehr als drei Knoten |
 | Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |
 | 83 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
-| Konsole und Website verletzen keine automatisch prüfbare Regel der WCAG 2.1 A und AA; die Konsole lässt sich ohne Maus bedienen (`docs/BARRIEREFREIHEIT.md`) | Barrierefreiheit nach BITV: kein Test einer Prüfstelle, kein Test mit Bildschirmleser, Karte nur mit der Maus |
+| Konsole und Website verletzen keine automatisch prüfbare Regel der WCAG 2.1 A und AA; die Konsole lässt sich ohne Maus bedienen (`docs/BARRIEREFREIHEIT.md`) | Barrierefreiheit nach BITV: kein Test einer Prüfstelle, kein Test mit Bildschirmleser, Marken der Karte nur mit der Maus |
 
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
 gemessenen Anfragen eingestellt. Diese Einschränkung gehört zu jeder Nennung der Zahlen.

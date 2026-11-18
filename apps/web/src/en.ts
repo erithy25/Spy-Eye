@@ -444,6 +444,10 @@ export const EN: Record<string, string> = {
   'Direktbild trennen': 'Disconnect live stream',
   'Personenbeschreibung zulässig': 'person descriptions permitted',
   'Bild öffnen': 'Open picture',
+  Karte: 'Map',
+  'Pfeiltasten verschieben, Plus und Minus vergrößern und verkleinern.': 'Arrow keys move it, plus and minus zoom in and out.',
+  Vergrößern: 'Zoom in',
+  Verkleinern: 'Zoom out',
   'Neue Meldung': 'New alert',
   Zielquelle: 'Target source',
 };

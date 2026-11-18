@@ -211,7 +211,7 @@ fremdem Einsatzmaterial.
 - **Barrierefreiheit geprüft, nicht bescheinigt.** Konsole und Website verletzen keine automatisch
   prüfbare Regel der WCAG 2.1 A und AA, und die Konsole lässt sich ohne Maus bedienen
   ([`docs/BARRIEREFREIHEIT.md`](docs/BARRIEREFREIHEIT.md)). Einen BITV-Test und einen Test mit
-  Bildschirmleser gab es nicht; die Karte selbst lässt sich nur mit der Maus bedienen.
+  Bildschirmleser gab es nicht; die Marken der Karte lassen sich nur mit der Maus wählen.
 - **Größe.** Die Suche vergleicht mit jedem Vektor und ist für einige Millionen Vektoren je Knoten
   ausgelegt, nicht für mehr.
 

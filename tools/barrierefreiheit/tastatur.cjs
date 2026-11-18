@@ -74,7 +74,22 @@ async function tabTo(page, test, limit = 60) {
   await page.waitForTimeout(400);
   note('Eingabetaste wählt die Lage', (await page.locator('li.incident[aria-current="true"]').count()) === 1);
 
-  hit = await tabTo(page, (el) => el.matches('.tab') && /^WACHEN/i.test(el.innerText.trim()));
+  // Die Karte: mit Tab erreichbar, mit Plus vergrößern, mit den Pfeiltasten verschieben.
+  hit = await tabTo(page, (el) => el.matches('.geo'), 200);
+  note('Karte erreichbar', !!hit && hit.outline);
+  const zoomText = async () => (await page.locator('.lage-map .geo-readout').allInnerTexts()).join(' ').match(/Z\s*([\d.,]+)/)?.[1] ?? '';
+  const zoomBefore = await zoomText();
+  await page.keyboard.press('+');
+  await page.waitForTimeout(400);
+  const zoomAfter = await zoomText();
+  note('Plus vergrößert die Karte', zoomBefore !== '' && zoomAfter !== zoomBefore, `Z ${zoomBefore} → ${zoomAfter}`);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('-');
+  await page.waitForTimeout(300);
+  note('Pfeiltasten und Minus werden angenommen', (await zoomText()) === zoomBefore);
+
+  hit = await tabTo(page, (el) => el.matches('.tab') && /^WACHEN/i.test(el.innerText.trim()), 200);
   note('Reiter WACHEN erreichbar', !!hit && hit.outline);
   await page.keyboard.press('Enter');
   await page.waitForTimeout(1200);

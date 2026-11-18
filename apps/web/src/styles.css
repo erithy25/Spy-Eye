@@ -74,7 +74,8 @@ img {
 }
 
 tr.clickable:focus-visible,
-li.incident:focus-visible {
+li.incident:focus-visible,
+.geo:focus-visible {
   outline-offset: -1px;
 }
 
@@ -1858,7 +1859,7 @@ button.frame:hover::before {
 .lage {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 392px;
+  grid-template-columns: minmax(0, 1fr) 424px;
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
@@ -1870,14 +1871,17 @@ button.frame:hover::before {
 
 .lage-side {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
   min-height: 0;
+  min-width: 0;
 }
 
 .lage-pane {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
 .lage-pane + .lage-pane {
@@ -1891,6 +1895,17 @@ button.frame:hover::before {
   gap: 12px;
   padding: 10px 16px 8px;
   border-bottom: 1px solid var(--line);
+}
+
+.pane-head > h2 {
+  flex: none;
+}
+
+.pane-head > .low {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pane-body {

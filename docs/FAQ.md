@@ -237,8 +237,8 @@ Stufen A und AA findet in 15 Zuständen der Konsole und auf der Website keine ve
 mehr; vorher waren es sechs, vor allem zu schwacher Kontrast der Nebentexte. Anmelden, Übung
 starten, Lage wählen, suchen und ein Bild öffnen gelingen ohne Maus, und neue Meldungen werden
 für Bildschirmleser angesagt. Nicht geprüft: die Bedienung mit einem Bildschirmleser, die
-Vergrößerung auf 200 Prozent, die Unterlagen. Die Karte lässt sich nur mit der Maus bedienen;
-ihr Inhalt steht daneben als Liste. Ein BITV-Test durch eine Prüfstelle steht aus. Einzelheiten
+Vergrößerung auf 200 Prozent, die Unterlagen. Die Marken der Karte lassen sich nur mit der
+Maus wählen; ihr Inhalt steht daneben als Liste. Ein BITV-Test durch eine Prüfstelle steht aus. Einzelheiten
 in `docs/BARRIEREFREIHEIT.md`.
 
 ### Woraus besteht die Software, und unter welchen Lizenzen?

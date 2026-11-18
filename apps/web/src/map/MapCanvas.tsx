@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatCoordinate, fromUtm, metresPerPixel, project, toMgrs, toUtm, unproject, worldSize } from './geo';
+import { useLang } from '../i18n';
 import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile } from './tiles';
 
 export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident';
@@ -732,10 +733,29 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
     return best;
   };
 
+  const { t } = useLang();
+
   return (
     <div
       ref={container}
       className="geo"
+      role="group"
+      tabIndex={0}
+      aria-roledescription={t('Karte')}
+      aria-label={`${t('Karte')}${label ? `: ${label}` : ''}. ${t('Pfeiltasten verschieben, Plus und Minus vergrößern und verkleinern.')}`}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
+        const step = 96 / worldSize(state.current.zoom);
+        if (e.key === 'ArrowLeft') state.current.x -= step;
+        else if (e.key === 'ArrowRight') state.current.x += step;
+        else if (e.key === 'ArrowUp') state.current.y = Math.max(0, state.current.y - step);
+        else if (e.key === 'ArrowDown') state.current.y = Math.min(1, state.current.y + step);
+        else if (e.key === '+' || e.key === '=') zoomAt(1, size.current.width / 2, size.current.height / 2);
+        else if (e.key === '-') zoomAt(-1, size.current.width / 2, size.current.height / 2);
+        else return;
+        e.preventDefault();
+        schedule('both');
+      }}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
@@ -787,10 +807,10 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
       <canvas ref={overlayCanvas} className="geo-layer" />
       {label && <div className="geo-readout geo-tl">{label}</div>}
       <div className="geo-zoom">
-        <button type="button" aria-label="Vergrößern" onClick={() => zoomAt(1, size.current.width / 2, size.current.height / 2)}>
+        <button type="button" aria-label={t('Vergrößern')} onClick={() => zoomAt(1, size.current.width / 2, size.current.height / 2)}>
           +
         </button>
-        <button type="button" aria-label="Verkleinern" onClick={() => zoomAt(-1, size.current.width / 2, size.current.height / 2)}>
+        <button type="button" aria-label={t('Verkleinern')} onClick={() => zoomAt(-1, size.current.width / 2, size.current.height / 2)}>
           −
         </button>
       </div>
