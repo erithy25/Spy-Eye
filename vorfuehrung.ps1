@@ -75,7 +75,19 @@ foreach ($port in 8787, 8788, 8789) {
   }
 }
 if ($belegt.Count -gt 0) {
-  Abbruch "Die Anschlüsse $($belegt -join ', ') sind belegt: Eine Vorführung läuft schon. Dort weiterarbeiten (http://127.0.0.1:8787) oder sie mit Strg+C in ihrem Fenster beenden und diesen Befehl wiederholen."
+  # Antwortet dort ein Knoten von Sicht, läuft schon eine Vorführung. Sonst hält etwas anderes
+  # den Anschluss, am ehesten eine frühere Fassung dieses Programms.
+  $istSicht = $false
+  try {
+    $antwort = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$($belegt[0])/api/public/info" -TimeoutSec 3
+    if ($antwort.Content -match '"version"') { $istSicht = $true }
+  } catch {
+    $istSicht = $false
+  }
+  if ($istSicht) {
+    Abbruch "Die Anschlüsse $($belegt -join ', ') sind belegt: Eine Vorführung läuft schon. Dort weiterarbeiten (http://127.0.0.1:8787) oder sie mit Strg+C in ihrem Fenster beenden und diesen Befehl wiederholen."
+  }
+  Abbruch "Die Anschlüsse $($belegt -join ', ') sind belegt, aber dort antwortet kein Knoten von Sicht. Vermutlich läuft noch eine frühere Fassung (Spy-Eye) oder ein anderes Programm. Dessen Fenster mit Strg+C beenden und diesen Befehl wiederholen."
 }
 
 # ---------------------------------------------------------------- einrichten

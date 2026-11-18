@@ -211,6 +211,7 @@ main().catch((err: unknown) => {
     // The usual cause on a demonstration day: the nodes are already running in another window.
     process.stderr.write(
       `\nAnschluss ${failure.port ?? ''} ist bereits belegt. Läuft Sicht schon in einem anderen Fenster? Dann dort weiterarbeiten oder es mit Strg+C beenden.\n` +
+        'Läuft dort noch eine frühere Fassung (Spy-Eye), deren Fenster mit Strg+C beenden und neu starten.\n' +
         'Hält ein anderes Programm den Anschluss, lässt er sich mit PORT (ein Knoten) oder in der Knotendatei (mehrere Knoten) ändern.\n',
     );
   } else if (failure.code === 'EACCES' && failure.port !== undefined) {

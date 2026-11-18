@@ -71,6 +71,27 @@ jobs:
           if (-not $ok) { Get-Content start.err -Tail 25; Write-Host 'The console did not answer.'; exit 1 }
           Write-Host 'The console answered.'
           exit 0
+      # A port held by something that is not a node of Sicht, as an earlier version left running
+      # would hold it: the command has to stop and name the cause.
+      - name: vorfuehrung.cmd names a port held by another program
+        run: |
+          $job = Start-Job -ScriptBlock {
+            $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 8787)
+            $listener.Start()
+            Start-Sleep -Seconds 180
+            $listener.Stop()
+          }
+          Start-Sleep -Seconds 3
+          $out = cmd /c "vorfuehrung.cmd -NurPruefen 2>&1"
+          $code = $LASTEXITCODE
+          Stop-Job $job
+          Remove-Job $job -Force
+          Start-Sleep -Seconds 3
+          $out | Select-Object -Last 8 | ForEach-Object { Write-Host $_ }
+          if ($code -eq 0) { Write-Host 'The command went on although the port was taken.'; exit 1 }
+          if (-not (($out -join ' ') -match 'kein Knoten von Sicht')) { Write-Host 'The command did not say that another program holds the port.'; exit 1 }
+          Write-Host 'The command stopped and named the cause.'
+          exit 0
       # Preparing twice must not change the starting point; the nodes are checked from it once more.
       - run: pnpm demo:prepare
       - run: pnpm demo:check
