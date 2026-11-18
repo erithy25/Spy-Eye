@@ -14,7 +14,7 @@ Kernen ohne Grafikkarte nachgestellt; was für einen Echtbetrieb fehlt, steht am
 | Platte, einmalig | rund 950 MB Modelle | Ordner `.models` |
 | Platte, laufend | die Aufzeichnung selbst und dazu rund 3,3 MB je Minute Material | Übung: 577 s Material, 196 MB Aufzeichnungen, 25 MB Bilder, 7 MB Verzeichnis, bei einem Bild je Sekunde |
 | Software | Node ab 20.11, pnpm, ffmpeg | `README.md` |
-| Netz | nach dem Laden der Modelle keines | `SICHT_OFFLINE=1` unterbindet auch das Nachladen |
+| Netz | nach dem Laden der Modelle keines | nachgestellt auf einem vorbereiteten Rechner ohne jede Verbindung: Einrichten, Bauen, Prüfung, Start, Übung und Suche liefen durch (`docs/EVALUATION.md`, Abschnitt 7); `SICHT_OFFLINE=1` unterbindet zusätzlich jedes Nachladen |
 | Betriebssystem | Windows mit PowerShell 5.1 und Linux sind durchgespielt | `.github/workflows/windows.yml`, `docs/EVALUATION.md`; macOS ist nicht geprüft |
 
 Eine Grafikkarte wird nur verwendet, wenn sie beim Start dasselbe rechnet wie der Prozessor

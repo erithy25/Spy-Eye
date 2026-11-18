@@ -239,19 +239,22 @@ ihr Ereignis stattfindet; die Suche bekam getrennte Schwellen (Abschnitt 3). Fü
 heißt das: Schwellen gehören auf dem Rechner und am Material der Behörde eingestellt. Dafür gibt
 es die Vorschau „Am Bestand prüfen“ beim Aufstellen einer Wache und den Messbericht je Übung.
 
-## 7. Dauerlauf, Sicherung, Umstieg
+## 7. Dauerlauf, Sicherung, Umstieg, Betrieb ohne Netz
 
-Drei Prüfungen vom 18. November 2026, die zeigen, ob eine Vorführung über ihre Dauer hält und
-ob ein Bestand eine Kopie und einen Fassungswechsel übersteht.
+Vier Prüfungen vom 18. November 2026, die zeigen, ob eine Vorführung über ihre Dauer hält, ob
+ein Bestand eine Kopie und einen Fassungswechsel übersteht und ob ein vorbereiteter Rechner
+ohne Netz auskommt.
 
 | Prüfung | Ablauf | Ergebnis |
 | --- | --- | --- |
 | Dauerlauf | drei Knoten 19 Minuten durchgehend; die Übung sechsmal in achtfacher Geschwindigkeit und einmal in Echtzeit; ein Browser bleibt auf der Lage; alle vier bis zehn Sekunden eine Suchanfrage | jeder Lauf 15 Meldungen und 11 Lagen; Arbeitsspeicher des Prozesses 3,0 GB beim Start, danach zwischen 1 725 und 1 734 MB; 38 offene Dateien durchgehend; Suche im Median 5 bis 8 ms, Abruf der Lage 2 ms; kein Fehler im Browser; Protokoll am Ende unversehrt (325 Einträge, Prüfung in 15 ms) |
 | Sicherung | Datenordner eines Knotens nach sieben Übungsläufen und eines Knotens mit 44 eigenen Aufzeichnungen kopiert und die Kopie an anderem Ort gestartet | unabhängiges Prüfprogramm und Knoten melden für beide Kopien „Kette unversehrt“; Anmeldung, Mandat und Suche arbeiten auf der Kopie |
 | Umstieg | Knoten dieser Fassung auf einem Datenordner der ersten Fassung gestartet: 44 Aufzeichnungen, mit zwei früheren Kodierern ausgewertet | der Knoten wertet alle 44 im Hintergrund neu aus (drei bis vier Minuten); „Beach“, „Man with a cup“ und „Black car“ liefern Treffer, „Green bus“ meldet „Keine Szene über der Schwelle“ |
+| Ohne Netz | auf einem vorbereiteten Rechner unter Linux in einer Umgebung ohne jede Verbindung (weder die Paketquelle noch die Quelle der Modelle war erreichbar) die Schritte des Startbefehls: `pnpm install`, `pnpm build`, `pnpm demo:reset`, `pnpm demo:check`, `pnpm demo`; danach im Browser die Übung in achtfacher Geschwindigkeit und eine Suche | alle Schritte bestanden, die Prüfung endet mit „Ergebnis: bereit“; die drei Knoten antworten, die Suche „überflutete Wiese“ liefert vier Treffer, kein Fehler im Browser und keiner in der Ausgabe der Knoten |
 
 Neunzehn Minuten sind kein Dauerbetrieb über Tage. Die Einzelheiten für den Betrieb stehen in
-`docs/BETRIEB.md`.
+`docs/BETRIEB.md`. Unter Windows hatte der Prüflauf immer Netz; dort ist der Betrieb ohne Netz
+nicht eigens nachgestellt.
 
 ## 8. Was nicht gemessen ist
 

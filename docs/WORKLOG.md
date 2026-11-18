@@ -236,3 +236,14 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   are no longer readable.
 - The three artifacts are private and at their final versions.
 
+## 11:18 UTC · T+665 min
+
+- Without any network: in a namespace that has loopback and nothing else (neither the package
+  registry nor the model host reachable) the steps of the start command ran on a prepared
+  machine: install, build, reset, preflight ("Ergebnis: bereit"), start of the three nodes, then
+  in the browser the exercise at 8x and a search with four hits. No error in the browser or in
+  the output of the nodes. Recorded in the measurement paper, section 7. Linux only; the Windows
+  run always had a network.
+- Index sheet for the hand-over archive (`deliverables/MAPPE.md`), so that the archive reads
+  without the repository.
+

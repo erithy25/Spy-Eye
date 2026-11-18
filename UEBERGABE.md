@@ -34,7 +34,9 @@ Unterlagen.
 
 Voraussetzungen: Node ab 20.11, pnpm, ffmpeg (`winget install Gyan.FFmpeg`, danach ein neues
 Terminal öffnen), 8 GB Arbeitsspeicher. Beim ersten Mal werden rund 950 MB Modelle und rund
-300 MB Übungsmaterial geladen; danach braucht nichts mehr ein Netz. Die drei Knoten belegen beim
+300 MB Übungsmaterial geladen; danach braucht nichts mehr ein Netz (nachgestellt unter Linux in
+einer Umgebung ohne jede Verbindung: Die Schritte des Startbefehls, die Übung und die Suche
+liefen durch). Die drei Knoten belegen beim
 Start rund 3 GB Arbeitsspeicher und im Betrieb rund 1,7 GB; ein Dauerlauf über 19 Minuten mit
 sieben Übungsläufen blieb dabei stabil (`docs/EVALUATION.md`, Abschnitt 7).
 
@@ -202,7 +204,7 @@ am System zeigt; wer vorführt, überspringt sie und hat sie als Rückfallebene.
 | Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen, auch über HTTPS mit selbst ausgestelltem Zertifikat | Verbund über ein echtes Netz, mehr als drei Knoten |
 | Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |
 | 88 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
-| Dauerlauf über 19 Minuten mit sieben Übungsläufen: Speicher stabil, kein Fehler, Protokoll unversehrt; Kopie eines Datenordners startet und sucht | Dauerbetrieb über Tage und unter Last |
+| Dauerlauf über 19 Minuten mit sieben Übungsläufen: Speicher stabil, kein Fehler, Protokoll unversehrt; Kopie eines Datenordners startet und sucht; ein vorbereiteter Rechner kommt ohne Netz aus | Dauerbetrieb über Tage und unter Last |
 | Konsole und Website verletzen keine automatisch prüfbare Regel der WCAG 2.1 A und AA; die Konsole lässt sich ohne Maus bedienen (`docs/BARRIEREFREIHEIT.md`) | Barrierefreiheit nach BITV: kein Test einer Prüfstelle, kein Test mit Bildschirmleser, Marken der Karte nur mit der Maus |
 
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
