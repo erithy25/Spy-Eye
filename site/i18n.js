@@ -53,7 +53,7 @@ window.SICHT_EN = {
   'film.fallback': 'Open the film as a file (MP4, 2.8 MB)',
   'film.caption': 'Brand film · symbolic images, AI-generated',
   'film.note':
-    '40 seconds, with sound, no voice-over; the text cards are in German. What the film says about the flood night in the Ahr valley is set out with sources in the next section.',
+    '40 seconds, with sound, no voice-over. What the film says about the flood night in the Ahr valley is set out with sources in the next section.',
 
   // ---------------------------------------------------------------- 01 problem
   'problem.h2': 'The footage existed.<br>The picture did not.',

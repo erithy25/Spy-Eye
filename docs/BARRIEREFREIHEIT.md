@@ -50,8 +50,9 @@ Von der automatischen Prüfung nicht gemeldet, beim Gang mit der Tastatur gefund
 Unverändert und schon vorher vorhanden: sichtbarer Fokus an jedem bedienbaren Element; die
 Stufe einer Meldung wird durch die Zahl der hellen Balken gezeigt, nicht durch Farbe; die
 Oberfläche kommt ohne Farbe als Bedeutungsträger aus; Dialoge halten den Fokus und schließen
-mit Escape; Website und Konsole achten auf die Einstellung »weniger Bewegung«; der Film der
-Website hat keinen Sprecher, sein Inhalt steht als Text im Abschnitt danach.
+mit Escape; Website und Konsole achten auf die Einstellung »weniger Bewegung«; die beiden Filme
+der Website haben keinen Sprecher: Was der Markenfilm sagt, steht als Text im Abschnitt danach,
+und der Produktfilm trägt seine Aussagen als Einblendungen im Bild.
 
 ## Was nicht geprüft ist
 
