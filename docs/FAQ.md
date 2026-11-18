@@ -230,6 +230,15 @@ Platte, die Verwaltung von Zertifikaten und Grenzen gegen Überlastung.
 Die vollständige Liste mit Stand steht in `docs/SICHERHEIT.md`. Ein Penetrationstest durch eine
 dafür zugelassene Stelle steht aus und gehört vor jeden Betrieb mit echten Daten.
 
+### Woraus besteht die Software, und unter welchen Lizenzen?
+
+Aus 143 Paketen, drei Modellen, einer Schrift und Kartendaten; jedes Teil steht mit Fassung,
+Prüfsumme und Lizenz in der Stückliste (`docs/STUECKLISTE.md`, maschinenlesbar im Format
+CycloneDX). Kein Paket steht unter GPL oder AGPL; die Bildbibliothek libvips steht unter der
+LGPL und wird als eigene Datei geladen. Der Abgleich mit bekannten Schwachstellen vom
+18. November 2026 nennt keinen Befund in den ausgelieferten Paketen. Das ist eine
+Momentaufnahme und keine rechtliche Prüfung der Lizenzen.
+
 ### Wurde das je im Ernstfall erprobt?
 
 Nein. Es gibt keinen Behördenkunden, keine Erprobung mit einer Behörde und keinen Einsatz.

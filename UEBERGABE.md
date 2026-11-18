@@ -17,9 +17,10 @@ Unterlagen.
 | Einseiter, deutsch und englisch | [`deliverables/Sicht-Einseiter.pdf`](deliverables/Sicht-Einseiter.pdf), [`deliverables/Sicht-One-Pager-EN.pdf`](deliverables/Sicht-One-Pager-EN.pdf) | fertig |
 | Finanzmodell, drei Szenarien | [`deliverables/Sicht-Finanzmodell.xlsx`](deliverables/Sicht-Finanzmodell.xlsx) | fertig; alle Werte sind Annahmen |
 | Filme: Markenfilm (40 s und 67 s), englische Fassung (40 s), Produktfilm (143 s, Bildschirmaufnahme), Hochkant-Teaser (20 s, deutsch und englisch) | `deliverables/film/` (liegt nicht im Repository, wurde im Gespräch übergeben); Schnittwerkzeug und Drehbuch in [`media/brand/`](media/brand/) | fertig; Ton nur gemessen, nicht angehört |
-| Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
+| Unterlagenmappe als PDF: Strategie, Recht und Vorkehrungen, Fragen und Antworten, Messbericht, Marke, Architektur, Sicherheitsdurchsicht, Stückliste | [`deliverables/unterlagen/`](deliverables/unterlagen/); Quellen in [`docs/`](docs/) | fertig |
 | Architektur und Sicherheitsdurchsicht | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md), [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) | fertig; 21 Befunde einer unabhängigen Durchsicht, die schweren behoben |
 | Vertriebsvorlagen: Anschreiben, Angebot zur Erprobung | [`docs/vertrieb/`](docs/vertrieb/) | Vorlagen; eckige Klammern und Preis vor dem Versand füllen |
+| Stückliste: jedes Paket, Modell und Datum mit Fassung, Prüfsumme und Lizenz | [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md), maschinenlesbar [`docs/stueckliste/sicht.cdx.json`](docs/stueckliste/sicht.cdx.json), `pnpm sbom` | fertig; kein bekannter Befund in den ausgelieferten Paketen (Abgleich vom 18. November 2026) |
 | Prüfprogramme für das Protokoll, unabhängig von Sicht | [`tools/pruefen/`](tools/pruefen/), `pnpm ledger:verify <Datei>` | fertig; je eines in Node und Python |
 | Wortmarke als Datei | [`brand/`](brand/) | fertig; Name markenrechtlich nicht geprüft |
 | Messbericht mit Bedingungen und Einschränkungen | [`docs/EVALUATION.md`](docs/EVALUATION.md) | fertig; nachmessbar |
@@ -127,7 +128,7 @@ ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 | Der ganze Vorführweg unter Windows PowerShell (`.github/workflows/windows.yml`) | Direktbilder echter Kameras: nur gegen eine simulierte Kamera geprüft |
 | Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen, auch über HTTPS mit selbst ausgestelltem Zertifikat | Verbund über ein echtes Netz, mehr als drei Knoten |
 | Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |
-| 81 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
+| 83 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
 
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
 gemessenen Anfragen eingestellt. Diese Einschränkung gehört zu jeder Nennung der Zahlen.

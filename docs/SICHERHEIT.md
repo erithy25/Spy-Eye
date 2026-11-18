@@ -90,5 +90,5 @@ vor der Durchsicht aufgefallen waren (A bis C).
 | Verbund | Schlüssel ohne Wechsel, keine Zertifikate; zwischen getrennt eingerichteten Knoten erprobt, aber nur auf einem Rechner. | Vor einem Verbund über ein Netz. |
 | Last | Keine Mengenbegrenzung je Person, keine Prüfung des freien Platzes. | Eine angemeldete Person kann den Knoten lahmlegen. |
 | Direktbild | Keine Einschränkung der Ziele, zu denen ffmpeg sich verbindet. | Betrifft nur die Leitung, bleibt aber ein Weg ins interne Netz. |
-| Abhängigkeiten | Keine Prüfung der eingesetzten Pakete auf bekannte Schwachstellen. | Gehört vor jeden Betrieb. |
+| Abhängigkeiten | Abgeglichen am 18. November 2026: kein bekannter Befund in den 143 ausgelieferten Paketen, einer in einem Bauwerkzeug, das nicht im Knoten läuft. Die Stückliste mit Fassung, Prüfsumme und Lizenz jedes Pakets liegt bei (`docs/STUECKLISTE.md`, `docs/stueckliste/sicht.cdx.json`); ein Test hält sie an der Sperrdatei fest. Offen: kein regelmäßiger Abgleich, keine Bewertung neuer Befunde. | Ein Abgleich ist eine Momentaufnahme; im Betrieb gehört er in einen festen Lauf. |
 | Prüfung | Kein Penetrationstest, keine Prüfung der Konsole über die Suche nach ungeprüftem Markup hinaus. | Dieses Blatt ist eine Durchsicht des Quelltexts, kein Angriff auf ein laufendes System. |

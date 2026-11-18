@@ -223,6 +223,8 @@ fremdem Einsatzmaterial.
 | Schrift JetBrains Mono | JetBrains | SIL OFL 1.1 |
 | Übungsaufnahmen | Mixkit | Mixkit Stock Video Free License; werden geladen, nicht mitgeliefert |
 
+Alle 143 Pakete mit Fassung, Prüfsumme und Lizenz stehen in [`docs/STUECKLISTE.md`](docs/STUECKLISTE.md).
+
 Mit `MODEL_ID` lassen sich andere Kodierer wählen (`Xenova/clip-vit-base-patch32`, MIT;
 `Xenova/siglip-base-patch16-224`, Apache-2.0). `Xenova/mobileclip_s2` ist ebenfalls wählbar, aber
 nur für Forschungszwecke lizenziert und deshalb nicht voreingestellt. Ein Wechsel wertet den
@@ -242,6 +244,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `pnpm models:download` | Modelle vorab laden |
 | `pnpm selftest` | Rechner, Modell und ffmpeg prüfen, Geschwindigkeit messen |
 | `pnpm ledger:verify <Datei>` | ein exportiertes Protokoll unabhängig vom Knoten nachrechnen (`tools/pruefen/`, auch in Python) |
+| `pnpm sbom` | Stückliste neu erzeugen: jedes Paket mit Fassung, Prüfsumme und Lizenz, dazu der Abgleich mit bekannten Schwachstellen (`docs/STUECKLISTE.md`, CycloneDX in `docs/stueckliste/`) |
 | `pnpm test` / `pnpm typecheck` | Prüfungen |
 
 ## Einstellungen

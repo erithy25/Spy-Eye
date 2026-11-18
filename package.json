@@ -21,6 +21,7 @@
     "demo:prepare": "node apps/server/dist/index.js --nodes nodes.demo.json --prepare",
     "demo:check": "node apps/server/dist/scripts/checkDemo.js",
     "demo:reset": "node apps/server/dist/scripts/resetDemo.js",
-    "ledger:verify": "node tools/pruefen/ledger-verify.mjs"
+    "ledger:verify": "node tools/pruefen/ledger-verify.mjs",
+    "sbom": "node tools/stueckliste/build.mjs"
   }
 }

@@ -1,0 +1,5085 @@
+{
+ "bomFormat": "CycloneDX",
+ "specVersion": "1.5",
+ "serialNumber": "urn:uuid:0f349fc9-8388-526c-a165-b2f56b4a0efa",
+ "version": 1,
+ "metadata": {
+  "timestamp": "2026-11-18T08:19:01Z",
+  "tools": [
+   {
+    "vendor": "Sicht",
+    "name": "tools/stueckliste/build.mjs",
+    "version": "0.5.0"
+   }
+  ],
+  "component": {
+   "type": "application",
+   "bom-ref": "sicht@0.5.0",
+   "name": "sicht",
+   "version": "0.5.0",
+   "description": "Knoten und Konsole"
+  }
+ },
+ "components": [
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40emnapi/runtime@1.11.3",
+   "name": "@emnapi/runtime",
+   "version": "1.11.3",
+   "scope": "required",
+   "purl": "pkg:npm/%40emnapi/runtime@1.11.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5f3e13a72922ed7caba5b50ad6347502174075a5f2861638959de778ba1d9a1a6e59fcb63c040de41e3ab00894e2588e5c62e41f2a67fea53e8ef7d64826182c"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/accept-negotiator@2.1.2",
+   "name": "@fastify/accept-negotiator",
+   "version": "2.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/accept-negotiator@2.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2d5ecc66a4f05d312ddc6c414fa054f000b3b569effbe85290c12c3f7bac207888d2d03817910ee131e10c23abe49fe08a733d0c29cb0a667abb724b03dc7c23"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/ajv-compiler@4.0.8",
+   "name": "@fastify/ajv-compiler",
+   "version": "4.0.8",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/ajv-compiler@4.0.8",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "c58700158a323ff3442cc823e88ecb98c0268aa79731a974c2c3364a0b9e37d3b232be9b54a1e898ef4ec6e4ad0bb6c800497867725705b0cfc295d1a79f4d3d"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/busboy@3.2.6",
+   "name": "@fastify/busboy",
+   "version": "3.2.6",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/busboy@3.2.6",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "50f5ddc8031bcff80dbe34bc1ce369251d930da1ccdf040a32d4913c59288762d379146d9e6f8809560a8016244f094f395cc33729ce777e041fca9aa707de95"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/deepmerge@3.2.4",
+   "name": "@fastify/deepmerge",
+   "version": "3.2.4",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/deepmerge@3.2.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "91cf0642ae605fd451870d2ba2fdc332b37cc12f32465c4945d0f3b18c3074157fc1acee56073fd4aec228bf74b65beedd19476a7e98d11d1a1379c9b41cf679"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/error@4.2.1",
+   "name": "@fastify/error",
+   "version": "4.2.1",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/error@4.2.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "31806e9ae2303fee4c2295d2c8a9bafe8d448a07288a3d7cea5594b2c5f72c7e54f0a5aa53492d661cc2e0212b217f4425e41e44623ecc965059a9019456d472"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/fast-json-stringify-compiler@5.2.0",
+   "name": "@fastify/fast-json-stringify-compiler",
+   "version": "5.2.0",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/fast-json-stringify-compiler@5.2.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2cf4d5034c38a0f21358702fa31f4d808d6b0d2ae35278f15fa40de4c09bf4563e1eabc3b149a02ee71b8fd7906a4a82f256303bb5209033c71102c9365f6fb6"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/forwarded@3.1.2",
+   "name": "@fastify/forwarded",
+   "version": "3.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/forwarded@3.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f3d5a2446fa15b755049f0b08381dbf1be373dec845f5e4ae7e9447ec678114b61fc5c8e8d2fe5bfc1ec56eb3050d5d68929f1306368b84fdfabfd30dd5ba61d"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/merge-json-schemas@0.2.2",
+   "name": "@fastify/merge-json-schemas",
+   "version": "0.2.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/merge-json-schemas@0.2.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "77f831f6c45b5025601911b399ae3ac0b730898f27a13a8ed8d9a383fbdb4c04711d11396dd8793c82fcb3decbb755fb49c456456e76795631c08a0fc0875550"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/multipart@10.1.9",
+   "name": "@fastify/multipart",
+   "version": "10.1.9",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/multipart@10.1.9",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "cc041f028f66f5eeae10d68fb18b8d81c369b719fd0e042701265780d2bd810c0954fe88755dab0463cb73a63c4920185a85a80858726b939a8cef100f97ca39"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/proxy-addr@5.1.3",
+   "name": "@fastify/proxy-addr",
+   "version": "5.1.3",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/proxy-addr@5.1.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "a6d808801f9a6c1353b3996c28dbc568a3026ae3da4ce13a6488f126bdc5c422de86661040a606838b2bc30348091f5042516b630e7d8d6028fa2f466a55426b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/send@4.2.1",
+   "name": "@fastify/send",
+   "version": "4.2.1",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/send@4.2.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "cce07c2fdcf8e383e719b77535dee03573f3ffb6e70d1f19e0a353352c0b550b84ddc4c6b14f6a523d4de128d728ad13ab871ab99613c01fadaaf96aa2cb8ab3"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40fastify/static@10.1.11",
+   "name": "@fastify/static",
+   "version": "10.1.11",
+   "scope": "required",
+   "purl": "pkg:npm/%40fastify/static@10.1.11",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5a31290ea9333b38888a9821878922dd935f2c2988d6445695829aaf7fbd162b98d8bce87a880a883ab1207ebcafabd8512c6f533c84895d4138fd327d6fa095"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40huggingface/jinja@0.5.13",
+   "name": "@huggingface/jinja",
+   "version": "0.5.13",
+   "scope": "required",
+   "purl": "pkg:npm/%40huggingface/jinja@0.5.13",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "8ccd7b32a162972d62c93ff52c3debe70f3f0998b26a9541d3eeef3b0e3c3df56dcf22ac5d2b661c4e23553c83003d394eabf7ba7d71ad2f482d4535ba040061"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40huggingface/tokenizers@0.2.0",
+   "name": "@huggingface/tokenizers",
+   "version": "0.2.0",
+   "scope": "required",
+   "purl": "pkg:npm/%40huggingface/tokenizers@0.2.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2e274c1ded45a5c4981f8bdc4a35e8a1d6b7e290b433c9b58260cebfb4908ba22ffa26f5cd7ec9dec1c1082f7fdc53c2927da4d5be79167795a8c471aebf7da6"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40huggingface/transformers@4.3.2",
+   "name": "@huggingface/transformers",
+   "version": "4.3.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40huggingface/transformers@4.3.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "577f9da9fde25a545827d23d1ab78cdf31907749405e79e83de75d9a439061600413897ff858baa7bb71fea55426529080b5c68a6d96efaad33b3cfe782d22ee"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/colour@1.1.0",
+   "name": "@img/colour",
+   "version": "1.1.0",
+   "scope": "required",
+   "purl": "pkg:npm/%40img/colour@1.1.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4ddefaabb8f9ee8fed2d57604bbe3a7180117d2cb193c8847d1c5ec0bf61e0e3336216d6e1301ca69974993e1ecaa5dd761e8bfe3c2833be66a3b8b16bfa4279"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-darwin-arm64@0.35.5",
+   "name": "@img/sharp-darwin-arm64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-darwin-arm64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "411525150d16c6f756caaa86fd6b48de2ba97c3e6b0739821d749d3ec63dd6c02d56d4e8ed0e1c6facce71c67782a12a92bd1fd40b357a12ea984a43b117fe96"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "darwin"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-darwin-x64@0.35.5",
+   "name": "@img/sharp-darwin-x64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-darwin-x64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f81476e794610e5a72814a4e73f25db759d3e834375c6fc4468e706dc74e7f9437db474ab4f08a3cb4752c9b3d5465d168c6bc975b946b4b6408d397880c5953"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "darwin"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-freebsd-wasm32@0.35.5",
+   "name": "@img/sharp-freebsd-wasm32",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-freebsd-wasm32@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "63fcfdd67119e2e2015f95f79df4e8be353d94734a1586cbda5a4708b54d99740ad3754866f5c106dd0ac5b3c6a7649d19217eda6414e1efa141a58eb7cea203"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "freebsd"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.3.4",
+   "name": "@img/sharp-libvips-darwin-arm64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e51f3d9c162245d5254962713e13be195b5a5f35d2c4a9d1bbfc6a327dca4c0dcbf4407d3b2fcff8d9f67f6be584fb94772fd9bac6f60daadbc93a4609f103bb"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "darwin"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-darwin-x64@1.3.4",
+   "name": "@img/sharp-libvips-darwin-x64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-darwin-x64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "891d8e287f34ca2d14f9d529972877ff176916fa6ce98902c2c5de9c8271ab1475bfda3ec6d29319b4bd1fb729b3ed95c6373c0758fdea9ef93664c68c886da5"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "darwin"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linux-arm@1.3.4",
+   "name": "@img/sharp-libvips-linux-arm",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linux-arm@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2e646d4ec387baf336fb094ed836f7eddc7932266107416f4ae9dc8b0e3c62374e919cfd2808916e6f2e8de30e03520daa67a2e4d6a91716042b50f565289d9b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linux-arm64@1.3.4",
+   "name": "@img/sharp-libvips-linux-arm64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linux-arm64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6377605ffea513642141bf86c72d166717e0f4c126fc90636a66694b622494fef1210a0a378873026eca70c546b5a543b779de13d38a042eef01fa2703f2ebd4"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.3.4",
+   "name": "@img/sharp-libvips-linux-ppc64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2dee9ba01f136a2d0d8acfa02312292b1ebc50355522a751f138a7e587f5cf62c92502c326f08346a46efa30b6a82a03f9e2289a89e63b0078b26051c5f56961"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "ppc64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.3.4",
+   "name": "@img/sharp-libvips-linux-riscv64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6879242041cf45d4047a024ddb430b986b71603f51db042bdc2c2975d9eee7e60a32de94cdac7b4bd879829653a3cc32ac6b994a57d0eb739ebcbe664f2382ed"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "riscv64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linux-s390x@1.3.4",
+   "name": "@img/sharp-libvips-linux-s390x",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linux-s390x@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "adafe607a32290448350eed883e322f796c505bf46b0e6d446e8673afdceaa49e319ef6c66b1bcb427bdab4c52206aed2e0be0c3480a9c559c2b86e54a040eb9"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "s390x"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linux-x64@1.3.4",
+   "name": "@img/sharp-libvips-linux-x64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linux-x64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "189fff4925db9f04837acd36ba60779c324b15c433c3c6b5f15f1fca1aabead579d79b4e10c7489a38f18f502869f311cf9e85dcf1e07ed9e3d5010a494d7393"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.3.4",
+   "name": "@img/sharp-libvips-linuxmusl-arm64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "86fba5170b6351c6a0b22b3a041c47c061705a83598e062650b195ad97327cd6e303c84a20b6d1c46835e7fef0e470f25c75d4a2cfe3e9b6805aa9c2c90d8358"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.3.4",
+   "name": "@img/sharp-libvips-linuxmusl-x64",
+   "version": "1.3.4",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.3.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "LGPL-3.0-or-later"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "eb35ca784fe9dfd2350260377091b7e5ec8118da8d75d2e75178e1c019ec1a314f5aa7f954a903044a9a1243c3a1312d931c22dafbfc4dcaf6983c8fe12a3b16"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linux-arm@0.35.5",
+   "name": "@img/sharp-linux-arm",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linux-arm@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2c46972b659d5d52b9ca4730d1bb96c8f32c98b2cbdafa472c3eb2acd496f891842f70593c0e2da4a37a89a31ce00c534c0a1a5ffb14d6b38be7595c233e3c65"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linux-arm64@0.35.5",
+   "name": "@img/sharp-linux-arm64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linux-arm64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2d8571e494ec38cd820739b1ade87e9e5eb8ff71fa5dbd3d8922e49ea1f8ef3d93d83145c437852cfe72e1d2707ba1fbb864251cfc8412d22aca8dc362c47075"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linux-ppc64@0.35.5",
+   "name": "@img/sharp-linux-ppc64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linux-ppc64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "415c4002af1ebd5448f626b6bea830ae65ae727e437eff89756ce3ef9a43f289872cf48fedff29db43bc8f1ce309cb8211010eb583995265f5864899d2475ebc"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "ppc64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linux-riscv64@0.35.5",
+   "name": "@img/sharp-linux-riscv64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linux-riscv64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2ed76b79782e69abca3833c87f327891f7f1ed436dd689b0b4ad2b721e0405b6d24d73e7c5699849ac9774b270d1f27343dee41edd602ffca1e2dbd4fa70b245"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "riscv64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linux-s390x@0.35.5",
+   "name": "@img/sharp-linux-s390x",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linux-s390x@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5196ac4ce162633a2d4ec18e0aee3605f5333fa4eee83a3ff78ee2466d51b0b2af965971c06727e11376ecb89b19671e8b1e18f8f9b0de3b274dc0902205a3a8"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "s390x"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linux-x64@0.35.5",
+   "name": "@img/sharp-linux-x64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linux-x64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4b116d2d378922784003d43cdfa92ec76bd935e381404c7ae7caaf6dba1949caf4c08011ca6dc8706996ecaa550f9b1b560d0e8f2fae74541d6b2608672a0da2"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linuxmusl-arm64@0.35.5",
+   "name": "@img/sharp-linuxmusl-arm64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linuxmusl-arm64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f476cc725988d7394d90546cdf3f7f781b438df0f4b0696b5f5cfa6f5ab09a2158e449432e1e010b42cf05d569ef3d435c588a9487339dff9996cb99ccbc50aa"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-linuxmusl-x64@0.35.5",
+   "name": "@img/sharp-linuxmusl-x64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-linuxmusl-x64@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e0a3a986a074df91eb55da8b65f0a0333cc446b4249333b04619783809113b560295d6da163c925cc68ae77e0ca3457e2e776794993eb1b5322de53450bc83d4"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "linux"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-wasm32@0.35.5",
+   "name": "@img/sharp-wasm32",
+   "version": "0.35.5",
+   "scope": "required",
+   "purl": "pkg:npm/%40img/sharp-wasm32@0.35.5",
+   "licenses": [
+    {
+     "expression": "Apache-2.0 AND LGPL-3.0-or-later AND MIT"
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "3edb206b5b2ee2d431f8b2c5d44092f54ea7cf9926ad72a8e9755bb51e3c29edd9471c6069606eec80ed11ed6aba8f218aea709ba585ab15655da49fec820d19"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-webcontainers-wasm32@0.35.5",
+   "name": "@img/sharp-webcontainers-wasm32",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-webcontainers-wasm32@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "85f845fc59a84324d4900d1b20a14eb70e77e8141278131ee8117a4325a5acfc53ef9e3e4c52da67bb0a2937efbccd322602a06984f09c508867f1ae0f0e5250"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "wasm32"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-win32-arm64@0.35.5",
+   "name": "@img/sharp-win32-arm64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-win32-arm64@0.35.5",
+   "licenses": [
+    {
+     "expression": "Apache-2.0 AND LGPL-3.0-or-later"
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5f8b7b83eed90390ca6e50811171a352aa9e9a3e2f73320d1bfe6f885c002fc878377a987b28f0742bd12c78b811d39423ed99ed4165a7554cfa9fc0b84b66e9"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "win32"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "arm64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-win32-ia32@0.35.5",
+   "name": "@img/sharp-win32-ia32",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-win32-ia32@0.35.5",
+   "licenses": [
+    {
+     "expression": "Apache-2.0 AND LGPL-3.0-or-later"
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e599bcd8ba01738de78703726d9946ed8d4a3bffd986c9f7d3a7d0976f593ae4ad1cb193a370562fcdeaddcce75f4a68c5200cb982f53a7fc11c1c6405e2abe8"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "win32"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "ia32"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40img/sharp-win32-x64@0.35.5",
+   "name": "@img/sharp-win32-x64",
+   "version": "0.35.5",
+   "scope": "optional",
+   "purl": "pkg:npm/%40img/sharp-win32-x64@0.35.5",
+   "licenses": [
+    {
+     "expression": "Apache-2.0 AND LGPL-3.0-or-later"
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "c7be9e1f4bc488795c310bbc63c21e9e7b5a002b5d7694fa5b4c265ed5ab9ca727288ecc1390dd82a8400fa48458e125d6fdb30ef9190e1140f4a9d4470a5faa"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "win32"
+    },
+    {
+     "name": "sicht:cpu",
+     "value": "x64"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40isaacs/nonrecursive-glob-match@1.1.0",
+   "name": "@isaacs/nonrecursive-glob-match",
+   "version": "1.1.0",
+   "scope": "required",
+   "purl": "pkg:npm/%40isaacs/nonrecursive-glob-match@1.1.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "BlueOak-1.0.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "18f9bf0dbbe4e512e68519f15c86bb9d3a4ad31b65e04d308f432c96cb8d889d45211394fb6fbd960502fdd805ec4cb84025a17c4b20c6294c44c09d1cf7c37f"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40lukeed/ms@2.0.2",
+   "name": "@lukeed/ms",
+   "version": "2.0.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40lukeed/ms@2.0.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f48d999faf8d24b7da1a8cfd8cdde5a700e0018bdf19e35875b0088c93aacece13a5cf9553726aab82287d250129a8e20d2f24f5f648835f3fcf5de6a64d5bb0"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40pinojs/redact@0.4.0",
+   "name": "@pinojs/redact",
+   "version": "0.4.0",
+   "scope": "required",
+   "purl": "pkg:npm/%40pinojs/redact@0.4.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "93610d9e606e804febcd07c471d58770263efc533754bcc7f5c604b1b76ca2aaefcc029185465e44d84066f07c3a2b502754c179ddf2a96b5d8f34bac09281c2"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/aspromise@1.1.2",
+   "name": "@protobufjs/aspromise",
+   "version": "1.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/aspromise@1.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "8fe80a13112e2e62b0bf3dce811397b6b276506db1f028766195316a187eb351761d9fb001c79434b92fcbacca08f551914fbe65642b771b147905e6720e2ea1"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/base64@1.1.2",
+   "name": "@protobufjs/base64",
+   "version": "1.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/base64@1.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "01991c000e6f9cdfefe0f0ea2b2311e65c7b859b6d3c380296ff3713ffc530d851d9331c2d485f4540470a64a5d288bdccc8030ea4542644b13b7c26f39f972e"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/codegen@2.0.5",
+   "name": "@protobufjs/codegen",
+   "version": "2.0.5",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/codegen@2.0.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "ce05c52f35b7029df77ba7745a58f8306226e827bc3bcf67fdaa54686341fe3c7e870fabb96129ec4c0652c85d2ca5510b1656d767e9f6be34135990adfff7e2"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/eventemitter@1.1.1",
+   "name": "@protobufjs/eventemitter",
+   "version": "1.1.1",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/eventemitter@1.1.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "bd6d469b03193672fe80c45aa2f961f72657ef891cf934d4dc539b924baba4c691b417cb3f795d8d2f4a416970660ada444d3e76178412803177370943c79766"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/fetch@1.1.1",
+   "name": "@protobufjs/fetch",
+   "version": "1.1.1",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/fetch@1.1.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "1a9a6d2ebb39eda74c4ae1e2dd5363d26005f1dc21dfa2cc69817a5f227a24c5a556c73eb78dad9b51d210398eb3703c7c2f72c9e8ac80b86c4d542890e674cf"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/float@1.0.2",
+   "name": "@protobufjs/float",
+   "version": "1.0.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/float@1.0.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "0dd6fe9155e55ecb7d77e47d3df4c8c61d4474d920a117b9b4e5fab74d5fd656163af26748f0c1946db8d502f37323dda0d4ec6e52d476e8c6484e11ceb4d919"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/path@1.1.2",
+   "name": "@protobufjs/path",
+   "version": "1.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/path@1.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e8939c2794e6d3c74e1c06dd4771abbcffb25147e48c6e5e3ec1d87333052eadd998c9000fdf1c0e0713da2035949f4d57015de2d1ff8924a87b8e185a496d10"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/pool@1.1.0",
+   "name": "@protobufjs/pool",
+   "version": "1.1.0",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/pool@1.1.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "d2410b6864880c12af7204b8ce48f3d4f79d75ab6b8d87263163a502e00fc0079c714acf1dd52aa3f27a2e2ca61c7122253e4dac5d54570c58d787fe7f2e1643"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40protobufjs/utf8@1.1.2",
+   "name": "@protobufjs/utf8",
+   "version": "1.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/%40protobufjs/utf8@1.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6f5510c1c119e320a73020fc0c02f55656ef04913dfc85f8153229ec11b5c58a5fdbd48b6b32d2aea5248f8c3b639cbb70254fe84e6d72aa9c234c5e98f907ba"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/%40types/node@22.20.5",
+   "name": "@types/node",
+   "version": "22.20.5",
+   "scope": "required",
+   "purl": "pkg:npm/%40types/node@22.20.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "536f8336bfb04a3a6c4d2ff0646607abb19cc1fb9298a88abe83ef2b6db3c13951854f75c8e9e2378a914792a1223be27fbcacc3f773fe12a67c31f4462b3868"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/abstract-logging@2.0.1",
+   "name": "abstract-logging",
+   "version": "2.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/abstract-logging@2.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "d818d14d9c533ef85e3af19b06c94549839492bf928cfb4e9eb2cfdf77fe54858bcdecd0a5972a560ee36b72f87415e6cf38304fe6b4dbd8d1c793c28b726e88"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/adm-zip@0.6.1",
+   "name": "adm-zip",
+   "version": "0.6.1",
+   "scope": "required",
+   "purl": "pkg:npm/adm-zip@0.6.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5f0ae36bc9f1f5ee68d8dd66cb80ec28278aa5dae7002cabd70b5b3f1043806ccaccac84f6446d04503c99695d23e455943ec205935663fc10dbec9dc0e47a91"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/ajv@8.20.0",
+   "name": "ajv",
+   "version": "8.20.0",
+   "scope": "required",
+   "purl": "pkg:npm/ajv@8.20.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4e16e58be3a53a3fa230f60505505f2773a60809da4b2367e0cd6fcfd4fa1a46b926df5b6bf1c8479ea3a32eb9b58ea4c7f142179557341f35f58eff194ac118"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/ajv-formats@3.0.1",
+   "name": "ajv-formats",
+   "version": "3.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/ajv-formats@3.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f2252a979d04511fae51c7514371c3a9ae84572a3776870bf20e5627714d7169aeeb621b90652e7bfa44c8b056f1518a2ae7133e0a9e92ce1f214d43038ca8c1"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/atomic-sleep@1.0.0",
+   "name": "atomic-sleep",
+   "version": "1.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/atomic-sleep@1.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "90d3a30ea021ee9c745d6348fb841bce8891fe74e41c058db9ddaebe726ab83d7fc796bb11064c253d00733a8ad109faee863f4d34352db50a6a3669a7723db5"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/avvio@9.3.1",
+   "name": "avvio",
+   "version": "9.3.1",
+   "scope": "required",
+   "purl": "pkg:npm/avvio@9.3.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4324ca5bad7faa56daf9c510066fec4fd5fc96b8b851da26a920f00a7ae78f522f2d50d14625d1933e0280145607efdc99f0bb48ae5641cf13d6f49d1af69471"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/balanced-match@4.0.4",
+   "name": "balanced-match",
+   "version": "4.0.4",
+   "scope": "required",
+   "purl": "pkg:npm/balanced-match@4.0.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "04bae011c453c17da8ea01b118e08dc8cbc64a9df96287ee633c3d87520c4d198aaadb40659554ebb6dd6fd3ebdaf50703cfa3de2dad25f8cee82ebee26c864c"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/brace-expansion@5.0.13",
+   "name": "brace-expansion",
+   "version": "5.0.13",
+   "scope": "required",
+   "purl": "pkg:npm/brace-expansion@5.0.13",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "561ddd9856dce3065ea31eccf48ff42fd19f15df374aee3ec82724fce17d1a2fcffdd0079f4453ed7e0af51ee030d3210dc9370ef851e905ec9d07638e0c0dbd"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/content-disposition@3.0.0",
+   "name": "content-disposition",
+   "version": "3.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/content-disposition@3.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "647ff45ecf6b30815608e9867664bd78705317adaaa9060dcf89d58d08647483bf6b47c23f8508337991cffc22a8bd0bd78620033ff5c62a3839a498e3e38dfc"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/cookie@2.0.2",
+   "name": "cookie",
+   "version": "2.0.2",
+   "scope": "required",
+   "purl": "pkg:npm/cookie@2.0.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "48bd1c56e11d113129ee937416e65bd35b68737be738311f5540a8a311b5489374c888ab87b24c6fd5fd6ef7c215fd2fcf36d3ebc45d6ca0c7613896cbb6bb8b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/define-data-property@1.1.4",
+   "name": "define-data-property",
+   "version": "1.1.4",
+   "scope": "required",
+   "purl": "pkg:npm/define-data-property@1.1.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "ac132f23396903cbfa13e489668a3ef87018aac2eb920ecc49f2229cc3c5866928af0ed7f9d39754942cf904faf731a4cccc9f0e720c3765a2775f8d6cbdd3f8"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/define-properties@1.2.1",
+   "name": "define-properties",
+   "version": "1.2.1",
+   "scope": "required",
+   "purl": "pkg:npm/define-properties@1.2.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f109902aa10048b7799f1d14d41d6890b1256d4baeb6d27f0276264576db6c60d687ab92db4f048c3e17aaafc8f702bbbb4bfa3b4f178535a7b795ed11b47a0e"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/depd@2.0.0",
+   "name": "depd",
+   "version": "2.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/depd@2.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "83b9c7e8fe9dc838a8268800006a6b1a90ad5489898693e4feba02cdd6f77c887ad7fb3f9cfb1f47aa27c8cc2408047f3a50b7c810b49444af52840402cb08af"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/dequal@2.0.3",
+   "name": "dequal",
+   "version": "2.0.3",
+   "scope": "required",
+   "purl": "pkg:npm/dequal@2.0.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "d237bea8f28710ca21bdf453084a370ab3c6e9c033018826ccacb1462612483912e9e1897725499bb59a600e4409a003f702c1d93e0411eca603968555c61708"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/detect-libc@2.1.2",
+   "name": "detect-libc",
+   "version": "2.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/detect-libc@2.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "06d8f604e38ef37a375b21f9f5ef0c817b3111055c6ab9143a9118aee6c1d2eaf09cdd74c90dfae2bb22072535d67665a966199b4e62fe87fb8a8e26ce2841b5"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/es-define-property@1.0.1",
+   "name": "es-define-property",
+   "version": "1.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/es-define-property@1.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "7b79d17e07d4678acd18bdb7da05205f4e90372c9ecf4e0a76316b17e2d34683979ab3a014a0e0e0109db235bc1274faf5ea9d606991a49c223d560dac2696de"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/es-errors@1.3.0",
+   "name": "es-errors",
+   "version": "1.3.0",
+   "scope": "required",
+   "purl": "pkg:npm/es-errors@1.3.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "65fe47d8ac6ddb18d3bdb26f3f66562c4202c40ea3fa1026333225ca9cb8c5c060d6f2959f1f3d5b2d066d2fa47f9730095145cdd0858765d20853542d2e9cb3"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/escape-html@1.0.3",
+   "name": "escape-html",
+   "version": "1.0.3",
+   "scope": "required",
+   "purl": "pkg:npm/escape-html@1.0.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "3624aea59e0e7ae1b0afaf251887b29bf92c219309a1d506392099fc54a74f172b7a46efaab81d53194938ca628da299563009ad6ac6b3fe89cbc38cbb28fda3"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/escape-string-regexp@4.0.0",
+   "name": "escape-string-regexp",
+   "version": "4.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/escape-string-regexp@4.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4eda5c349dd7033c771aaf2c591cc96956a346cd2e57103660091d6f58e6d9890fcf81ba7a05050320379f9bed10865e7cf93959ae145db2ae4b97ca90959d80"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fast-decode-uri-component@1.0.1",
+   "name": "fast-decode-uri-component",
+   "version": "1.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/fast-decode-uri-component@1.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "58a80a5a0e5e531bd1646c16f05bdf6da1fb0174a1d9c2fede3e5f306cd4302c56049ddd5776bb5b3f32d9ffee4347b707a5a6a1d0f7a12e788d343d1d54c822"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fast-deep-equal@3.1.3",
+   "name": "fast-deep-equal",
+   "version": "3.1.3",
+   "scope": "required",
+   "purl": "pkg:npm/fast-deep-equal@3.1.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "7f7a90f68432f63d808417bf1fd542f75c0b98a042094fe00ce9ca340606e61b303bb04b2a3d3d1dce4760dcfd70623efb19690c22200da8ad56cd3701347ce1"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fast-json-stringify@7.3.6",
+   "name": "fast-json-stringify",
+   "version": "7.3.6",
+   "scope": "required",
+   "purl": "pkg:npm/fast-json-stringify@7.3.6",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "8570a98994d91a2111fd7ade7b54dbe0f6350d110f5279564cfe437fd860b680e7529a6e955eca9bc961d7f34406eab3e099cd1925e0867001b9d7d9fe2c08ce"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fast-querystring@1.1.2",
+   "name": "fast-querystring",
+   "version": "1.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/fast-querystring@1.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "83a2ae2969855dcd1f203f16587d238ade20d00181a0984290931bd5199bb1211436f43e642f03e82519f86b45f2733348f5e786278fcb2aaa8a9ccd3449c78e"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fast-uri@3.1.9",
+   "name": "fast-uri",
+   "version": "3.1.9",
+   "scope": "required",
+   "purl": "pkg:npm/fast-uri@3.1.9",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "852ff45addd86b4e37a0a5ecd2c231acca4a4084d784c2c8ad500a2978b8828cc60bdbfb6115959d7219ce334f4ced3633d05dc4b096a8ad7245780dce257225"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fast-uri@4.2.3",
+   "name": "fast-uri",
+   "version": "4.2.3",
+   "scope": "required",
+   "purl": "pkg:npm/fast-uri@4.2.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2353d7c0fe5e02194d95c7698edf42801e7da29d99bd97f1c3e064a861552143a03690954dc4eaa771e14d7edbaf18f9bec8a9fa7498e274ef7dff9e200efa86"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fastify@5.12.8",
+   "name": "fastify",
+   "version": "5.12.8",
+   "scope": "required",
+   "purl": "pkg:npm/fastify@5.12.8",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "9a83fc7b16f6b021cb51b264c29f88e82d2969d872e03f25a7449d9b363b1e149d66eaa6ecefeede8d9aabbbbca24690fffdf7403ce3dc6feef85b12741f10cf"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fastify-plugin@6.0.1",
+   "name": "fastify-plugin",
+   "version": "6.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/fastify-plugin@6.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e305b84714a6bcf5cbae1e66810122bb8dea5376f0e38376b2ce054e44e44086e9ad4844fbfb38dd05f48ffb6d733b5d58aecf1241ea56d85d73919d1060ef8c"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/fastq@1.20.3",
+   "name": "fastq",
+   "version": "1.20.3",
+   "scope": "required",
+   "purl": "pkg:npm/fastq@1.20.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "ISC"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5cabf99e72ecea72c5ef536088a24b21914b90fc8812e3ac7a52c6eee8d99c6ad17d02bc1e9bd8f96a8a84025401d2e89b054712b552e0b7f11653ead3f15303"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/find-my-way@9.10.1",
+   "name": "find-my-way",
+   "version": "9.10.1",
+   "scope": "required",
+   "purl": "pkg:npm/find-my-way@9.10.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5306d9744764e7d6172063d6feb6c39ff032af7989e5f3c7fc725e30f94af04cf5d1a5229f88b2470809bcd4d29117e967687cb8b5f42dbbd99bf614054a729b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/flatbuffers@25.9.23",
+   "name": "flatbuffers",
+   "version": "25.9.23",
+   "scope": "required",
+   "purl": "pkg:npm/flatbuffers@25.9.23",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "308d6ab3b2e8e12cb0d043b3525d318ecda5b287aa164bb8e0aa6781f21db87058bf39bc876fbb2bc60c421d49b55555ad4be12e9370a958b80c445e8142613d"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/glob@14.0.6",
+   "name": "glob",
+   "version": "14.0.6",
+   "scope": "required",
+   "purl": "pkg:npm/glob@14.0.6",
+   "licenses": [
+    {
+     "license": {
+      "id": "BlueOak-1.0.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "3b05e354fdacbd8e44c8b63be557a4f7a0bca8ae3782aaede31b19faa4882dd9da12224f5e477ada671f512371fd3404ad045dbb9b8ce6417aeec7ce36b6a02b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/global-agent@4.1.7",
+   "name": "global-agent",
+   "version": "4.1.7",
+   "scope": "required",
+   "purl": "pkg:npm/global-agent@4.1.7",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "a71699a9db0cc0f0388bb4ee44aa4350e366db11918ef61d46889d090cfb565794295b947e1ff8a794374034c6ae9004e4acf94f1c5c67ebaa1204e4a0a44db6"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/globalthis@1.0.4",
+   "name": "globalthis",
+   "version": "1.0.4",
+   "scope": "required",
+   "purl": "pkg:npm/globalthis@1.0.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "0e92ca6cd5385b2969c49ca442e8df09cc185a257f2619b9d06a28d30ad520b02fe633abf5df87f944773e14820f6ac2084220d2e73e1be9ae053c03e782610d"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/gopd@1.2.0",
+   "name": "gopd",
+   "version": "1.2.0",
+   "scope": "required",
+   "purl": "pkg:npm/gopd@1.2.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "65429187afe4505a0089302d4d83d9277870f70371c7e04804e8a39e51bd3e7ac9b027128ecd70cb20fabc9a5a62d827cc3aca6114aa7f738ee917daf77c6c46"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/guid-typescript@1.0.9",
+   "name": "guid-typescript",
+   "version": "1.0.9",
+   "scope": "required",
+   "purl": "pkg:npm/guid-typescript@1.0.9",
+   "licenses": [
+    {
+     "license": {
+      "id": "ISC"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "63c4f8bd88447f024e4dba2e444bc6fb75c3b23afc137908afbb9ff8967405896816cb6d88753459fbc0355b11ed3c4d5096bf5a90a7c3f227a3fa7e0de06105"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/has-property-descriptors@1.0.2",
+   "name": "has-property-descriptors",
+   "version": "1.0.2",
+   "scope": "required",
+   "purl": "pkg:npm/has-property-descriptors@1.0.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e7924d2ae216fafab829ed418ce4e333661cb5022f093ec61731f099f64f1a8e709eb82489dd1842d9c095e152aae9999b86b3de7d814be7ab6f2e62a49760ae"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/http-errors@2.0.1",
+   "name": "http-errors",
+   "version": "2.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/http-errors@2.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "e056d17405fe6d2766a3801416e4b458d88fcfc36016dfabf138603569a5ae3423b7543b651f7ecd395c7b6f39f71e0a497af022c69e4ea0e82909ad3fca4b99"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/inherits@2.0.4",
+   "name": "inherits",
+   "version": "2.0.4",
+   "scope": "required",
+   "purl": "pkg:npm/inherits@2.0.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "ISC"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "93fbc6697e3f6256b75b3c8c0af4d039761e207bea38ab67a8176ecd31e9ce9419cc0b2428c859d8af849c189233dcc64a820578ca572b16b8758799210a9ec1"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/ipaddr.js@2.5.0",
+   "name": "ipaddr.js",
+   "version": "2.5.0",
+   "scope": "required",
+   "purl": "pkg:npm/ipaddr.js@2.5.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6aafade4d01cf9c4baad94105560b6c7df023ea1ad28a4cc0dde066a876fd304a19c8b5d2a0ff9d5d8e4189d61a87f8ecb48af0dfb426d22c24286fcceca34d7"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/json-schema-ref-resolver@3.0.1",
+   "name": "json-schema-ref-resolver",
+   "version": "3.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/json-schema-ref-resolver@3.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "c3e1f08258d7a55c19dc889da14475a8f67148e43e351416b957ba6b9a5ef176c7b0d644e1403054f52fcd96a09fbc8129b26db7a5099d11586cd4d13d9238e5"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/json-schema-traverse@1.0.0",
+   "name": "json-schema-traverse",
+   "version": "1.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/json-schema-traverse@1.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "34cf3f3fd9f75e35e12199f594b86415a0024ce5114178d6855e0103f4673aff31be0aadaa9017f483b89914314b1d51968e2dab37aa6f4b0e96bb9a3b2dddba"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/light-my-request@6.8.1",
+   "name": "light-my-request",
+   "version": "6.8.1",
+   "scope": "required",
+   "purl": "pkg:npm/light-my-request@6.8.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "db46e250ad070083c6f4164e2b7ff8b3cb950240288b5faa5b9e657221d9091d29b935a2a4183230f1148ea5c358b8ec65ea9f3ba0c6b2ec16e5ec9fb131adca"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/long@5.3.2",
+   "name": "long",
+   "version": "5.3.2",
+   "scope": "required",
+   "purl": "pkg:npm/long@5.3.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "98d0206751a6c8d843ec0baa9d31b7fd5436ea8efad3e65804f2a33efba03bcfa72db61f5fa4d5a493ec781be8a5b758faaa59fe52949e611cd4b799612dd000"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/lru-cache@11.5.3",
+   "name": "lru-cache",
+   "version": "11.5.3",
+   "scope": "required",
+   "purl": "pkg:npm/lru-cache@11.5.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "BlueOak-1.0.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "53837c160ce65b173c935547f0aafa950835f14ec58ef6f2eb05c75515ff659ec8c166d1320ad16cfd16adbe6ae4d5629ebca9e1241a9a91ca76fb5e708b7152"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/matcher@4.0.0",
+   "name": "matcher",
+   "version": "4.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/matcher@4.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4bac79c267039ac0d1454fdcd9d91c703c103d7a05733739f87a50da538df299ef1e59ef1c01e3e5694b56fc3a9fabcdc87b95ba062b168858c5b4bea6f16929"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/mime@3.0.0",
+   "name": "mime",
+   "version": "3.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/mime@3.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "8d2094eff541d65a0858165ed7868460753ffb550c107a1a3bbab108e5493b0f46807ef65405a9a7135c8d4fb1f5ada4dc648805734ac57405a91bef67bbebdc"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/minimatch@11.0.9",
+   "name": "minimatch",
+   "version": "11.0.9",
+   "scope": "required",
+   "purl": "pkg:npm/minimatch@11.0.9",
+   "licenses": [
+    {
+     "license": {
+      "id": "BlueOak-1.0.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "2821647f28ea7ab3654acb6396120635720a64603fe8ee15e1196167e0ecafadb548f3f0d26ce5ca913d0fd64ea0f89579f1c80fe8fbfd7b8c325a9f0ff17ad1"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/minipass@7.1.3",
+   "name": "minipass",
+   "version": "7.1.3",
+   "scope": "required",
+   "purl": "pkg:npm/minipass@7.1.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "BlueOak-1.0.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "b44047a839c8a0cff5ad7304d738246bd83a43695ca029311cbb9cece0c9e41c5b3f977873667970682d5c092ee7ddb4d02c7b762b874ce61f4810fc9fa9a6f0"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/object-keys@1.1.1",
+   "name": "object-keys",
+   "version": "1.1.1",
+   "scope": "required",
+   "purl": "pkg:npm/object-keys@1.1.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "36e00449439432b9485ce7c72b30fa6e93eeded62ddf1be335d44843e15e4f494d6f82bc591ef409a0f186e360b92d971be1a39323303b3b0de5992d2267e12c"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/on-exit-leak-free@2.1.2",
+   "name": "on-exit-leak-free",
+   "version": "2.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/on-exit-leak-free@2.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "d1e24963a8572c67f5b9d1f07cd7ed06a1fe83bdc4538079d389d978aa73d6c61129a7c0821c31109ba70763bbac36642f83c67ec3159d35d9d848e26dba9cb0"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/onnxruntime-common@1.30.0",
+   "name": "onnxruntime-common",
+   "version": "1.30.0",
+   "scope": "required",
+   "purl": "pkg:npm/onnxruntime-common@1.30.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "edf7555a30080f5755847fc6f2a2b700f011ba7578564045a024003fbaa9e1691a6f49aba2bbe673eb2a893fa62973b30ea7633798fefd9f676f883334f59cc8"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/onnxruntime-common@1.31.0-dev.20260911-2a43ec07e",
+   "name": "onnxruntime-common",
+   "version": "1.31.0-dev.20260911-2a43ec07e",
+   "scope": "required",
+   "purl": "pkg:npm/onnxruntime-common@1.31.0-dev.20260911-2a43ec07e",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "801b85e94df6604aca200b7ec83ec37860698d1c61275b89c1a928eb2823a2449950b0d4e8f77e2960a8997f13ba69358585474718cf8fb99d3270f4af200f3b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/onnxruntime-node@1.30.0",
+   "name": "onnxruntime-node",
+   "version": "1.30.0",
+   "scope": "optional",
+   "purl": "pkg:npm/onnxruntime-node@1.30.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "b7086cd42d82fc1164cf5c9ce4e634288536194aba0d444eee10f86f1e50d90cb79c0309c115d6f31537355733136f5503d96894b3987a9a03f1f8d318e7c8ab"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    },
+    {
+     "name": "sicht:os",
+     "value": "win32, darwin, linux"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0",
+   "name": "onnxruntime-web",
+   "version": "1.31.0-dev.20260914-8d85527a0",
+   "scope": "required",
+   "purl": "pkg:npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "232eebb5a768060c52fcb2ef0ebdd05b7f030753cd5d19ebd0624c70bd1302dedcf6a8e055097cdd4946095c9e0272b6227a665bc51cdcf2fc5c8baab43785ea"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/path-scurry@3.0.0",
+   "name": "path-scurry",
+   "version": "3.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/path-scurry@3.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "BlueOak-1.0.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "d694db42a1f5c08c0c8bf7a5790e657854d30a4cc5b0f7205cd8f0380f181865bf5b8fe41d3dddb2c13b67a347fb3baa34b3b3381d2e683eb5ca5edc01c56182"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/pino@10.4.0",
+   "name": "pino",
+   "version": "10.4.0",
+   "scope": "required",
+   "purl": "pkg:npm/pino@10.4.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6e4d59313c06fd5ca6c7eccfa1adbc321373b9c16f5c95a9ddcb2b4aec6e1cf48c7947adb5a0a843926f834ee6b42e0918da5c7d3c33e35a150a736004af7ebc"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/pino-abstract-transport@3.0.0",
+   "name": "pino-abstract-transport",
+   "version": "3.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/pino-abstract-transport@3.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "c257d473353e9fb1f2fc76b98fd6bf819372ed67b9f9c5e9f182fe5fe3c6f12d0a5f1c3b9ff257037738e98d334339c827cdd44498b0cbb2e1e7a58ba2436ec6"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/pino-std-serializers@7.1.0",
+   "name": "pino-std-serializers",
+   "version": "7.1.0",
+   "scope": "required",
+   "purl": "pkg:npm/pino-std-serializers@7.1.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "06774f1faeff271184c518225f5757d30d45bd9724e566b869a97dd7df12ad18598c7dc6c4a4142880676094dd8f61c3377510012d3a1e57dc49b423d8e1e66b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/platform@1.3.6",
+   "name": "platform",
+   "version": "1.3.6",
+   "scope": "required",
+   "purl": "pkg:npm/platform@1.3.6",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "7e759596351c853ae8e9188216f09705b36125cd8d8a337ba084316f0b322f46ee5893c6f39bfcd5e8651c8f5f5eb26c30d813a1f12858841e0a52a983114bae"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/process-warning@5.1.1",
+   "name": "process-warning",
+   "version": "5.1.1",
+   "scope": "required",
+   "purl": "pkg:npm/process-warning@5.1.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "a0290d563e0e2a728472871505c0df888ba0375fdc13aae07d3de70adcdea993c0f3eac8c4c690d315f322418ff068f6a9468fd5447bba1275543f25502a730a"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/protobufjs@7.6.6",
+   "name": "protobufjs",
+   "version": "7.6.6",
+   "scope": "required",
+   "purl": "pkg:npm/protobufjs@7.6.6",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "7580d67634a5e5135bed280fc4641c454f86b6f3fbb367e992b634af8df63dc388699d3fac17311199d037aee226116e422570ef9e090e83ebb8f08d746b1b8e"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/quick-format-unescaped@4.0.4",
+   "name": "quick-format-unescaped",
+   "version": "4.0.4",
+   "scope": "required",
+   "purl": "pkg:npm/quick-format-unescaped@4.0.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "b580b5435860c91b87825a15fd85ecdb0d79ba73d587ca9fbbfa824df85361a99ac3b7f286e98a6b6c86a5d4a8f3bbd8df6ac87258fee1f59841750cb3d107be"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/react@19.3.1",
+   "name": "react",
+   "version": "19.3.1",
+   "scope": "required",
+   "purl": "pkg:npm/react@19.3.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "40d85676dee7ae05565901b9f10b86b004778efdc76dee266f8bf3ef0d9cb271dabdc89926075ad423cd6a5745e9e571bfdd2e7778d45e92a51cbebd80edfccb"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Konsole"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/react-dom@19.3.1",
+   "name": "react-dom",
+   "version": "19.3.1",
+   "scope": "required",
+   "purl": "pkg:npm/react-dom@19.3.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6346c0473e77961102d4d302012b34fe3f9f681ff3aaddd1f21a6f8357bcfbad59549e142f451d0b87016d77d931c22e86b7e07882d32def9978109abd03ed29"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Konsole"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/real-require@1.0.0",
+   "name": "real-require",
+   "version": "1.0.0",
+   "scope": "required",
+   "purl": "pkg:npm/real-require@1.0.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "3f89db41841f78f271452998faffca20dc55b9c9b8345de9decee926f78c4eda26e76151e181a5b5440b07c89d0d7c030d65be798ad60c56eecd49e3a161c5ee"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/require-from-string@2.0.2",
+   "name": "require-from-string",
+   "version": "2.0.2",
+   "scope": "required",
+   "purl": "pkg:npm/require-from-string@2.0.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "5dfd2759ee91b1ece214cbbe029f5b8a251b9a996ae92f7fa7eef0ed85cffc904786b5030d48706bebc0372b9bbaa7d9593bde53ffc36151ac0c6ed128bfef13"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/ret@0.5.1",
+   "name": "ret",
+   "version": "0.5.1",
+   "scope": "required",
+   "purl": "pkg:npm/ret@0.5.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "67f9f2bc00707119d10f698c3fb2b3e86d5d15966a5f598d12b3a7c45e3638240a134edbf64f612bd490c472f72c511951dcd068b33874877513f13a566e1684"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/reusify@1.1.0",
+   "name": "reusify",
+   "version": "1.1.0",
+   "scope": "required",
+   "purl": "pkg:npm/reusify@1.1.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "83a4147dfd38a19a47b34786e69f37ac52e11de574d2e83f61ff6764ce9f2de52b3e0b814e44d039da40596b29321e794d97d54033da37735025f6d5440c5d23"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/rfdc@1.4.1",
+   "name": "rfdc",
+   "version": "1.4.1",
+   "scope": "required",
+   "purl": "pkg:npm/rfdc@1.4.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "ab56f737942445459497b8b2ca569a8f790ea484f43768bd32a2044173fbdc656c37d730ddf771f17eb77049968491a2d8f3c2176dc88e9ee4b66777f6b6b020"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/safe-regex2@5.1.2",
+   "name": "safe-regex2",
+   "version": "5.1.2",
+   "scope": "required",
+   "purl": "pkg:npm/safe-regex2@5.1.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "b40b421853cf3f4d95ae80d5ce9e1d6868ba6c2ee3586fb8d43e3b18a7f5f05787fee6ef2901d3f559a1024bed8cd3a6270aad029cd6794a44864c846142ef9b"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/safe-stable-stringify@2.5.0",
+   "name": "safe-stable-stringify",
+   "version": "2.5.0",
+   "scope": "required",
+   "purl": "pkg:npm/safe-stable-stringify@2.5.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6f7ae9a532a6f53f8fb1508110e511e3a19623b7dd3acd3454a675fbd7351160da0ccbe341cead530b85c88a6b806813716a151d22ab53c1f7d591c0d9ed111c"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/scheduler@0.28.0",
+   "name": "scheduler",
+   "version": "0.28.0",
+   "scope": "required",
+   "purl": "pkg:npm/scheduler@0.28.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "8eea2b7c2988908c3cb53fa9e415d29ba3c98d017fc9c11898acb3511088b7f45a64884bf8fba56d0f58bb6cf51dd3890dda834e5c40d7ec4a0661d726c73303"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Konsole"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/secure-json-parse@4.1.1",
+   "name": "secure-json-parse",
+   "version": "4.1.1",
+   "scope": "required",
+   "purl": "pkg:npm/secure-json-parse@4.1.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "BSD-3-Clause"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "96777cd4c40464a8e15bf19dd9342a75de173fa41835d0d6fc43fe23b9d3ac51cff72d8b99a18f20793dc6c9f370e884af5737f5cfdef38c45806be240a05347"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/semver@7.8.6",
+   "name": "semver",
+   "version": "7.8.6",
+   "scope": "required",
+   "purl": "pkg:npm/semver@7.8.6",
+   "licenses": [
+    {
+     "license": {
+      "id": "ISC"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "f65a52494e0c972de6aedaeec0bb3578b2bafa0cdbcea78117044d8c88c4fbd2ee0e959d61cb6b4254377a3d489608bb8249e9b134673e82cff03a421ea1c827"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/serialize-error@8.1.0",
+   "name": "serialize-error",
+   "version": "8.1.0",
+   "scope": "required",
+   "purl": "pkg:npm/serialize-error@8.1.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "dcd9ee59f33abc1628cb981916f1e262c55b69fbc8f6f66fffe8e52228059f8a0fe338cd3cadcb85c634c520a079bd5ae4bf233bbd4c8adf4b94da22d947c30d"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/set-cookie-parser@3.2.3",
+   "name": "set-cookie-parser",
+   "version": "3.2.3",
+   "scope": "required",
+   "purl": "pkg:npm/set-cookie-parser@3.2.3",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6c33bb35d0242e9acdb7704d9772c0874a159ce4b9f96b29cf13b189ba28eef448c93aa3da9bc598d598105ca7486420a49fbbc86ffd9dcfda486db4503054a6"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/setprototypeof@1.2.0",
+   "name": "setprototypeof",
+   "version": "1.2.0",
+   "scope": "required",
+   "purl": "pkg:npm/setprototypeof@1.2.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "ISC"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "1392c35fb5aba7ce4a8a5e5b859bf8ea3f2339e6e82aae4932660cde05467461fcc45a4f59750cb0dae53830ab928c4c11e362fd7648c2e46f6385cdc18309a7"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/sharp@0.35.5",
+   "name": "sharp",
+   "version": "0.35.5",
+   "scope": "required",
+   "purl": "pkg:npm/sharp@0.35.5",
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6309f83a7cc6ba4a7b08332ba74f11439d182a6bb01b8edbad980854f4ef05a6807d095197282b46a4abc5d0a22fd33e2e5ccb06227af0847542abf31f28c2ee"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/sonic-boom@4.2.1",
+   "name": "sonic-boom",
+   "version": "4.2.1",
+   "scope": "required",
+   "purl": "pkg:npm/sonic-boom@4.2.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "c3a031b6e6d76b6c135c052c64c316111aec21101dacad1273e154cad5af60084124bcae238965acc202d43b65352748f7d108f3a299ba6d8c32adc4019945f5"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/split2@4.2.0",
+   "name": "split2",
+   "version": "4.2.0",
+   "scope": "required",
+   "purl": "pkg:npm/split2@4.2.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "ISC"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "51c8dc24e5a49eb36417a3cb5fcdea70733a28781528d915eb663c6b9b980d5bfdc9d19057000730aa877498ded554d6a658c6d1662908386b09d00e607e135a"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/statuses@2.0.2",
+   "name": "statuses",
+   "version": "2.0.2",
+   "scope": "required",
+   "purl": "pkg:npm/statuses@2.0.2",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "0ef132e795770c1eee927468fb888e193e5f3f5b2547cc10a2155d9278a064f32932cb5a289416870898040089137525da94e70138a18416274616501c606247"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/thread-stream@4.2.1",
+   "name": "thread-stream",
+   "version": "4.2.1",
+   "scope": "required",
+   "purl": "pkg:npm/thread-stream@4.2.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "4ad83a79d2570bfebfc6a1b0497c05a24ad4842849d7c6a6123a4a1fcf56ad0434a1514317ea5451c4e98b05a1154ac4f3d55fd7a1413a5c216b0fa57ac73131"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/toad-cache@3.7.4",
+   "name": "toad-cache",
+   "version": "3.7.4",
+   "scope": "required",
+   "purl": "pkg:npm/toad-cache@3.7.4",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "9b54dd47faef4fb920189661b2936d5ddb1d624d1f75d1692491651b9b3e5243c5a3a9642e867760b39aa2f3d88ead51ef934fe497de4e548768eb04d3da5e0a"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/toidentifier@1.0.1",
+   "name": "toidentifier",
+   "version": "1.0.1",
+   "scope": "required",
+   "purl": "pkg:npm/toidentifier@1.0.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "a39b123ca12483f0c840d987e37574fee7ab2eba7355e764521f2d18dbda797a5fa6ec2329e9e54a8c7fd8efc14e5654b447be246eece58844cfad3c3e500744"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/tslib@2.9.1",
+   "name": "tslib",
+   "version": "2.9.1",
+   "scope": "required",
+   "purl": "pkg:npm/tslib@2.9.1",
+   "licenses": [
+    {
+     "license": {
+      "id": "0BSD"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "6b8531f552ae20c1ec392ec435b12aea12b66466084f6ed1b65d04e1e0fd2aac3184a89078c644ffdc5bdc8758c166923b220140b1318508170d3628882c6758"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/type-fest@0.20.2",
+   "name": "type-fest",
+   "version": "0.20.2",
+   "scope": "required",
+   "purl": "pkg:npm/type-fest@0.20.2",
+   "licenses": [
+    {
+     "expression": "(MIT OR CC0-1.0)"
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "35ef9e138af4fe25a7a40c43f39db3dc0f8dd01b7944dfff36327045dd95147126af2c317f9bec66587847a962c65e81fb0cfff1dfa669348090dd452242372d"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "library",
+   "bom-ref": "pkg:npm/undici-types@6.21.0",
+   "name": "undici-types",
+   "version": "6.21.0",
+   "scope": "required",
+   "purl": "pkg:npm/undici-types@6.21.0",
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "hashes": [
+    {
+     "alg": "SHA-512",
+     "content": "8b00d9aa0d10006ae0f516afe47e27d0ceb87379a4479f5c27ac10a7eec2e2723482c984c5a79d6982cd3b8e1e4f802d041c236d38863cc96dd8c7744fd1fd25"
+    }
+   ],
+   "properties": [
+    {
+     "name": "sicht:teil",
+     "value": "Knoten"
+    }
+   ]
+  },
+  {
+   "type": "machine-learning-model",
+   "bom-ref": "model:onnx-community/siglip2-base-patch32-256-ONNX",
+   "name": "SigLIP 2 base patch32-256 (ONNX)",
+   "supplier": {
+    "name": "Google; ONNX-Fassung der onnx-community"
+   },
+   "licenses": [
+    {
+     "license": {
+      "id": "Apache-2.0"
+     }
+    }
+   ],
+   "description": "Bildkodierer und Textkodierer der Suche und der Wachen",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "wird beim ersten Start geladen"
+    },
+    {
+     "name": "sicht:sha256:vision_model.onnx",
+     "value": "0ddb7507cfcb54c2cd503029949add9dc6586de67164bb69c2c09588cdcc9719"
+    },
+    {
+     "name": "sicht:sha256:text_model_fp16.onnx",
+     "value": "3f8149272095410332433ca84f2c99611ed4679429eff43fbf3983ea15664ef3"
+    }
+   ]
+  },
+  {
+   "type": "machine-learning-model",
+   "bom-ref": "model:opencv/face_detection_yunet",
+   "name": "YuNet face detection 2023mar",
+   "supplier": {
+    "name": "OpenCV Zoo"
+   },
+   "licenses": [
+    {
+     "license": {
+      "id": "MIT"
+     }
+    }
+   ],
+   "description": "findet Gesichter, damit sie verpixelt werden; erkennt niemanden",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "wird beim ersten Start geladen"
+    },
+    {
+     "name": "sicht:sha256:face_detection_yunet_2023mar.onnx",
+     "value": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+    }
+   ]
+  },
+  {
+   "type": "machine-learning-model",
+   "bom-ref": "model:sicht/hazard-head",
+   "name": "Gefahrenmodell (Zweitmeinung)",
+   "supplier": {
+    "name": "Sicht; trainiert auf AIDERv2"
+   },
+   "licenses": [
+    {
+     "license": {
+      "name": "eigene Gewichte; Trainingsdaten CC-BY-4.0"
+     }
+    }
+   ],
+   "description": "zweite Einschätzung zu Brand, Überflutung, Trümmern, Verkehrsunfall",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "liegt im Repository"
+    },
+    {
+     "name": "sicht:sha256:hazard-head.siglip2-base-patch32-256-onnx.json",
+     "value": "44dfe4ae22f5b964730a348404fe1954ebdeacf79e83de474ce0dad29d3f8b63"
+    }
+   ]
+  },
+  {
+   "type": "file",
+   "bom-ref": "font:jetbrains-mono",
+   "name": "JetBrains Mono (Regular, Medium, Bold)",
+   "supplier": {
+    "name": "JetBrains"
+   },
+   "licenses": [
+    {
+     "license": {
+      "id": "OFL-1.1"
+     }
+    }
+   ],
+   "description": "Schrift der Konsole, der Website und der Unterlagen",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "liegt im Repository"
+    },
+    {
+     "name": "sicht:sha256:JetBrainsMono-Regular.woff2",
+     "value": "f1a7a03672cdd494ce0d5543fac6e4360fe22403c6de297fdc2e55a815f7baff"
+    },
+    {
+     "name": "sicht:sha256:JetBrainsMono-Medium.woff2",
+     "value": "fe1c9099e3ea4123a6216d8a4a31970a2cfc6e9d80056da165012f406c83e219"
+    },
+    {
+     "name": "sicht:sha256:JetBrainsMono-Bold.woff2",
+     "value": "08863c7964612257a90bd821e3127dc5ccb0b5046f881673a1ade5809eb21d0f"
+    }
+   ]
+  },
+  {
+   "type": "data",
+   "bom-ref": "data:openstreetmap-koblenz",
+   "name": "Kartenkacheln Mittelrhein (Zoom 5 bis 14)",
+   "supplier": {
+    "name": "OpenStreetMap-Mitwirkende über OpenFreeMap; Schema OpenMapTiles"
+   },
+   "licenses": [
+    {
+     "license": {
+      "name": "ODbL-1.0 (Daten); CC-BY-4.0 (Schema)"
+     }
+    }
+   ],
+   "description": "Karte ohne Netz",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "liegt im Repository"
+    },
+    {
+     "name": "sicht:sha256:manifest.json",
+     "value": "a2485b8e4772c7469bf9d3fbd59d05afbd978e2fa825596b6c89e419ac9da8f2"
+    }
+   ]
+  },
+  {
+   "type": "data",
+   "bom-ref": "data:mapzen-terrain",
+   "name": "Höhenlinien, abgeleitet aus Mapzen Terrain Tiles",
+   "supplier": {
+    "name": "Mapzen und die dort genannten Quellen"
+   },
+   "licenses": [
+    {
+     "license": {
+      "name": "siehe Quellenliste der Terrain Tiles"
+     }
+    }
+   ],
+   "description": "Geländeform in der Karte",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "liegt im Repository, in den Kartenkacheln"
+    }
+   ]
+  },
+  {
+   "type": "data",
+   "bom-ref": "data:mixkit-exercise",
+   "name": "Übungsaufnahmen (45 Stück)",
+   "supplier": {
+    "name": "Mixkit"
+   },
+   "licenses": [
+    {
+     "license": {
+      "name": "Mixkit Stock Video Free License"
+     }
+    }
+   ],
+   "description": "Material der Übung RHEIN-MOSEL und der beiden Nachbarknoten",
+   "properties": [
+    {
+     "name": "sicht:lieferung",
+     "value": "werden mit pnpm exercise:fetch geladen, nicht mitgeliefert"
+    }
+   ]
+  }
+ ],
+ "dependencies": [
+  {
+   "ref": "sicht@0.5.0",
+   "dependsOn": [
+    "pkg:npm/%40fastify/multipart@10.1.9",
+    "pkg:npm/%40fastify/static@10.1.11",
+    "pkg:npm/%40huggingface/transformers@4.3.2",
+    "pkg:npm/fastify@5.12.8",
+    "pkg:npm/onnxruntime-node@1.30.0",
+    "pkg:npm/react@19.3.1",
+    "pkg:npm/react-dom@19.3.1",
+    "pkg:npm/sharp@0.35.5",
+    "model:onnx-community/siglip2-base-patch32-256-ONNX",
+    "model:opencv/face_detection_yunet",
+    "model:sicht/hazard-head",
+    "font:jetbrains-mono",
+    "data:openstreetmap-koblenz",
+    "data:mapzen-terrain",
+    "data:mixkit-exercise"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40emnapi/runtime@1.11.3",
+   "dependsOn": [
+    "pkg:npm/tslib@2.9.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/accept-negotiator@2.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40fastify/ajv-compiler@4.0.8",
+   "dependsOn": [
+    "pkg:npm/ajv-formats@3.0.1",
+    "pkg:npm/ajv@8.20.0",
+    "pkg:npm/fast-uri@4.2.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/busboy@3.2.6",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40fastify/deepmerge@3.2.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40fastify/error@4.2.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40fastify/fast-json-stringify-compiler@5.2.0",
+   "dependsOn": [
+    "pkg:npm/fast-json-stringify@7.3.6"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/forwarded@3.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40fastify/merge-json-schemas@0.2.2",
+   "dependsOn": [
+    "pkg:npm/dequal@2.0.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/multipart@10.1.9",
+   "dependsOn": [
+    "pkg:npm/%40fastify/busboy@3.2.6",
+    "pkg:npm/%40fastify/deepmerge@3.2.4",
+    "pkg:npm/%40fastify/error@4.2.1",
+    "pkg:npm/fastify-plugin@6.0.1",
+    "pkg:npm/secure-json-parse@4.1.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/proxy-addr@5.1.3",
+   "dependsOn": [
+    "pkg:npm/%40fastify/forwarded@3.1.2",
+    "pkg:npm/ipaddr.js@2.5.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/send@4.2.1",
+   "dependsOn": [
+    "pkg:npm/%40lukeed/ms@2.0.2",
+    "pkg:npm/escape-html@1.0.3",
+    "pkg:npm/fast-decode-uri-component@1.0.1",
+    "pkg:npm/http-errors@2.0.1",
+    "pkg:npm/mime@3.0.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40fastify/static@10.1.11",
+   "dependsOn": [
+    "pkg:npm/%40fastify/accept-negotiator@2.1.2",
+    "pkg:npm/%40fastify/error@4.2.1",
+    "pkg:npm/%40fastify/send@4.2.1",
+    "pkg:npm/content-disposition@3.0.0",
+    "pkg:npm/fastify-plugin@6.0.1",
+    "pkg:npm/fastq@1.20.3",
+    "pkg:npm/glob@14.0.6"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40huggingface/jinja@0.5.13",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40huggingface/tokenizers@0.2.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40huggingface/transformers@4.3.2",
+   "dependsOn": [
+    "pkg:npm/%40huggingface/jinja@0.5.13",
+    "pkg:npm/%40huggingface/tokenizers@0.2.0",
+    "pkg:npm/onnxruntime-node@1.30.0",
+    "pkg:npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0",
+    "pkg:npm/sharp@0.35.5"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/colour@1.1.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-darwin-arm64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-darwin-x64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-darwin-x64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-freebsd-wasm32@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-wasm32@0.35.5"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-darwin-x64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linux-arm@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linux-arm64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linux-s390x@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linux-x64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.3.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linux-arm@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linux-arm@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linux-arm64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linux-arm64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linux-ppc64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linux-riscv64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linux-s390x@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linux-s390x@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linux-x64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linux-x64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linuxmusl-arm64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-linuxmusl-x64@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.3.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-wasm32@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40emnapi/runtime@1.11.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-webcontainers-wasm32@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/sharp-wasm32@0.35.5"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-win32-arm64@0.35.5",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-win32-ia32@0.35.5",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40img/sharp-win32-x64@0.35.5",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40isaacs/nonrecursive-glob-match@1.1.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40lukeed/ms@2.0.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40pinojs/redact@0.4.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/aspromise@1.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/base64@1.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/codegen@2.0.5",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/eventemitter@1.1.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/fetch@1.1.1",
+   "dependsOn": [
+    "pkg:npm/%40protobufjs/aspromise@1.1.2"
+   ]
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/float@1.0.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/path@1.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/pool@1.1.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40protobufjs/utf8@1.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/%40types/node@22.20.5",
+   "dependsOn": [
+    "pkg:npm/undici-types@6.21.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/abstract-logging@2.0.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/adm-zip@0.6.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/ajv@8.20.0",
+   "dependsOn": [
+    "pkg:npm/fast-deep-equal@3.1.3",
+    "pkg:npm/fast-uri@3.1.9",
+    "pkg:npm/json-schema-traverse@1.0.0",
+    "pkg:npm/require-from-string@2.0.2"
+   ]
+  },
+  {
+   "ref": "pkg:npm/ajv-formats@3.0.1",
+   "dependsOn": [
+    "pkg:npm/ajv@8.20.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/atomic-sleep@1.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/avvio@9.3.1",
+   "dependsOn": [
+    "pkg:npm/%40fastify/error@4.2.1",
+    "pkg:npm/fastq@1.20.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/balanced-match@4.0.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/brace-expansion@5.0.13",
+   "dependsOn": [
+    "pkg:npm/balanced-match@4.0.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/content-disposition@3.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/cookie@2.0.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/define-data-property@1.1.4",
+   "dependsOn": [
+    "pkg:npm/es-define-property@1.0.1",
+    "pkg:npm/es-errors@1.3.0",
+    "pkg:npm/gopd@1.2.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/define-properties@1.2.1",
+   "dependsOn": [
+    "pkg:npm/define-data-property@1.1.4",
+    "pkg:npm/has-property-descriptors@1.0.2",
+    "pkg:npm/object-keys@1.1.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/depd@2.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/dequal@2.0.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/detect-libc@2.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/es-define-property@1.0.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/es-errors@1.3.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/escape-html@1.0.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/escape-string-regexp@4.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/fast-decode-uri-component@1.0.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/fast-deep-equal@3.1.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/fast-json-stringify@7.3.6",
+   "dependsOn": [
+    "pkg:npm/%40fastify/merge-json-schemas@0.2.2",
+    "pkg:npm/ajv-formats@3.0.1",
+    "pkg:npm/ajv@8.20.0",
+    "pkg:npm/fast-uri@4.2.3",
+    "pkg:npm/json-schema-ref-resolver@3.0.1",
+    "pkg:npm/rfdc@1.4.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/fast-querystring@1.1.2",
+   "dependsOn": [
+    "pkg:npm/fast-decode-uri-component@1.0.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/fast-uri@3.1.9",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/fast-uri@4.2.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/fastify@5.12.8",
+   "dependsOn": [
+    "pkg:npm/%40fastify/ajv-compiler@4.0.8",
+    "pkg:npm/%40fastify/error@4.2.1",
+    "pkg:npm/%40fastify/fast-json-stringify-compiler@5.2.0",
+    "pkg:npm/%40fastify/proxy-addr@5.1.3",
+    "pkg:npm/abstract-logging@2.0.1",
+    "pkg:npm/avvio@9.3.1",
+    "pkg:npm/fast-json-stringify@7.3.6",
+    "pkg:npm/find-my-way@9.10.1",
+    "pkg:npm/light-my-request@6.8.1",
+    "pkg:npm/pino@10.4.0",
+    "pkg:npm/process-warning@5.1.1",
+    "pkg:npm/rfdc@1.4.1",
+    "pkg:npm/secure-json-parse@4.1.1",
+    "pkg:npm/semver@7.8.6",
+    "pkg:npm/toad-cache@3.7.4"
+   ]
+  },
+  {
+   "ref": "pkg:npm/fastify-plugin@6.0.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/fastq@1.20.3",
+   "dependsOn": [
+    "pkg:npm/reusify@1.1.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/find-my-way@9.10.1",
+   "dependsOn": [
+    "pkg:npm/fast-deep-equal@3.1.3",
+    "pkg:npm/fast-querystring@1.1.2",
+    "pkg:npm/safe-regex2@5.1.2"
+   ]
+  },
+  {
+   "ref": "pkg:npm/flatbuffers@25.9.23",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/glob@14.0.6",
+   "dependsOn": [
+    "pkg:npm/minimatch@11.0.9",
+    "pkg:npm/minipass@7.1.3",
+    "pkg:npm/path-scurry@3.0.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/global-agent@4.1.7",
+   "dependsOn": [
+    "pkg:npm/globalthis@1.0.4",
+    "pkg:npm/matcher@4.0.0",
+    "pkg:npm/semver@7.8.6",
+    "pkg:npm/serialize-error@8.1.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/globalthis@1.0.4",
+   "dependsOn": [
+    "pkg:npm/define-properties@1.2.1",
+    "pkg:npm/gopd@1.2.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/gopd@1.2.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/guid-typescript@1.0.9",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/has-property-descriptors@1.0.2",
+   "dependsOn": [
+    "pkg:npm/es-define-property@1.0.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/http-errors@2.0.1",
+   "dependsOn": [
+    "pkg:npm/depd@2.0.0",
+    "pkg:npm/inherits@2.0.4",
+    "pkg:npm/setprototypeof@1.2.0",
+    "pkg:npm/statuses@2.0.2",
+    "pkg:npm/toidentifier@1.0.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/inherits@2.0.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/ipaddr.js@2.5.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/json-schema-ref-resolver@3.0.1",
+   "dependsOn": [
+    "pkg:npm/dequal@2.0.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/json-schema-traverse@1.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/light-my-request@6.8.1",
+   "dependsOn": [
+    "pkg:npm/%40fastify/deepmerge@3.2.4",
+    "pkg:npm/cookie@2.0.2",
+    "pkg:npm/process-warning@5.1.1",
+    "pkg:npm/set-cookie-parser@3.2.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/long@5.3.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/lru-cache@11.5.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/matcher@4.0.0",
+   "dependsOn": [
+    "pkg:npm/escape-string-regexp@4.0.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/mime@3.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/minimatch@11.0.9",
+   "dependsOn": [
+    "pkg:npm/%40isaacs/nonrecursive-glob-match@1.1.0",
+    "pkg:npm/brace-expansion@5.0.13"
+   ]
+  },
+  {
+   "ref": "pkg:npm/minipass@7.1.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/object-keys@1.1.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/on-exit-leak-free@2.1.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/onnxruntime-common@1.30.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/onnxruntime-common@1.31.0-dev.20260911-2a43ec07e",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/onnxruntime-node@1.30.0",
+   "dependsOn": [
+    "pkg:npm/adm-zip@0.6.1",
+    "pkg:npm/global-agent@4.1.7",
+    "pkg:npm/onnxruntime-common@1.30.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0",
+   "dependsOn": [
+    "pkg:npm/flatbuffers@25.9.23",
+    "pkg:npm/guid-typescript@1.0.9",
+    "pkg:npm/long@5.3.2",
+    "pkg:npm/onnxruntime-common@1.31.0-dev.20260911-2a43ec07e",
+    "pkg:npm/platform@1.3.6",
+    "pkg:npm/protobufjs@7.6.6"
+   ]
+  },
+  {
+   "ref": "pkg:npm/path-scurry@3.0.0",
+   "dependsOn": [
+    "pkg:npm/lru-cache@11.5.3",
+    "pkg:npm/minipass@7.1.3"
+   ]
+  },
+  {
+   "ref": "pkg:npm/pino@10.4.0",
+   "dependsOn": [
+    "pkg:npm/%40pinojs/redact@0.4.0",
+    "pkg:npm/atomic-sleep@1.0.0",
+    "pkg:npm/on-exit-leak-free@2.1.2",
+    "pkg:npm/pino-abstract-transport@3.0.0",
+    "pkg:npm/pino-std-serializers@7.1.0",
+    "pkg:npm/process-warning@5.1.1",
+    "pkg:npm/quick-format-unescaped@4.0.4",
+    "pkg:npm/real-require@1.0.0",
+    "pkg:npm/safe-stable-stringify@2.5.0",
+    "pkg:npm/sonic-boom@4.2.1",
+    "pkg:npm/thread-stream@4.2.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/pino-abstract-transport@3.0.0",
+   "dependsOn": [
+    "pkg:npm/split2@4.2.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/pino-std-serializers@7.1.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/platform@1.3.6",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/process-warning@5.1.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/protobufjs@7.6.6",
+   "dependsOn": [
+    "pkg:npm/%40protobufjs/aspromise@1.1.2",
+    "pkg:npm/%40protobufjs/base64@1.1.2",
+    "pkg:npm/%40protobufjs/codegen@2.0.5",
+    "pkg:npm/%40protobufjs/eventemitter@1.1.1",
+    "pkg:npm/%40protobufjs/fetch@1.1.1",
+    "pkg:npm/%40protobufjs/float@1.0.2",
+    "pkg:npm/%40protobufjs/path@1.1.2",
+    "pkg:npm/%40protobufjs/pool@1.1.0",
+    "pkg:npm/%40protobufjs/utf8@1.1.2",
+    "pkg:npm/%40types/node@22.20.5",
+    "pkg:npm/long@5.3.2"
+   ]
+  },
+  {
+   "ref": "pkg:npm/quick-format-unescaped@4.0.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/react@19.3.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/react-dom@19.3.1",
+   "dependsOn": [
+    "pkg:npm/react@19.3.1",
+    "pkg:npm/scheduler@0.28.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/real-require@1.0.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/require-from-string@2.0.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/ret@0.5.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/reusify@1.1.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/rfdc@1.4.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/safe-regex2@5.1.2",
+   "dependsOn": [
+    "pkg:npm/ret@0.5.1"
+   ]
+  },
+  {
+   "ref": "pkg:npm/safe-stable-stringify@2.5.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/scheduler@0.28.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/secure-json-parse@4.1.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/semver@7.8.6",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/serialize-error@8.1.0",
+   "dependsOn": [
+    "pkg:npm/type-fest@0.20.2"
+   ]
+  },
+  {
+   "ref": "pkg:npm/set-cookie-parser@3.2.3",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/setprototypeof@1.2.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/sharp@0.35.5",
+   "dependsOn": [
+    "pkg:npm/%40img/colour@1.1.0",
+    "pkg:npm/%40img/sharp-darwin-arm64@0.35.5",
+    "pkg:npm/%40img/sharp-darwin-x64@0.35.5",
+    "pkg:npm/%40img/sharp-freebsd-wasm32@0.35.5",
+    "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-darwin-x64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linux-arm64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linux-arm@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linux-s390x@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linux-x64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.3.4",
+    "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.3.4",
+    "pkg:npm/%40img/sharp-linux-arm64@0.35.5",
+    "pkg:npm/%40img/sharp-linux-arm@0.35.5",
+    "pkg:npm/%40img/sharp-linux-ppc64@0.35.5",
+    "pkg:npm/%40img/sharp-linux-riscv64@0.35.5",
+    "pkg:npm/%40img/sharp-linux-s390x@0.35.5",
+    "pkg:npm/%40img/sharp-linux-x64@0.35.5",
+    "pkg:npm/%40img/sharp-linuxmusl-arm64@0.35.5",
+    "pkg:npm/%40img/sharp-linuxmusl-x64@0.35.5",
+    "pkg:npm/%40img/sharp-webcontainers-wasm32@0.35.5",
+    "pkg:npm/%40img/sharp-win32-arm64@0.35.5",
+    "pkg:npm/%40img/sharp-win32-ia32@0.35.5",
+    "pkg:npm/%40img/sharp-win32-x64@0.35.5",
+    "pkg:npm/%40types/node@22.20.5",
+    "pkg:npm/detect-libc@2.1.2",
+    "pkg:npm/semver@7.8.6"
+   ]
+  },
+  {
+   "ref": "pkg:npm/sonic-boom@4.2.1",
+   "dependsOn": [
+    "pkg:npm/atomic-sleep@1.0.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/split2@4.2.0",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/statuses@2.0.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/thread-stream@4.2.1",
+   "dependsOn": [
+    "pkg:npm/real-require@1.0.0"
+   ]
+  },
+  {
+   "ref": "pkg:npm/toad-cache@3.7.4",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/toidentifier@1.0.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/tslib@2.9.1",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/type-fest@0.20.2",
+   "dependsOn": []
+  },
+  {
+   "ref": "pkg:npm/undici-types@6.21.0",
+   "dependsOn": []
+  }
+ ]
+}
