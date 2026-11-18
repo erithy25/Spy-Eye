@@ -175,7 +175,7 @@ Auf vier Prozessorkernen ohne Grafikkarte; Bedingungen und Einschränkungen in
 | Erkennungsverzug | 1,1 s im Median, ab Eintreffen des ausgewerteten Bildes |
 | Fehlmeldungen | 1 von 15 Meldungen; nach Verwerfen und Nachschärfen im Folgelauf keine |
 | Auswertung von Aufzeichnungen | 3,3-fache Echtzeit, mit Maskierung |
-| Erste Durchsuchbarkeit | 8 s für 44 Aufnahmen ab Beginn des Hochladens |
+| Erste Durchsuchbarkeit | 8 s für 44 Aufnahmen ab Beginn des Hochladens über die Schnittstelle, 10 s über den Browser |
 | Suche auf allgemeinem Material | 54 von 66 Anfragen beantwortet, erster Treffer bei 64 von 66 passend; 2 von 25 Anfragen nach nicht Vorhandenem mit Treffer |
 | Dauer einer neuen Anfrage | 0,1 s im Median, davon 5 ms Vergleich mit 2 108 Vektoren |
 | Gefahrenmodell auf AIDERv2 | 99,1 % auf der Testmenge; auf dem Übungsmaterial irrt es und löst deshalb keine Meldungen aus |

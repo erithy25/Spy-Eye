@@ -71,7 +71,7 @@ die Schnittstelle des laufenden Knotens.
 | Übungsmaterial | 577 s in 176 s, 3,3-fache Echtzeit | 1 Bild/s, 4 Ausschnitte je Bild, mit Gesichtsmaskierung |
 | Bilder im Verzeichnis | 571 | unveränderte Folgebilder werden übersprungen |
 | Maskierte Gesichter | 37 | YuNet, Schwelle 0,55 |
-| Allgemeiner Datensatz, 44 Aufnahmen, 540 s, 87 MB | durchsuchbar 7,6 s nach Beginn des Hochladens; vollständig ausgewertet nach 169 s (3,2-fache Echtzeit) | Hochladen über die Schnittstelle, vier Aufnahmen gleichzeitig; ohne Hochladen (`pnpm search:evaluate`) 7,5 s |
+| Allgemeiner Datensatz, 44 Aufnahmen, 540 s, 87 MB | durchsuchbar 7,6 s nach Beginn des Hochladens; vollständig ausgewertet nach 169 s (3,2-fache Echtzeit) | Hochladen über die Schnittstelle, vier Aufnahmen gleichzeitig; ohne Hochladen (`pnpm search:evaluate`) 7,5 s. Über die Oberfläche im Browser, ein Lauf auf dem Endstand: durchsuchbar nach 9,9 s, vollständig ausgewertet nach 184 s |
 | Bildkodierer allein | 34 ms je Bild | `pnpm selftest` |
 | Textkodierer | 50 ms je Anfrage | halbe Genauigkeit (fp16), `pnpm selftest` |
 

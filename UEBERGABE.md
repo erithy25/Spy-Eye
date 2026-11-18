@@ -199,7 +199,7 @@ am System zeigt; wer vorführt, überspringt sie und hat sie als Rückfallebene.
 | --- | --- |
 | Übung: 13 von 13 Ereignissen erkannt, Verzug 1,1 s im Median, eine Fehlmeldung (`pnpm exercise:evaluate`) | Güte auf echtem Einsatzmaterial deutscher Behörden |
 | Suche auf allgemeinem Material: 54 von 66 Anfragen beantwortet, erster Treffer bei 64 von 66 passend (`pnpm search:evaluate`) | Nachfrage: Es gibt kein Gespräch mit einer Behörde und keine Zusage |
-| 44 Aufnahmen durchsuchbar 8 s nach Beginn des Hochladens; Auswertung in 3,3-facher Echtzeit auf vier Kernen ohne Grafikkarte | Rechtsgrundlage: kein Gutachten; `docs/COMPLIANCE.md` ordnet zu, ersetzt es nicht |
+| 44 Aufnahmen durchsuchbar 8 s nach Beginn des Hochladens über die Schnittstelle, 10 s über den Browser; Auswertung in 3,3-facher Echtzeit auf vier Kernen ohne Grafikkarte | Rechtsgrundlage: kein Gutachten; `docs/COMPLIANCE.md` ordnet zu, ersetzt es nicht |
 | Der ganze Vorführweg unter Windows PowerShell (`.github/workflows/windows.yml`) | Direktbilder echter Kameras: nur gegen eine simulierte Kamera geprüft |
 | Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen, auch über HTTPS mit selbst ausgestelltem Zertifikat | Verbund über ein echtes Netz, mehr als drei Knoten |
 | Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |

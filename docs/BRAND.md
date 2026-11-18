@@ -133,7 +133,7 @@ Gemessen in diesem Repository; Bedingungen und Einschränkungen stehen in `docs/
 | Erkennungsverzug | 1,1 s im Median | ab Eintreffen des ausgewerteten Bildes; ein Bild je Sekunde, zwei Treffer bis zur Meldung |
 | Fehlmeldungen in der Übung | 1 von 15 Meldungen | nach Verwerfen und Nachschärfen im Folgelauf keine |
 | Auswertegeschwindigkeit | 3,3-fache Echtzeit | vier Prozessorkerne, ohne Grafikkarte, ein Bild je Sekunde, mit Maskierung |
-| Erste Durchsuchbarkeit | 8 s für 44 Aufnahmen | ab Beginn des Hochladens, gleicher Rechner |
+| Erste Durchsuchbarkeit | 8 s für 44 Aufnahmen | ab Beginn des Hochladens über die Schnittstelle, gleicher Rechner; über den Browser 10 s |
 | Gefahrenmodell auf seinem Benchmark | 99,1 % (Makro-F1 0,991) | AIDERv2-Testmenge, 1 654 Bilder; ohne Training 85,1 % |
 | Suche auf allgemeinem Material | 54 von 66 Anfragen beantwortet, erster Treffer bei 64 von 66 passend | 44 Aufnahmen, 91 beschriftete Anfragen deutsch und englisch; die Schwellen wurden an diesen Anfragen eingestellt |
 | Dauer einer neuen Anfrage | 0,1 s im Median | davon 5 ms Vergleich mit 2 108 Vektoren |
