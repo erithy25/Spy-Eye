@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "createdAt": "2026-11-18T13:59:15.902Z",
+  "createdAt": "2026-11-18T14:26:27.420Z",
   "source": "Wikidata P10/P625",
   "videos": [
     {
@@ -80,7 +80,7 @@
       "country": "DE",
       "countryLabel": "Deutschland",
       "continent": "EU",
-      "instanceOf": "road bridge",
+      "instanceOf": "cable-stayed bridge",
       "commonsFile": "Rheinbrücke_Leverkusen_und_Neubau_im_Baustopp_Februar_2021.webm",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Rheinbr%C3%BCcke_Leverkusen_und_Neubau_im_Baustopp_Februar_2021.webm",
       "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e1/Rheinbr%C3%BCcke_Leverkusen_und_Neubau_im_Baustopp_Februar_2021.webm/Rheinbr%C3%BCcke_Leverkusen_und_Neubau_im_Baustopp_Februar_2021.webm.480p.vp9.webm",
@@ -124,7 +124,7 @@
       "country": "DE",
       "countryLabel": "Deutschland",
       "continent": "EU",
-      "instanceOf": "street",
+      "instanceOf": "road bridge",
       "commonsFile": "Zoobrücke_Köln.webm",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Zoobr%C3%BCcke_K%C3%B6ln.webm",
       "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/1/13/Zoobr%C3%BCcke_K%C3%B6ln.webm/Zoobr%C3%BCcke_K%C3%B6ln.webm.480p.vp9.webm",
@@ -1158,7 +1158,7 @@
       "country": "KR",
       "countryLabel": "Südkorea",
       "continent": "AS",
-      "instanceOf": "road bridge",
+      "instanceOf": "cable-stayed bridge",
       "commonsFile": "Busan_Harbor_Bridge_-_from_ferry_-_2013-9-5.webm",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Busan_Harbor_Bridge_-_from_ferry_-_2013-9-5.webm",
       "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/ec/Busan_Harbor_Bridge_-_from_ferry_-_2013-9-5.webm/Busan_Harbor_Bridge_-_from_ferry_-_2013-9-5.webm.480p.vp9.webm",
@@ -1246,7 +1246,7 @@
       "country": "DZ",
       "countryLabel": "Algerien",
       "continent": "AF",
-      "instanceOf": "church building",
+      "instanceOf": "mosque",
       "commonsFile": "مسجد_المشور.webm",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:%D9%85%D8%B3%D8%AC%D8%AF_%D8%A7%D9%84%D9%85%D8%B4%D9%88%D8%B1.webm",
       "mediaUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/2/20/%D9%85%D8%B3%D8%AC%D8%AF_%D8%A7%D9%84%D9%85%D8%B4%D9%88%D8%B1.webm/%D9%85%D8%B3%D8%AC%D8%AF_%D8%A7%D9%84%D9%85%D8%B4%D9%88%D8%B1.webm.480p.vp9.webm",

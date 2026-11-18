@@ -158,10 +158,9 @@ async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (lin
 
 async function main(): Promise<void> {
   const say = (line: string): void => void process.stdout.write(`${line}\n`);
-  say(process.argv.some((a) => a.includes('nodes.datum')) ? `DATUM ${VERSION}` : `Sicht ${VERSION}`);
-  say(`  ${await checkFfmpeg()}`);
-
   const configs = await loadNodeConfigs();
+  say(configs.some((c) => c.exercise === false) ? `DATUM ${VERSION}` : `Sicht ${VERSION}`);
+  say(`  ${await checkFfmpeg()}`);
   if (process.argv.includes('--prepare')) {
     // Preparing twice must not turn a rehearsal into the starting point: where a prepared state
     // exists it is put back first, and only what is missing since is analysed.

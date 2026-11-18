@@ -64,6 +64,9 @@ interface Prepared {
   index: number;
   split: 'train' | 'test';
   truthIso: string | null;
+  /** Codes that count as the right country: the shape the point falls in and the manifest's
+   * (a dependency such as GS for South Georgia and its sovereign GB both count). */
+  truthIsos: string[];
   frameNumbers: number[];
   neighbours: Record<Mode, GalleryNeighbour[][]>;
   cosines: Float32Array;
@@ -86,6 +89,11 @@ interface ModeOutcome {
   topReference: string | null;
   topReferenceIsSameItem: boolean;
   countryCorrect: boolean | null;
+  level: string | null;
+  countryTopP: number;
+  continentTop: string | null;
+  continentTopP: number;
+  continentCorrect: boolean;
   zeroShotCountry: string | null;
   features: ConfidenceFeatures;
 }
@@ -105,7 +113,9 @@ function summarise(outcomes: ModeOutcome[]): Record<string, number> {
   out['countryAcc'] = round(withCountry.filter((o) => o.countryCorrect).length / Math.max(1, withCountry.length), 3);
   out['meanConfidence'] = round(outcomes.reduce((s, o) => s + o.confidence, 0) / Math.max(1, outcomes.length), 3);
   out['withinRadius'] = round(outcomes.filter((o) => o.withinRadius).length / Math.max(1, outcomes.length), 3);
-  out['regionAnswers'] = outcomes.filter((o) => o.method === 'region').length;
+  out['countryLevelAnswers'] = outcomes.filter((o) => o.level === 'country').length;
+  out['continentLevelAnswers'] = outcomes.filter((o) => o.level === 'continent').length;
+  out['noAnswer'] = outcomes.filter((o) => o.level === null).length;
   return out;
 }
 
@@ -158,7 +168,12 @@ function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams): 
     topSimilarity: r.diagnostics.topSimilarity,
     topReference: top?.label ?? null,
     topReferenceIsSameItem: sameItem,
-    countryCorrect: p.truthIso ? (r.countries[0]?.iso ?? null) === p.truthIso : null,
+    countryCorrect: p.truthIsos.length > 0 ? p.truthIsos.includes(r.countries[0]?.iso ?? '') : null,
+    level: r.diagnostics.level,
+    countryTopP: r.diagnostics.countryTop?.p ?? 0,
+    continentTop: r.diagnostics.continentTop?.code ?? null,
+    continentTopP: r.diagnostics.continentTop?.p ?? 0,
+    continentCorrect: p.truthIsos.some((iso) => world.continentOf(iso) === (r.diagnostics.continentTop?.code ?? '-')),
     zeroShotCountry: r.diagnostics.zeroShotTop[0]?.iso ?? null,
     features: r.diagnostics.features,
   };
@@ -198,7 +213,9 @@ function tune(world: WorldT, train: Prepared[], start: LocateParams): { params: 
     { name: 'priorExponent', values: [0, 0.25, 0.5, 1, 2].map((priorExponent) => ({ priorExponent })) },
     { name: 'countryVoteWeight', values: [0, 0.5, 1, 2].map((countryVoteWeight) => ({ countryVoteWeight })) },
     { name: 'regionAnchor', values: (['centroid', 'neighbours'] as const).map((regionAnchor) => ({ regionAnchor })) },
-    { name: 'regionThreshold', values: [-1, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75].map((regionThreshold) => ({ regionThreshold })) },
+    { name: 'regionThreshold', values: [-1, 0.5, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85].map((regionThreshold) => ({ regionThreshold })) },
+    { name: 'recognitionGap', values: [1, 0.04, 0.05, 0.06, 0.07, 0.08, 0.1].map((recognitionGap) => ({ recognitionGap })) },
+    { name: 'gapThreshold', values: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12].map((gapThreshold) => ({ gapThreshold })) },
   ];
   for (let sweep = 0; sweep < 2; sweep++) {
     let changed = false;
@@ -219,35 +236,66 @@ function tune(world: WorldT, train: Prepared[], start: LocateParams): { params: 
   return { params: best, log };
 }
 
-/** Temperature of the zero-shot prior: maximum likelihood of the true country on the training half. */
-function tunePriorTemperature(world: WorldT, train: Prepared[], base: LocateParams): { temperature: number; logLik: number; top1: number } {
-  let best = { temperature: base.prior.temperature, logLik: -Infinity, top1: 0 };
-  for (const temperature of [0.002, 0.003, 0.005, 0.0075, 0.01, 0.015, 0.02, 0.03, 0.05]) {
-    let ll = 0;
-    let top1 = 0;
-    let n = 0;
-    for (const p of train) {
-      if (!p.truthIso) continue;
-      const probs = world.priorFromCosines(p.cosines, { ...base.prior, temperature });
-      const hit = probs.find((c) => c.iso === p.truthIso);
-      ll += Math.log(hit?.p ?? 1e-9);
-      if (probs[0]?.iso === p.truthIso) top1++;
-      n++;
+/** Zero-shot prior: temperature and population exponent by maximum likelihood of the true country (train only). */
+function tunePrior(world: WorldT, train: Prepared[], base: LocateParams): { temperature: number; populationExponent: number; logLik: number; top1: number } {
+  let best = { temperature: base.prior.temperature, populationExponent: base.prior.populationExponent, logLik: -Infinity, top1: 0 };
+  for (const populationExponent of [0, 0.5, 1, 1.5, 2]) {
+    for (const temperature of [0.003, 0.005, 0.0075, 0.01, 0.015, 0.02, 0.03]) {
+      let ll = 0;
+      let top1 = 0;
+      let n = 0;
+      for (const p of train) {
+        if (p.truthIsos.length === 0) continue;
+        const probs = world.priorFromCosines(p.cosines, { ...base.prior, temperature, populationExponent });
+        const pTrue = probs.filter((c) => p.truthIsos.includes(c.iso)).reduce((a, c) => a + c.p, 0);
+        ll += Math.log(Math.max(1e-9, pTrue));
+        if (p.truthIsos.includes(probs[0]?.iso ?? '')) top1++;
+        n++;
+      }
+      if (n > 0 && ll / n > best.logLik) best = { temperature, populationExponent, logLik: ll / n, top1: top1 / n };
     }
-    if (n > 0 && ll / n > best.logLik) best = { temperature, logLik: ll / n, top1: top1 / n };
   }
   return best;
 }
 
+/** Top-1 / top-5 accuracy of the zero-shot prior alone (no gallery). */
+function zeroShotAccuracy(world: WorldT, items: Prepared[], prior: LocateParams['prior']): { n: number; top1: number; top5: number } {
+  let top1 = 0;
+  let top5 = 0;
+  let n = 0;
+  for (const p of items) {
+    if (p.truthIsos.length === 0) continue;
+    const probs = world.priorFromCosines(p.cosines, prior);
+    const rank = probs.findIndex((c) => p.truthIsos.includes(c.iso));
+    if (rank === 0) top1++;
+    if (rank >= 0 && rank < 5) top5++;
+    n++;
+  }
+  return { n, top1: round(top1 / Math.max(1, n), 3), top5: round(top5 / Math.max(1, n), 3) };
+}
+
+/**
+ * Smallest probability from which the best country (continent) is right in at least `target`
+ * of the training cases at or above it: the cut-off for country- and continent-level answers.
+ */
+function precisionThreshold(rows: { p: number; correct: boolean }[], target: number, fallback: number): number {
+  const candidates = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8];
+  for (const t of candidates) {
+    const above = rows.filter((r) => r.p >= t);
+    if (above.length >= 4 && above.filter((r) => r.correct).length / above.length >= target) return t;
+  }
+  return fallback;
+}
+
 /** Logistic regression (L2) of "error within the stated radius" on the confidence features. */
 function fitConfidence(rows: { f: ConfidenceFeatures; hit: boolean }[]): LocateParams['confidence'] {
-  const keys = ['topSim', 'margin', 'share', 'region', 'countryP'] as const;
-  const w = { bias: 0, topSim: 0, margin: 0, share: 0, region: 0, countryP: 0 };
+  const keys = ['topSim', 'gap', 'margin', 'share', 'region', 'continent', 'countryP'] as const;
+  const w = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0 };
   if (rows.length < 10) return DEFAULT_LOCATE_PARAMS.confidence;
   const lr = 0.5;
   const lambda = 0.01;
   for (let iter = 0; iter < 6000; iter++) {
-    const g = { bias: 0, topSim: 0, margin: 0, share: 0, region: 0, countryP: 0 };
+    const g = { bias: 0, topSim: 0, gap: 0, margin: 0, share: 0, region: 0, continent: 0, countryP: 0 };
     for (const r of rows) {
       let z = w.bias;
       for (const k of keys) z += w[k] * r.f[k];
@@ -261,9 +309,11 @@ function fitConfidence(rows: { f: ConfidenceFeatures; hit: boolean }[]): LocateP
   return {
     bias: round(w.bias, 3),
     topSim: round(w.topSim, 3),
+    gap: round(w.gap, 3),
     margin: round(w.margin, 3),
     share: round(w.share, 3),
     region: round(w.region, 3),
+    continent: round(w.continent, 3),
     countryP: round(w.countryP, 3),
   };
 }
@@ -375,6 +425,13 @@ for (let i = 0; i < videos.length; i++) {
       index: i,
       split: splitOf.get(video.id) ?? 'test',
       truthIso: world.countryNear(video.lat, video.lon)?.iso ?? (typeof video.country === 'string' && /^[A-Z]{2}$/.test(video.country) ? video.country : null),
+      truthIsos: [
+        ...new Set(
+          [world.countryNear(video.lat, video.lon)?.iso ?? null, typeof video.country === 'string' ? video.country.toUpperCase() : null].filter(
+            (x): x is string => x !== null && /^[A-Z]{2}$/.test(x),
+          ),
+        ),
+      ],
       frameNumbers: frames.frameNumbers,
       neighbours: { open, unknown },
       cosines,
@@ -400,10 +457,32 @@ const train = prepared.filter((p) => p.split === 'train');
 const test = prepared.filter((p) => p.split === 'test');
 
 // ---- tuning on the training half only
-const prior = tunePriorTemperature(world, train, DEFAULT_LOCATE_PARAMS);
-let params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, prior: { ...DEFAULT_LOCATE_PARAMS.prior, temperature: prior.temperature } };
+const prior = tunePrior(world, train, DEFAULT_LOCATE_PARAMS);
+let params: LocateParams = {
+  ...DEFAULT_LOCATE_PARAMS,
+  prior: { ...DEFAULT_LOCATE_PARAMS.prior, temperature: prior.temperature, populationExponent: prior.populationExponent },
+};
+const zeroShot = {
+  untuned: { all: zeroShotAccuracy(world, prepared, DEFAULT_LOCATE_PARAMS.prior) },
+  tuned: {
+    train: zeroShotAccuracy(world, train, params.prior),
+    test: zeroShotAccuracy(world, test, params.prior),
+    all: zeroShotAccuracy(world, prepared, params.prior),
+  },
+  withoutPopulationPrior: { all: zeroShotAccuracy(world, prepared, { ...params.prior, populationExponent: 0 }) },
+};
 const tuned = tune(world, train, params);
 params = tuned.params;
+// Country- and continent-level answers only where the training half shows they are right at
+// least half of the time (the coarse-answer cut-offs are not fitted to the Im2GPS objective).
+{
+  const rows = [...train.map((p) => runMode(world, p, 'unknown', params)), ...train.map((p) => runMode(world, p, 'open', params))];
+  params = {
+    ...params,
+    countryMinP: precisionThreshold(rows.map((o) => ({ p: o.countryTopP, correct: o.countryCorrect === true })), 0.5, params.countryMinP),
+    continentMinP: precisionThreshold(rows.map((o) => ({ p: o.continentTopP, correct: o.continentCorrect })), 0.5, params.continentMinP),
+  };
+}
 const trainOpen = train.map((p) => runMode(world, p, 'open', params));
 params = { ...params, landmarkSimilarity: landmarkThreshold(trainOpen, params.landmarkSimilarity) };
 const trainRuns = runAll(world, train, params);
@@ -458,9 +537,10 @@ const report = {
     testIds: test.map((p) => p.video.id),
     tuningObjective: 'mean of the five Im2GPS accuracies, averaged over both modes, train half only',
   },
+  zeroShotCountryPrior: zeroShot,
   tuned: {
     params,
-    priorTemperature: prior,
+    prior,
     log: tuned.log,
   },
   timing: {
@@ -484,7 +564,7 @@ const report = {
     label: p.video.label,
     wikidata: p.video.wikidata,
     split: p.split,
-    truth: { lat: p.video.lat, lon: p.video.lon, country: p.truthIso },
+    truth: { lat: p.video.lat, lon: p.video.lon, country: p.truthIso, countriesAccepted: p.truthIsos },
     gpsInFile: p.hasGps,
     timeMs: round(p.timing.totalMs, 0),
     open: compact(final.open[i] as ModeOutcome),
@@ -504,9 +584,14 @@ function compact(o: ModeOutcome): Record<string, unknown> {
     errorKm: round(o.errorKm, 2),
     withinRadius: o.withinRadius,
     topSimilarity: round(o.topSimilarity, 4),
+    gap: round(o.features.gap, 4),
     topReference: o.topReference,
     topReferenceIsSameItem: o.topReferenceIsSameItem,
     countryCorrect: o.countryCorrect,
+    level: o.level,
+    countryTopP: round(o.countryTopP, 3),
+    continentTop: o.continentTop,
+    continentTopP: round(o.continentTopP, 3),
     zeroShotCountry: o.zeroShotCountry,
   };
 }
@@ -537,6 +622,10 @@ for (const mode of MODES) {
 }
 say('');
 say(`Zeit pro Video: Median ${(median(times) / 1000).toFixed(2)} s (Bilder ${(report.timing.perVideoFramesMedianMs / 1000).toFixed(2)} s, Entscheidung ${report.timing.perVideoLocateMedianMs} ms).`);
+say(
+  `Zero-shot-Länderprior allein (alle ${zeroShot.tuned.all.n}): Top-1 ${(zeroShot.tuned.all.top1 * 100).toFixed(0)} %, Top-5 ${(zeroShot.tuned.all.top5 * 100).toFixed(0)} % ` +
+    `(ohne Bevölkerungsprior: ${(zeroShot.withoutPopulationPrior.all.top1 * 100).toFixed(0)} % / ${(zeroShot.withoutPopulationPrior.all.top5 * 100).toFixed(0)} %).`,
+);
 say(`Abgestimmte Parameter: ${JSON.stringify({ ...params, kernelsKm: undefined })}`);
 say(`Geschrieben: ${path.relative(repoRoot, outFile)}`);
 

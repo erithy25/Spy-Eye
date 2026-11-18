@@ -1,0 +1,79 @@
+name: datum-windows
+
+# DATUM on a Windows machine with Windows PowerShell 5.1, through the one command a presenter
+# runs (datum.cmd): install, build, fetch the reference set (videos, reference pictures, elevation
+# tiles), analyse and locate it, check it, start the node and ask it for fixes. It downloads well
+# over 1 GB, so it runs only when asked for: by hand, or by a commit whose message contains
+# [datum-windows].
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+
+jobs:
+  datum:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[datum-windows]')
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: ffmpeg
+        run: choco install ffmpeg --no-progress -y
+      - uses: actions/cache@v4
+        with:
+          path: .models
+          key: models-siglip2-depth-v1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            datasets/datum/clips
+            datasets/datum/gallery
+            datasets/datum/terrain
+          key: datum-dataset-${{ hashFiles('datasets/datum/manifest.json', 'datasets/datum/gallery.json', 'datasets/datum/regions.json') }}
+      # The command on a machine that has nothing yet: fetch, analyse, locate, check; no start.
+      - name: datum.cmd on a fresh machine
+        run: .\datum.cmd -NurPruefen
+      - run: pnpm typecheck
+      - run: pnpm test
+      # The same command again: everything is there, so it only checks.
+      - name: datum.cmd on a prepared machine
+        run: .\datum.cmd -NurPruefen
+      # Without a switch it starts the node; the console must answer and serve fixes.
+      - name: datum.cmd starts the node and serves fixes
+        run: |
+          $p = Start-Process -FilePath cmd.exe -ArgumentList '/c', 'datum.cmd', '-OhneBrowser' -PassThru -NoNewWindow -RedirectStandardOutput start.log -RedirectStandardError start.err
+          $ok = $false
+          for ($i = 0; $i -lt 300; $i++) {
+            $announced = (Test-Path start.log) -and (Select-String -Path start.log -Pattern 'DATUM startet' -Quiet)
+            if ($announced) {
+              try {
+                $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+                $body = '{"user":"leitung","password":"lagebild"}'
+                Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8787/api/login' -Method Post -ContentType 'application/json' -Body $body -WebSession $session -TimeoutSec 5 | Out-Null
+                $fixes = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8787/api/datum/summary' -WebSession $session -TimeoutSec 10
+                Write-Host $fixes.Content.Substring(0, [Math]::Min(600, $fixes.Content.Length))
+                if ($fixes.Content -match '"ready":\s*([0-9]+)' -and [int]$Matches[1] -gt 0) { $ok = $true; break }
+              } catch {
+                Start-Sleep -Seconds 1
+              }
+            } else {
+              Start-Sleep -Seconds 1
+            }
+          }
+          Get-Content start.log -Tail 25
+          taskkill /PID $p.Id /T /F | Out-Null
+          Start-Sleep -Seconds 3
+          if (-not $ok) { Get-Content start.err -Tail 25; Write-Host 'The node did not serve fixes.'; exit 1 }
+          Write-Host 'The node served fixes.'
+          exit 0

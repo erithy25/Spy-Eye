@@ -1,4 +1,70 @@
-# Sicht
+# DATUM
+
+**Jedes Bild hat einen Ort und eine Uhrzeit.**
+
+DATUM bestimmt aus einem Video, wo und wann es aufgenommen wurde: Ort mit Unsicherheitskreis,
+Uhrzeit als Zeitfenster in Ortszeit, Sonnenstand und Schattenrichtung, Blickrichtung, wo der
+Geländehorizont sie verrät. Aus einem einzelnen Bild baut es einen begehbaren 3D-Raum, und es
+zeigt das Gelände um den Fundort mit der Sonne zur geschätzten Zeit. Alles läuft auf einem
+Rechner ohne Grafikkarte; zur Laufzeit wird kein Dienst im Netz gefragt. Beschreibung, Verfahren,
+Messung und Grenzen: [`docs/DATUM.md`](docs/DATUM.md).
+
+Stand: Erprobung mit einem Referenzbestand von 60 Videos mit bekanntem Aufnahmeort aus Wikimedia
+Commons. Keine Kunden, keine Zulassung, der Name ist markenrechtlich nicht geprüft.
+
+### DATUM starten
+
+Windows, im Ordner des Repositorys (der erste Lauf lädt Modelle, Referenzbestand und Höhendaten
+und wertet alles aus; danach startet der Befehl in unter einer Minute):
+
+```bash
+.\datum.cmd
+```
+
+Auf jedem Betriebssystem einzeln:
+
+```bash
+pnpm install
+```
+
+```bash
+pnpm build
+```
+
+```bash
+pnpm datum:fetch
+```
+
+```bash
+pnpm datum:prepare
+```
+
+```bash
+pnpm datum:check
+```
+
+```bash
+pnpm datum
+```
+
+Dann <http://127.0.0.1:8787>, Anmeldung `leitung`, Passwort `lagebild`, Mandat „Erprobung“.
+Eigene Videos im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung geortet.
+
+| Befehl | Tut |
+| --- | --- |
+| `pnpm datum:fetch` | lädt Referenzvideos, Referenzbilder und Höhendaten (setzt nach Abbruch fort) |
+| `pnpm datum:prepare` | wertet den Referenzbestand aus, rechnet die Galerie ein, ortet jede Aufnahme |
+| `pnpm datum:check` | prüft, ob alles da ist; jede Zeile endet mit OK oder FEHLT |
+| `pnpm datum` | startet den Knoten auf Anschluss 8787 |
+| `pnpm datum:evaluate` | misst die Ortung gegen die Grundwahrheit (`docs/measurements/datum-geolocation.json`) |
+| `DATUM_HOLDOUT=0` | Referenzbild desselben Bauwerks nicht aus der Galerie nehmen (voreingestellt: herausnehmen, wie bei einem unbekannten Ort) |
+
+---
+
+# Sicht (Vorgänger)
+
+Die Plattform, auf der DATUM aufbaut, bleibt im Repository und lässt sich weiter vorführen
+(`.\vorfuehrung.cmd`).
 
 **Keine Sicht ohne Aufsicht.**
 

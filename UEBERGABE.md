@@ -4,6 +4,41 @@ Stand: 18. November 2026. Dieses Blatt sagt, was vorliegt, wie es auf einem Wind
 Gang kommt und was vor dem Termin noch zu entscheiden ist. Einzelheiten stehen in den verlinkten
 Unterlagen.
 
+## DATUM: Ort und Uhrzeit aus Video
+
+DATUM ist das neue Produkt in diesem Repository (Beschreibung, Verfahren, Messung, Grenzen:
+[`docs/DATUM.md`](docs/DATUM.md)). Es baut auf der Plattform von Sicht auf, die weiter vorführbar
+bleibt (Abschnitte 1 bis 6 unten).
+
+**Starten unter Windows (PowerShell), im Ordner des Repositorys.** Das alte Fenster (Spy-Eye
+oder Sicht) vorher mit Strg+C schließen: Alle benutzen Anschluss 8787.
+
+```bash
+git fetch origin
+```
+
+```bash
+git checkout claude/video-dataset-keyword-search-8h6kxd
+```
+
+```bash
+git pull
+```
+
+```bash
+.\datum.cmd
+```
+
+- Der erste Lauf lädt Modelle (rund 1 GB), 60 Referenzvideos, rund 6 400 Referenzbilder und
+  Höhendaten (zusammen gut 1,5 GB) und wertet alles aus. Das dauert je nach Rechner und Netz 20
+  bis 40 Minuten; danach startet derselbe Befehl in unter einer Minute und ohne Netz.
+- Am Vorabend genügt `.\datum.cmd -NurPruefen`: alles bis zur Prüfung, ohne zu starten.
+- Anmeldung `leitung`, Passwort `lagebild`, Mandat „Erprobung“.
+- Reiter ORTUNG: Weltkarte mit allen Videos. Eine Zeile wählen: Ort mit Kreis, Uhrzeit, Sonne,
+  Schatten. BEFUND: alle Belege, Uhr, Sonnenstand. RAUM: in das Video hineingehen (W A S D,
+  Maus) und das Gelände in 3D. MESSUNG: Abweichung jeder Ortung gegen die Wahrheit.
+- Eigene Videos: im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung geortet.
+
 ## 1. Was vorliegt
 
 | Was | Wo | Stand |

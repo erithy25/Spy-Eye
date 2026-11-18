@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useLang } from '../../i18n';
 import { FirstPersonControls } from './controls';
 import {
   GlResources,
@@ -43,6 +44,9 @@ import {
   type TapeMarker,
 } from './hud';
 import './space.css';
+
+/** The console's translation function (`useLang().t`). */
+type Translate = (de: string, vars?: Record<string, string | number>) => string;
 
 export interface SpaceViewProps {
   /** URL of the DSG1 grid (`Keyframe.spaceUrl`). */
@@ -482,6 +486,8 @@ interface EngineHooks {
   live: () => Live;
   onReadout: (r: Readout) => void;
   onLost: () => void;
+  /** Translates the HUD texts in the current language. */
+  t: Translate;
 }
 
 class SpaceEngine {
@@ -529,6 +535,7 @@ class SpaceEngine {
     private readonly hooks: EngineHooks,
   ) {
     const gl = createGl(canvas);
+    // German message; the component translates it when it shows the error.
     if (!gl) throw new Error('WebGL 2 ist in diesem Browser nicht verfügbar.');
     this.gl = gl;
     this.res = new GlResources(gl);
@@ -865,6 +872,7 @@ class SpaceEngine {
   private drawHud(live: Live, hfov: number, focal: number): void {
     const ctx = prepareOverlay(this.hud, this.width, this.height, this.dpr);
     if (!ctx) return;
+    const t = this.hooks.t;
     const W = this.width;
     const H = this.height;
     const cx = W / 2;
@@ -876,47 +884,47 @@ class SpaceEngine {
     const relative = heading === null;
     const az = relative ? yawDeg : normDeg(heading + yawDeg);
 
-    drawPitchLadder(ctx, cx, cy, W, pitchDeg, focal, H);
+    drawPitchLadder(ctx, cx, cy, W, pitchDeg, focal, H, t);
 
     const markers: TapeMarker[] = [];
     if (Math.abs(((yawDeg % 360) + 540) % 360 - 180) > 2 || Math.hypot(...c.position) > 0.3) {
-      markers.push({ az: relative ? 0 : heading, label: 'KAMERA', kind: 'origin' });
+      markers.push({ az: relative ? 0 : heading, label: t('KAMERA'), kind: 'origin' });
     }
     const sun = live.sun;
-    if (sun && heading !== null) markers.push({ az: sun.azimuthDeg, label: 'SONNE', kind: 'sun' });
-    drawCompassTape(ctx, { cx, y: 14, width: Math.min(560, W * 0.46), azimuth: az, relative, span: 110, fovDeg: hfov, markers });
+    if (sun && heading !== null) markers.push({ az: sun.azimuthDeg, label: t('SONNE'), kind: 'sun' });
+    drawCompassTape(ctx, { cx, y: 14, width: Math.min(560, W * 0.46), azimuth: az, relative, span: 110, fovDeg: hfov, markers, t });
 
     // Sun in the sky.
     if (sun && heading !== null) {
       const dir = vec3.fromAzEl(sun.azimuthDeg - heading, sun.elevationDeg);
       const p = projectToScreen(this.viewProj, vec3.add(c.position, vec3.scale(dir, 1000)), W, H);
-      const caption = 'SONNE';
+      const caption = t('SONNE');
       const sub = `${fmtAz(sun.azimuthDeg)} · ${fmtSigned(sun.elevationDeg, 1)}°`;
       if (p && p.x > 30 && p.x < W - 30 && p.y > 80 && p.y < H - 50) drawSun(ctx, p.x, p.y, sun.elevationDeg < 0, caption, sub, p.x > W - 330);
       else {
         const v = transformDir(this.view, dir);
-        drawEdgePointer(ctx, W, H, v[0], -v[1], `SONNE ${fmtAz(sun.azimuthDeg)}`);
+        drawEdgePointer(ctx, W, H, v[0], -v[1], `${t('SONNE')} ${fmtAz(sun.azimuthDeg)}`);
       }
     }
     if (this.shadowTip) {
       const tip = projectToScreen(this.viewProj, this.shadowTip.tip, W, H);
       if (tip && tip.depth > 0.5 && tip.x > 0 && tip.x < W && tip.y > 0 && tip.y < H) {
-        drawAnchor(ctx, tip.x, tip.y + 10, `SCHATTEN ${fmtAz(this.shadowTip.azimuth)}`, `1 : ${fmt(this.shadowTip.ratio, 2)}`, 'left');
+        drawAnchor(ctx, tip.x, tip.y + 10, `${t('SCHATTEN')} ${fmtAz(this.shadowTip.azimuth)}`, `1 : ${fmt(this.shadowTip.ratio, 2)}`, 'left');
       }
     }
     // The point the video was recorded from, once the viewer has left it.
     const away = Math.hypot(...c.position);
     if (away > 1.2) {
       const o = projectToScreen(this.viewProj, [0, 0, 0], W, H);
-      if (o && o.x > 20 && o.x < W - 20 && o.y > 80 && o.y < H - 40) drawAnchor(ctx, o.x, o.y - 14, 'AUFNAHMEPUNKT', fmtMetres(away), 'center');
+      if (o && o.x > 20 && o.x < W - 20 && o.y > 80 && o.y < H - 40) drawAnchor(ctx, o.x, o.y - 14, t('AUFNAHMEPUNKT'), fmtMetres(away), 'center');
     }
 
-    const t = this.target;
+    const aim = this.target;
     const far = this.scene.grid.far;
-    if (!t) drawCrosshair(ctx, cx, cy, '—', 'KEIN ZIEL');
-    else if (t.kind === 'far') drawCrosshair(ctx, cx, cy, `> ${fmt(far, 0)} M`, 'JENSEITS DER REICHWEITE');
-    else if (t.kind === 'sky') drawCrosshair(ctx, cx, cy, '∞', 'HIMMEL');
-    else drawCrosshair(ctx, cx, cy, fmtMetres(t.range), t.kind === 'ground' ? 'BODENEBENE' : 'OBERFLÄCHE');
+    if (!aim) drawCrosshair(ctx, cx, cy, '—', t('KEIN ZIEL'));
+    else if (aim.kind === 'far') drawCrosshair(ctx, cx, cy, `> ${fmt(far, 0)} M`, t('JENSEITS DER REICHWEITE'));
+    else if (aim.kind === 'sky') drawCrosshair(ctx, cx, cy, '∞', t('HIMMEL'));
+    else drawCrosshair(ctx, cx, cy, fmtMetres(aim.range), aim.kind === 'ground' ? t('BODENEBENE') : t('OBERFLÄCHE'));
   }
 
   dispose(): void {
@@ -944,9 +952,9 @@ function transformDir(view: Float32Array, d: Vec3): Vec3 {
 
 /* ---------------------------------------------------------------- loading */
 
-async function fetchGrid(url: string, signal: AbortSignal): Promise<SpaceGrid> {
+async function fetchGrid(url: string, signal: AbortSignal, t: Translate): Promise<SpaceGrid> {
   const response = await fetch(url, { signal, credentials: 'same-origin' });
-  if (!response.ok) throw new Error(`Raumgitter nicht verfügbar (HTTP ${response.status}).`);
+  if (!response.ok) throw new Error(t('Raumgitter nicht verfügbar (HTTP {status}).', { status: response.status }));
   return parseSpaceGrid(await response.arrayBuffer());
 }
 
@@ -992,6 +1000,10 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
   const [colour, setColour] = useState(0.3);
   const [ground, setGround] = useState(true);
   const [restore, setRestore] = useState(0);
+  const { t } = useLang();
+  // The engine and the readout callback live across language changes; they read `t` from here.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const settings = useRef<Settings>({ mode, edges, colour, ground });
   settings.current = { mode, edges, colour, ground };
@@ -1001,14 +1013,15 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
   exitRef.current = onExit;
 
   const onReadout = useCallback((r: Readout) => {
+    const tr = tRef.current;
     const [x, y, z] = r.position;
     setText(posRef.current, `X ${fmtSigned(x, 2)}  Y ${fmtSigned(y, 2)}  Z ${fmtSigned(z, 2)} M`);
     setText(
       viewRef.current,
-      `${r.relative ? `RICHTUNG ${fmtSigned(((r.azimuth % 360) + 540) % 360 - 180, 0)}° REL` : `AZIMUT ${fmtAz(r.azimuth)}`}  NICK ${fmtSigned(r.pitch, 0)}°`,
+      `${r.relative ? `${tr('RICHTUNG')} ${fmtSigned(((r.azimuth % 360) + 540) % 360 - 180, 0)}° REL` : `${tr('AZIMUT')} ${fmtAz(r.azimuth)}`}  ${tr('NICK')} ${fmtSigned(r.pitch, 0)}°`,
     );
-    setText(opticRef.current, `SICHTFELD ${fmt(r.hfov, 0)}°  ${fmt(r.speed, 1)} M/S`);
-    setText(rateRef.current, `${fmt(Math.min(240, r.fps), 0)} BILDER/S`);
+    setText(opticRef.current, `${tr('SICHTFELD')} ${fmt(r.hfov, 0)}°  ${fmt(r.speed, 1)} M/S`);
+    setText(rateRef.current, `${fmt(Math.min(240, r.fps), 0)} ${tr('BILDER/S')}`);
   }, []);
 
   useEffect(() => {
@@ -1032,12 +1045,20 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
 
     void (async () => {
       try {
-        const gridP = fetchGrid(gridUrl, abort.signal).then((g) => {
-          step(`Raster ${g.width} × ${g.height} · ${g.fovDeg > 0 ? `${fmt(g.fovDeg, 0)}°` : 'ohne Brennweite'} · bis ${fmt(g.far, 0)} m`);
+        const tr = tRef.current;
+        const gridP = fetchGrid(gridUrl, abort.signal, tr).then((g) => {
+          step(
+            tr('Raster {w} × {h} · {fov} · bis {far} m', {
+              w: g.width,
+              h: g.height,
+              fov: g.fovDeg > 0 ? `${fmt(g.fovDeg, 0)}°` : tr('ohne Brennweite'),
+              far: fmt(g.far, 0),
+            }),
+          );
           return g;
         });
         const imageP = loadImage(imageUrl, abort.signal).then((img) => {
-          step(`Bild ${img.naturalWidth} × ${img.naturalHeight}`);
+          step(tr('Bild {w} × {h}', { w: img.naturalWidth, h: img.naturalHeight }));
           return img;
         });
         const [grid, image] = await Promise.all([gridP, imageP]);
@@ -1053,6 +1074,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
             if (!cancelled) setPhase({ kind: 'error', message: 'Der Grafikkontext ist verloren gegangen. Der Raum wird neu aufgebaut …' });
             window.setTimeout(() => setRestore((n) => n + 1), 600);
           },
+          t: (de, vars) => tRef.current(de, vars),
         });
         engineRef.current = engine;
         const rect = wrap.getBoundingClientRect();
@@ -1082,7 +1104,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
 
   useEffect(() => {
     engineRef.current?.invalidate();
-  }, [mode, edges, colour, ground, headingDeg, sun?.azimuthDeg, sun?.elevationDeg]);
+  }, [mode, edges, colour, ground, headingDeg, sun?.azimuthDeg, sun?.elevationDeg, t]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -1106,7 +1128,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
     e.preventDefault();
   };
 
-  const help = `W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück${onExit ? ' · Esc verlassen' : ''}`;
+  const help = `${t('W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück')}${onExit ? ` · ${t('Esc verlassen')}` : ''}`;
 
   return (
     <div
@@ -1114,49 +1136,49 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
       className="sv"
       tabIndex={0}
       role="application"
-      aria-roledescription="begehbarer Raum"
-      aria-label={`Raum aus dem Videobild${label ? `: ${label}` : ''}. ${help}. Ziffern 1 bis 3 wechseln die Darstellung.`}
+      aria-roledescription={t('begehbarer Raum')}
+      aria-label={`${t('Raum aus dem Videobild')}${label ? `: ${label}` : ''}. ${help}. ${t('Ziffern 1 bis 3 wechseln die Darstellung.')}`}
       aria-busy={phase.kind === 'loading'}
       onKeyDown={onKeyDown}
     >
       <canvas ref={hudRef} className="sv-hud" aria-hidden="true" />
       <div className="sv-readout sv-tl">
-        <span>Raum</span>
+        <span>{t('Raum')}</span>
         {label && <span className="sv-dim">{label}</span>}
       </div>
 
       {phase.kind === 'ready' && (
         <>
           <div className="sv-panel sv-tr" data-hud-control>
-            <div className="sv-group" role="group" aria-label="Darstellung">
+            <div className="sv-group" role="group" aria-label={t('Darstellung')}>
               {MODES.map((m) => (
-                <button key={m.id} type="button" aria-pressed={mode === m.id} title={`${m.label} (${m.key})`} onClick={() => setMode(m.id)}>
-                  {m.label}
+                <button key={m.id} type="button" aria-pressed={mode === m.id} title={`${t(m.label)} (${m.key})`} onClick={() => setMode(m.id)}>
+                  {t(m.label)}
                 </button>
               ))}
             </div>
-            <div className="sv-group" role="group" aria-label="Ebenen">
-              <button type="button" aria-pressed={edges} title="Kanten (K)" onClick={() => setEdges((v) => !v)}>
-                Kanten
+            <div className="sv-group" role="group" aria-label={t('Ebenen')}>
+              <button type="button" aria-pressed={edges} title={`${t('Kanten')} (K)`} onClick={() => setEdges((v) => !v)}>
+                {t('Kanten')}
               </button>
-              <button type="button" aria-pressed={ground} title="Bodenraster (G)" onClick={() => setGround((v) => !v)}>
-                Boden
+              <button type="button" aria-pressed={ground} title={`${t('Bodenraster')} (G)`} onClick={() => setGround((v) => !v)}>
+                {t('Boden')}
               </button>
             </div>
-            <div className="sv-group" role="group" aria-label="Farbanteil">
+            <div className="sv-group" role="group" aria-label={t('Farbanteil')}>
               {COLOUR_STEPS.map((s) => (
-                <button key={s.label} type="button" aria-pressed={colour === s.value} title="Farbanteil (F)" onClick={() => setColour(s.value)}>
-                  {s.label}
+                <button key={s.label} type="button" aria-pressed={colour === s.value} title={`${t('Farbanteil')} (F)`} onClick={() => setColour(s.value)}>
+                  {t(s.label)}
                 </button>
               ))}
             </div>
             <div className="sv-group">
-              <button type="button" title="Zurück zum Aufnahmepunkt (R)" onClick={() => engineRef.current?.reset()}>
-                Aufnahmepunkt
+              <button type="button" title={`${t('Zurück zum Aufnahmepunkt')} (R)`} onClick={() => engineRef.current?.reset()}>
+                {t('Aufnahmepunkt')}
               </button>
               {onExit && (
-                <button type="button" title="Verlassen (Esc)" onClick={onExit}>
-                  Verlassen
+                <button type="button" title={`${t('Verlassen')} (Esc)`} onClick={onExit}>
+                  {t('Verlassen')}
                 </button>
               )}
             </div>
@@ -1169,10 +1191,10 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
           </div>
           <div className="sv-readout sv-br sv-stack">
             <span>
-              Raster {phase.stats.columns} × {phase.stats.rows} · {fmt(phase.stats.triangles, 0)} Dreiecke
+              {t('Raster {w} × {h} · {n} Dreiecke', { w: phase.stats.columns, h: phase.stats.rows, n: fmt(phase.stats.triangles, 0) })}
             </span>
             <span className="sv-dim">
-              Sichtfeld {fmt(phase.stats.fovDeg, 0)}° · Reichweite {fmt(phase.stats.far, 0)} m · <span ref={rateRef} />
+              {t('Sichtfeld {fov}° · Reichweite {far} m', { fov: fmt(phase.stats.fovDeg, 0), far: fmt(phase.stats.far, 0) })} · <span ref={rateRef} />
             </span>
           </div>
           <div className="sv-help" aria-hidden="true">
@@ -1183,7 +1205,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
 
       {phase.kind === 'loading' && (
         <div className="sv-status" role="status">
-          <p className="sv-status-title">Raum wird aufgebaut …</p>
+          <p className="sv-status-title">{t('Raum wird aufgebaut …')}</p>
           <i className="sv-bar" />
           <ul className="sv-steps">
             {phase.steps.map((s) => (
@@ -1194,11 +1216,11 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
       )}
       {phase.kind === 'error' && (
         <div className="sv-status" role="alert">
-          <p className="sv-status-title">Raum nicht verfügbar</p>
-          <p className="sv-status-detail">{phase.message}</p>
+          <p className="sv-status-title">{t('Raum nicht verfügbar')}</p>
+          <p className="sv-status-detail">{t(phase.message)}</p>
           {onExit && (
             <button type="button" className="sv-status-btn" onClick={onExit}>
-              Zurück
+              {t('Zurück')}
             </button>
           )}
         </div>

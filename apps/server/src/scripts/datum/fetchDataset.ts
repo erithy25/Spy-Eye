@@ -385,11 +385,16 @@ async function sparql(query: string, label: string, attempts = 4): Promise<Sparq
   throw new Error(`SPARQL ${label} failed: ${lastError}`);
 }
 
-/** Cached query (gallery queries only; the cache lives in the git-ignored gallery folder). */
+/**
+ * Cached query (gallery queries only; the cache lives in the git-ignored gallery folder). Results
+ * younger than a day are reused even with --reselect, so a re-selection after changing targets
+ * does not repeat dozens of queries.
+ */
 async function sparqlCached(query: string, label: string, attempts = 3): Promise<SparqlRow[]> {
   const key = createHash('sha1').update(query).digest('hex').slice(0, 16);
   const file = path.join(SPARQL_CACHE_DIR, `${key}.json`);
-  if (!FLAG_RESELECT) {
+  const age = await fs.stat(file).then((st) => Date.now() - st.mtimeMs, () => Infinity);
+  if (!FLAG_RESELECT || age < 24 * 3600_000) {
     const cached = await readJson<SparqlRow[]>(file);
     if (cached) return cached;
   }
@@ -509,7 +514,9 @@ function scoreVideoItem(item: VideoItem, video: string): { score: number; instan
   const cleaned = classLabels.map((c) =>
     c.replace(/\bport city\b/i, 'city').replace(/\bcounty seat\b/i, 'town').replace(/\bwar memorial\b/i, 'memorial'));
   if (cleaned.some((c) => HARD_EXCLUDE_CLASS.test(c) || (SOFT_EXCLUDE_CLASS.test(c) && !TIER_A.test(c)))) return null;
-  const tierA = cleaned.find((c) => TIER_A.test(c));
+  // Prefer a specific structure (bridge, church) over generic classes (street, building).
+  const generic = /\b(street|building|landmark|market|square|promenade|built structure|architectural structure)\b/i;
+  const tierA = cleaned.find((c) => TIER_A.test(c) && !generic.test(c)) ?? cleaned.find((c) => TIER_A.test(c));
   const tierB = cleaned.find((c) => TIER_B.test(c));
   if (!tierA && !tierB) return null;
   const name = video.replace(/_/g, ' ');
@@ -876,6 +883,7 @@ async function runVideos(countries: () => Promise<Map<string, CountryInfo>>, vid
     }
   };
   await Promise.all(Array.from({ length: 2 }, worker));
+  await writeJson(MANIFEST_PATH, current);
 
   // Replace videos whose clip could not be cut by the next candidates of the pool.
   if (failed.length > 0 && pool) {
@@ -970,10 +978,14 @@ const GERMAN_CLASSES: [string, string, number, number][] = [
   ['Q17715832', 'Burgruine', 3, 40],
   ['Q38720', 'Windmühle', 3, 20],
   ['Q11303', 'Hochhaus', 3, 30],
+  ['Q537127', 'Straßenbrücke', 3, 50],
+  ['Q158438', 'Bogenbrücke', 3, 30],
+  ['Q543654', 'Rathaus (city hall)', 3, 40],
+  ['Q262166', 'Gemeinde', 20, 200],
 ];
 
-const WORLD_TARGET = 2500;
-const GERMAN_TARGET = 1200;
+const WORLD_TARGET = 2900;
+const GERMAN_TARGET = 1400;
 
 function classQuery(cls: string, minSitelinks: number, germanyOnly: boolean): string {
   return `SELECT ?item ?sl ?coord ?image ?country ?de ?en WHERE {
@@ -1144,6 +1156,16 @@ async function runGallery(countries: () => Promise<Map<string, CountryInfo>>, vi
     log('Galerie: Auswahl aus Wikidata (P18 Bild + P625 Koordinate) …');
     candidates = await selectGallery(await countries(), await videoItems());
     await writeJson(CANDIDATES_PATH, candidates);
+    // Remove thumbnails of an earlier selection that are no longer listed.
+    const keep = new Set(candidates.map((c) => `${c.id}.jpg`));
+    let pruned = 0;
+    for (const name of await fs.readdir(GALLERY_DIR)) {
+      if (name.endsWith('.jpg') && !keep.has(name)) {
+        await fs.rm(path.join(GALLERY_DIR, name));
+        pruned++;
+      }
+    }
+    if (pruned > 0) log(`  ${pruned} nicht mehr ausgewählte Bilder entfernt.`);
   } else {
     log(`Galerie: gespeicherte Auswahl (${candidates.length} Kandidaten).`);
   }

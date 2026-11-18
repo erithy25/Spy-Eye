@@ -250,6 +250,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   app.get('/api/public/info', async () => {
     const body: PublicInfo = {
       node: node.info,
+      product: node.cfg.exercise === false ? 'datum' : 'sicht',
       demo: auth.demoMode ? { users: auth.listUsers(), passwordHint: auth.demoHint } : null,
     };
     return body;

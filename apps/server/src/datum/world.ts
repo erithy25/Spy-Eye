@@ -40,6 +40,45 @@ export interface CountryRef {
   name_en: string;
 }
 
+export interface ContinentInfo {
+  code: string;
+  name_de: string;
+  lat: number;
+  lon: number;
+  /** Radius (km) that covers most of the continent's population around its centre. */
+  radiusKm: number;
+}
+
+const CONTINENT_NAMES: Record<string, string> = {
+  EU: 'Europa', AS: 'Asien', AF: 'Afrika', NA: 'Nordamerika', SA: 'Südamerika', OC: 'Ozeanien', AN: 'Antarktis',
+  Europe: 'Europa', Asia: 'Asien', Africa: 'Afrika', 'North America': 'Nordamerika', 'South America': 'Südamerika',
+  Oceania: 'Ozeanien', Antarctica: 'Antarktis',
+};
+
+/** Distance (km) from a point to a ring's edges, in a local equirectangular projection. */
+export function distanceToRingKm(lat: number, lon: number, ring: readonly LonLat[]): number {
+  const kx = 111.32 * Math.cos(lat * RAD);
+  const ky = 110.57;
+  let best = Infinity;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[j] as LonLat;
+    const b = ring[i] as LonLat;
+    const ax = (a[0] - lon) * kx;
+    const ay = (a[1] - lat) * ky;
+    const bx = (b[0] - lon) * kx;
+    const by = (b[1] - lat) * ky;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const d = Math.sqrt(px * px + py * py);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
 export interface NearestCity {
   name: string;
   iso: string;
@@ -55,6 +94,13 @@ export interface CountryPriorParams {
   temperature: number;
   /** Share of a uniform distribution mixed in, so that no country is ever ruled out. */
   uniformMix: number;
+  /**
+   * Exponent of the population prior: logits gain populationExponent * log(sqrt(pop + 1e5)),
+   * pop being the summed city population of the country (cities.json). Independent of the area;
+   * keeps uninhabited or tiny territories (British Indian Ocean Territory, Anguilla) from winning
+   * a nearly flat distribution. 0 disables it.
+   */
+  populationExponent: number;
 }
 
 /**
@@ -62,7 +108,7 @@ export interface CountryPriorParams {
  * docs/measurements/datum-geolocation.json): the temperature that maximises the likelihood of the
  * true country.
  */
-export const DEFAULT_PRIOR_PARAMS: CountryPriorParams = { temperature: 0.01, uniformMix: 0.02 };
+export const DEFAULT_PRIOR_PARAMS: CountryPriorParams = { temperature: 0.0075, uniformMix: 0.01, populationExponent: 1 };
 
 /** Prompt ensemble for the zero-shot country classifier (English names; {name} is replaced). */
 export const COUNTRY_PROMPTS: readonly string[] = [
@@ -157,6 +203,9 @@ export class World {
   private readonly grid = new Map<number, CityRecord[]>();
   private readonly biggest = new Map<string, CityRecord>();
   private readonly cityList: CityRecord[];
+  /** Summed city population per country. */
+  private readonly population = new Map<string, number>();
+  private continentCache: Map<string, ContinentInfo> | null = null;
   /** Text vectors of the country prompts, one promise per embedding function (per process). */
   private readonly textVectors = new WeakMap<EmbedTexts, Promise<Float32Array>>();
 
@@ -187,6 +236,7 @@ export class World {
       cell.push(city);
       const best = this.biggest.get(city.iso);
       if (!best || city.pop > best.pop) this.biggest.set(city.iso, city);
+      this.population.set(city.iso, (this.population.get(city.iso) ?? 0) + Math.max(0, city.pop));
     }
   }
 
@@ -269,7 +319,7 @@ export class World {
    * Country containing the point (bounding-box prefilter, then point-in-polygon). Where simplified
    * shapes overlap (an enclave drawn without its hole: Vatican City in Italy), the smaller wins.
    */
-  countryAt(lat: number, lon: number): CountryRef | null {
+  countryAt(lat: number, lon: number, edgeToleranceKm = 10): CountryRef | null {
     let found: CountryRecord | null = null;
     for (const c of this.indexed) {
       if (!inBox(lon, lat, c.box)) continue;
@@ -279,7 +329,79 @@ export class World {
       }
       if (inside && (!found || c.record.areaKm2 < found.areaKm2)) found = c.record;
     }
+    // The shapes are simplified (0.05°): harbours, lighthouses and bridges fall just outside the
+    // coast. Then the country whose border is nearest within the tolerance counts.
+    if (!found && edgeToleranceKm > 0) {
+      const padLat = edgeToleranceKm / 110;
+      const padLon = edgeToleranceKm / (111 * Math.max(0.05, Math.cos(lat * RAD)));
+      let bestKm = edgeToleranceKm;
+      for (const c of this.indexed) {
+        const b = c.box;
+        if (lon < b[0] - padLon || lon > b[2] + padLon || lat < b[1] - padLat || lat > b[3] + padLat) continue;
+        for (const r of c.rings) {
+          const rb = r.box;
+          if (lon < rb[0] - padLon || lon > rb[2] + padLon || lat < rb[1] - padLat || lat > rb[3] + padLat) continue;
+          const d = distanceToRingKm(lat, lon, r.ring);
+          if (d <= bestKm) {
+            bestKm = d;
+            found = c.record;
+          }
+        }
+      }
+    }
     return found ? { iso: found.iso, name_de: found.name_de, name_en: found.name_en } : null;
+  }
+
+  /** Summed population of the listed cities of a country (0 when none is listed). */
+  populationOf(iso: string): number {
+    return this.population.get(iso.toUpperCase()) ?? 0;
+  }
+
+  /** Continent code of a country ("EU", "AS", … as in countries.json), or null. */
+  continentOf(iso: string): string | null {
+    return this.byIso.get(iso.toUpperCase())?.continent || null;
+  }
+
+  /**
+   * Continent centres: population-weighted mean position of the continent's cities (3-D mean, so
+   * Oceania does not break at the date line), with the radius around it that holds 80 % of them.
+   */
+  continent(code: string): ContinentInfo | null {
+    if (!this.continentCache) {
+      const cache = new Map<string, ContinentInfo>();
+      const groups = new Map<string, CityRecord[]>();
+      for (const city of this.cityList) {
+        const cont = this.continentOf(city.iso);
+        if (!cont) continue;
+        let g = groups.get(cont);
+        if (!g) groups.set(cont, (g = []));
+        g.push(city);
+      }
+      for (const c of this.indexed) {
+        const cont = c.record.continent;
+        if (cont && !groups.has(cont)) groups.set(cont, []);
+      }
+      for (const [code, cities] of groups) {
+        let x = 0;
+        let y = 0;
+        let z = 0;
+        const points = cities.length > 0
+          ? cities.map((c) => ({ lat: c.lat, lon: c.lon, w: Math.sqrt(Math.max(1, c.pop)) }))
+          : this.indexed.filter((c) => c.record.continent === code).map((c) => ({ lat: c.record.centroid[1], lon: c.record.centroid[0], w: Math.sqrt(c.record.areaKm2) }));
+        for (const p of points) {
+          x += p.w * Math.cos(p.lat * RAD) * Math.cos(p.lon * RAD);
+          y += p.w * Math.cos(p.lat * RAD) * Math.sin(p.lon * RAD);
+          z += p.w * Math.sin(p.lat * RAD);
+        }
+        const lat = Math.atan2(z, Math.hypot(x, y)) / RAD;
+        const lon = Math.atan2(y, x) / RAD;
+        const dists = points.map((p) => greatCircleKm(lat, lon, p.lat, p.lon)).sort((a, b) => a - b);
+        const r80 = dists[Math.floor(dists.length * 0.8)] ?? 2000;
+        cache.set(code, { code, name_de: CONTINENT_NAMES[code] ?? code, lat, lon, radiusKm: Math.max(1500, r80) });
+      }
+      this.continentCache = cache;
+    }
+    return this.continentCache.get(code) ?? null;
   }
 
   /**
@@ -351,7 +473,9 @@ export class World {
   private async buildTextVectors(embedTexts: EmbedTexts): Promise<Float32Array> {
     const countries = this.countries();
     const prompts: string[] = [];
-    for (const c of countries) for (const p of COUNTRY_PROMPTS) prompts.push(p.replace('{name}', c.name_en));
+    // Lower case, as the search does: the SigLIP 2 text tower all but ignores capitalised names
+    // ("a photo taken in Germany" scores like "… in Japan"; "… in germany" does not).
+    for (const c of countries) for (const p of COUNTRY_PROMPTS) prompts.push(p.replace('{name}', c.name_en).toLowerCase());
     const cache = this.textCache;
     const key = cache ? createHash('sha256').update(JSON.stringify([cache.modelId, prompts])).digest('hex').slice(0, 16) : '';
     const cacheFile = cache ? cache.file.replace(/(\.bin)?$/, `-${key}.bin`) : null;
@@ -425,17 +549,26 @@ export class World {
     return out;
   }
 
-  /** Softmax over the cosines with temperature, mixed with a uniform prior; all countries, sorted. */
+  /**
+   * Softmax over the cosines with temperature plus the population prior, mixed with a uniform
+   * share; all countries, most probable first.
+   */
   priorFromCosines(cosines: Float32Array, params: CountryPriorParams = DEFAULT_PRIOR_PARAMS): CountryProb[] {
     const countries = this.countries();
     const n = countries.length;
     if (n === 0) return [];
+    const logits = new Float64Array(n);
     let max = -Infinity;
-    for (let c = 0; c < n; c++) max = Math.max(max, (cosines[c] as number) / params.temperature);
+    for (let c = 0; c < n; c++) {
+      const iso = (countries[c] as CountryRecord).iso;
+      const popPrior = params.populationExponent > 0 ? params.populationExponent * Math.log(Math.sqrt(this.populationOf(iso) + 1e5)) : 0;
+      logits[c] = (cosines[c] as number) / params.temperature + popPrior;
+      max = Math.max(max, logits[c] as number);
+    }
     const exps = new Float64Array(n);
     let sum = 0;
     for (let c = 0; c < n; c++) {
-      const e = Math.exp((cosines[c] as number) / params.temperature - max);
+      const e = Math.exp((logits[c] as number) - max);
       exps[c] = e;
       sum += e;
     }

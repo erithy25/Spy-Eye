@@ -10,6 +10,7 @@
 
 import { StrictMode, useEffect, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
+import { LangProvider } from '../../i18n';
 import '../../styles.css';
 import { makeFixtures, type Fixtures } from './fixtures';
 import { SpaceView } from './SpaceView';
@@ -118,7 +119,9 @@ const root = document.getElementById('root');
 if (root) {
   createRoot(root).render(
     <StrictMode>
-      <Harness />
+      <LangProvider>
+        <Harness />
+      </LangProvider>
     </StrictMode>,
   );
 }

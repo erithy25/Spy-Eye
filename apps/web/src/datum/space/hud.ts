@@ -17,6 +17,11 @@ export function normDeg(a: number): number {
   return ((a % 360) + 360) % 360;
 }
 
+/** Translates a German HUD text; the viewers pass the console's `t`, the default leaves it German. */
+export type Translate = (de: string) => string;
+
+const keep: Translate = (de) => de;
+
 export function fmt(value: number, digits = 0): string {
   return formatDecimal(value, digits);
 }
@@ -41,10 +46,10 @@ export function fmtMetres(m: number): string {
   return `${fmt(m, 2)} M`;
 }
 
-const POINTS16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+const POINTS16 = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 
-export function cardinal(a: number): string {
-  return POINTS16[Math.round(normDeg(a) / 22.5) % 16] ?? 'N';
+export function cardinal(a: number, t: Translate = keep): string {
+  return t(POINTS16[Math.round(normDeg(a) / 22.5) % 16] ?? 'N');
 }
 
 function spacing(ctx: CanvasRenderingContext2D, value: string): void {
@@ -143,6 +148,8 @@ export interface TapeOptions {
   /** Horizontal field of view, drawn as brackets. */
   fovDeg?: number;
   markers?: TapeMarker[];
+  /** Translates the compass letters. */
+  t?: Translate;
 }
 
 /**
@@ -151,6 +158,7 @@ export interface TapeOptions {
  */
 export function drawCompassTape(ctx: CanvasRenderingContext2D, o: TapeOptions): void {
   const span = o.span ?? 100;
+  const tr = o.t ?? keep;
   const half = span / 2;
   const ppd = o.width / span;
   const base = o.y + 22;
@@ -197,7 +205,7 @@ export function drawCompassTape(ctx: CanvasRenderingContext2D, o: TapeOptions): 
         weight = 700;
       }
     } else if (cardinalTick) {
-      text = POINTS16[(n / 22.5) % 16] ?? '';
+      text = tr(POINTS16[(n / 22.5) % 16] ?? '');
       color = n % 90 === 0 ? FG : MID;
       weight = n % 90 === 0 ? 700 : 500;
     } else {
@@ -253,7 +261,7 @@ export function drawCompassTape(ctx: CanvasRenderingContext2D, o: TapeOptions): 
   }, FG, 1);
   const readout = o.relative
     ? `${fmtSigned(((((o.azimuth % 360) + 540) % 360) - 180), 0)}° REL`
-    : `${fmtAz(o.azimuth)} ${cardinal(o.azimuth)}`;
+    : `${fmtAz(o.azimuth)} ${cardinal(o.azimuth, tr)}`;
   ctx.save();
   ctx.font = `700 10.5px ${HUD_FONT}`;
   spacing(ctx, '0.1em');
@@ -301,7 +309,16 @@ export function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: numbe
  * Pitch ladder: the true horizon as a dashed line outside the centre, short rungs every 10°.
  * `focal` is the vertical focal length in CSS pixels.
  */
-export function drawPitchLadder(ctx: CanvasRenderingContext2D, cx: number, cy: number, width: number, pitchDeg: number, focal: number, height: number): void {
+export function drawPitchLadder(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  width: number,
+  pitchDeg: number,
+  focal: number,
+  height: number,
+  tr: Translate = keep,
+): void {
   for (let level = -80; level <= 80; level += 10) {
     const d = ((level - pitchDeg) * Math.PI) / 180;
     if (Math.abs(d) >= Math.PI / 2 - 0.05) continue;
@@ -317,7 +334,7 @@ export function drawPitchLadder(ctx: CanvasRenderingContext2D, cx: number, cy: n
         ctx.lineTo(width - 24, y);
       }, FG, 0.32, false);
       ctx.restore();
-      label(ctx, 'HORIZONT', width - 26, y - 8, { align: 'right', size: 8, color: LOW, track: 0.18 });
+      label(ctx, tr('HORIZONT'), width - 26, y - 8, { align: 'right', size: 8, color: LOW, track: 0.18 });
       continue;
     }
     hair(ctx, () => {

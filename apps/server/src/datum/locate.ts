@@ -39,19 +39,45 @@ export interface LocateParams {
   priorExponent: number;
   /** Below this best similarity, retrieval is not trusted and the answer is a country. */
   regionThreshold: number;
+  /**
+   * Retrieval is also not trusted when the best match does not stand out from the next ones:
+   * gap = best similarity of a frame minus the mean of its 2nd..10th neighbours (max over frames).
+   */
+  gapThreshold: number;
+  /**
+   * Recognition: when the best single match stands out by at least this gap, its place wins
+   * over the kernel vote (a known landmark must not be outvoted by many look-alikes elsewhere).
+   */
+  recognitionGap: number;
   /** Best similarity from which a single reference counts as a recognised landmark. */
   landmarkSimilarity: number;
   /** Weight of the retrieval votes in the country posterior (0: zero-shot prior only). */
   countryVoteWeight: number;
   /** Where the country-level answer is placed: the country's centroid or the neighbours in it. */
   regionAnchor: 'centroid' | 'neighbours';
+  /**
+   * Without a usable landmark: below this probability of the best country the answer is the
+   * continent (radius >= 1500 km), below continentMinP for the best continent there is none.
+   */
+  countryMinP: number;
+  continentMinP: number;
   maxCandidates: number;
   prior: CountryPriorParams;
   /**
    * Logistic model of P(error <= radius) over the best similarity, the margin to the second
-   * mode, the share of the best mode, a region-answer indicator and the best country probability.
+   * mode, the share of the best mode, indicators of a country- or continent-level answer and the
+   * probability of the chosen country (or continent).
    */
-  confidence: { bias: number; topSim: number; margin: number; share: number; region: number; countryP: number };
+  confidence: {
+    bias: number;
+    topSim: number;
+    gap: number;
+    margin: number;
+    share: number;
+    region: number;
+    continent: number;
+    countryP: number;
+  };
 }
 
 /**
@@ -67,12 +93,16 @@ export const DEFAULT_LOCATE_PARAMS: LocateParams = {
   mergeKm: 5,
   priorExponent: 0.5,
   regionThreshold: 0.55,
+  gapThreshold: 0,
+  recognitionGap: 0.06,
   landmarkSimilarity: 0.75,
   countryVoteWeight: 1,
   regionAnchor: 'neighbours',
+  countryMinP: 0.3,
+  continentMinP: 0.4,
   maxCandidates: 8,
   prior: DEFAULT_PRIOR_PARAMS,
-  confidence: { bias: -6, topSim: 8, margin: 2, share: 1, region: 0, countryP: 1 },
+  confidence: { bias: -6, topSim: 8, gap: 0, margin: 2, share: 1, region: 0, continent: 0, countryP: 1 },
 };
 
 export interface LocateInput {
@@ -104,6 +134,11 @@ export interface LocateResult {
 
 export interface LocateDiagnostics {
   features: ConfidenceFeatures;
+  /** Granularity of the visual answer; null when there is none. */
+  level: 'landmark' | 'country' | 'continent' | null;
+  /** Best country and continent of the posterior (zero-shot prior times retrieval votes). */
+  countryTop: { iso: string; p: number } | null;
+  continentTop: { code: string; p: number } | null;
   topSimilarity: number;
   margin: number;
   share: number;
@@ -231,6 +266,19 @@ export function voteModes(refs: readonly WeightedRef[], params: Pick<LocateParam
   return modes;
 }
 
+/** Largest margin, over frames, between the best neighbour and the mean of the 2nd..10th. */
+export function similarityGap(rows: readonly GalleryNeighbour[][]): number {
+  let best = 0;
+  for (const row of rows) {
+    const first = row[0];
+    const rest = row.slice(1, 10);
+    if (!first || rest.length === 0) continue;
+    const mean = rest.reduce((s, n) => s + n.similarity, 0) / rest.length;
+    best = Math.max(best, first.similarity - mean);
+  }
+  return best;
+}
+
 /** Weighted RMS distance (km) of the references around a point, counting those within maxKm. */
 export function weightedSpreadKm(refs: readonly WeightedRef[], lat: number, lon: number, maxKm: number): number {
   let w = 0;
@@ -250,15 +298,29 @@ function sigmoid(x: number): number {
 
 export interface ConfidenceFeatures {
   topSim: number;
+  /** How far the best match stands out from the next neighbours (see gapThreshold). */
+  gap: number;
   margin: number;
   share: number;
+  /** 1 for a country-level answer. */
   region: number;
+  /** 1 for a continent-level answer. */
+  continent: number;
+  /** Probability of the best country (continent for a continent-level answer). */
   countryP: number;
 }
 
 /** P(true place within the radius), clamped: nothing visual is ever certain. */
 export function confidenceFrom(f: ConfidenceFeatures, c: LocateParams['confidence']): number {
-  const z = c.bias + c.topSim * f.topSim + c.margin * f.margin + c.share * f.share + c.region * f.region + c.countryP * f.countryP;
+  const z =
+    c.bias +
+    c.topSim * f.topSim +
+    c.gap * f.gap +
+    c.margin * f.margin +
+    c.share * f.share +
+    c.region * f.region +
+    c.continent * f.continent +
+    c.countryP * f.countryP;
   return Math.min(0.95, Math.max(0.02, sigmoid(z)));
 }
 
@@ -319,9 +381,20 @@ function countryAnchor(world: World, iso: string): { lat: number; lon: number } 
   return city ? { lat: city.lat, lon: city.lon } : { lat, lon };
 }
 
+/** A country-level answer covers at least the country: radius >= sqrt(area), never under 50 km. */
 function regionRadiusKm(world: World, iso: string): number {
   const area = world.country(iso)?.areaKm2 ?? 250_000;
-  return Math.max(25, Math.sqrt(area / Math.PI));
+  return Math.max(50, Math.sqrt(area));
+}
+
+/** Country probabilities summed per continent, best first. */
+function continentPosterior(world: World, countries: readonly CountryProb[]): { code: string; p: number }[] {
+  const sums = new Map<string, number>();
+  for (const c of countries) {
+    const code = world.continentOf(c.iso);
+    if (code) sums.set(code, (sums.get(code) ?? 0) + c.p);
+  }
+  return [...sums.entries()].map(([code, p]) => ({ code, p })).sort((a, b) => b.p - a.p);
 }
 
 function placeLabel(world: World, lat: number, lon: number, landmark: string | null): string {
@@ -394,8 +467,24 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     return { mode: m, lead, iso, score: m.density * Math.pow(p, params.priorExponent) };
   });
   scored.sort((a, b) => b.score - a.score);
-  const totalScore = scored.reduce((s, c) => s + c.score, 0);
   const topSimilarity = refs.reduce((s, r) => Math.max(s, r.bestSimilarity), -1);
+  const topGap = similarityGap(ev.neighbours);
+  // A clearly recognised reference: its mode goes first, whatever the vote says.
+  const recognised = topGap >= params.recognitionGap;
+  if (recognised) {
+    const bestRef = refs.reduce((a, b) => (b.bestSimilarity > a.bestSimilarity ? b : a));
+    const at = scored.findIndex((c) => c.mode.members.some((j) => refs[j] === bestRef));
+    if (at > 0) {
+      const [mode] = scored.splice(at, 1);
+      const lead = scored[0];
+      if (mode && lead) {
+        // It takes at least the vote winner's score, so the normalised scores stay ordered.
+        mode.score = Math.max(mode.score, lead.score);
+        scored.unshift(mode);
+      }
+    }
+  }
+  const totalScore = scored.reduce((s, c) => s + c.score, 0);
   const first = scored[0];
   const second = scored[1];
   const margin = first ? (second ? 1 - second.score / first.score : 1) : 0;
@@ -418,18 +507,22 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     };
   });
 
-  const features = (region: boolean): ConfidenceFeatures => ({
+  const continents = continentPosterior(world, countries);
+  const features = (level: 'landmark' | 'country' | 'continent'): ConfidenceFeatures => ({
     topSim: topSimilarity,
+    gap: topGap,
     margin,
     share,
-    region: region ? 1 : 0,
-    countryP: countries[0]?.p ?? 0,
+    region: level === 'country' ? 1 : 0,
+    continent: level === 'continent' ? 1 : 0,
+    countryP: level === 'continent' ? (continents[0]?.p ?? 0) : (countries[0]?.p ?? 0),
   });
-  const confidenceOf = (region: boolean): number => confidenceFrom(features(region), params.confidence);
+  let level: 'landmark' | 'country' | 'continent' = 'landmark';
+  const confidenceOf = (l: typeof level): number => confidenceFrom(features(l), params.confidence);
 
   let visual: FixLocation | null = null;
   let method: LocateDiagnostics['method'] = 'none';
-  if (first && topSimilarity >= params.regionThreshold) {
+  if (first && topSimilarity >= params.regionThreshold && topGap >= params.gapThreshold) {
     // Radius: spread of the references that support the mode; a strong single landmark keeps
     // half a kilometre, weaker matches widen with the similarity gap.
     const support = weightedSpreadKm(refs, first.mode.lat, first.mode.lon, Math.max(...params.kernelsKm));
@@ -440,21 +533,21 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       params.mergeKm,
     );
     let radiusKm: number;
-    if (topSimilarity >= params.landmarkSimilarity && share >= 0.5) radiusKm = Math.max(0.5, local);
+    if (recognised || (topSimilarity >= params.landmarkSimilarity && share >= 0.5)) radiusKm = Math.max(0.5, local);
     else if (topSimilarity >= params.landmarkSimilarity) radiusKm = Math.max(2, local, support * 0.5);
     else radiusKm = Math.max(25, support);
     visual = {
       lat: first.mode.lat,
       lon: first.mode.lon,
       radiusKm,
-      confidence: confidenceOf(false),
+      confidence: confidenceOf('landmark'),
       method: 'landmark',
       label: placeLabel(world, first.mode.lat, first.mode.lon, first.lead.label),
       country: first.iso,
       countryName: countryName(first.iso),
     };
     method = 'landmark';
-  } else if (countries[0]) {
+  } else if (countries[0] && countries[0].p >= params.countryMinP) {
     const best = countries[0];
     let anchor = countryAnchor(world, best.iso);
     if (params.regionAnchor === 'neighbours') {
@@ -465,15 +558,33 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       }
     }
     if (anchor) {
+      level = 'country';
       visual = {
         lat: anchor.lat,
         lon: anchor.lon,
         radiusKm: regionRadiusKm(world, best.iso),
-        confidence: confidenceOf(true),
+        confidence: confidenceOf('country'),
         method: 'region',
         label: world.country(best.iso)?.name_de ?? best.name,
         country: best.iso,
         countryName: best.name,
+      };
+      method = 'region';
+    }
+  } else if (continents[0] && continents[0].p >= params.continentMinP) {
+    // No country stands out: only the continent is claimed, with a matching radius.
+    const info = world.continent(continents[0].code);
+    if (info) {
+      level = 'continent';
+      visual = {
+        lat: info.lat,
+        lon: info.lon,
+        radiusKm: info.radiusKm,
+        confidence: confidenceOf('continent'),
+        method: 'region',
+        label: info.name_de,
+        country: null,
+        countryName: null,
       };
       method = 'region';
     }
@@ -507,8 +618,10 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     evidence.push({
       kind: 'region',
       label: `Länderschätzung: ${top3.map((c) => `${c.name} ${pct(c.p)}`).join(', ')}`,
-      detail:
-        'Zero-shot-Vergleich der Bilder mit Beschreibungen aller Länder (Straßen, Landschaft, Gebäude); wirkt als weiche Gewichtung der Kandidaten und trägt das Ergebnis allein, wenn kein Referenzbild passt.',
+      detail: `Zero-shot-Vergleich der Bilder mit Beschreibungen aller Länder (Straßen, Landschaft, Gebäude), mit einem milden Bevölkerungsprior. Zusammen mit den Ländern der ähnlichsten Referenzbilder: ${countries
+        .slice(0, 3)
+        .map((c) => `${c.name} ${pct(c.p)}`)
+        .join(', ')}. Wirkt als weiche Gewichtung der Kandidaten; ohne passendes Referenzbild trägt es das Ergebnis allein (Land nur ab ${pct(params.countryMinP)}, sonst Kontinent oder kein Ort).`,
       weight: method === 'region' ? (top3[0] as CountryProb).p : (top3[0] as CountryProb).p * 0.3,
     });
   }
@@ -532,7 +645,10 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     countries,
     evidence,
     diagnostics: {
-      features: features(method === 'region'),
+      features: features(level),
+      level: visual ? level : null,
+      countryTop: countries[0] ? { iso: countries[0].iso, p: countries[0].p } : null,
+      continentTop: continents[0] ?? null,
       topSimilarity,
       margin,
       share,

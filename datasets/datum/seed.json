@@ -1,0 +1,317 @@
+{
+  "sources": [
+    {
+      "id": "referenz",
+      "name": "Referenzbestand",
+      "nameEn": "Reference set",
+      "kind": "upload",
+      "owner": "DATUM",
+      "description": "Videos mit bekanntem Aufnahmeort aus Wikimedia Commons; der Ort wird nicht mitgegeben.",
+      "lat": 0,
+      "lon": 0,
+      "shared": false,
+      "clips": [
+        {
+          "file": "de-kyffhaeuserdenkmal.mp4",
+          "name": "datum-001.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-bahnhof-berlin-lichterfelde.mp4",
+          "name": "datum-002.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-hof-hauptbahnhof.mp4",
+          "name": "datum-003.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-rheinbruecke-leverkusen.mp4",
+          "name": "datum-004.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-berliner-fernsehturm.mp4",
+          "name": "datum-005.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-zoobruecke.mp4",
+          "name": "datum-006.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-elstertalbruecke.mp4",
+          "name": "datum-007.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-spitterfall.mp4",
+          "name": "datum-008.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-kirche-hanshagen.mp4",
+          "name": "datum-009.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-molenfeuer-warnemuende.mp4",
+          "name": "datum-010.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-dorfkirche-rieben.mp4",
+          "name": "datum-011.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-palmengartenwehr.mp4",
+          "name": "datum-012.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-kammergutweg.mp4",
+          "name": "datum-013.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-bhf-eschborn.mp4",
+          "name": "datum-014.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-quellbrunnen.mp4",
+          "name": "datum-015.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "de-st-lambertus.mp4",
+          "name": "datum-016.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ru-crimean-bridge.mp4",
+          "name": "datum-017.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "tr-istiklal-avenue.mp4",
+          "name": "datum-018.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "al-skanderbeg-square.mp4",
+          "name": "datum-019.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "gb-rhuddlan-castle.mp4",
+          "name": "datum-020.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "gb-glenfinnan-viaduct.mp4",
+          "name": "datum-021.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ch-schloss-der-grafen-von-greyerz.mp4",
+          "name": "datum-022.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ee-tartu-railway-station.mp4",
+          "name": "datum-023.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ie-charles-fort.mp4",
+          "name": "datum-024.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "fr-eiffel-tower.mp4",
+          "name": "datum-025.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ie-church-of-st-anne.mp4",
+          "name": "datum-026.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "it-alghero-railway-station.mp4",
+          "name": "datum-027.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "fr-arc-de-triomphe.mp4",
+          "name": "datum-028.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "cz-kolin-train-station.mp4",
+          "name": "datum-029.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "no-fj-l-y-lighthouse.mp4",
+          "name": "datum-030.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ie-the-elysian.mp4",
+          "name": "datum-031.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "fr-new-gatteville-lighthouse.mp4",
+          "name": "datum-032.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ua-kyiv-pechersk-lavra.mp4",
+          "name": "datum-033.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ru-cathedral-of-christ-the.mp4",
+          "name": "datum-034.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ua-buhaz.mp4",
+          "name": "datum-035.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "us-francis-scott-key-bridge.mp4",
+          "name": "datum-036.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "us-oriole-park-at-camden-yards.mp4",
+          "name": "datum-037.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "us-vessel.mp4",
+          "name": "datum-038.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "us-corona-del-mar-state-beach.mp4",
+          "name": "datum-039.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "mx-mexico-city-metropolitan.mp4",
+          "name": "datum-040.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ca-clarence-st-bridge.mp4",
+          "name": "datum-041.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "mx-chapultepec-castle.mp4",
+          "name": "datum-042.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "gb-grytviken.mp4",
+          "name": "datum-043.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "cl-palacio-de-la-moneda.mp4",
+          "name": "datum-044.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ve-estadio-olimpico.mp4",
+          "name": "datum-045.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "pe-cusco-cathedral.mp4",
+          "name": "datum-046.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "br-praia-do-grumari.mp4",
+          "name": "datum-047.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "tr-1915-canakkale-bridge.mp4",
+          "name": "datum-048.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "ru-russky-bridge.mp4",
+          "name": "datum-049.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "jp-tokyo-station.mp4",
+          "name": "datum-050.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "id-lovina-beach.mp4",
+          "name": "datum-051.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "mn-ulaanbaatar-railway-station.mp4",
+          "name": "datum-052.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "kr-busan-harbor-bridge.mp4",
+          "name": "datum-053.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "id-borobudur-temple.mp4",
+          "name": "datum-054.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "za-nelson-mandela-square.mp4",
+          "name": "datum-055.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "eg-al-fattah-al-alim-mosque.mp4",
+          "name": "datum-056.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "dz-el-mechouar-mosque.mp4",
+          "name": "datum-057.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "bj-dantokpa-market.mp4",
+          "name": "datum-058.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "au-malmsbury-viaduct.mp4",
+          "name": "datum-059.mp4",
+          "daysAgo": 1
+        },
+        {
+          "file": "au-wellington-point.mp4",
+          "name": "datum-060.mp4",
+          "daysAgo": 1
+        }
+      ]
+    }
+  ]
+}

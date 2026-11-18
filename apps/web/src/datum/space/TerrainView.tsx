@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { SunPathPoint, TerrainGrid } from '../../../../server/src/datum/contract';
+import { useLang } from '../../i18n';
 import { FirstPersonControls, OrbitControls } from './controls';
 import {
   GlResources,
@@ -46,6 +47,9 @@ import {
 } from './hud';
 import { formatCoordinate } from '../../map/geo';
 import './space.css';
+
+/** The console's translation function (`useLang().t`). */
+type Translate = (de: string, vars?: Record<string, string | number>) => string;
 
 export interface TerrainViewProps {
   /** Height grid around the location; null when there is none. */
@@ -282,6 +286,8 @@ interface Hooks {
   onReadout: (r: Readout) => void;
   onMode: (m: ViewMode) => void;
   onLost: () => void;
+  /** Translates the HUD texts in the current language. */
+  t: Translate;
 }
 
 interface CamPose {
@@ -353,6 +359,7 @@ class TerrainEngine {
     private readonly hooks: Hooks,
   ) {
     const gl = createGl(canvas);
+    // German message; the component translates it when it shows the error.
     if (!gl) throw new Error('WebGL 2 ist in diesem Browser nicht verfügbar.');
     this.gl = gl;
     this.res = new GlResources(gl);
@@ -638,7 +645,7 @@ class TerrainEngine {
         const pts: Vec3[] = [];
         for (let el = 0; el <= 90; el += 3) pts.push(onDome(az, el));
         b.polyline(pts, az % 90 === 0 ? 0.16 : 0.07);
-        if (az % 90 === 0) cardinals.push({ p: onDome(az, 0), text: ['N', 'E', 'S', 'W'][az / 90] ?? '' });
+        if (az % 90 === 0) cardinals.push({ p: onDome(az, 0), text: ['N', 'O', 'S', 'W'][az / 90] ?? '' });
       }
       // Terrain horizon at its true elevation angles.
       const prof = live.horizonProfile;
@@ -946,6 +953,7 @@ class TerrainEngine {
   private drawHud(live: Live, pose: CamPose, walking: boolean): void {
     const ctx = prepareOverlay(this.hud, this.width, this.height, this.dpr);
     if (!ctx) return;
+    const t = this.hooks.t;
     const W = this.width;
     const H = this.height;
     const P = (p: Vec3): { x: number; y: number; depth: number } | null => {
@@ -955,16 +963,16 @@ class TerrainEngine {
     const m = this.model;
     const az = normDeg((Math.atan2(pose.fwd[0], -pose.fwd[2]) * 180) / Math.PI);
     const markers: TapeMarker[] = [];
-    if (live.sun) markers.push({ az: live.sun.azimuthDeg, label: 'SONNE', kind: 'sun' });
-    if (live.headingDeg !== null) markers.push({ az: live.headingDeg, label: 'KAMERA', kind: 'origin' });
+    if (live.sun) markers.push({ az: live.sun.azimuthDeg, label: t('SONNE'), kind: 'sun' });
+    if (live.headingDeg !== null) markers.push({ az: live.headingDeg, label: t('KAMERA'), kind: 'origin' });
     const hfov = (2 * Math.atan(Math.tan(pose.fovY / 2) * (W / H)) * 180) / Math.PI;
-    drawCompassTape(ctx, { cx: W / 2, y: 14, width: Math.min(520, W * 0.42), azimuth: az, relative: false, span: 120, fovDeg: hfov, markers });
+    drawCompassTape(ctx, { cx: W / 2, y: 14, width: Math.min(520, W * 0.42), azimuth: az, relative: false, span: 120, fovDeg: hfov, markers, t });
     if (this.revealing) return;
 
     const a = this.anchors;
     if (!walking) {
       const top = P(a.marker);
-      if (top) drawAnchor(ctx, top.x, top.y - 12, 'STANDPUNKT', `${fmt(m.base, 0)} M Ü. NN`, 'center');
+      if (top) drawAnchor(ctx, top.x, top.y - 12, t('STANDPUNKT'), t('{h} M Ü. NN', { h: fmt(m.base, 0) }), 'center');
       const peak = P([m.peak.x, (m.peak.h - m.base) * live.exag, m.peak.z]);
       if (peak) {
         ctx.save();
@@ -981,11 +989,11 @@ class TerrainEngine {
     }
     for (const c of a.cardinals) {
       const s = P(c.p);
-      if (s) hudLabel(ctx, c.text, s.x, s.y - 9, { align: 'center', size: 10, weight: 700, color: c.text === 'N' ? '#ededed' : MID });
+      if (s) hudLabel(ctx, t(c.text), s.x, s.y - 9, { align: 'center', size: 10, weight: 700, color: c.text === 'N' ? '#ededed' : MID });
     }
     if (a.cone && live.headingDeg !== null && !walking) {
       const s = P(a.cone);
-      if (s) hudLabel(ctx, `BLICK ${fmtAz(live.headingDeg)} · ${fmt(live.fovDeg, 0)}°`, s.x + 8, s.y, { size: 8.5, color: MID, track: 0.14 });
+      if (s) hudLabel(ctx, `${t('BLICK')} ${fmtAz(live.headingDeg)} · ${fmt(live.fovDeg, 0)}°`, s.x + 8, s.y, { size: 8.5, color: MID, track: 0.14 });
     }
     const fmtUtc = (t: number): string => {
       const d = new Date(t);
@@ -996,26 +1004,26 @@ class TerrainEngine {
     const clear = (s: { x: number; y: number }): boolean => !sunAt || Math.hypot(s.x - sunAt.x, s.y - sunAt.y) > 110;
     if (a.rise) {
       const s = P(a.rise.p);
-      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, 'AUFGANG', fmtUtc(a.rise.t), 'center');
+      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, t('AUFGANG'), fmtUtc(a.rise.t), 'center');
     }
     if (a.set) {
       const s = P(a.set.p);
-      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, 'UNTERGANG', fmtUtc(a.set.t), 'center');
+      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, t('UNTERGANG'), fmtUtc(a.set.t), 'center');
     }
     if (sunAt && live.sun) {
-      drawSun(ctx, sunAt.x, sunAt.y, live.sun.elevationDeg <= 0, 'SONNE', `${fmtAz(live.sun.azimuthDeg)} · ${fmtSigned(live.sun.elevationDeg, 1)}°`, sunAt.x > W - 330);
+      drawSun(ctx, sunAt.x, sunAt.y, live.sun.elevationDeg <= 0, t('SONNE'), `${fmtAz(live.sun.azimuthDeg)} · ${fmtSigned(live.sun.elevationDeg, 1)}°`, sunAt.x > W - 330);
     }
     if (walking) {
       const c = this.cursor;
-      drawCrosshair(ctx, W / 2, H / 2, c ? fmtMetres(c.dist) : '—', c ? `${fmt(c.h, 0)} M Ü. NN` : 'KEIN ZIEL');
+      drawCrosshair(ctx, W / 2, H / 2, c ? fmtMetres(c.dist) : '—', c ? t('{h} M Ü. NN', { h: fmt(c.h, 0) }) : t('KEIN ZIEL'));
     } else if (this.cursor && this.pointer) {
       const s = P([this.cursor.x, (this.cursor.h - m.base) * live.exag, this.cursor.z]);
       if (s) ring(ctx, s.x, s.y, 5, 0.9);
     }
     if (!walking && this.transition === null && live.sun === null) {
-      hudLabel(ctx, 'OHNE SONNENSTAND · RELIEFLICHT AUS NORDWEST', W / 2, 78, { align: 'center', size: 9, color: LOW, track: 0.16 });
+      hudLabel(ctx, t('OHNE SONNENSTAND · RELIEFLICHT AUS NORDWEST'), W / 2, 78, { align: 'center', size: 9, color: LOW, track: 0.16 });
     } else if (live.sun && live.sun.elevationDeg <= 0) {
-      hudLabel(ctx, 'SONNE UNTER DEM HORIZONT', W / 2, 78, { align: 'center', size: 9, color: LOW, track: 0.16 });
+      hudLabel(ctx, t('SONNE UNTER DEM HORIZONT'), W / 2, 78, { align: 'center', size: 9, color: LOW, track: 0.16 });
     }
   }
 
@@ -1068,6 +1076,10 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
   const [mpp, setMpp] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [restore, setRestore] = useState(0);
+  const { t } = useLang();
+  // The engine and the readout callback live across language changes; they read `t` from here.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const modelKey = terrain ? `${terrain.bbox.join(',')}|${terrain.size}|${terrain.heights.length}|${camera.lat}|${camera.lon}` : 'none';
   // The model only changes with the grid and the camera position.
@@ -1106,18 +1118,22 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
   }
 
   const onReadout = useCallback((r: Readout) => {
+    const tr = tRef.current;
     const m = model.current;
     if (r.cursor && m) {
       const g = m.toLatLon(r.cursor.x, r.cursor.z);
-      setText(cursorRef.current, `${r.mode === 'walk' ? 'ZIEL' : 'ZEIGER'} ${formatCoordinate(g.lat, g.lon)}`);
-      setText(cursorSubRef.current, `HÖHE ${fmt(r.cursor.h, 0)} M Ü. NN · ABSTAND ${fmtMetres(r.cursor.dist)}`);
+      setText(cursorRef.current, `${r.mode === 'walk' ? tr('ZIEL') : tr('ZEIGER')} ${formatCoordinate(g.lat, g.lon)}`);
+      setText(cursorSubRef.current, tr('HÖHE {h} M Ü. NN · ABSTAND {d}', { h: fmt(r.cursor.h, 0), d: fmtMetres(r.cursor.dist) }));
     } else if (r.mode === 'walk' && m && r.ground !== null) {
       const g = m.toLatLon(r.eye[0], r.eye[2]);
-      setText(cursorRef.current, `STANDORT ${formatCoordinate(g.lat, g.lon)}`);
-      setText(cursorSubRef.current, `GRUND ${fmt(r.ground, 0)} M Ü. NN`);
+      setText(cursorRef.current, `${tr('STANDORT')} ${formatCoordinate(g.lat, g.lon)}`);
+      setText(cursorSubRef.current, tr('GRUND {h} M Ü. NN', { h: fmt(r.ground, 0) }));
     } else {
-      setText(cursorRef.current, `STANDPUNKT ${formatCoordinate(m?.center.lat ?? 0, m?.center.lon ?? 0)}`);
-      setText(cursorSubRef.current, m ? `GRUND ${fmt(m.base, 0)} M Ü. NN · RELIEF ${fmt(m.minH, 0)}–${fmt(m.maxH, 0)} M` : '');
+      setText(cursorRef.current, `${tr('STANDPUNKT')} ${formatCoordinate(m?.center.lat ?? 0, m?.center.lon ?? 0)}`);
+      setText(
+        cursorSubRef.current,
+        m ? tr('GRUND {h} M Ü. NN · RELIEF {min}–{max} M', { h: fmt(m.base, 0), min: fmt(m.minH, 0), max: fmt(m.maxH, 0) }) : '',
+      );
     }
     setMpp((v) => {
       const n = r.metresPerPixel;
@@ -1147,6 +1163,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
           setError('Der Grafikkontext ist verloren gegangen. Das Gelände wird neu aufgebaut …');
           window.setTimeout(() => setRestore((n) => n + 1), 600);
         },
+        t: (de, vars) => tRef.current(de, vars),
       });
       engineRef.current = engine;
       const rect = wrap.getBoundingClientRect();
@@ -1170,7 +1187,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
 
   useEffect(() => {
     engineRef.current?.invalidate();
-  }, [exag, shadows, dome, sun?.azimuthDeg, sun?.elevationDeg, camera.headingDeg, camera.fovDeg, sunPath, horizonProfile, skyline]);
+  }, [exag, shadows, dome, sun?.azimuthDeg, sun?.elevationDeg, camera.headingDeg, camera.fovDeg, sunPath, horizonProfile, skyline, t]);
 
   const go = (m: ViewMode): void => {
     engineRef.current?.setMode(m);
@@ -1196,8 +1213,8 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
   const missing = !loading && built === null;
   const help =
     mode === 'walk'
-      ? 'W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück · Esc Übersicht'
-      : 'Ziehen drehen · Rechts ziehen verschieben · Rad zoomen · W A S D verschieben · P Standpunkt';
+      ? `${t('W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück')} · ${t('Esc Übersicht')}`
+      : t('Ziehen drehen · Rechts ziehen verschieben · Rad zoomen · W A S D verschieben · P Standpunkt');
 
   return (
     <div
@@ -1205,43 +1222,43 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
       className="sv"
       tabIndex={0}
       role="application"
-      aria-roledescription="Geländemodell"
-      aria-label={`Gelände um den Aufnahmeort${label ? `: ${label}` : ''}. ${help}.`}
+      aria-roledescription={t('Geländemodell')}
+      aria-label={`${t('Gelände um den Aufnahmeort')}${label ? `: ${label}` : ''}. ${help}.`}
       aria-busy={loading}
       onKeyDown={onKeyDown}
     >
       <canvas ref={hudRef} className="sv-hud" aria-hidden="true" />
       <div className="sv-readout sv-tl">
-        <span>Gelände</span>
+        <span>{t('Gelände')}</span>
         {label && <span className="sv-dim">{label}</span>}
       </div>
 
       {ready && (
         <>
           <div className="sv-panel sv-tr" data-hud-control>
-            <div className="sv-group" role="group" aria-label="Ansicht">
-              <button type="button" aria-pressed={mode === 'orbit'} title="Übersicht (P)" onClick={() => go('orbit')}>
-                Übersicht
+            <div className="sv-group" role="group" aria-label={t('Ansicht')}>
+              <button type="button" aria-pressed={mode === 'orbit'} title={`${t('Übersicht')} (P)`} onClick={() => go('orbit')}>
+                {t('Übersicht')}
               </button>
-              <button type="button" aria-pressed={mode === 'walk'} title="Am Standpunkt stehen (P)" onClick={() => go('walk')}>
-                Standpunkt
+              <button type="button" aria-pressed={mode === 'walk'} title={`${t('Am Standpunkt stehen')} (P)`} onClick={() => go('walk')}>
+                {t('Standpunkt')}
               </button>
             </div>
-            <div className="sv-group" role="group" aria-label="Überhöhung">
-              <span className="sv-group-label">Überhöhung</span>
-              <button type="button" aria-pressed={exag === 1} title="Überhöhung (U)" onClick={() => setExag(1)}>
+            <div className="sv-group" role="group" aria-label={t('Überhöhung')}>
+              <span className="sv-group-label">{t('Überhöhung')}</span>
+              <button type="button" aria-pressed={exag === 1} title={`${t('Überhöhung')} (U)`} onClick={() => setExag(1)}>
                 1×
               </button>
-              <button type="button" aria-pressed={exag === 2} title="Überhöhung (U)" onClick={() => setExag(2)}>
+              <button type="button" aria-pressed={exag === 2} title={`${t('Überhöhung')} (U)`} onClick={() => setExag(2)}>
                 2×
               </button>
             </div>
-            <div className="sv-group" role="group" aria-label="Ebenen">
-              <button type="button" aria-pressed={shadows} title="Schattenwurf (L)" onClick={() => setShadows((v) => !v)}>
-                Schatten
+            <div className="sv-group" role="group" aria-label={t('Ebenen')}>
+              <button type="button" aria-pressed={shadows} title={`${t('Schattenwurf')} (L)`} onClick={() => setShadows((v) => !v)}>
+                {t('Schatten')}
               </button>
-              <button type="button" aria-pressed={dome} title="Himmelskuppel, Sonnenbahn, Horizont (K)" onClick={() => setDome((v) => !v)}>
-                Kuppel
+              <button type="button" aria-pressed={dome} title={`${t('Himmelskuppel, Sonnenbahn, Horizont')} (K)`} onClick={() => setDome((v) => !v)}>
+                {t('Kuppel')}
               </button>
             </div>
           </div>
@@ -1253,32 +1270,32 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
           <div className="sv-readout sv-br sv-stack">
             <span>
               {sun
-                ? `Sonne Azimut ${fmtAz(sun.azimuthDeg)} · Höhe ${fmtSigned(sun.elevationDeg, 1)}°`
-                : 'Kein Sonnenstand'}
+                ? t('Sonne Azimut {az} · Höhe {el}°', { az: fmtAz(sun.azimuthDeg), el: fmtSigned(sun.elevationDeg, 1) })
+                : t('Kein Sonnenstand')}
             </span>
             <span className="sv-dim">
-              Höhenlinien {contourStep(built)[0]} / {contourStep(built)[1]} m · Überhöhung {exag}×
+              {t('Höhenlinien {minor} / {major} m · Überhöhung {exag}×', { minor: contourStep(built)[0], major: contourStep(built)[1], exag })}
             </span>
             {mpp !== null && mode === 'orbit' && <ScaleBar mpp={mpp} />}
           </div>
           {dome && (
             <div className="sv-readout sv-legend" style={{ top: 44, left: 12 }}>
               <i />
-              <span>Geländehorizont</span>
+              <span>{t('Geländehorizont')}</span>
               {skyline && camera.headingDeg !== null && (
                 <>
                   <i className="dash" />
-                  <span>Horizont im Video</span>
+                  <span>{t('Horizont im Video')}</span>
                 </>
               )}
               {(sunPath?.length ?? 0) > 0 && (
                 <>
                   <i className="dot" />
-                  <span>Sonnenbahn</span>
+                  <span>{t('Sonnenbahn')}</span>
                 </>
               )}
               <i className="faint" />
-              <span>Sichtfeld · Kuppel</span>
+              <span>{t('Sichtfeld · Kuppel')}</span>
             </div>
           )}
           <div className="sv-help" aria-hidden="true">
@@ -1289,20 +1306,20 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ho
 
       {loading && !terrain && (
         <div className="sv-status" role="status">
-          <p className="sv-status-title">Höhenmodell wird geladen …</p>
+          <p className="sv-status-title">{t('Höhenmodell wird geladen …')}</p>
           <i className="sv-bar" />
         </div>
       )}
       {missing && (
         <div className="sv-status" role="status">
-          <p className="sv-status-title">Kein Höhenmodell</p>
-          <p className="sv-status-detail">Kein Höhenmodell für diesen Ort vorhanden.</p>
+          <p className="sv-status-title">{t('Kein Höhenmodell')}</p>
+          <p className="sv-status-detail">{t('Kein Höhenmodell für diesen Ort vorhanden.')}</p>
         </div>
       )}
       {error && (
         <div className="sv-status" role="alert">
-          <p className="sv-status-title">Gelände nicht verfügbar</p>
-          <p className="sv-status-detail">{error}</p>
+          <p className="sv-status-title">{t('Gelände nicht verfügbar')}</p>
+          <p className="sv-status-detail">{t(error)}</p>
         </div>
       )}
     </div>

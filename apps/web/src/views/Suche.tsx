@@ -9,7 +9,8 @@ import { useLang } from '../i18n';
 import { MapCanvas, type MapMarker } from '../map/MapCanvas';
 import { Frame, Glyph } from '../ui';
 
-const EXAMPLES = ['Brücke über einen Fluss', 'Kathedrale mit zwei Türmen', 'Bahnhof mit Zügen', 'Strand mit Palmen', 'Platz mit Menschen', 'Leuchtturm am Meer'];
+const EXAMPLES_DATUM = ['Brücke über einen Fluss', 'Kathedrale mit zwei Türmen', 'Bahnhof mit Zügen', 'Strand mit Palmen', 'Platz mit Menschen', 'Leuchtturm am Meer'];
+const EXAMPLES_SICHT = ['überflutete Wiese', 'umgestürzter Baum auf einer Straße', 'Rauch über Gebäuden', 'umgekippter Lastwagen', 'Löschfahrzeug', 'Trümmer'];
 const RESULT_LIMIT = 120;
 
 const RULE_LABEL: Record<string, string> = {
@@ -215,7 +216,7 @@ export function Suche({ node, openFrame }: ViewProps) {
         </form>
         <div className="query-foot">
           <span className="examples">
-            {EXAMPLES.map((example) => (
+            {(node.info?.product === 'sicht' ? EXAMPLES_SICHT : EXAMPLES_DATUM).map((example) => (
               <button key={example} type="button" className="text-btn" disabled={!modelReady || !hasMandate} onClick={() => submit(example)}>
                 {example}
               </button>

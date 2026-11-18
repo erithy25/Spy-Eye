@@ -319,6 +319,8 @@ export interface SessionInfo {
 
 export interface PublicInfo {
   node: NodeInfo;
+  /** Which console the node presents: DATUM (place and time of videos) or Sicht (civil operating picture). */
+  product?: 'datum' | 'sicht';
   /** Present while the node only has seeded demonstration accounts. */
   demo: { users: UserInfo[]; passwordHint: string } | null;
 }

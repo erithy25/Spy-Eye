@@ -6,9 +6,14 @@ import { LangProvider, useLang } from './i18n';
 import { MapCanvas, type MapMarker } from './map/MapCanvas';
 import { Dialog, Field, pressable, useAction } from './ui';
 import { useNode, type NodeConnection } from './useNode';
+import { Lage } from './views/Lage';
 import { Protokoll } from './views/Protokoll';
 import { Quellen } from './views/Quellen';
 import { Suche } from './views/Suche';
+import { Verbund } from './views/Verbund';
+import { Vorgaenge } from './views/Vorgaenge';
+import { Wachen } from './views/Wachen';
+import { Wirkung } from './views/Wirkung';
 import './datum/datum.css';
 import { useFixes } from './datum/useFixes';
 import { Befund } from './datum/views/Befund';
@@ -16,7 +21,19 @@ import { Messung } from './datum/views/Messung';
 import { Ortung } from './datum/views/Ortung';
 import { Raum } from './datum/views/Raum';
 
-type TabId = 'ortung' | 'befund' | 'raum' | 'suche' | 'quellen' | 'messung' | 'protokoll';
+type TabId = 'ortung' | 'befund' | 'raum' | 'suche' | 'quellen' | 'messung' | 'protokoll' | 'lage' | 'wachen' | 'vorgaenge' | 'verbund' | 'wirkung';
+
+/** The console of the predecessor platform, shown by nodes that run the civil operating picture. */
+const SICHT_TABS: { id: TabId; label: string; permission: string | null }[] = [
+  { id: 'lage', label: 'Lage', permission: 'media' },
+  { id: 'suche', label: 'Suche', permission: 'search' },
+  { id: 'wachen', label: 'Wachen', permission: 'watch.read' },
+  { id: 'vorgaenge', label: 'Vorgänge', permission: 'case.read' },
+  { id: 'verbund', label: 'Verbund', permission: 'federation.read' },
+  { id: 'protokoll', label: 'Protokoll', permission: null },
+  { id: 'quellen', label: 'Quellen', permission: 'source.read' },
+  { id: 'wirkung', label: 'Wirkung', permission: 'metrics.read' },
+];
 
 const TABS: { id: TabId; label: string; permission: string | null }[] = [
   { id: 'ortung', label: 'Ortung', permission: 'media' },
@@ -28,7 +45,11 @@ const TABS: { id: TabId; label: string; permission: string | null }[] = [
   { id: 'protokoll', label: 'Protokoll', permission: null },
 ];
 
-const MARK = 'DATUM';
+let MARK = 'DATUM';
+
+function isSicht(node: NodeConnection): boolean {
+  return node.info?.product === 'sicht';
+}
 
 const ROLE_LABEL: Record<Role, string> = { operator: 'Auswertung', supervisor: 'Leitung', auditor: 'Aufsicht' };
 
@@ -48,6 +69,7 @@ export function App() {
 function Root() {
   const node = useNode();
   const { t } = useLang();
+  MARK = isSicht(node) ? 'SICHT' : 'DATUM';
   const [skipMandate, setSkipMandate] = useState(false);
 
   if (node.phase === 'loading' || node.phase === 'unreachable') {
@@ -93,7 +115,11 @@ function GateMap({ node }: { node: NodeConnection }) {
   if (!info) return <div className="gate-map" />;
   return (
     <div className="gate-map">
-      <MapCanvas view={{ lat: 30, lon: 10, zoom: 1.8 }} viewKey={info.id} markers={markers} minZoom={1} readouts={false} />
+      {isSicht(node) ? (
+        <MapCanvas view={{ lat: info.lat, lon: info.lon, zoom: 11.4 }} viewKey={info.id} markers={markers} readouts={false} />
+      ) : (
+        <MapCanvas view={{ lat: 30, lon: 10, zoom: 1.8 }} viewKey={info.id} markers={markers} minZoom={1} readouts={false} />
+      )}
     </div>
   );
 }
@@ -116,7 +142,7 @@ function Login({ node }: { node: NodeConnection }) {
       <div className="gate-side">
         <div>
           <div className="gate-mark">{MARK}</div>
-          <p className="gate-claim">{t('Jedes Bild hat einen Ort und eine Uhrzeit.')}</p>
+          <p className="gate-claim">{isSicht(node) ? t('Keine Sicht ohne Aufsicht.') : t('Jedes Bild hat einen Ort und eine Uhrzeit.')}</p>
         </div>
         {info && (
           <div className="gate-node">
@@ -352,7 +378,8 @@ function initialSelection(): string | null {
 function Shell({ node }: { node: NodeConnection }) {
   const { t, pick } = useLang();
   const session = node.session;
-  const allowed = useMemo(() => TABS.filter((tab) => tab.permission === null || node.can(tab.permission)).map((tab) => tab.id), [node]);
+  const tabs = isSicht(node) ? SICHT_TABS : TABS;
+  const allowed = useMemo(() => tabs.filter((tab) => tab.permission === null || node.can(tab.permission)).map((tab) => tab.id), [node, tabs]);
   const [tab, setTab] = useState<TabId>(() => initialTab(allowed));
   const [selected, setSelected] = useState<string | null>(() => initialSelection());
   const datum = useFixes(node);
@@ -380,6 +407,7 @@ function Shell({ node }: { node: NodeConnection }) {
   const model = node.app?.model ?? null;
   const current = sheet ? (sheet.list[sheet.index] ?? null) : null;
   const props: ViewProps = { node, openFrame };
+  const newAlerts = (node.intel?.alerts ?? []).filter((a) => a.status === 'new' && a.active).length;
   const datumProps = {
     node,
     fixes: datum.fixes,
@@ -407,10 +435,11 @@ function Shell({ node }: { node: NodeConnection }) {
           <span>{node.info?.node.name ?? ''}</span>
         </div>
         <nav className="tabs" aria-label={t('Bereiche')}>
-          {TABS.filter((x) => allowed.includes(x.id)).map((x) => (
+          {tabs.filter((x) => allowed.includes(x.id)).map((x) => (
             <button key={x.id} type="button" className={tab === x.id ? 'tab tab-on' : 'tab'} onClick={() => setTab(x.id)}>
               {t(x.label)}
               {x.id === 'ortung' && locating > 0 && <span className="tab-n">{locating}</span>}
+              {x.id === 'lage' && newAlerts > 0 && <span className="tab-n">{newAlerts}</span>}
             </button>
           ))}
         </nav>
@@ -438,6 +467,11 @@ function Shell({ node }: { node: NodeConnection }) {
         {tab === 'quellen' && <Quellen {...props} />}
         {tab === 'messung' && <Messung {...datumProps} />}
         {tab === 'protokoll' && <Protokoll {...props} />}
+        {tab === 'lage' && <Lage {...props} />}
+        {tab === 'wachen' && <Wachen {...props} />}
+        {tab === 'vorgaenge' && <Vorgaenge {...props} />}
+        {tab === 'verbund' && <Verbund {...props} />}
+        {tab === 'wirkung' && <Wirkung {...props} />}
       </main>
 
       <footer className="foot">
@@ -453,10 +487,12 @@ function Shell({ node }: { node: NodeConnection }) {
         <span>
           {t('Verzeichnis')} <b>{node.app ? `${formatCount(node.app.stats.frames)} ${t('Bilder')}` : '–'}</b>
         </span>
-        <span>
-          {t('Ortung')} <b>{located}/{datum.fixes.length}</b>
-          {locating > 0 && <b> · {t('offen')} {locating}</b>}
-        </span>
+        {!isSicht(node) && (
+          <span>
+            {t('Ortung')} <b>{located}/{datum.fixes.length}</b>
+            {locating > 0 && <b> · {t('offen')} {locating}</b>}
+          </span>
+        )}
         {scenario && exerciseRunning && (
           <span>
             {t('Übungsuhr')} <b>{formatExercise(scenario.elapsedSec)}</b> <b>{scenario.speed}×</b>

@@ -239,3 +239,38 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
   assert.equal(withGps.location?.country, 'FR');
   assert.ok(withGps.diagnostics.visual, 'the visual estimate is still computed');
 });
+
+test('countryAt falls back to the nearest border within 10 km; flat priors give no 25 km fix', () => {
+  const world = fixtureWorld();
+  // 5 km east of the DE square (15° E edge) at 52° N: outside every shape, near the border.
+  assert.equal(world.countryAt(52, 15.07)?.iso, 'DE');
+  assert.equal(world.countryAt(52, 15.07, 0), null, 'strict test without tolerance');
+  assert.equal(world.countryAt(52, 15.5), null, '34 km off: no country');
+
+  // A nearly flat country distribution and no usable reference: never a country with a small radius.
+  const n = (id: string, lat: number, lon: number, s: number): GalleryNeighbour => ({
+    id, label: id, lat, lon, country: null, wikidata: null, similarity: s,
+  });
+  const flat = decideLocation(
+    world,
+    { neighbours: [[n('a', 52.5, 13.4, 0.3)]], countryCosines: new Float32Array([0.1, 0.1]), frameNumbers: [1], metadata: null, hints: null },
+    { countryMinP: 0.9, continentMinP: 0.5, prior: { temperature: 0.01, uniformMix: 0, populationExponent: 0 } },
+  );
+  assert.equal(flat.location?.method, 'region');
+  assert.equal(flat.location?.country, null, 'continent, not a country');
+  assert.ok((flat.location?.radiusKm ?? 0) >= 1500);
+  const none = decideLocation(
+    world,
+    { neighbours: [[n('a', 52.5, 13.4, 0.3)]], countryCosines: new Float32Array([0.1, 0.1]), frameNumbers: [1], metadata: null, hints: null },
+    { countryMinP: 0.9, continentMinP: 1.1, prior: { temperature: 0.01, uniformMix: 0, populationExponent: 0 } },
+  );
+  assert.equal(none.location, null);
+  // A country-level answer covers the country.
+  const country = decideLocation(
+    world,
+    { neighbours: [[n('a', 52.5, 13.4, 0.3)]], countryCosines: new Float32Array([0.2, 0.0]), frameNumbers: [1], metadata: null, hints: null },
+    { countryMinP: 0.5, prior: { temperature: 0.01, uniformMix: 0, populationExponent: 0 } },
+  );
+  assert.equal(country.location?.country, 'DE');
+  assert.ok((country.location?.radiusKm ?? 0) >= Math.sqrt(357000) - 1);
+});
