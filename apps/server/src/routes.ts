@@ -1560,7 +1560,18 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     }
   }
   if (hasWebDist) {
-    await app.register(fastifyStatic, { root: config.webDistDir, prefix: '/', decorateReply: false });
+    await app.register(fastifyStatic, {
+      root: config.webDistDir,
+      prefix: '/',
+      decorateReply: false,
+      // The page is asked for anew on every load: after an update it names new script files, and
+      // a cached page would keep showing the old console. The scripts themselves carry a content
+      // hash in their names and never change, so the browser may keep them.
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) res.header('Cache-Control', 'no-cache');
+        else if (/[\\/]assets[\\/]/.test(filePath)) res.header('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    });
   } else {
     app.get('/', async (_request, reply) =>
       reply

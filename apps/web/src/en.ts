@@ -554,6 +554,7 @@ export const EN: Record<string, string> = {
   MARKE: 'LANDMARK',
   'Weltmodell befragt': 'World model consulted',
   'Mit Straßenbildern verglichen': 'Compared with street-level pictures',
+  'Stand der Konsole': 'Console build',
   WELTMODELL: 'WORLD MODEL',
   STRASSENBILD: 'STREET LEVEL',
   'Weltmodell (GeoCLIP)': 'World model (GeoCLIP)',

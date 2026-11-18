@@ -211,6 +211,7 @@ function Login({ node }: { node: NodeConnection }) {
         <p className="gate-foot">
           {t('Jede Anmeldung, jede Abfrage und jede Freigabe wird in einem verketteten Protokoll festgehalten.')}
           {info ? ` · v${info.node.version}` : ''}
+          <span className="dim" title={t('Stand der Konsole')}>{` · ${__DATUM_BUILD__}`}</span>
         </p>
       </div>
     </div>
@@ -533,6 +534,7 @@ function Shell({ node }: { node: NodeConnection }) {
         )}
         <span className="right">
           {node.connected ? t('verbunden') : t('getrennt')} · v{node.info?.node.version ?? ''}
+          <span title={t('Stand der Konsole')}>{` · ${__DATUM_BUILD__.split(' · ')[0]}`}</span>
         </span>
       </footer>
 

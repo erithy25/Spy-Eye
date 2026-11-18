@@ -80,6 +80,13 @@ if (-not $ffmpeg) { Abbruch 'ffmpeg wurde nicht gefunden. Installieren mit:  win
 
 Sage "  Node $nodeVersion, pnpm $(& pnpm --version), ffmpeg vorhanden"
 
+# Welcher Stand gestartet wird: Commit und Zweig. Steht hier nicht der erwartete Stand, ist
+# "git pull" nicht durchgelaufen (zum Beispiel wegen lokaler Änderungen) oder ein anderer Zweig
+# ist ausgecheckt.
+$stand = (& git -C $PSScriptRoot log -1 --format='%h vom %cd' --date=format:'%d.%m.%Y %H:%M' 2>$null)
+$zweig = (& git -C $PSScriptRoot rev-parse --abbrev-ref HEAD 2>$null)
+if ($stand) { Sage "  Stand $stand (Zweig $zweig)" }
+
 # Belegte Anschlüsse: Die Knoten einer früheren Vorführung laufen noch.
 $belegt = @()
 foreach ($port in 8787) {
@@ -104,8 +111,27 @@ if ($belegt.Count -gt 0) {
     $istSicht = $false
   }
   if ($istSicht) {
-    Abbruch "Der Anschluss $($belegt -join ', ') ist belegt: Ein Knoten läuft schon (DATUM oder die Sicht-Vorführung). Dort weiterarbeiten (http://127.0.0.1:8787) oder ihn mit Strg+C in seinem Fenster beenden und diesen Befehl wiederholen."
+    # Eine frühere Fassung dieses Programms läuft noch, oft in einem vergessenen oder
+    # geschlossenen Fenster. Sie würde weiter den alten Stand ausliefern; sie wird deshalb
+    # beendet, damit der neue Stand startet.
+    $prozesse = @()
+    try {
+      $prozesse = @(Get-NetTCPConnection -LocalPort $belegt[0] -State Listen -ErrorAction Stop | Select-Object -ExpandProperty OwningProcess -Unique)
+    } catch {
+      $prozesse = @()
+    }
+    if ($prozesse.Count -eq 0) {
+      Abbruch "Der Anschluss $($belegt -join ', ') ist belegt: Ein Knoten läuft schon (DATUM oder die Sicht-Vorführung). Ihn mit Strg+C in seinem Fenster beenden und diesen Befehl wiederholen."
+    }
+    foreach ($id in $prozesse) {
+      Sage "  Eine laufende frühere Fassung (Prozess $id auf Anschluss $($belegt[0])) wird beendet, damit der neue Stand startet."
+      Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 2
+    $belegt = @()
   }
+}
+if ($belegt.Count -gt 0) {
   Abbruch "Der Anschluss $($belegt -join ', ') ist belegt, aber dort antwortet kein Knoten. Vermutlich läuft noch eine frühere Fassung (Spy-Eye) oder ein anderes Programm. Dessen Fenster mit Strg+C beenden und diesen Befehl wiederholen."
 }
 
