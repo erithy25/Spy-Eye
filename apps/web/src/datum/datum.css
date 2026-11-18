@@ -872,3 +872,17 @@
 .dt-truth-ctl {
   margin: 4px 0 8px;
 }
+
+.dt-tag-inline {
+  margin-left: 10px;
+}
+
+.dt-own-figures {
+  color: var(--mid);
+  margin: 2px 0 10px;
+}
+
+.dt-own-figures b {
+  color: var(--fg);
+  font-weight: 500;
+}

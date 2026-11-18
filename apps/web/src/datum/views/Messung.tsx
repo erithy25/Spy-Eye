@@ -47,30 +47,72 @@ function evalRows(evaluation: unknown, t: (s: string) => string): EvalRow[] {
   return rows;
 }
 
-export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
+/** One table of cases with a known place: the reference set, or the analyst's own truths. */
+function TruthTable({ rows, names, select, go }: { rows: DatasetRow[]; names: Map<string, string>; select: (id: string | null) => void; go: DatumViewProps['go'] }) {
   const { t, locale, region } = useLang();
+  return (
+    <table className="tbl">
+      <thead>
+        <tr>
+          <th>{t('Fall')}</th>
+          <th>{t('Wahrer Ort')}</th>
+          <th>{t('Land')}</th>
+          <th>{t('Abweichung')}</th>
+          <th style={{ width: 160 }} />
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr
+            key={r.index}
+            className={r.videoId ? 'clickable' : ''}
+            {...(r.videoId
+              ? pressable(() => {
+                  select(r.videoId);
+                  go('befund');
+                })
+              : {})}
+          >
+            <td className="strong">{caseLabel(r.videoId ? (names.get(r.videoId) ?? r.name) : r.name)}</td>
+            <td>{r.label}</td>
+            <td title={r.country ?? ''}>{r.country ? region(r.country) : '–'}</td>
+            <td>
+              {r.errorKm != null ? kmText(r.errorKm, locale) : r.videoId ? t('wird geortet …') : <span className="low">{t('keine Aufnahme dieses Namens')}</span>}
+              {r.stage === 'quick' && <span className="dt-tag dt-tag-inline">{t('schnell geortet')}</span>}
+            </td>
+            <td>
+              {r.errorKm != null && (
+                <div className="dt-bar" title={kmText(r.errorKm, locale)}>
+                  <i style={{ width: `${Math.min(100, (Math.log10(1 + r.errorKm) / Math.log10(1 + 5000)) * 100)}%` }} />
+                </div>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
+  const { t, locale } = useLang();
   const truth = useTruthUpload();
-  // Own recordings with a true place the analyst gave (POST /api/datum/truth), best first.
-  const own = useMemo(() => {
-    const names = new Map(videos.map((v) => [v.id, v.name]));
-    return fixes
-      .filter((f) => f.truth && f.truth.source === 'eigene' && names.has(f.videoId))
-      .map((f) => ({ fix: f, name: names.get(f.videoId)! }))
-      .sort((a, b) => (a.fix.truth?.errorKm ?? Infinity) - (b.fix.truth?.errorKm ?? Infinity));
-  }, [fixes, videos]);
   const [summary, setSummary] = useState<DatumSummary | null>(null);
   const [rows, setRows] = useState<DatasetRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  // The figures are read again when a fix starts, ends or is replaced by a recomputation. The
-  // steps announced while a fix runs keep status and computedAt and do not count.
+  // The figures are read again when a fix starts, ends or is replaced by a recomputation, and when
+  // a ground truth arrives for it (that keeps computedAt). The steps announced while a fix runs
+  // keep status and computedAt and do not count.
   const version = useMemo(
     () =>
       fixes
-        .map((f) => `${f.videoId}:${f.status}:${f.computedAt}`)
+        .map((f) => `${f.videoId}:${f.status}:${f.computedAt}:${f.truth?.errorKm ?? ''}`)
         .sort()
         .join('|'),
     [fixes],
   );
+  // A truth list for files not on the node yet changes no fix; it still belongs in the table.
+  const truthStamp = truth.result?.ok ? truth.result.text : '';
 
   const firstRead = useRef(true);
   useEffect(() => {
@@ -94,7 +136,14 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
       window.clearTimeout(timer);
       ctrl.abort();
     };
-  }, [version]);
+  }, [version, truthStamp]);
+
+  const ownRows = useMemo(() => rows.filter((r) => r.kind === 'eigene'), [rows]);
+  const referenceRows = useMemo(() => rows.filter((r) => r.kind !== 'eigene'), [rows]);
+  // Headline figures are those of the reference set; older nodes have no split and count all.
+  const reference = summary ? (summary.bySource?.referenz ?? summary) : null;
+  const ownAccuracy = summary?.bySource?.eigene ?? null;
+  const videoNames = useMemo(() => new Map(videos.map((v) => [v.id, v.name])), [videos]);
 
   const modes = evalRows(summary?.evaluation, t);
   const pct = (v: number | null | undefined): string => (v == null ? '–' : `${Math.round(v * 100).toLocaleString(locale)} %`);
@@ -116,23 +165,26 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
                 <b>
                   {summary.ready}/{summary.recordings}
                 </b>
-                <span>{t('Aufnahmen geortet')}</span>
+                <span>
+                  {t('Aufnahmen geortet')}
+                  {(summary.quick ?? 0) > 0 ? ` · ${t('{n} schnell', { n: summary.quick ?? 0 })}` : ''}
+                </span>
               </div>
               <div className="dt-figure">
-                <b>{summary.medianErrorKm == null ? '–' : kmText(summary.medianErrorKm, locale)}</b>
+                <b>{reference?.medianErrorKm == null ? '–' : kmText(reference.medianErrorKm, locale)}</b>
                 <span>{t('Abweichung im Median')}</span>
               </div>
               {/* Two thresholds here; all five are in the stored evaluation below. */}
-              {summary.within.filter((w) => w.km === 25 || w.km === 750).map((w) => (
+              {(reference?.within ?? []).filter((w) => w.km === 25 || w.km === 750).map((w) => (
                 <div className="dt-figure" key={w.km}>
-                  <b>{summary.withTruth ? pct(w.share) : '–'}</b>
+                  <b>{reference?.withTruth ? pct(w.share) : '–'}</b>
                   <span>
                     {t('innerhalb')} {w.km.toLocaleString(locale)} km
                   </span>
                 </div>
               ))}
               <div className="dt-figure">
-                <b>{pct(summary.insideRadius)}</b>
+                <b>{pct(reference?.insideRadius)}</b>
                 <span>{t('Wahrheit im angegebenen Kreis')}</span>
               </div>
               <div className="dt-figure">
@@ -151,45 +203,23 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
 
         <section className="section-gap dt-own" style={{ marginTop: 26 }}>
           <h3 className="label">
-            {t('Eigene Aufnahmen mit Grundwahrheit')} <span className="count">{own.length}</span>
+            {t('Eigene Aufnahmen mit Grundwahrheit')} <span className="count">{ownRows.length}</span>
           </h3>
           {can('source.write') && <TruthControl truth={truth} />}
-          {own.length === 0 ? (
+          {ownAccuracy && ownAccuracy.withTruth > 0 && (
+            <p className="dt-own-figures">
+              {t('Abweichung im Median')} <b>{ownAccuracy.medianErrorKm == null ? '–' : kmText(ownAccuracy.medianErrorKm, locale)}</b>
+              {' · '}
+              {t('innerhalb')} 25 km <b>{pct(ownAccuracy.within.find((w) => w.km === 25)?.share)}</b>
+              {' · '}
+              {t('Wahrheit im angegebenen Kreis')} <b>{pct(ownAccuracy.insideRadius)}</b>
+              <span className="low"> · {t('{n} mit Grundwahrheit', { n: ownAccuracy.withTruth })}</span>
+            </p>
+          )}
+          {ownRows.length === 0 ? (
             <p className="hint">{t('Noch keine. Mit einer Grundwahrheit zu eigenen Videos steht hier, wie weit die Ortung danebenliegt.')}</p>
           ) : (
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>{t('Fall')}</th>
-                  <th>{t('Wahrer Ort')}</th>
-                  <th>{t('Abweichung')}</th>
-                  <th style={{ width: 160 }} />
-                </tr>
-              </thead>
-              <tbody>
-                {own.map(({ fix, name }) => (
-                  <tr
-                    key={fix.videoId}
-                    className="clickable"
-                    {...pressable(() => {
-                      select(fix.videoId);
-                      go('befund');
-                    })}
-                  >
-                    <td className="strong">{caseLabel(name)}</td>
-                    <td>{fix.truth?.label || '–'}</td>
-                    <td>{fix.truth?.errorKm == null ? (fix.status === 'ready' ? '–' : t('wird geortet …')) : kmText(fix.truth.errorKm, locale)}</td>
-                    <td>
-                      {fix.truth?.errorKm != null && (
-                        <div className="dt-bar" title={kmText(fix.truth.errorKm, locale)}>
-                          <i style={{ width: `${Math.min(100, (Math.log10(1 + fix.truth.errorKm) / Math.log10(1 + 5000)) * 100)}%` }} />
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TruthTable rows={ownRows} names={videoNames} select={select} go={go} />
           )}
         </section>
 
@@ -232,45 +262,9 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
 
         <section className="section-gap" style={{ marginTop: 26 }}>
           <h3 className="label">
-            {t('Referenzbestand: Einzelfälle')} <span className="count">{rows.length}</span>
+            {t('Referenzbestand: Einzelfälle')} <span className="count">{referenceRows.length}</span>
           </h3>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>{t('Fall')}</th>
-                <th>{t('Wahrer Ort')}</th>
-                <th>{t('Land')}</th>
-                <th>{t('Abweichung')}</th>
-                <th style={{ width: 160 }} />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.index}
-                  className={r.videoId ? 'clickable' : ''}
-                  {...(r.videoId
-                    ? pressable(() => {
-                        select(r.videoId);
-                        go('befund');
-                      })
-                    : {})}
-                >
-                  <td className="strong">{caseLabel(r.name)}</td>
-                  <td>{r.label}</td>
-                  <td title={r.country ?? ''}>{r.country ? region(r.country) : '–'}</td>
-                  <td>{r.errorKm == null ? '–' : kmText(r.errorKm, locale)}</td>
-                  <td>
-                    {r.errorKm != null && (
-                      <div className="dt-bar" title={kmText(r.errorKm, locale)}>
-                        <i style={{ width: `${Math.min(100, (Math.log10(1 + r.errorKm) / Math.log10(1 + 5000)) * 100)}%` }} />
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TruthTable rows={referenceRows} names={videoNames} select={select} go={go} />
           <p className="hint">
             {t('Quelle der Videos: Wikimedia Commons, verknüpft über Wikidata (Eigenschaften P10 und P625). Lizenzen je Datei auf der jeweiligen Dateiseite.')}
           </p>

@@ -2,24 +2,36 @@ import type { Fix, TerrainGrid } from '../../../server/src/datum/contract';
 
 export type { Fix, TerrainGrid };
 
-export interface DatumSummary {
-  recordings: number;
-  ready: number;
-  pending: number;
-  failed: number;
+/** Accuracy of the fixes against one set of truths. */
+export interface TruthAccuracy {
   withTruth: number;
   medianErrorKm: number | null;
   within: { km: number; share: number; count: number }[];
   insideRadius: number | null;
+}
+
+export interface DatumSummary extends TruthAccuracy {
+  recordings: number;
+  ready: number;
+  /** Ready fixes still at the quick stage (engine 6 on; absent on older nodes). */
+  quick?: number;
+  pending: number;
+  failed: number;
   medianRadiusKm: number | null;
   timeKnown: number;
   medianSeconds: number | null;
+  /** Accuracy split by where the truth comes from (engine 6 on; absent on older nodes). */
+  bySource?: { referenz: TruthAccuracy; eigene: TruthAccuracy };
+  /** Own truths stored on the node, matched to a recording or not (engine 6 on). */
+  ownTruths?: number;
   evaluation: unknown;
   holdout: boolean;
 }
 
 export interface DatasetRow {
   index: number;
+  /** 'referenz': the reference set; 'eigene': an own truth (POST /api/datum/truth). Absent on older nodes: reference. */
+  kind?: 'referenz' | 'eigene';
   name: string;
   label: string;
   country: string | null;
@@ -29,6 +41,8 @@ export interface DatasetRow {
   license: string | null;
   videoId: string | null;
   errorKm: number | null;
+  /** Stage of the fix the error belongs to; null without one (engine 6 on). */
+  stage?: 'quick' | 'full' | null;
 }
 
 export interface CountryShape {

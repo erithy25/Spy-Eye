@@ -802,4 +802,6 @@ export const EN: Record<string, string> = {
   'Leuchtturm am Meer': 'lighthouse by the sea',
   'Wortlaut im Protokoll': 'As recorded (German)',
   '© OpenStreetMap-Mitwirkende (ODbL) · OpenMapTiles · Höhendaten: Mapzen Terrain Tiles': '© OpenStreetMap contributors (ODbL) · OpenMapTiles · Elevation: Mapzen Terrain Tiles',
+  '{n} schnell': '{n} quick',
+  'keine Aufnahme dieses Namens': 'no recording of this name',
 };
