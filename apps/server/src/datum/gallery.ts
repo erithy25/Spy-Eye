@@ -70,8 +70,8 @@ export interface GalleryOptions {
   /** Parallel JPEG decodes. Default: number of cores. */
   decodeConcurrency?: number;
   /**
-   * Thread that runs searchAsync. Default: the process-wide search thread (sharedGallerySearch,
-   * ended by closeGallerySearch on shutdown).
+   * Thread that runs searchAsync. Default: the process-wide search thread (sharedGallerySearch),
+   * which ends with the process.
    */
   searchThread?: GallerySearchThread;
 }

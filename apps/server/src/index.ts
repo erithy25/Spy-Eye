@@ -1,11 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config, repoRoot } from './config.js';
-import { closeGallerySearch } from './datum/gallerySearch.js';
 import type { PeerRecord } from './intel/federation.js';
 import { externalPeer, pairSecret, type ExternalPeer } from './intel/peerConfig.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
-import { closeInferenceThreads } from './ml/workerHost.js';
 import { PlatformNode, VERSION, nodeScheme, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
 import { restorePreparedState, snapshotPreparedState } from './scripts/prepared.js';
@@ -194,15 +192,17 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     say('Beende …');
-    Promise.allSettled(nodes.map((n) => n.stop()))
-      // The worker threads end after the nodes, which use them until they have stopped. An
-      // inference thread finishes its run and releases its sessions first (an onnxruntime
-      // session torn down mid-run aborts the process); a gallery search under way may finish.
-      .then(() => Promise.allSettled([closeInferenceThreads(), closeGallerySearch()]))
-      .then(
-        () => process.exit(0),
-        () => process.exit(1),
-      );
+    // The worker threads are deliberately not closed here. Closing an inference thread fails the
+    // calls in it while the event loop still runs, and the pipeline then stores a recording that
+    // is mid-analysis as failed ("Rechenthread wurde beendet"), which the next start never
+    // analyses again. Ending the process right after the nodes leaves that work unfinished, so it
+    // is redone at the next start. The inference threads finish their runs and release their
+    // sessions during the exit itself (drainAtExit in ml/workerHost.ts, synchronous, so nothing
+    // else runs meanwhile); the gallery search thread holds no native resources.
+    Promise.allSettled(nodes.map((n) => n.stop())).then(
+      () => process.exit(0),
+      () => process.exit(1),
+    );
     // Whatever has not ended after 4 s does not hold the process any longer.
     setTimeout(() => process.exit(0), 4000).unref();
   };

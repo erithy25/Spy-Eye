@@ -332,8 +332,9 @@ export class GallerySearchThread {
 let shared: GallerySearchThread | null = null;
 
 /**
- * The search thread of the process, used by every Gallery that was not given its own. Once
- * closed (node shutdown) it stays closed: later searches run on the main thread.
+ * The search thread of the process, used by every Gallery that was not given its own. It ends
+ * with the process (the node does not close it: it holds no native resources). Once closed it
+ * stays closed: later searches run on the main thread.
  */
 export function sharedGallerySearch(): GallerySearchThread {
   shared ??= new GallerySearchThread();
@@ -345,7 +346,7 @@ export function forgetGallery(gallery: number): void {
   for (const thread of open) thread.drop(gallery);
 }
 
-/** Ends every gallery search thread of this process (node shutdown). */
+/** Ends every gallery search thread of this process (tests, and callers that keep running). */
 export async function closeGallerySearch(): Promise<void> {
   await Promise.all([...open].map((thread) => thread.close()));
 }

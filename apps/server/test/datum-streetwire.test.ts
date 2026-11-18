@@ -540,7 +540,7 @@ test('a stand-in stage that throws costs the fix nothing but the refinement', as
   }
 });
 
-test('which answers are searched: recognised landmarks, never countries, GPS or diffuse world-model answers', () => {
+test('which answers are searched: clearly recognised landmarks, never weaker ones, countries, GPS or world-model answers', () => {
   const location = { lat: 48.1, lon: 11.5, radiusKm: 3, confidence: 0.6, method: 'landmark' as const, label: 'Ort', country: 'DE', countryName: 'Deutschland' };
   const situation = (method: StreetLevelSituation['diagnostics']['method'], radiusTier: string | null, worldModel: StreetLevelSituation['diagnostics']['worldModel'] = null): StreetLevelSituation => ({
     location,
@@ -549,7 +549,8 @@ test('which answers are searched: recognised landmarks, never countries, GPS or 
   const strong = sl.streetLevelPlan(situation('landmark', 'strong'));
   assert.deepEqual(strong?.candidate, { lat: 48.1, lon: 11.5, radiusKm: 3, label: 'Ort' });
   assert.equal(strong?.source, 'landmark');
-  assert.equal(sl.streetLevelPlan(situation('landmark', 'recognised'))?.source, 'landmark');
+  // A weaker recognition is too often a look-alike elsewhere (docs/measurements/datum-streetlevel-open.json).
+  assert.equal(sl.streetLevelPlan(situation('landmark', 'recognised')), null);
   assert.equal(sl.streetLevelPlan(situation('landmark', 'similar')), null);
   assert.equal(sl.streetLevelPlan(situation('region', 'country')), null);
   assert.equal(sl.streetLevelPlan(situation('metadata', 'strong')), null);

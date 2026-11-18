@@ -1787,10 +1787,18 @@ export interface StreetLevelRule {
 }
 
 /**
- * When the full stage compares with street-level pictures. A recognised landmark (tiers 'strong'
- * and 'recognised') is searched 3 km around (docs/measurements/datum-streetlevel.json: with the
- * true place among the candidates 6 of 29 covered places matched, 5 within 1 km; around a wrong
- * place 50 km away 1 of 18 matched).
+ * When the full stage compares with street-level pictures. A landmark recognised clearly (tier
+ * 'strong') is searched 3 km around (docs/measurements/datum-streetlevel.json: with the true place
+ * among the candidates 6 of 29 covered places matched, 5 within 1 km; around a wrong place 50 km
+ * away 1 of 18 matched). On the engine's own answers for the reference videos
+ * (docs/measurements/datum-streetlevel-open.json, the gallery as the live node uses it) the 8
+ * 'strong' answers all lay within 3 km of the truth; 5 had enough Panoramax pictures and 1
+ * matched, 0.3 km from the truth (the answer had been 1.0 km off).
+ *
+ * Tier 'recognised' is not searched: its answers are far more often wrong (radius 7500 km), and a
+ * look-alike place is just where street-level pictures look alike too. Of the 3 'recognised'
+ * answers, the one match was a wrong pin: a station 20 km from the filmed one, pinned with a
+ * 1 km radius (the same in unknown mode, datum-streetlevel-worldmodel.json).
  *
  * World-model answers stay off (worldModelMinConcentration null). Measured on the reference
  * videos in unknown mode (the place not in the gallery; docs/measurements/
@@ -1805,7 +1813,7 @@ export interface StreetLevelRule {
  */
 export const STREETLEVEL_RULE: StreetLevelRule = {
   radiusKm: 3,
-  landmarkTiers: ['strong', 'recognised'],
+  landmarkTiers: ['strong'],
   worldModelMinConcentration: null,
 };
 

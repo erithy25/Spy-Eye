@@ -1,6 +1,6 @@
 {
  "measuredAt": "2026-11-18T19:25:58.959Z",
- "summarisedAt": "2026-11-18T19:32:09.896Z",
+ "summarisedAt": "2026-11-18T19:38:01.539Z",
  "script": "apps/server/src/scripts/datum/evaluateStreetlevel.ts --worldmodel",
  "model": "onnx-community/siglip2-base-patch32-256-ONNX",
  "threads": 2,
@@ -72,7 +72,7 @@
   "worldModelPrecision": "int8",
   "candidateRadiusKm": 3,
   "worldModelCandidate": "GeoCLIP's best point (LocateDiagnostics.worldModel.best) of every answer with method 'worldmodel'",
-  "landmarkCandidate": "the answer of method 'landmark' with tier strong or recognised (the engine's rule)",
+  "landmarkCandidate": "the answer of method 'landmark' with tier strong or recognised (the engine searches strong only, streetlevel.ts STREETLEVEL_RULE)",
   "providers": [
    "panoramax"
   ],
@@ -315,6 +315,48 @@
  },
  "landmark": {
   "note": "in unknown mode a recognised landmark is a look-alike of the filmed one; this is the false-match risk of the engine rule",
+  "byTier": {
+   "strong": {
+    "train": {
+     "calls": 2,
+     "centreWithin3km": 2,
+     "withPictures": 2,
+     "withPicturesCentreWithin3km": 2,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 0,
+     "centreWithin3km": 0,
+     "withPictures": 0,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    }
+   },
+   "recognised": {
+    "train": {
+     "calls": 0,
+     "centreWithin3km": 0,
+     "withPictures": 0,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 0,
+     "matchedWithin1km": 0,
+     "wrongPins": 0
+    },
+    "test": {
+     "calls": 2,
+     "centreWithin3km": 0,
+     "withPictures": 2,
+     "withPicturesCentreWithin3km": 0,
+     "matched": 1,
+     "matchedWithin1km": 0,
+     "wrongPins": 1
+    }
+   }
+  },
   "train": {
    "calls": 2,
    "centreWithin3km": 2,

@@ -18,9 +18,9 @@
  * GeoCLIP's prediction from its worker thread). Where the answer came from the world model,
  * street-level pictures are compared 3 km around GeoCLIP's best point (whatever its
  * concentration, so that the concentration threshold can be chosen afterwards); where it is a
- * recognised landmark (tiers strong and recognised), 3 km around it (the engine's rule,
- * streetlevel.ts streetLevelPlan, for reference: in unknown mode such a landmark is a look-alike
- * of the filmed one). The rule for world-model answers is chosen on the train half (even ids):
+ * recognised landmark (tiers strong and recognised, so that the engine's choice of tiers in
+ * streetlevel.ts STREETLEVEL_RULE can be checked), 3 km around it (in unknown mode such a landmark
+ * is a look-alike of the filmed one). The rule for world-model answers is chosen on the train half (even ids):
  * the lowest concentration threshold from 0.2 up with at least MIN_RULE_MATCHES matches on train,
  * at most one in ten of them a wrong pin; the test half is reported. A rate of one in ten can only
  * be judged on ten matches or more: with fewer, a single wrong pin is already more than that, and
@@ -397,8 +397,9 @@ async function runWorldModelMode(): Promise<void> {
         .catch(() => null);
       const geoVideos = geoCache && geoCache.version === 1 && geoCache.precision === precision && geoCache.frames === FRAMES ? geoCache.videos : {};
       const embedTexts = (texts: string[]): Promise<Float32Array> => model.embedTexts(texts);
-      // Every listed place, the world model's diffuse answers too: the threshold is chosen below.
-      const collect = { ...sl.STREETLEVEL_RULE, worldModelMinConcentration: 0 };
+      // Every candidate either path could have, the world model's diffuse answers and both landmark
+      // tiers too: the threshold and the tiers are judged below.
+      const collect = { ...sl.STREETLEVEL_RULE, landmarkTiers: ['strong', 'recognised'], worldModelMinConcentration: 0 };
       for (const [i, video] of videos.entries()) {
         const file = path.join(datasetDir, video.file);
         const split = (indexOf.get(video.id) ?? 0) % 2 === 0 ? 'train' : 'test';
@@ -508,7 +509,7 @@ async function runWorldModelMode(): Promise<void> {
       worldModelPrecision: precision,
       candidateRadiusKm: radiusKm,
       worldModelCandidate: "GeoCLIP's best point (LocateDiagnostics.worldModel.best) of every answer with method 'worldmodel'",
-      landmarkCandidate: "the answer of method 'landmark' with tier strong or recognised (the engine's rule)",
+      landmarkCandidate: "the answer of method 'landmark' with tier strong or recognised (the engine searches strong only, streetlevel.ts STREETLEVEL_RULE)",
       providers: process.env['MAPILLARY_TOKEN'] ? ['panoramax', 'mapillary'] : ['panoramax'],
       mapillary: process.env['MAPILLARY_TOKEN'] ? 'used' : 'not measured: no Mapillary key on the measuring machine',
       decision: { minPictures: minPicturesWm, minSimilarity: sl.DEFAULT_STREETLEVEL_OPTIONS.minSimilarity, minGap: sl.DEFAULT_STREETLEVEL_OPTIONS.minGap, minZ: sl.DEFAULT_STREETLEVEL_OPTIONS.minZ },
