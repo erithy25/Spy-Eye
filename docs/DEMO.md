@@ -6,6 +6,15 @@ das Verbundprotokoll miteinander, so wie Knoten auf drei Rechnern es täten.
 
 ## Am Vorabend (einmalig, mit Netz)
 
+Unter Windows genügt ein Befehl; er prüft die Voraussetzungen, richtet ein, lädt das Material,
+wertet es aus, prüft die drei Knoten und hört dort auf:
+
+```bash
+.\vorfuehrung.cmd -NurPruefen
+```
+
+Dieselben Schritte einzeln, auf jedem Betriebssystem:
+
 ```bash
 pnpm install
 ```
@@ -41,6 +50,15 @@ Windows-Rechner mit PowerShell durchgespielt (`.github/workflows/windows.yml`).
 
 ## Am Tag selbst
 
+Unter Windows stellt derselbe Befehl ohne Zusatz den vorbereiteten Ausgangsstand wieder her,
+prüft, startet die drei Knoten und öffnet den Browser:
+
+```bash
+.\vorfuehrung.cmd
+```
+
+Oder von Hand:
+
 ```bash
 pnpm demo
 ```
@@ -67,7 +85,8 @@ Vor Beginn prüfen (zwei Minuten):
    durchgelaufen: abwarten.
 3. Zweites Browserfenster: Trier, als `leitung` angemeldet, Reiter PROTOKOLL.
 4. Nach einem Probelauf den Ausgangsstand wiederherstellen: die Knoten beenden (Strg+C),
-   `pnpm demo:reset`, dann `pnpm demo`. Das dauert eine Sekunde und nimmt alles zurück, was die
+   `pnpm demo:reset`, dann `pnpm demo` (unter Windows erledigt `.\vorfuehrung.cmd` beides). Das
+   dauert eine Sekunde und nimmt alles zurück, was die
    Probe hinterlassen hat: Meldungen, Urteile, die nachgeschärfte Wache, Vorgänge und
    Protokolleinträge. Das Material wird nicht neu ausgewertet. Ohne Zurücksetzen träte die
    Fehlmeldung in der Vorführung nicht mehr auf, weil die Wache schon in Version 2 arbeitet.

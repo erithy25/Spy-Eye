@@ -30,9 +30,31 @@ Voraussetzungen: Node ab 20.11, pnpm, ffmpeg (`winget install Gyan.FFmpeg`, dana
 Terminal öffnen). Beim ersten Mal werden rund 950 MB Modelle und rund 300 MB Übungsmaterial
 geladen; danach braucht nichts mehr ein Netz.
 
+**Der kurze Weg.** Im Ordner des Repositorys:
+
 ```bash
 git pull
 ```
+
+```bash
+.\vorfuehrung.cmd
+```
+
+Der Befehl prüft die Voraussetzungen und nennt, was fehlt; richtet ein und baut; lädt beim ersten
+Mal das Material und wertet es aus (fünf bis zehn Minuten); stellt bei jedem weiteren Mal den
+vorbereiteten Ausgangsstand in einer Sekunde wieder her; prüft die drei Knoten; startet sie und
+öffnet den Browser. Am Vorabend genügt `.\vorfuehrung.cmd -NurPruefen`: alles bis zur Prüfung,
+ohne zu starten. Derselbe Befehl läuft auf einem Windows-Rechner von GitHub in jedem Prüflauf mit.
+
+- Hauptbildschirm: <http://127.0.0.1:8787>, Anmeldung `leitung`, Passwort `lagebild`, Mandat
+  „Übung RHEIN-MOSEL“.
+- Beenden: Strg+C im Fenster. Nach einer Probe einfach `.\vorfuehrung.cmd` wiederholen.
+- Ohne `ML_DEVICE` starten. Die Auswertung läuft auf dem Prozessor; eine Grafikkarte wird nur
+  verwendet, wenn sie nachweislich dasselbe rechnet.
+- Die Kette ohne Sicht nachrechnen, falls jemand fragt:
+  `pnpm ledger:verify data-koblenz/ledger.jsonl`.
+
+**Dieselben Schritte einzeln**, falls der kurze Weg an einer Stelle hängt:
 
 ```bash
 pnpm install
@@ -58,23 +80,15 @@ pnpm demo:check
 pnpm demo
 ```
 
-- `demo:prepare` wertet das Material aus (fünf bis zehn Minuten) und endet mit „Vorbereitet“.
+- `demo:prepare` endet mit „Vorbereitet“; ein zweiter Aufruf ändert den Ausgangsstand nicht.
 - `demo:check` endet mit „Ergebnis: bereit“. Steht dort etwas anderes, nennt jede Zeile mit
   FEHLT den nächsten Schritt.
-- `demo` startet drei Knoten. Hauptbildschirm: <http://127.0.0.1:8787>, Anmeldung `leitung`,
-  Passwort `lagebild`, Mandat „Übung RHEIN-MOSEL“.
-- Nach einer Probe: Knoten mit Strg+C beenden, `pnpm demo:reset`, dann wieder `pnpm demo`. Das
-  stellt den Ausgangsstand in einer Sekunde wieder her.
-- Ohne `ML_DEVICE` starten. Die Auswertung läuft auf dem Prozessor; eine Grafikkarte wird nur
-  verwendet, wenn sie nachweislich dasselbe rechnet.
-- Nach jedem `git pull` wieder `pnpm install` und `pnpm build`, dann `pnpm demo:check`. Neu
-  vorbereiten (`pnpm demo:prepare`) ist nur nötig, wenn die Prüfung es sagt; ein früher
-  vorbereiteter Stand bleibt verwendbar.
-- Die Kette ohne Sicht nachrechnen, falls jemand fragt:
-  `pnpm ledger:verify data-koblenz/ledger.jsonl`.
+- Nach einer Probe: Knoten mit Strg+C beenden, `pnpm demo:reset`, dann wieder `pnpm demo`.
 
 Für eigenes Material statt der Übung: `pnpm start`, anmelden, Mandat „Erprobung“, im Reiter
-QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen.
+QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen. Bilder erscheinen erst, wenn
+sie auf Gesichter geprüft sind; eine Aufnahme lässt sich abspielen, sobald sie vollständig
+ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 
 ## 3. Vor dem Termin entscheiden
 

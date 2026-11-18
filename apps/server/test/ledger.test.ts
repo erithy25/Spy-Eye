@@ -140,3 +140,31 @@ test('appending and verifying at the same time neither forks the chain nor repor
   const final = await ledger.verify();
   assert.deepEqual([final.ok, final.entries], [true, 40]);
 });
+
+test('the oversight sample is drawn from the whole file, not only from recent entries', async () => {
+  const file = await tempFile();
+  const ledger = new Ledger(file);
+  await ledger.open();
+  // More entries than the ledger keeps in memory, with the queries at the very beginning.
+  for (let i = 0; i < 6; i++) await ledger.append({ ...entry(i), action: 'search.query' });
+  for (let i = 0; i < 4200; i++) await ledger.append({ ...entry(i), action: 'alert.raise', actor: 'system' });
+  assert.equal(ledger.list({ limit: 5000, action: 'search.query' }).length, 0, 'the early queries have left the window in memory');
+
+  const all = await ledger.sample((e) => e.action === 'search.query', 10);
+  assert.equal(all.population, 6);
+  assert.deepEqual(all.entries.map((e) => e.seq), [6, 5, 4, 3, 2, 1]);
+
+  // A sample smaller than the population: the right size, distinct entries, every entry reachable.
+  const seen = new Set<number>();
+  for (let round = 0; round < 60; round++) {
+    const some = await ledger.sample((e) => e.action === 'search.query', 2);
+    assert.equal(some.population, 6);
+    assert.equal(some.entries.length, 2);
+    assert.notEqual(some.entries[0]?.seq, some.entries[1]?.seq);
+    for (const e of some.entries) seen.add(e.seq);
+  }
+  assert.equal(seen.size, 6);
+
+  const none = await ledger.sample((e) => e.action === 'no.such.action', 5);
+  assert.deepEqual(none, { population: 0, entries: [] });
+});

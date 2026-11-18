@@ -250,6 +250,41 @@ export class Ledger {
     };
   }
 
+  /**
+   * A random sample of the entries that satisfy `test`, drawn from the whole file and not only
+   * from the recent entries held in memory: an oversight sample must reach back as far as the
+   * ledger does, however much has been written since. One pass, each matching entry equally
+   * likely. Returns the sample newest first and the number of entries it was drawn from.
+   */
+  async sample(test: (entry: LedgerEntry) => boolean, size: number, random: () => number = Math.random): Promise<{ population: number; entries: LedgerEntry[] }> {
+    await this.queue;
+    const chosen: LedgerEntry[] = [];
+    let population = 0;
+    try {
+      await fs.access(this.file);
+    } catch {
+      return { population: 0, entries: [] };
+    }
+    for await (const line of fileLines(this.file)) {
+      if (line.trim() === '') continue;
+      let entry: LedgerEntry;
+      try {
+        entry = JSON.parse(line) as LedgerEntry;
+      } catch {
+        continue; // a damaged line is the business of verify(), not of the sample
+      }
+      if (!test(entry)) continue;
+      population++;
+      if (chosen.length < size) chosen.push(entry);
+      else {
+        const slot = Math.floor(random() * population);
+        if (slot < size) chosen[slot] = entry;
+      }
+    }
+    chosen.sort((a, b) => b.seq - a.seq);
+    return { population, entries: chosen };
+  }
+
   /** Full file content for export to an oversight body. */
   async exportText(): Promise<string> {
     await this.queue;

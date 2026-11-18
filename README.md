@@ -34,7 +34,9 @@ einrichtet (Nachbarknoten im Verbund, angeschlossene Direktbilder).
 
 Voraussetzungen: Node ab 20.11, pnpm, `ffmpeg` im Suchpfad
 (Windows: `winget install Gyan.FFmpeg`, macOS: `brew install ffmpeg`, Linux: `apt install ffmpeg`).
-Die Befehle sind in PowerShell, bash und zsh dieselben.
+Die Befehle sind in PowerShell, bash und zsh dieselben. Unter Windows fasst `.\vorfuehrung.cmd`
+alle Schritte dieses Abschnitts zusammen: prüfen, einrichten, vorbereiten oder zurücksetzen,
+prüfen, starten.
 
 ```bash
 pnpm install

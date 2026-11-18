@@ -954,9 +954,16 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       rawBox && [rawBox.x, rawBox.y, rawBox.w, rawBox.h].every((v) => typeof v === 'number' && Number.isFinite(v))
         ? { x: rawBox.x as number, y: rawBox.y as number, w: rawBox.w as number, h: rawBox.h as number }
         : null;
+    // When the picture was taken is read from the recording, not from what the browser says:
+    // for exercise footage the moment the exercise showed it, otherwise recording start plus offset.
+    const scope = node.scopes().find((candidate) => candidate.entry.info.id === videoId);
+    const frameIdx = scope ? scope.entry.frames.findIndex((frame) => frame.n === frameNumber) : -1;
+    const recorded = store.get(videoId);
+    const offsetMs = Math.round((recorded?.frames.find((frame) => frame.n === frameNumber)?.t ?? 0) * 1000);
+    const at = scope && frameIdx >= 0 ? scope.timeOf(frameIdx) : (recorded?.info.capturedAt ?? Date.now()) + offsetMs;
     const item = await cases.addFrame(
       request.params.id,
-      { videoId, frameNumber, at: body.number('at', Date.now(), 0, 1e14), note: body.text('note', 500), query: body.text('query', 300) || null, box },
+      { videoId, frameNumber, at, note: body.text('note', 500), query: body.text('query', 300) || null, box },
       ctx.user,
     );
     if (!item) return sendError(reply, 409, say(ctx, 'Vorgang nicht gefunden, versiegelt oder Bild unbekannt.', 'Case not found, sealed, or frame unknown.'));
@@ -1134,15 +1141,10 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const sizeRaw = Number(queryString(request.query, 'n') ?? '10');
     const size = Number.isFinite(sizeRaw) ? Math.min(50, Math.max(1, Math.floor(sizeRaw))) : 10;
     const QUERIES = ['search.query', 'search.refused', 'search.explain', 'watch.preview', 'watch.refused', 'federation.inbound', 'federation.refused'];
-    const pool = ledger.list({ limit: 4000 }).filter((e) => QUERIES.includes(e.action));
-    const sample: typeof pool = [];
-    const copy = [...pool];
-    while (sample.length < size && copy.length > 0) {
-      sample.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0] as (typeof pool)[number]);
-    }
-    sample.sort((a, b) => b.seq - a.seq);
-    await node.record(ctx, 'audit.sample', `Stichprobe gezogen: ${sample.length} von ${pool.length} Abfragen`, { entries: sample.map((e) => e.seq) });
-    return { population: pool.length, entries: sample };
+    // Drawn from the whole ledger file, so that old queries cannot be pushed out of reach by new ones.
+    const { population, entries: sample } = await ledger.sample((e) => QUERIES.includes(e.action), size);
+    await node.record(ctx, 'audit.sample', `Stichprobe gezogen: ${sample.length} von ${population} Abfragen`, { entries: sample.map((e) => e.seq) });
+    return { population, entries: sample };
   });
 
   // ---- interfaces to existing situation-picture and warning systems

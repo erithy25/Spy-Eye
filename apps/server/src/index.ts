@@ -6,7 +6,7 @@ import type { PeerRecord } from './intel/federation.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
 import { PlatformNode, VERSION, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
-import { snapshotPreparedState } from './scripts/prepared.js';
+import { restorePreparedState, snapshotPreparedState } from './scripts/prepared.js';
 
 interface NodesFile {
   /** Secret from which the pairwise federation keys of the nodes in this file are derived. */
@@ -148,8 +148,17 @@ async function main(): Promise<void> {
   say(`Sicht ${VERSION}`);
   say(`  ${await checkFfmpeg()}`);
 
+  const configs = await loadNodeConfigs();
+  if (process.argv.includes('--prepare')) {
+    // Preparing twice must not turn a rehearsal into the starting point: where a prepared state
+    // exists it is put back first, and only what is missing since is analysed.
+    for (const cfg of configs) {
+      const restored = await restorePreparedState(cfg.dataDir);
+      if (restored) say(`  ${cfg.name}: vorbereiteter Stand wiederhergestellt, ${restored.recordings} Aufzeichnungen`);
+    }
+  }
   const shared = await createSharedRuntime(say);
-  const nodes = (await loadNodeConfigs()).map((cfg) => new PlatformNode(cfg, shared));
+  const nodes = configs.map((cfg) => new PlatformNode(cfg, shared));
   for (const node of nodes) {
     await node.start(true);
     say(`  ${node.info.name}: http://${node.cfg.host === '0.0.0.0' ? '127.0.0.1' : node.cfg.host}:${node.cfg.port}`);
@@ -160,7 +169,7 @@ async function main(): Promise<void> {
     return;
   }
   if (first?.auth.demoMode) {
-    say(`  Demo-Zugänge: ${first.auth.listUsers().map((u) => u.id).join(', ')} · Passwort: ${first.auth.demoHint}`);
+    say(`  Demo-Zugänge: ${first.auth.listUsers().map((u) => u.id).join(', ')} · Passwort: ${first.auth.demoHint || 'vom Betreiber gesetzt'}`);
   }
 
   let shuttingDown = false;

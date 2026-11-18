@@ -1,8 +1,9 @@
 name: windows
 
-# The whole demonstration path on a Windows machine with Windows PowerShell 5.1: install, build,
-# fetch the footage, prepare three nodes, check them, reset them, play the exercise. It downloads about
-# 1.3 GB, so it runs only when asked for: by hand, or by a commit whose message contains [windows].
+# The whole demonstration path on a Windows machine with Windows PowerShell 5.1, through the one
+# command a presenter runs (vorfuehrung.cmd): install, build, fetch the footage, prepare three
+# nodes, check them, restore them, play the exercise. It downloads about 1.3 GB, so it runs only
+# when asked for: by hand, or by a commit whose message contains [windows].
 
 on:
   workflow_dispatch:
@@ -28,20 +29,22 @@ jobs:
           cache: pnpm
       - name: ffmpeg
         run: choco install ffmpeg --no-progress -y
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
       - uses: actions/cache@v4
         with:
           path: .models
           key: models-siglip2-base-patch32-256-v1
+      # The one command a presenter runs, on a machine that has nothing yet: install, build, fetch
+      # the footage, analyse it on three nodes, check them. Only the start itself is left out.
+      - name: vorfuehrung.cmd on a fresh machine
+        run: .\vorfuehrung.cmd -NurPruefen
+      - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm selftest
-      - run: pnpm exercise:fetch
+      # The same command again, as after a rehearsal: it restores the prepared state and checks.
+      - name: vorfuehrung.cmd on a prepared machine
+        run: .\vorfuehrung.cmd -NurPruefen
+      # Preparing twice must not change the starting point; the nodes are checked from it once more.
       - run: pnpm demo:prepare
-      - run: pnpm demo:check
-      # A rehearsal is undone and the nodes are checked once more from the restored state.
-      - run: pnpm demo:reset
       - run: pnpm demo:check
       # The same events and the same single false alert as on the development machine.
       - run: pnpm exercise:evaluate --speed 8 --require 13 --max-false 1

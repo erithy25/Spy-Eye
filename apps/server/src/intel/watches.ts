@@ -462,15 +462,21 @@ export class WatchEngine {
     const incident = this.deps.incidents.attach(alert);
     alert.incidentId = incident?.id ?? null;
     this.trim();
-    this.deps.hub.broadcast({ type: 'alert', alert });
-    void this.deps.ledger.append({
-      actor: 'system',
-      role: 'system',
-      mandateId: watch.mandateId,
-      action: 'alert.raise',
-      summary: `Meldung „${watch.name}“ von ${source.name} (${Math.round(alert.confidence * 100)} %)`,
-      data: { alertId: alert.id, watchId: watch.id, sourceId: source.id, videoId: alert.videoId, frame: alert.frameNumber, confidence: alert.confidence },
-    });
+    // The entry first, the display after it. An alert that cannot be written down is shown all
+    // the same, because the staff has to see it; the failure is reported instead of swallowed.
+    void this.deps.ledger
+      .append({
+        actor: 'system',
+        role: 'system',
+        mandateId: watch.mandateId,
+        action: 'alert.raise',
+        summary: `Meldung „${watch.name}“ von ${source.name} (${Math.round(alert.confidence * 100)} %)`,
+        data: { alertId: alert.id, watchId: watch.id, sourceId: source.id, videoId: alert.videoId, frame: alert.frameNumber, confidence: alert.confidence },
+      })
+      .catch((err: unknown) => {
+        console.error(`  Meldung ${alert.id} konnte nicht protokolliert werden: ${err instanceof Error ? err.message : String(err)}`);
+      })
+      .finally(() => this.deps.hub.broadcast({ type: 'alert', alert }));
   }
 
   private setEvidence(alert: Alert, observation: Observation, evaluation: Evaluation): void {
