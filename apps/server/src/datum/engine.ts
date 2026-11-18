@@ -27,7 +27,7 @@ import { terrainAvailable } from './terrain.js';
 import { horizonProfile, refinePosition } from './horizon.js';
 
 /** Bumped when the engine changes in a way that makes stored fixes outdated. */
-export const ENGINE_VERSION = 2;
+export const ENGINE_VERSION = 3;
 /** Frames whose whole-frame and crop vectors go into the localisation (as in the evaluation). */
 const LOCATE_FRAMES = 12;
 const SPACE_FRAMES = 3;

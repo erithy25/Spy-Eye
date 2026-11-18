@@ -258,7 +258,11 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
   });
   assert.equal(strong.location?.method, 'landmark');
   assert.ok(greatCircleKm(strong.location?.lat ?? 0, strong.location?.lon ?? 0, 50.3644, 7.6058) < 0.5);
-  assert.ok((strong.location?.radiusKm ?? 99) <= 1);
+  // A match that stands out is the 'strong' tier: its calibrated (small) radius, not the
+  // continental one of a mere similarity.
+  assert.equal(strong.diagnostics.radiusTier, 'strong');
+  assert.ok((strong.location?.radiusKm ?? 99) <= Math.max(1, DEFAULT_LOCATE_PARAMS.radiusKm.strong));
+  assert.ok(DEFAULT_LOCATE_PARAMS.radiusKm.strong < DEFAULT_LOCATE_PARAMS.radiusKm.similar);
   assert.match(strong.location?.label ?? '', /Deutsches Eck, Koblenz/);
   assert.equal(strong.location?.country, 'DE');
   const scoreSum = strong.candidates.reduce((s, c) => s + c.score, 0);
@@ -277,7 +281,10 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
   assert.equal(weak.location?.method, 'region');
   assert.equal(weak.location?.country, 'DE');
   assert.ok((weak.location?.radiusKm ?? 0) > 200);
-  assert.ok((weak.location?.confidence ?? 1) < 0.8, "a country-level answer is never near-certain");
+  // The country-level circle is calibrated (a multiple of the country's size), so it may be
+  // likely to hold the truth, but never certain.
+  assert.ok((weak.location?.radiusKm ?? 0) >= Math.sqrt(357000), 'the circle covers at least the country');
+  assert.ok((weak.location?.confidence ?? 1) <= 0.95, 'a country-level answer is never certain');
   assert.ok(weak.evidence.some((e) => e.kind === 'filename'));
 
   const withGps = decideLocation(world, {

@@ -62,7 +62,8 @@ const THRESHOLDS_KM = [1, 25, 200, 750, 2500] as const;
 /** What changed against the previous measurement (written into the report). */
 const CHANGES = [
   'queries: 12 frames per video with the pipeline tiles (whole frame plus three square crops at detail "standard"); every tile row votes on its own (tilePooling "rows"), chosen on the train half among whole / frame / rows (train objective 0.373 / 0.343 / 0.403)',
-  'radius: calibrated per evidence tier (strong recognition with agreeing frames, other recognition, similarity, country, continent) on the train half to cover the truth in 70 % of its cases; agreement of the frames is a new confidence feature',
+  'radius: calibrated per evidence tier on the train half to cover the truth in 70 % of its cases: strong (gap >= strongGap and frame agreement >= agreementMin, both chosen on train), other recognition, similarity, country and continent (factor on their radius); frame agreement is a new confidence feature',
+  'previous measurement (6 frames, whole frames only, same gallery), test half: open median 233 km, <=1 km 40 %, <=25 km 47 %, <=2500 km 80 %, within radius 43 %; unknown median 751 km, <=25 km 17 %, <=2500 km 70 %, within radius 17 %; train objective 0.377 (now 0.403); the accuracy gain on train did not carry over to the test half',
   'gallery unchanged (6 393 pictures): a broad worldwide layer to 17 945 pictures (fetchDataset.ts --extend) lowered the train objective from 0.403 to 0.283 and was not kept',
   'evaluation uses the live node vector cache (.cache/datum), caches frame vectors, one gallery search serves both modes',
 ];

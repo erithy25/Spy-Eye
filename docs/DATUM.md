@@ -26,7 +26,7 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | Schritt | Verfahren | Ergebnis |
 | --- | --- | --- |
 | Metadaten | Tags der Datei lesen (ISO 6709 Ort, Aufnahmezeit, Gerät); Zeitstempel von Umwandlungen werden verworfen | Ort und Zeit exakt, wenn vorhanden |
-| Wiedererkennung | Acht Bilder des Videos gegen eine Galerie von Referenzbildern mit Koordinaten (Wikidata P18 + P625) vergleichen; die nächsten Nachbarn stimmen mit geodätischen Kernen (2, 25, 250 km) über ihren Ort ab | Kandidatenorte mit Radius |
+| Wiedererkennung | Zwölf Bilder des Videos, jedes als Ganzes und in drei quadratischen Ausschnitten, gegen eine Galerie von Referenzbildern mit Koordinaten (Wikidata P18 + P625) vergleichen; die nächsten Nachbarn stimmen mit geodätischen Kernen (2, 25, 250 km) über ihren Ort ab; der Radius richtet sich nach der Belegstufe | Kandidatenorte mit Radius |
 | Länderschätzung | Das Text-Bild-Modell wird ohne Training gefragt, aus welchem Land die Bilder aussehen; das gewichtet die Kandidaten und trägt die Antwort allein, wenn kein Referenzbild passt | Wahrscheinlichkeit je Land |
 | Licht | Tag, Dämmerung, Nacht, tief- oder hochstehende Sonne aus Bildmerkmalen und Bildstatistik | Band der Sonnenhöhe |
 | Jahreszeit | Schnee, kahle Bäume, Blüte, Laub; auf der Südhalbkugel gespiegelt | Monatsbereich |
@@ -61,33 +61,54 @@ genehmigungspflichtig sein (EU-Dual-Use-Verordnung); das ist vor jeder Lieferung
 Referenzbestand: 60 Videos aus Wikimedia Commons in 30 Ländern (16 aus Deutschland), deren
 Wikidata-Objekt eine Koordinate trägt. Die Videos gehen unter neutralen Namen (`datum-001.mp4`)
 in den Knoten; der Ort wird erst nach der Ortung zum Vergleich dazugelegt. Galerie: 6 393
-Referenzbilder von Wikidata-Objekten mit Koordinate. Je Video sechs Bilder. Die Schwellen der
-Ortung wurden nur an der einen Hälfte der Videos eingestellt (Abstimmungshälfte); die andere
+Referenzbilder von Wikidata-Objekten mit Koordinate. Je Video zwölf Bilder, jedes als Ganzes und
+in drei quadratischen Ausschnitten (so legt die Analyse sie ohnehin ab). Die Schwellen und Radien
+der Ortung wurden nur an der einen Hälfte der Videos eingestellt (Abstimmungshälfte); die andere
 Hälfte (Prüfhälfte) wurde nur gemessen. Gemessen am 18. November 2026 mit `pnpm datum:evaluate`,
 Einzelwerte in `docs/measurements/datum-geolocation.json`.
 
 | Fall | Hälfte | Median | ≤ 1 km | ≤ 25 km | ≤ 200 km | ≤ 750 km | ≤ 2 500 km | Land richtig |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Referenzbild des Ortes in der Galerie | Prüfhälfte (30) | 233 km | 40 % | 47 % | 50 % | 60 % | 80 % | 43 % |
-| Referenzbild des Ortes in der Galerie | alle (60) | 310 km | 27 % | 37 % | 45 % | 57 % | 77 % | 38 % |
-| Ort ohne Referenzbild (unbekannt) | Prüfhälfte (30) | 751 km | 0 % | 17 % | 27 % | 47 % | 70 % | 37 % |
-| Ort ohne Referenzbild (unbekannt) | alle (60) | 735 km | 0 % | 17 % | 28 % | 50 % | 70 % | 35 % |
-| Nur Länderschätzung, ohne Galerie | Prüfhälfte (30) | 1 253 km | 0 % | 0 % | 13 % | 43 % | 60 % | 37 % |
+| Referenzbild des Ortes in der Galerie | Prüfhälfte (30) | 434 km | 27 % | 43 % | 47 % | 53 % | 67 % | 37 % |
+| Referenzbild des Ortes in der Galerie | alle (60) | 283 km | 25 % | 40 % | 45 % | 58 % | 68 % | 40 % |
+| Ort ohne Referenzbild (unbekannt) | Prüfhälfte (30) | 937 km | 0 % | 13 % | 23 % | 43 % | 60 % | 33 % |
+| Ort ohne Referenzbild (unbekannt) | alle (60) | 937 km | 0 % | 15 % | 25 % | 47 % | 60 % | 38 % |
+| Nur Länderschätzung, ohne Galerie | Prüfhälfte (30) | 1 445 km | 0 % | 0 % | 13 % | 40 % | 57 % | 37 % |
+| Vorher: sechs ganze Bilder, Referenzbild in der Galerie | Prüfhälfte (30) | 233 km | 40 % | 47 % | 50 % | 60 % | 80 % | 43 % |
+| Vorher: sechs ganze Bilder, Ort unbekannt | Prüfhälfte (30) | 751 km | 0 % | 17 % | 27 % | 47 % | 70 % | 37 % |
 
 Einordnung:
-- Die Wiedererkennung trägt. Liegt ein Bild desselben Bauwerks in der Galerie, ortet DATUM
-  vier von zehn Videos der Prüfhälfte auf einen Kilometer genau. Fehlt es, bleibt eine Schätzung
-  auf Land- und Kontinentebene, die besser ist als die Länderschätzung allein.
+- Die Wiedererkennung trägt. Liegt ein Bild desselben Bauwerks in der Galerie, ortet DATUM gut
+  ein Viertel der Videos auf einen Kilometer genau. Fehlt es, bleibt eine Schätzung auf Land- und
+  Kontinentebene, die besser ist als die Länderschätzung allein.
+- Die Ausschnitte haben die Treffsicherheit nicht messbar verbessert. Auf der Abstimmungshälfte
+  stieg das Abstimmungsmaß (Mittel der fünf Trefferquoten über beide Fälle) von 0,377 auf 0,403,
+  auf der Prüfhälfte fielen die Werte (bekannter Ort auf 1 km genau: 27 statt 40 %). Beides liegt
+  innerhalb der Schwankung von 30 Videos; nach der Regel der Messung gilt das Verfahren, das auf
+  der Abstimmungshälfte vorn lag, und die Prüfhälfte steht hier so, wie sie gemessen wurde.
+- Geprüft und verworfen: eine breitere Galerie. 11 552 weitere Bilder von Wikidata-Objekten aus
+  aller Welt (nach Bekanntheit und Klasse gewählt, über die Kontinente verteilt, unabhängig von
+  den Orten der Videos; zusammen 17 945) senkten das Abstimmungsmaß von 0,403 auf 0,283. Mehr
+  ähnlich aussehende Bauwerke verdrängen das richtige, etwa die Krimbrücke durch eine Brücke in
+  Indien (Kosinus 0,88 gegen 0,84). Nur Bauwerke: 0,313, nur Orte und Landschaften: 0,357. Die
+  Galerie bleibt bei 6 393 Bildern; `fetchDataset.ts --extend` wiederholt den Versuch.
+- Die Zuverlässigkeitsangabe stimmt jetzt, ist aber grob. Der Radius hängt von der Belegstufe ab
+  und ist auf der Abstimmungshälfte so gewählt, dass die Wahrheit in 70 % der Fälle im Kreis
+  liegt. Auf der Prüfhälfte lag sie bei bekannten Orten in 67 %, bei unbekannten in 60 % im Kreis
+  (vorher 43 % und 17 %). Ehrlich heißt hier groß: 3 km nur, wenn ein Referenzbild klar aus den
+  übrigen Treffern heraussticht; sonst 1 500 km; 7 500 km bei einer knapperen Wiedererkennung,
+  weil gerade diese oft ein ähnliches Bauwerk auf einem anderen Kontinent ist; bei einer
+  Länderantwort das Dreifache der Landesgröße.
 - Die Länderschätzung allein trifft das Land in 38 % der Fälle (unter den ersten fünf Ländern in
-  65 %).
-- Die Zuverlässigkeitsangabe ist ehrlich, aber grob: Bei unbekannten Orten lag die Wahrheit in
-  18 % der Fälle im angegebenen Kreis (angegeben im Mittel 27 %), bei bekannten in 43 %.
+  67 %).
 - 30 Videos je Hälfte sind wenig; die Anteile schwanken um rund neun Prozentpunkte.
 - Zum Vergleich ohne Anspruch auf Gleichwertigkeit: Veröffentlichte Verfahren mit großen
   Galerien und eigens trainierten Modellen erreichen auf öffentlichen Prüfsätzen deutlich
   höhere Werte. DATUM arbeitet mit einem allgemeinen Bild-Text-Modell und 6 393 Referenzbildern.
-- Rechenzeit: 1,3 s je Video für die Ortung (Bilder und Vergleich), mit Raum, Horizont und Zeit
-  rund 2 s; die Galerie wird einmal eingerechnet und lädt danach in 0,4 s.
+- Rechenzeit: Im Knoten 0,6 s je Video für die Ortung; die Vektoren der Bilder und Ausschnitte
+  liegen aus der Analyse vor, der Vergleich der 48 Ausschnitte mit der Galerie dauert 0,4 s. Mit
+  Raum, Horizont und Zeit rund 2 s. Die Galerie wird einmal eingerechnet und lädt danach in
+  0,3 s.
 - Die Uhrzeit hat keine Grundwahrheit: Die Videos aus Commons tragen nach der Umwandlung keine
   Aufnahmezeit mehr. Geprüft ist die Rechnung (Sonnenstand gegen veröffentlichte Werte auf die
   Minute, Zeitzonen, Fenster aus der Sonnenhöhe), nicht die Treffsicherheit bei echten Videos.
