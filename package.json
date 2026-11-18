@@ -22,6 +22,11 @@
     "demo:check": "node apps/server/dist/scripts/checkDemo.js",
     "demo:reset": "node apps/server/dist/scripts/resetDemo.js",
     "ledger:verify": "node tools/pruefen/ledger-verify.mjs",
-    "sbom": "node tools/stueckliste/build.mjs"
+    "sbom": "node tools/stueckliste/build.mjs",
+    "datum:fetch": "pnpm --filter @sicht/server datum:fetch",
+    "datum:prepare": "node apps/server/dist/index.js --nodes nodes.datum.json --prepare",
+    "datum": "node apps/server/dist/index.js --nodes nodes.datum.json",
+    "datum:evaluate": "pnpm --filter @sicht/server datum:evaluate",
+    "datum:check": "node apps/server/dist/scripts/datum/check.js"
   }
 }

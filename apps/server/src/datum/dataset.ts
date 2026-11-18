@@ -1,0 +1,108 @@
+/**
+ * The DATUM reference dataset: videos with a known recording place (ground truth from
+ * Wikidata), used to show and to measure what the engine gets right.
+ *
+ * The clips enter a node under neutral names ("datum-017.mp4") so that neither the engine nor
+ * the person in front of the console learns the place from the file name. The ground truth is
+ * attached to a fix only after it has been computed, for comparison.
+ */
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { repoRoot } from '../config.js';
+
+export interface ManifestVideo {
+  id: string;
+  file: string;
+  title: string;
+  label: string;
+  wikidata: string;
+  lat: number;
+  lon: number;
+  country: string | null;
+  countryLabel?: string | null;
+  instanceOf?: string | null;
+  commonsFile?: string;
+  sourceUrl?: string;
+  dateFromName?: string | null;
+  clipStart?: number;
+  clipDuration?: number;
+  durationSec?: number;
+  license?: string | null;
+  author?: string | null;
+}
+
+interface ManifestFile {
+  version: number;
+  videos: ManifestVideo[];
+}
+
+export const DATASET_DIR = path.join(repoRoot, 'datasets', 'datum');
+const NAME_PATTERN = /^datum-(\d{3})\.mp4$/i;
+
+let cached: { mtimeMs: number; videos: ManifestVideo[] } | null = null;
+
+/** The test videos of the reference dataset (empty when the dataset is not there). */
+export async function loadManifest(): Promise<ManifestVideo[]> {
+  const file = path.join(DATASET_DIR, 'manifest.json');
+  try {
+    const stat = await fs.stat(file);
+    if (cached && cached.mtimeMs === stat.mtimeMs) return cached.videos;
+    const parsed = JSON.parse(await fs.readFile(file, 'utf8')) as ManifestFile;
+    const videos = Array.isArray(parsed.videos) ? parsed.videos.filter((v) => typeof v.lat === 'number' && typeof v.lon === 'number') : [];
+    cached = { mtimeMs: stat.mtimeMs, videos };
+    return videos;
+  } catch {
+    return [];
+  }
+}
+
+/** Neutral file name under which the n-th dataset video (0-based) enters a node. */
+export function caseName(index: number): string {
+  return `datum-${String(index + 1).padStart(3, '0')}.mp4`;
+}
+
+/** Ground truth for a recording that came from the reference dataset, by its neutral name. */
+export async function truthForName(name: string): Promise<ManifestVideo | null> {
+  const match = NAME_PATTERN.exec(path.basename(name));
+  if (!match) return null;
+  const index = Number(match[1]) - 1;
+  const videos = await loadManifest();
+  return videos[index] ?? null;
+}
+
+/**
+ * Writes `datasets/datum/seed.json`: the dataset as seed footage of a fresh DATUM node (one
+ * source, neutral names). Returns the number of clips that exist on disk.
+ */
+export async function writeSeed(): Promise<{ clips: number; missing: number }> {
+  const videos = await loadManifest();
+  const clips: { file: string; name: string; daysAgo: number }[] = [];
+  let missing = 0;
+  for (const [i, v] of videos.entries()) {
+    const file = path.basename(v.file);
+    try {
+      await fs.access(path.join(DATASET_DIR, 'clips', file));
+      clips.push({ file, name: caseName(i), daysAgo: 1 });
+    } catch {
+      missing++;
+    }
+  }
+  const seed = {
+    sources: [
+      {
+        id: 'referenz',
+        name: 'Referenzbestand',
+        nameEn: 'Reference set',
+        kind: 'upload',
+        owner: 'DATUM',
+        description: 'Videos mit bekanntem Aufnahmeort aus Wikimedia Commons; der Ort wird nicht mitgegeben.',
+        lat: 0,
+        lon: 0,
+        shared: false,
+        clips,
+      },
+    ],
+  };
+  await fs.writeFile(path.join(DATASET_DIR, 'seed.json'), `${JSON.stringify(seed, null, 2)}\n`);
+  return { clips: clips.length, missing };
+}

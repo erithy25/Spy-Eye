@@ -15,7 +15,10 @@
     "exercise:evaluate": "tsx src/scripts/runExercise.ts",
     "search:evaluate": "tsx src/scripts/evaluateSearch.ts",
     "centre:build": "tsx src/scripts/buildTextCentre.ts",
-    "map:extract": "tsx src/scripts/map/extractTiles.ts"
+    "map:extract": "tsx src/scripts/map/extractTiles.ts",
+    "datum:fetch": "tsx src/scripts/datum/fetchDataset.ts && tsx src/scripts/datum/fetchTerrain.ts && tsx src/scripts/datum/writeSeed.ts",
+    "datum:evaluate": "tsx src/scripts/datum/evaluate.ts",
+    "datum:seed": "tsx src/scripts/datum/writeSeed.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.9",

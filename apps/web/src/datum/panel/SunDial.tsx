@@ -1,0 +1,339 @@
+import type { ReactNode } from 'react';
+import type { Heading, SunPathPoint, SunReport, TimeEstimate } from '../../../../server/src/datum/contract';
+import { formatDecimal } from '../../format';
+import { useLang } from '../../i18n';
+import { anchorFor, fmtDeg, fmtElev, fmtLongDate, hhmm, localMinutes, norm360, polar, windowSpan } from './common';
+import './panel.css';
+
+export interface SunDialProps {
+  sun: SunReport;
+  heading: Heading | null;
+  time: TimeEstimate;
+}
+
+const W = 380;
+const H = 340;
+const CX = 190;
+const CY = 168;
+const R = 116; // horizon
+
+const HEADING_METHOD: Record<Heading['method'], string> = {
+  horizon: 'aus Horizont',
+  landmark: 'aus Landmarke',
+  sun: 'aus Sonnenstand',
+  metadata: 'aus Metadaten',
+};
+
+/** Polar projection: azimuth around (north up, east right), elevation as radius (zenith in the centre). */
+function xy(az: number, el: number): [number, number] {
+  return polar(CX, CY, (R * (90 - Math.max(0, Math.min(90, el)))) / 90, az);
+}
+
+function lerpAz(a: number, b: number, f: number): number {
+  const d = ((((b - a) % 360) + 540) % 360) - 180;
+  return norm360(a + d * f);
+}
+
+/** Sun position at an instant, interpolated along the path. */
+function sampleAt(path: SunPathPoint[], t: number): { az: number; el: number } | null {
+  if (path.length === 0) return null;
+  const first = path[0] as SunPathPoint;
+  const last = path[path.length - 1] as SunPathPoint;
+  if (t <= first.t) return { az: first.az, el: first.el };
+  if (t >= last.t) return { az: last.az, el: last.el };
+  let lo = 0;
+  let hi = path.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if ((path[mid] as SunPathPoint).t <= t) lo = mid;
+    else hi = mid;
+  }
+  const a = path[lo] as SunPathPoint;
+  const b = path[hi] as SunPathPoint;
+  const f = (t - a.t) / (b.t - a.t);
+  return { az: lerpAz(a.az, b.az, f), el: a.el + (b.el - a.el) * f };
+}
+
+/** Polyline through the sun positions of local minutes `from`..`from + span`, above the horizon only. */
+function trace(path: SunPathPoint[], tOf: (m: number) => number, from: number, span: number, step: number): string {
+  let d = '';
+  let pen = false;
+  for (let m = from; m <= from + span + 0.001; m += step) {
+    const p = sampleAt(path, tOf(Math.min(m, from + span)));
+    if (!p || p.el < 0) {
+      pen = false;
+      continue;
+    }
+    const [x, y] = xy(p.az, p.el);
+    d += `${pen ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`;
+    pen = true;
+  }
+  return d;
+}
+
+export function SunDial({ sun, heading, time }: SunDialProps) {
+  const { t, locale } = useLang();
+  const zone = time.timezone;
+  const path = [...sun.path].sort((a, b) => a.t - b.t);
+  const first = path[0];
+  // Local minute -> instant, anchored at the first point of the path (no change of offset within a day).
+  const m0 = first ? localMinutes(first.t, zone) : 0;
+  const tOf = (m: number): number => (first ? first.t + ((((m - m0) % 1440) + 1440) % 1440) * 60000 : 0);
+  const sorted = first ? [...path].sort((a, b) => localMinutes(a.t, zone) - localMinutes(b.t, zone)) : [];
+  const dayFrom = sorted[0] ? localMinutes(sorted[0].t, zone) : 0;
+  const daySpan = sorted.length > 1 ? localMinutes((sorted[sorted.length - 1] as SunPathPoint).t, zone) - dayFrom : 0;
+
+  const at = sun.at;
+  const maxEl = path.reduce((m, p) => Math.max(m, p.el), -90);
+
+  // ---- grid ----
+  const grid: ReactNode[] = [];
+  for (let a = 0; a < 360; a += 5) {
+    const major = a % 30 === 0;
+    const cardinal = a % 90 === 0;
+    const len = cardinal ? 9 : major ? 6 : a % 10 === 0 ? 3.5 : 2;
+    const [x1, y1] = polar(CX, CY, R + 1.5, a);
+    const [x2, y2] = polar(CX, CY, R + 1.5 + len, a);
+    grid.push(<line key={`t${a}`} x1={x1} y1={y1} x2={x2} y2={y2} className={cardinal ? 'dp-tk-major' : major ? 'dp-tk-hour' : 'dp-tk-minor'} />);
+    if (major) {
+      const [lx, ly] = polar(CX, CY, R + 19, a);
+      const names: Record<number, string> = { 0: 'N', 90: t('O'), 180: 'S', 270: 'W' };
+      grid.push(
+        <text key={`l${a}`} x={lx} y={ly + 3.2} textAnchor="middle" className={cardinal ? 'dp-num dp-num-major' : 'dp-num dp-num-small'}>
+          {names[a] ?? String(a).padStart(3, '0')}
+        </text>,
+      );
+    }
+  }
+
+  // ---- hour marks on the path ----
+  const hours: ReactNode[] = [];
+  const sunXY = at && at.elevationDeg >= 0 ? xy(at.azimuthDeg, at.elevationDeg) : null;
+  if (first) {
+    for (let h = 0; h < 24; h++) {
+      const p = sampleAt(path, tOf(h * 60));
+      if (!p || p.el < 2) continue;
+      const a = sampleAt(path, tOf(h * 60 - 6));
+      const b = sampleAt(path, tOf(h * 60 + 6));
+      if (!a || !b) continue;
+      const [px, py] = xy(p.az, p.el);
+      const [ax, ay] = xy(a.az, a.el);
+      const [bx, by] = xy(b.az, b.el);
+      let nx = -(by - ay);
+      let ny = bx - ax;
+      const len = Math.hypot(nx, ny) || 1;
+      nx /= len;
+      ny /= len;
+      // Labels go to the side away from the zenith.
+      if (nx * (px - CX) + ny * (py - CY) < 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+      hours.push(
+        <g key={h} className="dp-path-hour">
+          <line x1={px - nx * 3} y1={py - ny * 3} x2={px + nx * 3.5} y2={py + ny * 3.5} />
+          {h % 2 === 0 && p.el >= 8 && (!sunXY || Math.hypot(px + nx * 11 - sunXY[0], py + ny * 11 - sunXY[1]) > 16) && (
+            <text x={px + nx * 11} y={py + ny * 11 + 3} textAnchor="middle">
+              {String(h).padStart(2, '0')}
+            </text>
+          )}
+        </g>,
+      );
+    }
+  }
+
+  // ---- events on the horizon ----
+  const horizonEvent = (instant: number | null, name: string, key: string) => {
+    if (instant === null) return null;
+    const p = sampleAt(path, instant);
+    if (!p) return null;
+    const a = p.az;
+    const [x1, y1] = polar(CX, CY, R - 5, a);
+    const [x2, y2] = polar(CX, CY, R + 30, a);
+    const [lx, ly] = polar(CX, CY, R + 36, a);
+    const anchor = anchorFor(a);
+    const c = Math.cos((a * Math.PI) / 180);
+    const dy = c < -0.3 ? 9 : c > 0.3 ? -6 : 1;
+    return (
+      <g key={key} className="dp-ev">
+        <line x1={x1} y1={y1} x2={x2} y2={y2} />
+        <text x={lx} y={ly + dy} textAnchor={anchor} className="dp-ev-time">
+          {hhmm(localMinutes(instant, zone))}
+        </text>
+        <text x={lx} y={ly + dy + 10} textAnchor={anchor} className="dp-ev-name">
+          {name}
+        </text>
+      </g>
+    );
+  };
+
+  // ---- camera ----
+  let camera: ReactNode = null;
+  if (heading) {
+    const a0 = heading.deg - heading.fovDeg / 2;
+    const a1 = heading.deg + heading.fovDeg / 2;
+    const [x0, y0] = polar(CX, CY, R, a0);
+    const [x1, y1] = polar(CX, CY, R, a1);
+    const [hx, hy] = polar(CX, CY, R, heading.deg);
+    const [lx, ly] = polar(CX, CY, R * 0.42, heading.deg);
+    camera = (
+      <g className="dp-cam">
+        <path d={`M${CX} ${CY}L${x0} ${y0}A${R} ${R} 0 ${heading.fovDeg > 180 ? 1 : 0} 1 ${x1} ${y1}Z`} className="dp-cam-wedge" />
+        <line x1={CX} y1={CY} x2={hx} y2={hy} className="dp-cam-axis" />
+        <text x={lx} y={ly + 3} textAnchor="middle" className="dp-cam-label">
+          {t('Kamera')}
+        </text>
+      </g>
+    );
+  }
+
+  // ---- shadow ----
+  let shadow: ReactNode = null;
+  if (at && at.shadowRatio !== null && at.elevationDeg > 0) {
+    const length = R * Math.max(0.2, Math.min(0.9, 0.16 + at.shadowRatio * 0.24));
+    const a = at.shadowAzimuthDeg;
+    const [tx, ty] = polar(CX, CY, length, a);
+    const [h0x, h0y] = polar(tx, ty, 7, a + 180 - 24);
+    const [h1x, h1y] = polar(tx, ty, 7, a + 180 + 24);
+    // Label along the shaft, never upside down.
+    const [mx, my] = polar(CX, CY, length / 2, a);
+    const flip = norm360(a) > 180;
+    const rotation = a - 90 + (flip ? 180 : 0);
+    shadow = (
+      <g className="dp-shadow">
+        <line x1={CX} y1={CY} x2={tx} y2={ty} />
+        <path d={`M${h0x} ${h0y}L${tx} ${ty}L${h1x} ${h1y}`} className="dp-shadow-head" />
+        <text x={0} y={-4} textAnchor="middle" transform={`translate(${mx.toFixed(2)} ${my.toFixed(2)}) rotate(${rotation.toFixed(2)})`} className="dp-shadow-label">
+          {t('Schatten')}
+        </text>
+      </g>
+    );
+  }
+
+  // ---- sun now ----
+  let sunMark: ReactNode = null;
+  if (at) {
+    const up = at.elevationDeg >= 0;
+    const [sx, sy] = xy(at.azimuthDeg, at.elevationDeg);
+    const ticks = [0, 90, 180, 270].map((a) => {
+      const [x1, y1] = polar(sx, sy, 9, a);
+      const [x2, y2] = polar(sx, sy, 13, a);
+      return <line key={a} x1={x1} y1={y1} x2={x2} y2={y2} />;
+    });
+    // Readout beside the ring on the side of the zenith: the hour labels of the path sit outside.
+    // Below the horizon the ring sits on the horizon circle and the readout goes inside, under it.
+    const side = sx > CX + 2 ? -1 : 1;
+    const [ix, iy] = polar(CX, CY, R - 24, at.azimuthDeg);
+    const lx = up ? sx + side * 17 : ix;
+    const ly = up ? sy - 2 : iy - 2;
+    const anchor = up ? (side > 0 ? 'start' : 'end') : 'middle';
+    sunMark = (
+      <g className={up ? 'dp-sun' : 'dp-sun dp-sun-down'}>
+        <circle cx={sx} cy={sy} r={6} />
+        {ticks}
+        <text x={lx} y={ly} textAnchor={anchor} className="dp-sun-label">
+          {fmtDeg(at.azimuthDeg)} / {fmtElev(at.elevationDeg)}
+        </text>
+        <text x={lx} y={ly + 11} textAnchor={anchor} className="dp-sun-time">
+          {hhmm(localMinutes(at.at, zone))}
+        </text>
+      </g>
+    );
+  }
+
+  const windows = time.windows.map((w, i) => (
+    <path key={i} d={trace(path, tOf, w.startMin, windowSpan(w.startMin, w.endMin), 2)} className={i === 0 ? 'dp-path-win dp-path-best' : 'dp-path-win'} />
+  ));
+
+  const label = at
+    ? `${t('Sonnenstand')}: ${t('Azimut')} ${fmtDeg(at.azimuthDeg)}, ${t('Höhe')} ${fmtElev(at.elevationDeg)}`
+    : t('Sonnenstand');
+
+  return (
+    <section className="dp dp-sundial" aria-label={t('Sonnenstand')}>
+      <header className="dp-head">
+        <h3 className="label">{t('Sonnenstand')}</h3>
+        <span className="dp-head-note">{fmtLongDate(sun.date, locale)}</span>
+      </header>
+      <svg className="dp-sun-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+        <line x1={CX - R} y1={CY} x2={CX + R} y2={CY} className="dp-cross" />
+        <line x1={CX} y1={CY - R} x2={CX} y2={CY + R} className="dp-cross" />
+        <circle cx={CX} cy={CY} r={(R * 2) / 3} className="dp-ring-el" />
+        <circle cx={CX} cy={CY} r={R / 3} className="dp-ring-el" />
+        <text x={CX + 3} y={CY - (R * 2) / 3 - 3} className="dp-el-label">
+          30°
+        </text>
+        <text x={CX + 3} y={CY - R / 3 - 3} className="dp-el-label">
+          60°
+        </text>
+        <circle cx={CX} cy={CY} r={R} className="dp-ring" />
+        {grid}
+        {camera}
+        <path d={trace(path, tOf, dayFrom, daySpan, 4)} className="dp-path" />
+        {windows}
+        {hours}
+        {horizonEvent(sun.sunrise, t('Aufgang'), 'rise')}
+        {horizonEvent(sun.sunset, t('Untergang'), 'set')}
+        {shadow}
+        <path d={`M${CX - 3} ${CY}H${CX + 3}M${CX} ${CY - 3}V${CY + 3}`} className="dp-zenith" />
+        {sunMark}
+      </svg>
+
+      <dl className="dp-kv">
+        <div>
+          <dt>{t('Sonne')}</dt>
+          <dd>
+            {at ? (
+              <>
+                <span className="dp-strong">
+                  {fmtDeg(at.azimuthDeg)} / {fmtElev(at.elevationDeg)}
+                </span>
+                <span className="dp-low"> {t('Azimut / Höhe')}</span>
+              </>
+            ) : (
+              <span className="dp-low">{t('keine Zeitschätzung')}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('Schatten')}</dt>
+          <dd>
+            {at && at.shadowRatio !== null && at.elevationDeg > 0 ? (
+              t('{az}, Länge {ratio} × Objekthöhe', { az: fmtDeg(at.shadowAzimuthDeg), ratio: formatDecimal(at.shadowRatio, 1) })
+            ) : (
+              <span className="dp-low">{at ? t('Sonne unter dem Horizont') : '—'}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('Auf / Unter')}</dt>
+          <dd>
+            {sun.sunrise !== null ? hhmm(localMinutes(sun.sunrise, zone)) : '—'} / {sun.sunset !== null ? hhmm(localMinutes(sun.sunset, zone)) : '—'}
+            {sun.solarNoon !== null && (
+              <span className="dp-low">
+                {' · '}
+                {t('Mittag')} {hhmm(localMinutes(sun.solarNoon, zone))}, {fmtElev(maxEl)}
+              </span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('Kamera')}</dt>
+          <dd>
+            {heading ? (
+              <>
+                {fmtDeg(heading.deg)} · {t('Sichtfeld')} {Math.round(heading.fovDeg)}°
+                <span className="dp-low">
+                  {' · '}
+                  {t(HEADING_METHOD[heading.method])}
+                </span>
+              </>
+            ) : (
+              <span className="dp-low">{t('Blickrichtung unbekannt')}</span>
+            )}
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
+}

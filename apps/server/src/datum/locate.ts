@@ -1,0 +1,652 @@
+/**
+ * DATUM localisation: where was this video recorded?
+ *
+ * Three sources, strongest first:
+ *   1. GPS stored in the file (ISO 6709 tags) — taken as it is.
+ *   2. Landmark retrieval — every frame is compared with the geotagged reference gallery; the
+ *      nearest pictures vote for their positions with geodesic kernels of 2, 25 and 250 km, and
+ *      the densest places become candidates.
+ *   3. Zero-shot country prior — the text tower is asked which country the frames look like; it
+ *      weighs the candidates softly and carries the answer alone when retrieval finds nothing.
+ *
+ * The confidence is meant literally: the estimated probability that the true place lies within
+ * the stated radius. It is a logistic function of the match strength and the margin to the
+ * second-best place, fitted on one half of the DATUM test videos and checked on the other.
+ */
+import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { config } from '../config.js';
+import { decodeFrame, writeTile, type PixelRect } from '../ml/preprocess.js';
+import type { CountryProb, Evidence, FixCandidate, FixLocation } from './contract.js';
+import { galleryImageUrl, type Gallery, type GalleryNeighbour, type ImageEmbedder } from './gallery.js';
+import { filenameHints, readMetadata, type FilenameHints, type VideoMetadata } from './metadata.js';
+import { DEFAULT_PRIOR_PARAMS, greatCircleKm, loadWorld, type CountryPriorParams, type EmbedTexts, type World } from './world.js';
+
+export interface LocateParams {
+  /** Gallery neighbours per frame. */
+  k: number;
+  /** Similarity weight exp((s - simOffset) / simTemperature). */
+  simOffset: number;
+  simTemperature: number;
+  /** Kernel widths (sigma, km) and their mixing weights. */
+  kernelsKm: readonly number[];
+  kernelMix: readonly number[];
+  /** References closer than this to a mode belong to it. */
+  mergeKm: number;
+  /** Candidate score is multiplied by p(country)^priorExponent. */
+  priorExponent: number;
+  /** Below this best similarity, retrieval is not trusted and the answer is a country. */
+  regionThreshold: number;
+  /** Best similarity from which a single reference counts as a recognised landmark. */
+  landmarkSimilarity: number;
+  /** Weight of the retrieval votes in the country posterior (0: zero-shot prior only). */
+  countryVoteWeight: number;
+  /** Where the country-level answer is placed: the country's centroid or the neighbours in it. */
+  regionAnchor: 'centroid' | 'neighbours';
+  maxCandidates: number;
+  prior: CountryPriorParams;
+  /**
+   * Logistic model of P(error <= radius) over the best similarity, the margin to the second
+   * mode, the share of the best mode, a region-answer indicator and the best country probability.
+   */
+  confidence: { bias: number; topSim: number; margin: number; share: number; region: number; countryP: number };
+}
+
+/**
+ * Tuned on the even-indexed half of the DATUM test videos (scripts/datum/evaluate.ts); the odd
+ * half was only used to report the result. See docs/measurements/datum-geolocation.json.
+ */
+export const DEFAULT_LOCATE_PARAMS: LocateParams = {
+  k: 15,
+  simOffset: 0.6,
+  simTemperature: 0.03,
+  kernelsKm: [2, 25, 250],
+  kernelMix: [0.5, 0.3, 0.2],
+  mergeKm: 5,
+  priorExponent: 0.5,
+  regionThreshold: 0.55,
+  landmarkSimilarity: 0.75,
+  countryVoteWeight: 1,
+  regionAnchor: 'neighbours',
+  maxCandidates: 8,
+  prior: DEFAULT_PRIOR_PARAMS,
+  confidence: { bias: -6, topSim: 8, margin: 2, share: 1, region: 0, countryP: 1 },
+};
+
+export interface LocateInput {
+  videoPath: string;
+  /** n x dim, L2-normalised, one row per sampled frame. */
+  frameVectors: Float32Array;
+  dim: number;
+  /** Frame number in the video for each row. */
+  frameNumbers: number[];
+  embedTexts: EmbedTexts;
+  gallery: Gallery;
+  /** Wikidata items to leave out of the gallery (evaluation of unknown places). */
+  excludeWikidata?: string[];
+  /** Defaults to the node's world data (assets/datum). */
+  world?: World;
+  params?: Partial<LocateParams>;
+  /** Display name of the file (for file-name hints); defaults to the basename of videoPath. */
+  fileName?: string;
+}
+
+export interface LocateResult {
+  location: FixLocation | null;
+  candidates: FixCandidate[];
+  countries: CountryProb[];
+  evidence: Evidence[];
+  /** Diagnostics for evaluation and the console. */
+  diagnostics: LocateDiagnostics;
+}
+
+export interface LocateDiagnostics {
+  features: ConfidenceFeatures;
+  topSimilarity: number;
+  margin: number;
+  share: number;
+  method: 'metadata' | 'landmark' | 'region' | 'none';
+  /** The visual estimate, also when metadata decided the location. */
+  visual: FixLocation | null;
+  zeroShotTop: CountryProb[];
+}
+
+/** One gallery reference with the evidence the frames give it. */
+export interface WeightedRef {
+  id: string;
+  label: string;
+  lat: number;
+  lon: number;
+  country: string | null;
+  weight: number;
+  bestSimilarity: number;
+  /** Row (frame index) of the best similarity. */
+  bestRow: number;
+}
+
+export interface VoteMode {
+  lat: number;
+  lon: number;
+  /** Kernel density at the mode's seed. */
+  density: number;
+  /** Indices into the refs array, strongest first. */
+  members: number[];
+  /** Sum of the member weights. */
+  mass: number;
+}
+
+const FRAME_WIDTH = 640;
+
+function kernel(dKm: number, params: Pick<LocateParams, 'kernelsKm' | 'kernelMix'>): number {
+  let k = 0;
+  for (let m = 0; m < params.kernelsKm.length; m++) {
+    const s = params.kernelsKm[m] as number;
+    k += (params.kernelMix[m] ?? 0) * Math.exp(-(dKm * dKm) / (2 * s * s));
+  }
+  return k;
+}
+
+/** Collapses the neighbours of all frames to one weighted entry per reference picture. */
+export function weightNeighbours(rows: readonly GalleryNeighbour[][], params: Pick<LocateParams, 'simOffset' | 'simTemperature'>): WeightedRef[] {
+  const byId = new Map<string, WeightedRef>();
+  const frames = Math.max(1, rows.length);
+  rows.forEach((row, r) => {
+    for (const n of row) {
+      const w = Math.exp((n.similarity - params.simOffset) / params.simTemperature) / frames;
+      const ref = byId.get(n.id);
+      if (!ref) {
+        byId.set(n.id, {
+          id: n.id,
+          label: n.label,
+          lat: n.lat,
+          lon: n.lon,
+          country: n.country,
+          weight: w,
+          bestSimilarity: n.similarity,
+          bestRow: r,
+        });
+      } else {
+        ref.weight += w;
+        if (n.similarity > ref.bestSimilarity) {
+          ref.bestSimilarity = n.similarity;
+          ref.bestRow = r;
+        }
+      }
+    }
+  });
+  return [...byId.values()].sort((a, b) => b.weight - a.weight);
+}
+
+/**
+ * Geodesic kernel voting: the density at every reference position is the weighted sum of the
+ * kernels of all references; modes are taken greedily from the densest position, and every
+ * reference within `mergeKm` of a mode joins it. Returns modes, densest first.
+ */
+export function voteModes(refs: readonly WeightedRef[], params: Pick<LocateParams, 'kernelsKm' | 'kernelMix' | 'mergeKm'>): VoteMode[] {
+  const n = refs.length;
+  if (n === 0) return [];
+  const density = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = refs[i] as WeightedRef;
+    let d = 0;
+    for (let j = 0; j < n; j++) {
+      const b = refs[j] as WeightedRef;
+      d += b.weight * kernel(i === j ? 0 : greatCircleKm(a.lat, a.lon, b.lat, b.lon), params);
+    }
+    density[i] = d;
+  }
+  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => (density[b] as number) - (density[a] as number));
+  const assigned = new Int32Array(n).fill(-1);
+  const modes: VoteMode[] = [];
+  for (const seed of order) {
+    if ((assigned[seed] as number) >= 0) continue;
+    const s = refs[seed] as WeightedRef;
+    const members: number[] = [];
+    for (const j of order) {
+      if ((assigned[j] as number) >= 0) continue;
+      const r = refs[j] as WeightedRef;
+      if (j === seed || greatCircleKm(s.lat, s.lon, r.lat, r.lon) <= params.mergeKm) {
+        members.push(j);
+        assigned[j] = modes.length;
+      }
+    }
+    // Weighted centre of the members (small areas: plain averaging of degrees is fine).
+    let wSum = 0;
+    let lat = 0;
+    let lon = 0;
+    for (const j of members) {
+      const r = refs[j] as WeightedRef;
+      wSum += r.weight;
+      lat += r.weight * r.lat;
+      lon += r.weight * (r.lon + (Math.abs(r.lon - s.lon) > 180 ? (r.lon < s.lon ? 360 : -360) : 0));
+    }
+    lon /= wSum;
+    if (lon > 180) lon -= 360;
+    if (lon < -180) lon += 360;
+    modes.push({ lat: lat / wSum, lon, density: density[seed] as number, members, mass: wSum });
+  }
+  modes.sort((a, b) => b.density - a.density);
+  return modes;
+}
+
+/** Weighted RMS distance (km) of the references around a point, counting those within maxKm. */
+export function weightedSpreadKm(refs: readonly WeightedRef[], lat: number, lon: number, maxKm: number): number {
+  let w = 0;
+  let s = 0;
+  for (const r of refs) {
+    const d = greatCircleKm(lat, lon, r.lat, r.lon);
+    if (d > maxKm) continue;
+    w += r.weight;
+    s += r.weight * d * d;
+  }
+  return w > 0 ? Math.sqrt(s / w) : maxKm;
+}
+
+function sigmoid(x: number): number {
+  return 1 / (1 + Math.exp(-x));
+}
+
+export interface ConfidenceFeatures {
+  topSim: number;
+  margin: number;
+  share: number;
+  region: number;
+  countryP: number;
+}
+
+/** P(true place within the radius), clamped: nothing visual is ever certain. */
+export function confidenceFrom(f: ConfidenceFeatures, c: LocateParams['confidence']): number {
+  const z = c.bias + c.topSim * f.topSim + c.margin * f.margin + c.share * f.share + c.region * f.region + c.countryP * f.countryP;
+  return Math.min(0.95, Math.max(0.02, sigmoid(z)));
+}
+
+const fmt = (v: number, digits = 2): string => v.toFixed(digits).replace('.', ',');
+const pct = (p: number): string => `${Math.round(p * 100)} %`;
+
+function formatCoord(lat: number, lon: number): string {
+  return `${fmt(Math.abs(lat), 4)}° ${lat >= 0 ? 'N' : 'S'}, ${fmt(Math.abs(lon), 4)}° ${lon >= 0 ? 'O' : 'W'}`;
+}
+
+/** Everything locate() needs, already computed; the pure part, used directly by the evaluation. */
+export interface LocateEvidence {
+  neighbours: GalleryNeighbour[][];
+  /** Mean cosine per country, order of world.countries(). */
+  countryCosines: Float32Array;
+  frameNumbers: readonly number[];
+  metadata: VideoMetadata | null;
+  hints: FilenameHints | null;
+}
+
+/** ISO code of a reference: the gallery's own code if it is one, else from the coordinates. */
+function refIso(world: World, r: { country: string | null; lat: number; lon: number }): string | null {
+  if (r.country && /^[A-Z]{2}$/.test(r.country)) return r.country;
+  return world.countryNear(r.lat, r.lon)?.iso ?? null;
+}
+
+/** Country posterior: zero-shot prior times the (smoothed) retrieval votes per country. */
+function countryPosterior(world: World, zeroShot: CountryProb[], refs: readonly WeightedRef[], params: LocateParams): CountryProb[] {
+  if (params.countryVoteWeight <= 0 || refs.length === 0) return zeroShot;
+  const votes = new Map<string, number>();
+  let total = 0;
+  for (const r of refs) {
+    const iso = refIso(world, r);
+    if (!iso) continue;
+    votes.set(iso, (votes.get(iso) ?? 0) + r.weight);
+    total += r.weight;
+  }
+  if (total <= 0) return zeroShot;
+  const n = zeroShot.length;
+  const out = zeroShot.map((c) => {
+    const share = (votes.get(c.iso) ?? 0) / total;
+    // Votes are smoothed so a country without neighbours keeps a chance.
+    return { ...c, p: c.p * Math.pow(share + 0.5 / n + 0.02, params.countryVoteWeight) };
+  });
+  const sum = out.reduce((s, c) => s + c.p, 0);
+  for (const c of out) c.p /= sum;
+  out.sort((a, b) => b.p - a.p);
+  return out;
+}
+
+/** Mainland anchor of a country: the given centroid if it lies inside, else the biggest city. */
+function countryAnchor(world: World, iso: string): { lat: number; lon: number } | null {
+  const c = world.country(iso);
+  if (!c) return null;
+  const [lon, lat] = c.centroid;
+  if (world.countryAt(lat, lon)?.iso === iso) return { lat, lon };
+  const city = world.biggestCity(iso);
+  return city ? { lat: city.lat, lon: city.lon } : { lat, lon };
+}
+
+function regionRadiusKm(world: World, iso: string): number {
+  const area = world.country(iso)?.areaKm2 ?? 250_000;
+  return Math.max(25, Math.sqrt(area / Math.PI));
+}
+
+function placeLabel(world: World, lat: number, lon: number, landmark: string | null): string {
+  const city = world.nearestCity(lat, lon, { maxKm: 60 });
+  if (landmark && city) return landmark.includes(city.name) ? landmark : `${landmark}, ${city.name}`;
+  if (landmark) return landmark;
+  if (city) return city.distanceKm < 5 ? city.name : `bei ${city.name}`;
+  const country = world.countryNear(lat, lon);
+  return country ? country.name_de : formatCoord(lat, lon);
+}
+
+/** The pure decision: candidates, location and evidence from precomputed neighbours and prior. */
+export function decideLocation(world: World, ev: LocateEvidence, partial: Partial<LocateParams> = {}): LocateResult {
+  const params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, ...partial };
+  const evidence: Evidence[] = [];
+  const zeroShot = world.priorFromCosines(ev.countryCosines, params.prior);
+  const refs = weightNeighbours(ev.neighbours, params);
+  const countries = countryPosterior(world, zeroShot, refs, params);
+  const pCountry = new Map(countries.map((c) => [c.iso, c.p]));
+  const countryName = (iso: string | null): string | null => (iso ? (world.country(iso)?.name_de ?? iso) : null);
+
+  // ---- metadata
+  const meta = ev.metadata;
+  let metaLocation: FixLocation | null = null;
+  if (meta?.location) {
+    const { lat, lon } = meta.location;
+    const country = world.countryNear(lat, lon);
+    metaLocation = {
+      lat,
+      lon,
+      radiusKm: 0.05,
+      confidence: 0.98,
+      method: 'metadata',
+      label: placeLabel(world, lat, lon, null),
+      country: country?.iso ?? null,
+      countryName: country?.name_de ?? null,
+    };
+    evidence.push({
+      kind: 'metadata',
+      label: `GPS in der Datei: ${formatCoord(lat, lon)}`,
+      detail: `Die Videodatei trägt eine Positionsangabe (ISO 6709${meta.altitude !== null ? `, Höhe ${Math.round(meta.altitude)} m` : ''}${meta.device ? `, Gerät ${meta.device}` : ''}); sie wird als Ort übernommen, sofern sie nicht nachträglich verändert wurde.`,
+      weight: 0.98,
+    });
+  }
+  if (meta && (meta.creationUtc !== null || meta.creationRejected)) {
+    evidence.push(
+      meta.creationUtc !== null
+        ? {
+            kind: 'metadata',
+            label: `Aufnahmezeit laut Datei: ${new Date(meta.creationUtc).toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+            detail: `Zeitstempel aus den Container-Angaben${meta.device ? ` (${meta.device})` : ''}; er trägt nicht zum Ort bei.`,
+            weight: 0,
+          }
+        : {
+            kind: 'metadata',
+            label: 'Zeitstempel der Datei verworfen',
+            detail: `Der eingetragene Zeitpunkt ist unplausibel: ${meta.creationRejected}.`,
+            weight: 0,
+          },
+    );
+  }
+
+  // ---- landmark retrieval
+  const modes = voteModes(refs, params);
+  const scored = modes.map((m) => {
+    // The member with the most weight names the mode.
+    const lead = m.members.map((j) => refs[j] as WeightedRef).reduce((a, b) => (b.weight > a.weight ? b : a));
+    const iso = refIso(world, lead);
+    const p = iso ? (pCountry.get(iso) ?? 1 / Math.max(1, countries.length)) : 1 / Math.max(1, countries.length);
+    return { mode: m, lead, iso, score: m.density * Math.pow(p, params.priorExponent) };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const totalScore = scored.reduce((s, c) => s + c.score, 0);
+  const topSimilarity = refs.reduce((s, r) => Math.max(s, r.bestSimilarity), -1);
+  const first = scored[0];
+  const second = scored[1];
+  const margin = first ? (second ? 1 - second.score / first.score : 1) : 0;
+  const share = first && totalScore > 0 ? first.score / totalScore : 0;
+
+  const candidates: FixCandidate[] = scored.slice(0, params.maxCandidates).map((c) => {
+    const spread = weightedSpreadKm(
+      c.mode.members.map((j) => refs[j] as WeightedRef),
+      c.mode.lat,
+      c.mode.lon,
+      params.mergeKm,
+    );
+    return {
+      lat: c.mode.lat,
+      lon: c.mode.lon,
+      label: placeLabel(world, c.mode.lat, c.mode.lon, c.lead.label),
+      country: c.iso,
+      score: totalScore > 0 ? c.score / totalScore : 0,
+      radiusKm: Math.max(0.5, spread),
+    };
+  });
+
+  const features = (region: boolean): ConfidenceFeatures => ({
+    topSim: topSimilarity,
+    margin,
+    share,
+    region: region ? 1 : 0,
+    countryP: countries[0]?.p ?? 0,
+  });
+  const confidenceOf = (region: boolean): number => confidenceFrom(features(region), params.confidence);
+
+  let visual: FixLocation | null = null;
+  let method: LocateDiagnostics['method'] = 'none';
+  if (first && topSimilarity >= params.regionThreshold) {
+    // Radius: spread of the references that support the mode; a strong single landmark keeps
+    // half a kilometre, weaker matches widen with the similarity gap.
+    const support = weightedSpreadKm(refs, first.mode.lat, first.mode.lon, Math.max(...params.kernelsKm));
+    const local = weightedSpreadKm(
+      first.mode.members.map((j) => refs[j] as WeightedRef),
+      first.mode.lat,
+      first.mode.lon,
+      params.mergeKm,
+    );
+    let radiusKm: number;
+    if (topSimilarity >= params.landmarkSimilarity && share >= 0.5) radiusKm = Math.max(0.5, local);
+    else if (topSimilarity >= params.landmarkSimilarity) radiusKm = Math.max(2, local, support * 0.5);
+    else radiusKm = Math.max(25, support);
+    visual = {
+      lat: first.mode.lat,
+      lon: first.mode.lon,
+      radiusKm,
+      confidence: confidenceOf(false),
+      method: 'landmark',
+      label: placeLabel(world, first.mode.lat, first.mode.lon, first.lead.label),
+      country: first.iso,
+      countryName: countryName(first.iso),
+    };
+    method = 'landmark';
+  } else if (countries[0]) {
+    const best = countries[0];
+    let anchor = countryAnchor(world, best.iso);
+    if (params.regionAnchor === 'neighbours') {
+      const inCountry = refs.filter((r) => refIso(world, r) === best.iso);
+      if (inCountry.length > 0) {
+        const m = voteModes(inCountry, { kernelsKm: [250], kernelMix: [1], mergeKm: params.mergeKm })[0];
+        if (m) anchor = { lat: m.lat, lon: m.lon };
+      }
+    }
+    if (anchor) {
+      visual = {
+        lat: anchor.lat,
+        lon: anchor.lon,
+        radiusKm: regionRadiusKm(world, best.iso),
+        confidence: confidenceOf(true),
+        method: 'region',
+        label: world.country(best.iso)?.name_de ?? best.name,
+        country: best.iso,
+        countryName: best.name,
+      };
+      method = 'region';
+    }
+  }
+
+  // ---- evidence: reference matches
+  const topRefs = [...refs].sort((a, b) => b.bestSimilarity - a.bestSimilarity).slice(0, 3);
+  const totalWeight = refs.reduce((s, r) => s + r.weight, 0);
+  for (const r of topRefs) {
+    const distance = visual ? greatCircleKm(visual.lat, visual.lon, r.lat, r.lon) : null;
+    const frame = ev.frameNumbers[r.bestRow];
+    evidence.push({
+      kind: 'landmark',
+      label: `Referenzbild: ${r.label} (${fmt(r.bestSimilarity)})`,
+      detail: `Bild ${frame ?? r.bestRow + 1} gleicht dem Referenzbild mit Kosinus ${fmt(r.bestSimilarity)}${
+        distance !== null ? `; ${distance < 1 ? 'am Ergebnisort' : `${Math.round(distance)} km vom Ergebnis`}` : ''
+      }. ${r.bestSimilarity >= params.landmarkSimilarity ? 'Das ist eine Wiedererkennung.' : r.bestSimilarity >= params.regionThreshold ? 'Ähnlichkeit, keine sichere Wiedererkennung.' : 'Schwache Ähnlichkeit, zählt kaum.'}`,
+      weight: totalWeight > 0 ? r.weight / totalWeight : 0,
+      ...(frame !== undefined ? { frame } : {}),
+      refImage: galleryImageUrl(r.id),
+      refLabel: r.label,
+      refLat: r.lat,
+      refLon: r.lon,
+      similarity: r.bestSimilarity,
+    });
+  }
+
+  // ---- evidence: zero-shot country prior
+  const top3 = zeroShot.slice(0, 3);
+  if (top3.length > 0) {
+    evidence.push({
+      kind: 'region',
+      label: `Länderschätzung: ${top3.map((c) => `${c.name} ${pct(c.p)}`).join(', ')}`,
+      detail:
+        'Zero-shot-Vergleich der Bilder mit Beschreibungen aller Länder (Straßen, Landschaft, Gebäude); wirkt als weiche Gewichtung der Kandidaten und trägt das Ergebnis allein, wenn kein Referenzbild passt.',
+      weight: method === 'region' ? (top3[0] as CountryProb).p : (top3[0] as CountryProb).p * 0.3,
+    });
+  }
+
+  // ---- evidence: file name
+  const hints = ev.hints;
+  if (hints && (hints.date || hints.place)) {
+    const parts = [hints.date ? `Datum ${hints.date}` : null, hints.place ? `„${hints.place}“` : null].filter(Boolean);
+    evidence.push({
+      kind: 'filename',
+      label: `Dateiname: ${parts.join(', ')}`,
+      detail: 'Angaben im Dateinamen können vom Absender stammen und falsch sein; sie fließen nicht in die Ortsbestimmung ein.',
+      weight: 0.05,
+    });
+  }
+
+  const location = metaLocation ?? visual;
+  return {
+    location,
+    candidates,
+    countries,
+    evidence,
+    diagnostics: {
+      features: features(method === 'region'),
+      topSimilarity,
+      margin,
+      share,
+      method: metaLocation ? 'metadata' : method,
+      visual,
+      zeroShotTop: zeroShot.slice(0, 5),
+    },
+  };
+}
+
+/** Determines where a video was recorded from its frames, its file tags and its name. */
+export async function locate(input: LocateInput): Promise<LocateResult> {
+  const params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, ...input.params };
+  const world = input.world ?? (await loadWorld());
+  const [metadata, countryCosines] = await Promise.all([
+    readMetadata(input.videoPath).catch(() => null),
+    world.countryCosines(input.frameVectors, input.dim, input.embedTexts),
+  ]);
+  const neighbours = input.gallery.search(input.frameVectors, params.k, {
+    ...(input.excludeWikidata ? { excludeWikidata: input.excludeWikidata } : {}),
+  });
+  const hints = filenameHints(input.fileName ?? path.basename(input.videoPath));
+  return decideLocation(world, { neighbours, countryCosines, frameNumbers: input.frameNumbers, metadata, hints }, params);
+}
+
+// ------------------------------------------------------------------ frame sampling
+
+export interface SampledFrames {
+  vectors: Float32Array;
+  dim: number;
+  frameNumbers: number[];
+  times: number[];
+}
+
+function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(config.ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    let stderr = '';
+    child.stderr.setEncoding('utf8').on('data', (c: string) => {
+      if (stderr.length < 20_000) stderr += c;
+    });
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`ffmpeg timed out after ${timeoutMs} ms`));
+    }, timeoutMs);
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error(`ffmpeg: ${stderr.trim().split('\n').slice(-2).join(' | ') || `exit ${code}`}`));
+    });
+  });
+}
+
+/**
+ * Takes `count` evenly spaced frames (at the middle of equal segments), embeds the whole frame
+ * with the same preprocessing as the pipeline and the gallery, and returns the vectors.
+ */
+export async function sampleAndEmbedFrames(
+  videoPath: string,
+  model: ImageEmbedder,
+  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string } = {},
+): Promise<SampledFrames> {
+  const count = opts.count ?? 6;
+  let duration = opts.durationSec ?? null;
+  let fps = opts.fps ?? null;
+  if (duration === null || fps === null) {
+    const meta = await readMetadata(videoPath).catch(() => null);
+    duration ??= meta?.durationSec ?? null;
+    fps ??= meta?.fps ?? null;
+  }
+  const times = Array.from({ length: count }, (_, i) => (duration !== null ? (duration * (i + 0.5)) / count : i));
+  const dir = await fs.mkdtemp(path.join(opts.tmpDir ?? os.tmpdir(), 'datum-frames-'));
+  try {
+    const args = ['-hide_banner', '-nostdin', '-loglevel', 'error', '-y'];
+    for (const t of times) args.push('-ss', t.toFixed(3), '-protocol_whitelist', 'file', '-i', videoPath);
+    times.forEach((_, i) => {
+      args.push(
+        '-map', `${i}:v:0`,
+        '-frames:v', '1',
+        '-an', '-sn',
+        '-vf', `scale=w='min(${FRAME_WIDTH},iw)':h=-2:flags=bicubic`,
+        '-pix_fmt', 'yuvj420p',
+        '-q:v', '3',
+        path.join(dir, `f${i}.jpg`),
+      );
+    });
+    await runFfmpeg(args, 120_000);
+    const size = model.imageSize;
+    const plane = 3 * size * size;
+    const kept: number[] = [];
+    const pixels = new Float32Array(count * plane);
+    for (let i = 0; i < count; i++) {
+      try {
+        const decoded = await decodeFrame(path.join(dir, `f${i}.jpg`));
+        const full: PixelRect = { left: 0, top: 0, width: decoded.width, height: decoded.height };
+        await writeTile(decoded, full, size, model.imageMean, model.imageStd, pixels, kept.length * plane);
+        kept.push(i);
+      } catch {
+        // A seek past the last frame writes no picture.
+      }
+    }
+    if (kept.length === 0) throw new Error('Aus dem Video konnten keine Bilder gelesen werden.');
+    const vectors = await model.embedPixels(pixels.subarray(0, kept.length * plane), kept.length);
+    return {
+      vectors,
+      dim: model.dim,
+      frameNumbers: kept.map((i) => (fps !== null ? Math.round((times[i] as number) * fps) : i)),
+      times: kept.map((i) => times[i] as number),
+    };
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}

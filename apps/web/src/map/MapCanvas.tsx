@@ -3,7 +3,7 @@ import { formatCoordinate, fromUtm, metresPerPixel, project, toMgrs, toUtm, unpr
 import { useLang } from '../i18n';
 import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile } from './tiles';
 
-export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident';
+export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident' | 'fix' | 'truth';
 
 export interface MapMarker {
   id: string;
@@ -30,6 +30,29 @@ export interface MapLink {
   dim?: boolean;
 }
 
+/** Geometry drawn between the base map and the markers (DATUM: uncertainty, sun, view, countries). */
+export type MapShape =
+  | { kind: 'circle'; lat: number; lon: number; radiusKm: number; style?: ShapeStyle; label?: string }
+  | { kind: 'ray'; lat: number; lon: number; azimuthDeg: number; lengthKm: number; style?: ShapeStyle; label?: string; arrow?: boolean }
+  | { kind: 'wedge'; lat: number; lon: number; azimuthDeg: number; spreadDeg: number; lengthKm: number; style?: ShapeStyle }
+  | { kind: 'line'; points: [number, number][]; style?: ShapeStyle }
+  | { kind: 'area'; rings: [number, number][][]; opacity: number; label?: string; labelAt?: [number, number] };
+
+export type ShapeStyle = 'solid' | 'dashed' | 'dotted' | 'faint' | 'strong';
+
+const R_EARTH_KM = 6371.0088;
+
+/** Point reached from (lat, lon) after `km` along the great circle with initial bearing `azimuthDeg`. */
+export function destination(lat: number, lon: number, azimuthDeg: number, km: number): [number, number] {
+  const d = km / R_EARTH_KM;
+  const b = (azimuthDeg * Math.PI) / 180;
+  const p1 = (lat * Math.PI) / 180;
+  const l1 = (lon * Math.PI) / 180;
+  const p2 = Math.asin(Math.sin(p1) * Math.cos(d) + Math.cos(p1) * Math.sin(d) * Math.cos(b));
+  const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
+  return [(p2 * 180) / Math.PI, ((((l2 * 180) / Math.PI + 540) % 360) - 180)];
+}
+
 export interface MapView {
   lat: number;
   lon: number;
@@ -42,6 +65,7 @@ interface MapCanvasProps {
   viewKey?: string | number;
   markers: MapMarker[];
   links?: MapLink[];
+  shapes?: MapShape[];
   onSelect?: (id: string | null) => void;
   minZoom?: number;
   maxZoom?: number;
@@ -245,6 +269,152 @@ function drawGrid(
   ctx.textBaseline = 'middle';
 }
 
+function strokeStyleFor(ctx: CanvasRenderingContext2D, style: ShapeStyle | undefined): void {
+  ctx.setLineDash([]);
+  switch (style ?? 'solid') {
+    case 'strong':
+      ctx.strokeStyle = FG;
+      ctx.lineWidth = 1.4;
+      break;
+    case 'dashed':
+      ctx.strokeStyle = 'rgba(237,237,237,0.8)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      break;
+    case 'dotted':
+      ctx.strokeStyle = 'rgba(237,237,237,0.7)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([1.2, 3.5]);
+      break;
+    case 'faint':
+      ctx.strokeStyle = 'rgba(237,237,237,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      break;
+    default:
+      ctx.strokeStyle = 'rgba(237,237,237,0.85)';
+      ctx.lineWidth = 1;
+  }
+}
+
+/** Draws DATUM geometry: country likelihood, uncertainty circles, view wedges, sun and shadow rays. */
+function drawShapes(
+  ctx: CanvasRenderingContext2D,
+  shapes: MapShape[],
+  toScreen: (lat: number, lon: number) => { x: number; y: number },
+  zoom: number,
+): void {
+  if (shapes.length === 0) return;
+  const { width, height } = ctx.canvas;
+  const label = (text: string, x: number, y: number, align: CanvasTextAlign = 'left'): void => {
+    ctx.font = `500 9px ${FONT}`;
+    setSpacing(ctx, '0.12em');
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = BG;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.strokeText(text.toUpperCase(), x, y);
+    ctx.fillStyle = '#bdbdbd';
+    ctx.fillText(text.toUpperCase(), x, y);
+    setSpacing(ctx, '0px');
+  };
+  // Long lines are split so that they follow the projection (great circles look curved on the map).
+  const geoPath = (pts: [number, number][]): void => {
+    let prev: { x: number; y: number } | null = null;
+    for (const [lat, lon] of pts) {
+      const p = toScreen(lat, lon);
+      if (prev === null || Math.abs(p.x - prev.x) > width) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+      prev = p;
+    }
+  };
+  for (const s of shapes) {
+    if (s.kind !== 'area') continue;
+    ctx.beginPath();
+    for (const ring of s.rings) {
+      ring.forEach(([lon, lat], i) => {
+        const p = toScreen(lat, lon);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+    }
+    ctx.fillStyle = `rgba(237,237,237,${Math.min(0.32, s.opacity * 0.32).toFixed(3)})`;
+    ctx.fill('evenodd');
+    ctx.strokeStyle = `rgba(237,237,237,${Math.min(0.7, 0.15 + s.opacity * 0.6).toFixed(3)})`;
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    if (s.label && s.labelAt && zoom < 6.5) {
+      const p = toScreen(s.labelAt[1], s.labelAt[0]);
+      if (p.x > 0 && p.y > 0 && p.x < width && p.y < height) label(s.label, p.x, p.y, 'center');
+    }
+  }
+  for (const s of shapes) {
+    switch (s.kind) {
+      case 'circle': {
+        const pts: [number, number][] = [];
+        for (let a = 0; a <= 360; a += 4) pts.push(destination(s.lat, s.lon, a, s.radiusKm));
+        ctx.beginPath();
+        geoPath(pts);
+        strokeStyleFor(ctx, s.style);
+        ctx.stroke();
+        if (s.label) {
+          const [la, lo] = destination(s.lat, s.lon, 45, s.radiusKm);
+          const p = toScreen(la, lo);
+          label(s.label, p.x + 6, p.y - 6);
+        }
+        break;
+      }
+      case 'ray': {
+        const pts: [number, number][] = [];
+        for (let i = 0; i <= 24; i++) pts.push(destination(s.lat, s.lon, s.azimuthDeg, (s.lengthKm * i) / 24));
+        ctx.beginPath();
+        geoPath(pts);
+        strokeStyleFor(ctx, s.style);
+        ctx.stroke();
+        const end = toScreen(pts[24]![0], pts[24]![1]);
+        if (s.arrow) {
+          const before = toScreen(pts[22]![0], pts[22]![1]);
+          const ang = Math.atan2(end.y - before.y, end.x - before.x);
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.moveTo(end.x - 9 * Math.cos(ang - 0.35), end.y - 9 * Math.sin(ang - 0.35));
+          ctx.lineTo(end.x, end.y);
+          ctx.lineTo(end.x - 9 * Math.cos(ang + 0.35), end.y - 9 * Math.sin(ang + 0.35));
+          ctx.stroke();
+        }
+        if (s.label) label(s.label, end.x + 6, end.y);
+        break;
+      }
+      case 'wedge': {
+        const pts: [number, number][] = [[s.lat, s.lon]];
+        for (let a = -s.spreadDeg / 2; a <= s.spreadDeg / 2 + 0.001; a += s.spreadDeg / 16) pts.push(destination(s.lat, s.lon, s.azimuthDeg + a, s.lengthKm));
+        pts.push([s.lat, s.lon]);
+        ctx.beginPath();
+        geoPath(pts);
+        ctx.fillStyle = 'rgba(237,237,237,0.06)';
+        ctx.fill();
+        strokeStyleFor(ctx, s.style);
+        ctx.stroke();
+        break;
+      }
+      case 'line': {
+        ctx.beginPath();
+        geoPath(s.points);
+        strokeStyleFor(ctx, s.style);
+        ctx.stroke();
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  ctx.setLineDash([]);
+}
+
 function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number, y: number, r: number): void {
   ctx.beginPath();
   switch (shape) {
@@ -284,6 +454,25 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number,
       }
       ctx.closePath();
       break;
+    case 'fix':
+      // Crosshair with a gap at the centre: the determined position.
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.moveTo(x - r * 2, y);
+      ctx.lineTo(x - r * 0.45, y);
+      ctx.moveTo(x + r * 0.45, y);
+      ctx.lineTo(x + r * 2, y);
+      ctx.moveTo(x, y - r * 2);
+      ctx.lineTo(x, y - r * 0.45);
+      ctx.moveTo(x, y + r * 0.45);
+      ctx.lineTo(x, y + r * 2);
+      break;
+    case 'truth':
+      // Ground truth: a small diagonal cross.
+      ctx.moveTo(x - r, y - r);
+      ctx.lineTo(x + r, y + r);
+      ctx.moveTo(x + r, y - r);
+      ctx.lineTo(x - r, y + r);
+      break;
     case 'node':
       ctx.rect(x - r, y - r, r * 2, r * 2);
       ctx.rect(x - r * 0.4, y - r * 0.4, r * 0.8, r * 0.8);
@@ -305,7 +494,7 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number,
   }
 }
 
-export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children }: MapCanvasProps) {
+export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children }: MapCanvasProps) {
   const gridRef = useRef(grid);
   gridRef.current = grid;
   const container = useRef<HTMLDivElement>(null);
@@ -315,6 +504,7 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
   const size = useRef({ width: 0, height: 0, dpr: 1 });
   const markersRef = useRef(markers);
   const linksRef = useRef(links ?? []);
+  const shapesRef = useRef(shapes ?? []);
   const dirty = useRef({ base: true, overlay: true });
   const frame = useRef<number | null>(null);
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
@@ -324,6 +514,7 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
 
   markersRef.current = markers;
   linksRef.current = links ?? [];
+  shapesRef.current = shapes ?? [];
 
   const toScreen = useCallback((lat: number, lon: number): { x: number; y: number } => {
     const p = project(lat, lon);
@@ -503,6 +694,7 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
       const { width, height, dpr } = size.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
+      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom);
       const list = markersRef.current;
       const positions = new Map<string, { x: number; y: number }>();
       for (const m of list) positions.set(m.id, toScreen(m.lat, m.lon));
@@ -532,7 +724,7 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
         const p = positions.get(m.id);
         if (!p || p.x < -60 || p.y < -30 || p.x > width + 60 || p.y > height + 30) continue;
         const severity = m.alert ?? 0;
-        const r = m.shape === 'incident' ? 13 : m.shape === 'node' ? 6 : 5;
+        const r = m.shape === 'incident' ? 13 : m.shape === 'node' ? 6 : m.shape === 'fix' ? 7 : 5;
 
         if (severity > 0) {
           const period = severity === 3 ? 1300 : severity === 2 ? 1900 : 2600;
@@ -555,10 +747,11 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
 
         const color = m.dim ? '#4a4a4a' : severity > 0 || m.selected ? FG : '#b4b4b4';
         drawShape(ctx, m.shape, p.x, p.y, r);
-        ctx.fillStyle = m.selected || severity > 0 ? (m.shape === 'incident' ? 'transparent' : FG) : BG;
-        if (m.shape !== 'incident') ctx.fill();
+        const hollow = m.shape === 'incident' || m.shape === 'fix' || m.shape === 'truth';
+        ctx.fillStyle = m.selected || severity > 0 ? (hollow ? 'transparent' : FG) : BG;
+        if (!hollow) ctx.fill();
         ctx.strokeStyle = color;
-        ctx.lineWidth = m.shape === 'incident' ? 1.5 : 1.2;
+        ctx.lineWidth = m.shape === 'incident' || (m.shape === 'fix' && m.selected) ? 1.5 : 1.2;
         ctx.stroke();
 
         if (m.label === '') continue;
@@ -684,7 +877,7 @@ export function MapCanvas({ view, viewKey, markers, links, onSelect, minZoom = 5
 
   useEffect(() => {
     schedule('overlay');
-  }, [markers, links, schedule]);
+  }, [markers, links, shapes, schedule]);
 
   const zoomAt = useCallback(
     (delta: number, px: number, py: number) => {

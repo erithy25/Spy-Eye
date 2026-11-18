@@ -23,6 +23,8 @@ import type { EmbeddingModel } from './ml/model.js';
 import type { VocabularyIndex } from './ml/vocab.js';
 import { Pipeline } from './pipeline.js';
 import { registerRoutes } from './routes.js';
+import { DatumEngine } from './datum/engine.js';
+import { sharedGallery } from './datum/shared.js';
 import { SearchEngine } from './search.js';
 import { Store, type VideoEntry } from './store.js';
 import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, SourceKind, UserInfo } from './types.js';
@@ -64,6 +66,8 @@ export interface NodeConfig {
   peers: PeerRecord[];
   /** Directory with a seed.json and clips/ that fill the archive of a fresh demonstration node. */
   seedDir?: string;
+  /** false: the node never receives the exercise footage (DATUM reference node). */
+  exercise?: boolean;
 }
 
 interface SeedFile {
@@ -77,7 +81,8 @@ interface SeedFile {
     lat: number;
     lon: number;
     shared: boolean;
-    clips: { file: string; daysAgo?: number }[];
+    /** `name` is the file name the recording gets in the node (neutral names for reference sets). */
+    clips: { file: string; name?: string; daysAgo?: number }[];
   }[];
 }
 
@@ -126,6 +131,8 @@ export class PlatformNode {
   readonly pipeline: Pipeline;
   readonly search: SearchEngine;
   readonly live: LiveIngest;
+  /** DATUM: where and when each recording was made. */
+  readonly datum: DatumEngine;
   /** Stream addresses of live sources; they may carry credentials and never leave the node. */
   private streamAddresses: Record<string, string> = {};
   readonly grants = new Map<string, UnmaskGrant>();
@@ -228,6 +235,15 @@ export class PlatformNode {
 
     this.search = new SearchEngine(this.store, shared.model, this.sources, () => this.scopes());
 
+    this.datum = new DatumEngine({
+      store: this.store,
+      model: shared.model,
+      hub: this.hub,
+      gallery: () => sharedGallery(shared.model, shared.ready, (line) => this.log(line.trim())),
+      log: (msg) => this.log(msg),
+      holdout: process.env['DATUM_HOLDOUT'] !== '0',
+    });
+
     this.live = new LiveIngest({
       store: this.store,
       sources: this.sources,
@@ -310,6 +326,7 @@ export class PlatformNode {
 
   /** A finished upload is run past every watch, in recording order, like a delayed live feed. */
   private onRecordingReady(entry: VideoEntry): void {
+    this.datum.enqueue(entry.info.id);
     void this.enforceRetention();
     this.watches.recalibrateAll();
     if (entry.info.scenario !== null) {
@@ -446,7 +463,7 @@ export class PlatformNode {
         const { size } = await fs.stat(target);
         const entry = this.store.register({
           id,
-          name: clip.file,
+          name: clip.name ?? clip.file,
           sourceFile,
           sizeBytes: size,
           sampleFps: 1,
@@ -672,6 +689,7 @@ export class PlatformNode {
         this.watches.recalibrateAll();
         for (const id of pending) this.pipeline.enqueue(id);
         await this.seedArchive();
+        await this.datum.init();
         await this.live.open();
       })
       .catch((err: unknown) => this.log(`Model initialisation failed: ${err instanceof Error ? err.message : String(err)}`, true));
@@ -695,6 +713,7 @@ export class PlatformNode {
   async stop(): Promise<void> {
     if (this.retentionTimer) clearInterval(this.retentionTimer);
     this.pipeline.shutdown();
+    this.datum.stop();
     this.live.shutdown();
     this.scenario.shutdown();
     this.watches.shutdown();

@@ -1,0 +1,349 @@
+/* ---------- DATUM: shared layout of the views ---------- */
+
+.dt-pad {
+  padding: 14px 16px;
+}
+
+.dt-ortung {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.dt-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid var(--line-2);
+}
+
+.dt-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dt-row {
+  padding: 9px 16px 9px 14px;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+
+.dt-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.dt-row.on {
+  border-left-color: var(--fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dt-row:focus-visible {
+  outline: 1px solid var(--fg);
+  outline-offset: -3px;
+}
+
+.dt-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  letter-spacing: 0.08em;
+}
+
+.dt-clock {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dt-row-mid {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mid);
+  font-size: 11px;
+  min-width: 0;
+}
+
+.dt-place {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-row-truth {
+  font-size: 10px;
+  color: var(--low);
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-map {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+}
+
+.dt-hud {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  min-width: 300px;
+  padding: 14px 16px 12px;
+  background: rgba(5, 5, 5, 0.86);
+  border: 1px solid var(--line-2);
+  pointer-events: none;
+}
+
+.dt-hud-clock {
+  font-size: 40px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+}
+
+.dt-hud-sub {
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.dt-hud-coord,
+.dt-hud-sun,
+.dt-hud-truth {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fg);
+}
+
+.dt-hud-truth {
+  color: var(--low);
+}
+
+.dt-strip {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  padding: 10px;
+  background: rgba(5, 5, 5, 0.9);
+  border: 1px solid var(--line-2);
+  max-width: min(640px, calc(100% - 40px));
+}
+
+.dt-strip img {
+  width: 220px;
+  height: 124px;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.35);
+}
+
+.dt-strip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dt-strip-text .label {
+  white-space: normal;
+}
+
+.dt-strip-text .btn-row {
+  margin-top: auto;
+}
+
+.dt-map-tools {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(5, 5, 5, 0.8);
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+
+/* ---------- Befund ---------- */
+
+.dt-befund {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 380px;
+  min-height: 0;
+}
+
+.dt-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.dt-col + .dt-col {
+  border-left: 1px solid var(--line-2);
+}
+
+.dt-section {
+  padding: 14px 18px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dt-section > .label {
+  margin-bottom: 10px;
+}
+
+.dt-video {
+  width: 100%;
+  display: block;
+  background: #000;
+  max-height: 340px;
+}
+
+.dt-keys {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dt-keys button {
+  flex: 1;
+  border: 1px solid var(--line-2);
+  padding: 0;
+  opacity: 0.6;
+}
+
+.dt-keys button.on,
+.dt-keys button:hover {
+  opacity: 1;
+  border-color: var(--fg);
+}
+
+.dt-keys img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.dt-mini-map {
+  height: 280px;
+  position: relative;
+  border: 1px solid var(--line);
+}
+
+.dt-empty-view {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--low);
+  letter-spacing: 0.1em;
+}
+
+/* ---------- Raum ---------- */
+
+.dt-raum {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.dt-raum-bar {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--line-2);
+  min-width: 0;
+}
+
+.dt-raum-bar .seg {
+  display: flex;
+  gap: 2px;
+}
+
+.dt-raum-bar .seg button {
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.dt-raum-bar .seg button.on {
+  color: var(--bg);
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+.dt-raum-stage {
+  position: relative;
+  min-height: 0;
+}
+
+/* ---------- Messung ---------- */
+
+.dt-messung {
+  padding: 22px 28px 40px;
+  max-width: 1280px;
+}
+
+.dt-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line-2);
+  border-left: 1px solid var(--line-2);
+  margin: 14px 0 24px;
+}
+
+.dt-figure {
+  padding: 14px 16px;
+  border-right: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+}
+
+.dt-figure b {
+  display: block;
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.dt-figure span {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mid);
+}
+
+.dt-bar {
+  height: 3px;
+  background: var(--line-2);
+  position: relative;
+  min-width: 80px;
+}
+
+.dt-bar > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--fg);
+}

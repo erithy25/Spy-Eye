@@ -19,6 +19,7 @@ import { collectMetrics } from './intel/metrics.js';
 import { caseReport, measurementReport, situationReport } from './intel/report.js';
 import type { PlatformNode, RequestContext } from './node.js';
 import { SearchError } from './search.js';
+import { registerDatumRoutes } from './datum/routes.js';
 import { DEFAULT_SOURCE_ID, RM_OPTIONS, frameUrl, isValidVideoId, originalFrameFileName } from './store.js';
 import {
   DETAIL_LEVELS,
@@ -243,6 +244,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   };
 
   // ================================================================ session
+
+  registerDatumRoutes(app, node, need, sendError);
 
   app.get('/api/public/info', async () => {
     const body: PublicInfo = {

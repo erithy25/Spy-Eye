@@ -5,6 +5,7 @@
 import { config } from '../config.js';
 import { FaceDetector } from '../ml/faces.js';
 import { EmbeddingModel } from '../ml/model.js';
+import { depthModelId, ensureDepthModel } from '../datum/depth.js';
 
 const model = new EmbeddingModel();
 let last = '';
@@ -21,6 +22,8 @@ try {
   const faces = new FaceDetector();
   await faces.load();
   process.stdout.write(faces.ready ? 'Gesichts-Detektor für die Maskierung liegt vor.\n' : `Gesichts-Detektor fehlt: ${faces.problem ?? ''}\n`);
+  await ensureDepthModel();
+  process.stdout.write(`Tiefenmodell ${depthModelId} für den Raum liegt vor.\n`);
   process.exit(faces.ready ? 0 : 1);
 } catch (err: unknown) {
   process.stderr.write(`\nDownload fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}\n`);

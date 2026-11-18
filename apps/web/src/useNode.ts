@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Fix } from '../../server/src/datum/contract';
 import {
   ApiRequestError,
   fetchIntel,
@@ -38,6 +39,8 @@ export interface NodeConnection {
   /** Increments whenever the searchable index changed in a way that warrants a refresh. */
   indexVersion: number;
   live: LiveFeed;
+  /** DATUM fixes announced by the node since the console connected (summaries, by video id). */
+  fixes: Record<string, Fix>;
   can: (permission: string) => boolean;
   signIn: (user: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -74,6 +77,7 @@ export function useNode(): NodeConnection {
   const [ledger, setLedger] = useState<{ head: string; length: number } | null>(null);
   const [connected, setConnected] = useState(false);
   const [indexVersion, setIndexVersion] = useState(0);
+  const [fixes, setFixes] = useState<Record<string, Fix>>({});
   const listeners = useRef(new Set<LiveListener>());
   const statuses = useRef(new Map<string, VideoStatus>());
   const coarse = useRef(new Set<string>());
@@ -260,6 +264,11 @@ export function useNode(): NodeConnection {
         case 'ledger':
           setLedger({ head: event.head, length: event.length });
           break;
+        case 'datum-fix': {
+          const { fix } = event;
+          setFixes((current) => ({ ...current, [fix.videoId]: fix }));
+          break;
+        }
       }
     };
     return () => {
@@ -298,6 +307,7 @@ export function useNode(): NodeConnection {
       connected,
       indexVersion,
       live: live.current,
+      fixes,
       can,
       signIn,
       signOut,
@@ -309,6 +319,6 @@ export function useNode(): NodeConnection {
         setIntel((current) => (current ? { ...current, incidents: upsert(current.incidents, incident, true) } : current)),
       patchWatch: (watch) => setIntel((current) => (current ? { ...current, watches: upsert(current.watches, watch, false) } : current)),
     }),
-    [phase, info, session, app, intel, ledger, connected, indexVersion, can, signIn, signOut, refreshIntel],
+    [phase, info, session, app, intel, ledger, connected, indexVersion, fixes, can, signIn, signOut, refreshIntel],
   );
 }

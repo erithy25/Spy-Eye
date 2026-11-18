@@ -1,0 +1,18 @@
+{
+  "federationSecret": "nur-fuer-die-vorfuehrung-auf-einem-rechner",
+  "nodes": [
+    {
+      "id": "datum",
+      "name": "DATUM · Ortungsstelle",
+      "operator": "Auswertung (Erprobung)",
+      "region": "Referenzbestand",
+      "lat": 50.3569,
+      "lon": 7.589,
+      "port": 8787,
+      "dataDir": "data-datum",
+      "peers": [],
+      "seed": "datasets/datum",
+      "exercise": false
+    }
+  ]
+}

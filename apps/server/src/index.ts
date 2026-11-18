@@ -29,6 +29,8 @@ interface NodesFile {
     peers: (string | ExternalPeer)[];
     /** Optional directory (relative to the repository) with seed footage for a fresh node. */
     seed?: string;
+    /** false: "--prepare" does not load the exercise footage into this node (DATUM). */
+    exercise?: boolean;
   }[];
 }
 
@@ -102,6 +104,7 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
       dataDir: fromRoot(n.dataDir),
       peers,
       ...(n.seed ? { seedDir: fromRoot(n.seed) } : {}),
+      ...(n.exercise === false ? { exercise: false } : {}),
     };
   });
 }
@@ -113,10 +116,12 @@ async function waitForAnalysis(nodes: PlatformNode[]): Promise<number> {
       const videos = n.store.infos();
       const done = videos.filter((v) => v.status === 'ready').length;
       const failed = videos.filter((v) => v.status === 'error').length;
-      return { name: n.info.region || n.info.name, done, failed, total: videos.length };
+      return { name: n.info.region || n.info.name, done, failed, total: videos.length, located: n.datum.outstanding };
     });
-    process.stdout.write(`\r  Auswertung: ${parts.map((p) => `${p.name} ${p.done}/${p.total}${p.failed > 0 ? ` (${p.failed} Fehler)` : ''}`).join(' · ')}   `);
-    if (parts.every((p) => p.done + p.failed >= p.total)) return parts.reduce((sum, p) => sum + p.failed, 0);
+    process.stdout.write(
+      `\r  Auswertung: ${parts.map((p) => `${p.name} ${p.done}/${p.total}${p.failed > 0 ? ` (${p.failed} Fehler)` : ''}${p.located > 0 ? `, Ortung offen: ${p.located}` : ''}`).join(' · ')}   `,
+    );
+    if (parts.every((p) => p.done + p.failed >= p.total && p.located === 0)) return parts.reduce((sum, p) => sum + p.failed, 0);
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
@@ -134,7 +139,7 @@ async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (lin
   // share the processor, and the analysis speed each node reports would be lower than it is.
   let failed = await waitForAnalysis(nodes);
   const first = nodes[0];
-  if (first?.scenario.definition && first.scenario.info().status === 'absent') {
+  if (first?.cfg.exercise !== false && first?.scenario.definition && first.scenario.info().status === 'absent') {
     try {
       await first.scenario.installFootage();
     } catch (err: unknown) {
@@ -153,7 +158,7 @@ async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (lin
 
 async function main(): Promise<void> {
   const say = (line: string): void => void process.stdout.write(`${line}\n`);
-  say(`Sicht ${VERSION}`);
+  say(process.argv.some((a) => a.includes('nodes.datum')) ? `DATUM ${VERSION}` : `Sicht ${VERSION}`);
   say(`  ${await checkFfmpeg()}`);
 
   const configs = await loadNodeConfigs();

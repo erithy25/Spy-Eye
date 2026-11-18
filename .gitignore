@@ -31,3 +31,9 @@ media/product/
 
 # Films are built with media/brand/build.sh and handed over as files
 deliverables/film/
+
+# DATUM: reference dataset, gallery and elevation tiles are downloaded by "pnpm datum:fetch"
+datasets/datum/clips/
+datasets/datum/gallery/
+datasets/datum/terrain/
+.goal-start-a

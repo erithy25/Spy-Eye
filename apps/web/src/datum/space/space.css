@@ -1,0 +1,333 @@
+/* DATUM 3D viewers (SpaceView, TerrainView): same language as the map, hairlines and small caps. */
+
+.sv {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  overflow: hidden;
+  background: #050505;
+  color: var(--fg, #ededed);
+  font-family: var(--mono, 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  cursor: crosshair;
+  outline: none;
+}
+
+.sv:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--fg, #ededed);
+}
+
+.sv-gl,
+.sv-hud {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sv-hud {
+  pointer-events: none;
+}
+
+.sv-readout {
+  position: absolute;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(5, 5, 5, 0.82);
+  padding: 4px 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.sv-tl {
+  top: 12px;
+  left: 12px;
+  letter-spacing: 0.16em;
+  color: var(--mid, #a8a8a8);
+  max-width: calc(50% - 300px);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sv-tl span:first-child {
+  color: var(--fg, #ededed);
+  font-weight: 700;
+}
+
+.sv-tl .sv-dim {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-bl {
+  left: 12px;
+  bottom: 40px;
+}
+
+.sv-br {
+  right: 12px;
+  bottom: 40px;
+  text-align: right;
+  align-items: flex-end;
+}
+
+.sv-stack {
+  display: grid;
+  gap: 3px;
+  padding: 7px 10px;
+}
+
+.sv-dim {
+  color: var(--low, #828282);
+}
+
+.sv-k {
+  color: var(--low, #828282);
+  margin-right: 8px;
+}
+
+/* mode switches: one bordered column of small-caps segments, the active one underlined */
+.sv-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-2, #333);
+  background: rgba(5, 5, 5, 0.86);
+  cursor: default;
+}
+
+.sv-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.sv-group + .sv-group {
+  border-top: 1px solid var(--line-2, #333);
+}
+
+.sv-group-label {
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint, #555);
+  border-right: 1px solid var(--line, #1f1f1f);
+}
+
+.sv-group button {
+  flex: 1;
+  padding: 6px 10px 5px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--low, #828282);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.sv-group button + button {
+  border-left: 1px solid var(--line, #1f1f1f);
+}
+
+.sv-group button:hover {
+  color: var(--fg, #ededed);
+}
+
+.sv-group button[aria-pressed='true'] {
+  color: var(--fg, #ededed);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.sv-group button:focus-visible {
+  outline: 1px solid var(--fg, #ededed);
+  outline-offset: -2px;
+}
+
+.sv-help {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--low, #828282);
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(5, 5, 5, 0.72);
+  padding: 3px 9px;
+}
+
+/* scale bar as on the map */
+.sv-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mid, #a8a8a8);
+}
+
+.sv-scale i {
+  display: block;
+  height: 5px;
+  border: 1px solid var(--mid, #a8a8a8);
+  border-top: 0;
+}
+
+/* legend: a short sample of each line style */
+.sv-legend {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 10px;
+  align-items: center;
+}
+
+.sv-legend i {
+  display: block;
+  width: 22px;
+  height: 0;
+  border-top: 1px solid var(--fg, #ededed);
+}
+
+.sv-legend i.dash {
+  border-top-style: dashed;
+}
+
+.sv-legend i.dot {
+  border-top-style: dotted;
+  border-top-width: 2px;
+}
+
+.sv-legend i.faint {
+  border-top-color: var(--low, #828282);
+}
+
+/* loading and error */
+.sv-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 12px;
+  background: #050505;
+  padding: 24px;
+}
+
+.sv-status-title {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg, #ededed);
+}
+
+.sv-status-detail {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--mid, #a8a8a8);
+  line-height: 1.6;
+}
+
+.sv-status-btn {
+  margin-top: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-2, #333);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mid, #a8a8a8);
+}
+
+.sv-status-btn:hover {
+  color: var(--fg, #ededed);
+  border-color: var(--fg, #ededed);
+}
+
+.sv-bar {
+  position: relative;
+  display: block;
+  width: 260px;
+  height: 1px;
+  overflow: hidden;
+  background: var(--line-2, #333);
+}
+
+.sv-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 1px;
+  background: var(--fg, #ededed);
+  animation: sv-scan 1.15s linear infinite;
+}
+
+@keyframes sv-scan {
+  to {
+    left: 100%;
+  }
+}
+
+.sv-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 3px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--low, #828282);
+}
+
+.sv-steps li::before {
+  content: '— ';
+  color: var(--faint, #555);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-bar::after {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
+@media (max-width: 760px) {
+  .sv-help {
+    display: none;
+  }
+
+  .sv-bl,
+  .sv-br {
+    bottom: 12px;
+  }
+
+  .sv-br {
+    display: none;
+  }
+}

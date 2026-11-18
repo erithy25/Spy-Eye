@@ -1,3 +1,5 @@
+import type { Fix } from './datum/contract.js';
+
 /**
  * Types shared between the server and the web client. The web app imports this file type-only,
  * so it must not depend on Node-specific types.
@@ -149,7 +151,8 @@ export type ServerEvent =
   | { type: 'video'; video: VideoInfo; stats: Stats; queueLength: number }
   | { type: 'video-removed'; videoId: string; stats: Stats }
   | { type: 'frames'; frames: FrameEvent[] }
-  | { type: 'scene'; scene: SceneInfo };
+  | { type: 'scene'; scene: SceneInfo }
+  | { type: 'datum-fix'; fix: Fix };
 
 export interface SearchResult {
   sceneId: string;

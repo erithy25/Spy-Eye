@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>DATUM · Panel-Harness</title>
+    <link rel="icon" href="data:," />
+    <!-- Development only: lays out the result-panel parts with the fixtures. -->
+    <style>
+      .hx {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 20px 32px 64px;
+      }
+      .hx-bar {
+        display: flex;
+        align-items: baseline;
+        gap: 28px;
+        border-bottom: 1px solid var(--line-2);
+        padding-bottom: 10px;
+        margin-bottom: 24px;
+      }
+      .hx-tabs {
+        display: flex;
+        gap: 18px;
+      }
+      .hx-on {
+        color: var(--fg);
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      .hx-picked {
+        margin-left: auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .hx-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px 300px;
+        gap: 40px;
+        align-items: start;
+      }
+      .hx-col {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+        min-width: 0;
+      }
+      .hx-states {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 40px;
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line-2);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/datum/panel/harness.tsx"></script>
+  </body>
+</html>
