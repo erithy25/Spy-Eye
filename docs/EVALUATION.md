@@ -241,9 +241,9 @@ es die Vorschau „Am Bestand prüfen“ beim Aufstellen einer Wache und den Mes
 
 ## 7. Dauerlauf, Sicherung, Umstieg, Betrieb ohne Netz
 
-Vier Prüfungen vom 18. November 2026, die zeigen, ob eine Vorführung über ihre Dauer hält, ob
-ein Bestand eine Kopie und einen Fassungswechsel übersteht und ob ein vorbereiteter Rechner
-ohne Netz auskommt.
+Fünf Prüfungen vom 18. November 2026, die zeigen, ob eine Vorführung über ihre Dauer hält, ob
+ein Bestand eine Kopie und einen Fassungswechsel übersteht, ob ein vorbereiteter Rechner ohne
+Netz auskommt und was bei einer Störung mitten in der Übung geschieht.
 
 | Prüfung | Ablauf | Ergebnis |
 | --- | --- | --- |
@@ -251,6 +251,7 @@ ohne Netz auskommt.
 | Sicherung | Datenordner eines Knotens nach sieben Übungsläufen und eines Knotens mit 44 eigenen Aufzeichnungen kopiert und die Kopie an anderem Ort gestartet | unabhängiges Prüfprogramm und Knoten melden für beide Kopien „Kette unversehrt“; Anmeldung, Mandat und Suche arbeiten auf der Kopie |
 | Umstieg | Knoten dieser Fassung auf einem Datenordner der ersten Fassung gestartet: 44 Aufzeichnungen, mit zwei früheren Kodierern ausgewertet | der Knoten wertet alle 44 im Hintergrund neu aus (drei bis vier Minuten); „Beach“, „Man with a cup“ und „Black car“ liefern Treffer, „Green bus“ meldet „Keine Szene über der Schwelle“ |
 | Ohne Netz | auf einem vorbereiteten Rechner unter Linux in einer Umgebung ohne jede Verbindung (weder die Paketquelle noch die Quelle der Modelle war erreichbar) die Schritte des Startbefehls: `pnpm install`, `pnpm build`, `pnpm demo:reset`, `pnpm demo:check`, `pnpm demo`; danach im Browser die Übung in achtfacher Geschwindigkeit und eine Suche | alle Schritte bestanden, die Prüfung endet mit „Ergebnis: bereit“; die drei Knoten antworten, die Suche „überflutete Wiese“ liefert vier Treffer, kein Fehler im Browser und keiner in der Ausgabe der Knoten |
+| Störung im Lauf | Übung in achtfacher Geschwindigkeit; dabei nacheinander: Anmeldung an Koblenz und Trier im selben Browserprofil; der Prozess der Knoten 20 s angehalten; die Seite neu geladen; den Reiter geschlossen und neu geöffnet; den Prozess mitten in der Übung hart beendet | beide Anmeldungen bestehen nebeneinander; nach dem Anhalten antwortet der Knoten, die Uhr holt auf (von T+01:58 auf T+05:42) und die Meldungen kommen nach; nach Neuladen und neuem Reiter bleibt die Anmeldung, die Übung läuft weiter; nach dem harten Ende ist das Protokoll unversehrt (27 Einträge), und `pnpm demo:reset` stellt den Ausgangsstand her, die Prüfung endet mit „Ergebnis: bereit“; kein Fehler im Browser |
 
 Neunzehn Minuten sind kein Dauerbetrieb über Tage. Die Einzelheiten für den Betrieb stehen in
 `docs/BETRIEB.md`. Unter Windows hatte der Prüflauf immer Netz; dort ist der Betrieb ohne Netz

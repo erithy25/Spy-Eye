@@ -246,4 +246,9 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   run always had a network.
 - Index sheet for the hand-over archive (`deliverables/MAPPE.md`), so that the archive reads
   without the repository.
+- Disturbances during the exercise at 8x: signed in at Koblenz and Trier in one browser profile
+  (two cookies, both sessions hold); node process frozen for 20 s (the clock catches up, the
+  alerts follow); page reloaded, tab closed and reopened (session holds, exercise runs on); node
+  process killed hard in the middle (ledger intact with 27 entries, reset restores the prepared
+  state, preflight "bereit"). No page error. Measurement paper, section 7.
 
