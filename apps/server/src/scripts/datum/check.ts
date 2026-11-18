@@ -97,6 +97,9 @@ let located = 0;
 // again, in front of the audience. Only error-free fixes are written to disk, so a failed
 // location shows up as a missing fix.
 let outdated = 0;
+// Quick fixes (from frames sampled straight from the file) still wait for the full stage with the
+// walkable spaces; a prepared node has none of them.
+let quickOnly = 0;
 const errors: number[] = [];
 try {
   for (const id of await fs.readdir(videosDir)) {
@@ -112,6 +115,10 @@ try {
       outdated++;
       continue;
     }
+    if (fix.stage === 'quick') {
+      quickOnly++;
+      continue;
+    }
     located++;
     if (fix.location && fix.truth) errors.push(haversineKm(fix.location.lat, fix.location.lon, fix.truth.lat, fix.truth.lon));
   }
@@ -120,7 +127,8 @@ try {
 }
 line(`Aufnahmen im Knoten: ${recordings}`, recordings > 0, 'pnpm datum:prepare');
 line(`Ausgewertet: ${analysed} von ${recordings}`, recordings > 0 && analysed === recordings, 'pnpm datum:prepare');
-line(`Geortet: ${located} von ${analysed}${outdated > 0 ? ` (${outdated} veraltet)` : ''}`, analysed > 0 && located === analysed, 'pnpm datum:prepare');
+const pendingNotes = [outdated > 0 ? `${outdated} veraltet` : '', quickOnly > 0 ? `${quickOnly} nur schnell geortet` : ''].filter(Boolean).join(', ');
+line(`Geortet: ${located} von ${analysed}${pendingNotes ? ` (${pendingNotes})` : ''}`, analysed > 0 && located === analysed, 'pnpm datum:prepare');
 if (errors.length > 0) {
   const sorted = [...errors].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)]!;
