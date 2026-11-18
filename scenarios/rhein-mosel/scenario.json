@@ -646,7 +646,7 @@
       "threshold": 0.55,
       "persistence": 2,
       "cooldownSec": 30,
-      "sourceKinds": []
+      "sourceKinds": ["drone", "helicopter", "satellite"]
     },
     {
       "key": "lkw",

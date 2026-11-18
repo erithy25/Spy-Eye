@@ -1,7 +1,7 @@
 /**
  * Runs the exercise scenario without a console and reports what the watches found.
  *
- *   pnpm exercise:evaluate [--speed 8] [--data .cache/exercise-eval] [--keep] [--require 12]
+ *   pnpm exercise:evaluate [--speed 8] [--data .cache/exercise-eval] [--keep] [--require 12] [--max-false 1]
  *
  * Installs the scenario footage into a scratch node, waits for the analysis, plays the exercise
  * on the accelerated clock and compares the alerts with the events of the script. The result is
@@ -130,10 +130,15 @@ async function main(): Promise<void> {
   say(`\nErgebnis: ${path.relative(repoRoot, outFile)}`);
 
   await node.stop();
-  // For automated runs: fail when fewer events were recognised than asked for.
+  // For automated runs: fail when fewer events were recognised, or more false alerts raised, than asked for.
   const required = Number(argument('require', '0'));
   if (Number.isFinite(required) && required > 0 && evaluation.detected < required) {
     say(`Erwartet waren mindestens ${required} erkannte Ereignisse, erkannt wurden ${evaluation.detected}.`);
+    process.exit(1);
+  }
+  const allowedFalse = Number(argument('max-false', '-1'));
+  if (Number.isFinite(allowedFalse) && allowedFalse >= 0 && evaluation.falseAlarms > allowedFalse) {
+    say(`Erwartet waren höchstens ${allowedFalse} Fehlmeldungen, gemeldet wurden ${evaluation.falseAlarms}.`);
     process.exit(1);
   }
   process.exit(0);

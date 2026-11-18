@@ -43,4 +43,5 @@ jobs:
       # A rehearsal is undone and the nodes are checked once more from the restored state.
       - run: pnpm demo:reset
       - run: pnpm demo:check
-      - run: pnpm exercise:evaluate --speed 8 --require 12
+      # The same events and the same single false alert as on the development machine.
+      - run: pnpm exercise:evaluate --speed 8 --require 13 --max-false 1
