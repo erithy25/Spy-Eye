@@ -19,6 +19,7 @@
     "search:evaluate": "pnpm --filter @sicht/server search:evaluate",
     "demo": "node apps/server/dist/index.js --nodes nodes.demo.json",
     "demo:prepare": "node apps/server/dist/index.js --nodes nodes.demo.json --prepare",
-    "demo:check": "node apps/server/dist/scripts/checkDemo.js"
+    "demo:check": "node apps/server/dist/scripts/checkDemo.js",
+    "demo:reset": "node apps/server/dist/scripts/resetDemo.js"
   }
 }

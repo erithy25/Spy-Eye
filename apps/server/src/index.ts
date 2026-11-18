@@ -6,6 +6,7 @@ import type { PeerRecord } from './intel/federation.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
 import { PlatformNode, VERSION, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
+import { snapshotPreparedState } from './scripts/prepared.js';
 
 interface NodesFile {
   /** Secret from which the pairwise federation keys of the nodes in this file are derived. */
@@ -94,24 +95,8 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
   });
 }
 
-/**
- * `--prepare`: loads the exercise footage into the first node, lets every node finish analysing
- * what it holds, then exits. Run once before a demonstration so that nothing has to be computed
- * in front of the audience.
- */
-async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (line: string) => void): Promise<void> {
-  await ready;
-  await Promise.all(nodes.map((n) => n.settled));
-  const first = nodes[0];
-  if (first?.scenario.definition && first.scenario.info().status === 'absent') {
-    try {
-      await first.scenario.installFootage();
-    } catch (err: unknown) {
-      say(`  ${err instanceof Error ? err.message : String(err)}`);
-      process.exit(1);
-    }
-  }
-  const started = Date.now();
+/** Prints the progress of the analysis until every node has worked through what it holds. */
+async function waitForAnalysis(nodes: PlatformNode[]): Promise<number> {
   for (;;) {
     const parts = nodes.map((n) => {
       const videos = n.store.infos();
@@ -120,14 +105,39 @@ async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (lin
       return { name: n.info.region || n.info.name, done, failed, total: videos.length };
     });
     process.stdout.write(`\r  Auswertung: ${parts.map((p) => `${p.name} ${p.done}/${p.total}${p.failed > 0 ? ` (${p.failed} Fehler)` : ''}`).join(' · ')}   `);
-    if (parts.every((p) => p.done + p.failed >= p.total)) {
-      const failed = parts.reduce((sum, p) => sum + p.failed, 0);
-      say(`\n  Vorbereitet in ${Math.round((Date.now() - started) / 1000)} s${failed > 0 ? `, ${failed} Aufnahme(n) mit Fehler` : ''}. Start der Vorführung: pnpm demo`);
-      await Promise.allSettled(nodes.map((n) => n.stop()));
-      process.exit(failed > 0 ? 1 : 0);
-    }
+    if (parts.every((p) => p.done + p.failed >= p.total)) return parts.reduce((sum, p) => sum + p.failed, 0);
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
+}
+
+/**
+ * `--prepare`: lets every node finish analysing what it holds, loads the exercise footage into
+ * the first node, analyses that, then exits. Run once before a demonstration so that nothing has
+ * to be computed in front of the audience.
+ */
+async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (line: string) => void): Promise<void> {
+  await ready;
+  await Promise.all(nodes.map((n) => n.settled));
+  const started = Date.now();
+  // The archives of the nodes first, the exercise afterwards: analysed side by side they would
+  // share the processor, and the analysis speed each node reports would be lower than it is.
+  let failed = await waitForAnalysis(nodes);
+  const first = nodes[0];
+  if (first?.scenario.definition && first.scenario.info().status === 'absent') {
+    try {
+      await first.scenario.installFootage();
+    } catch (err: unknown) {
+      say(`\n  ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+    failed = await waitForAnalysis(nodes);
+  }
+  await Promise.allSettled(nodes.map((n) => n.stop()));
+  // The state reached here is kept, so that a rehearsal can be undone with "pnpm demo:reset"
+  // without analysing the footage again.
+  if (failed === 0) for (const node of nodes) await snapshotPreparedState(node.cfg.dataDir);
+  say(`\n  Vorbereitet in ${Math.round((Date.now() - started) / 1000)} s${failed > 0 ? `, ${failed} Aufnahme(n) mit Fehler` : ''}. Start der Vorführung: pnpm demo`);
+  process.exit(failed > 0 ? 1 : 0);
 }
 
 async function main(): Promise<void> {
@@ -171,6 +181,17 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  process.stderr.write(`${err instanceof Error ? (err.stack ?? err.message) : String(err)}\n`);
+  const failure = err as NodeJS.ErrnoException & { port?: number };
+  if (failure.code === 'EADDRINUSE') {
+    // The usual cause on a demonstration day: the nodes are already running in another window.
+    process.stderr.write(
+      `\nAnschluss ${failure.port ?? ''} ist bereits belegt. Läuft Sicht schon in einem anderen Fenster? Dann dort weiterarbeiten oder es mit Strg+C beenden.\n` +
+        'Hält ein anderes Programm den Anschluss, lässt er sich mit PORT (ein Knoten) oder in der Knotendatei (mehrere Knoten) ändern.\n',
+    );
+  } else if (failure.code === 'EACCES' && failure.port !== undefined) {
+    process.stderr.write(`\nAnschluss ${failure.port} darf nicht geöffnet werden. Einen Anschluss über 1024 wählen (PORT oder Knotendatei).\n`);
+  } else {
+    process.stderr.write(`${err instanceof Error ? (err.stack ?? err.message) : String(err)}\n`);
+  }
   process.exit(1);
 });

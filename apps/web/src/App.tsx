@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createMandate, errorText, fetchMandates, selectMandate, type Mandate, type Role } from './api';
 import { FrameSheet, type FrameTarget } from './components/FrameSheet';
-import { formatExercise, shortHash } from './format';
+import { formatCount, formatExercise, shortHash } from './format';
 import { LangProvider, useLang } from './i18n';
 import { MapCanvas, type MapMarker } from './map/MapCanvas';
 import { Dialog, Field, useAction } from './ui';
@@ -428,7 +428,7 @@ function Shell({ node }: { node: NodeConnection }) {
           </b>
         </span>
         <span>
-          {t('Verzeichnis')} <b>{node.app ? `${node.app.stats.frames.toLocaleString('de-DE')} ${t('Bilder')}` : '–'}</b>
+          {t('Verzeichnis')} <b>{node.app ? `${formatCount(node.app.stats.frames)} ${t('Bilder')}` : '–'}</b>
         </span>
         {scenario && exerciseRunning && (
           <span>

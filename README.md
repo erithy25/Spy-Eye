@@ -28,7 +28,7 @@ einrichtet (Nachbarknoten im Verbund, angeschlossene Direktbilder).
 | Weitsicht | VERBUND | Abfrage über Behördengrenzen: nur die Frage reist, zurück kommen maskierte Vorschaubilder und ein Beleg |
 | Aufsicht | PROTOKOLL | Verkettetes Protokoll, Prüfung der Kette, Stichprobe für die Kontrolle, Export |
 | Rücksicht | durchgehend | Gesichtsmaskierung, Mandat mit Zweckbindung, Vier-Augen-Freigabe, Löschfrist, Anfrageprüfung |
-| — | QUELLEN, WIRKUNG | Sensoren, Einspielen von Aufzeichnungen, Anschließen von Direktbildern; Messwerte des Knotens, Auswertung jeder Übung |
+| — | QUELLEN, WIRKUNG | Sensoren, Einspielen von Aufzeichnungen, Anschließen von Direktbildern; Messwerte des Knotens, Auswertung jeder Übung als druckbarer Messbericht |
 
 ## Vorführung mit drei Knoten
 
@@ -68,6 +68,8 @@ pnpm demo
   Vorführung ohne Wartezeit und ohne Netz.
 - `demo:check` prüft die vorbereitete Vorführung von Anfang bis Ende (Rechner, Material,
   Anmeldung, Suche, Verbund, Ablehnung, Protokoll) und endet mit „Ergebnis: bereit“.
+- `demo:reset` stellt nach einem Probelauf den Stand von `demo:prepare` wieder her (Knoten vorher
+  beenden).
 - `demo` startet drei Knoten: Koblenz <http://127.0.0.1:8787>, Trier <http://127.0.0.1:8788>,
   Mainz <http://127.0.0.1:8789>.
 
@@ -203,6 +205,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `pnpm start` / `pnpm dev` | einzelner Knoten / Entwicklung |
 | `pnpm exercise:fetch` | Übungsmaterial laden |
 | `pnpm demo:check` | vorbereitete Vorführung prüfen; startet die Knoten dafür, wenn sie nicht laufen |
+| `pnpm demo:reset` | nach einer Probe den vorbereiteten Ausgangsstand wiederherstellen, ohne neu auszuwerten |
 | `pnpm exercise:evaluate` | Übung ohne Konsole abspielen und auswerten (`--speed 1\|2\|4\|8`) |
 | `pnpm search:evaluate --dir <Ordner>` | Suche auf einem Ordner mit Aufnahmen und beschrifteten Anfragen messen |
 | `pnpm models:download` | Modelle vorab laden |

@@ -36,8 +36,8 @@ deutsche Suche, die Nachbarn im Verbund, eine Ablehnung, die Protokollkette. Lau
 nicht, startet der Befehl sie für die Prüfung und beendet sie wieder. Jede Zeile endet mit OK oder
 FEHLT und nennt bei FEHLT den nächsten Schritt; am Ende steht „Ergebnis: bereit“. Die Prüfung
 meldet sich als `leitung` an und hinterlässt deshalb Einträge in den Protokollen, wie jede andere
-Nutzung auch. Derselbe Ablauf wird bei jeder Änderung auf einem Windows-Rechner mit PowerShell
-durchgespielt (`.github/workflows/windows.yml`).
+Nutzung auch; `pnpm demo:reset` nimmt sie wieder zurück. Derselbe Ablauf wird auf einem
+Windows-Rechner mit PowerShell durchgespielt (`.github/workflows/windows.yml`).
 
 ## Am Tag selbst
 
@@ -66,9 +66,11 @@ Vor Beginn prüfen (zwei Minuten):
    „31 Aufnahmen bereit“. Steht dort „Material wird ausgewertet“, ist `demo:prepare` nicht
    durchgelaufen: abwarten.
 3. Zweites Browserfenster: Trier, als `leitung` angemeldet, Reiter PROTOKOLL.
-4. Falls vom Probelauf noch eine Übung läuft: ENDE drücken. Falls die Wache „Umgestürzter
-   Lastkraftwagen“ schon nachgeschärft ist (Version 2): im Reiter WACHEN „Gelerntes verwerfen“,
-   damit die Fehlmeldung in der Vorführung wieder auftritt.
+4. Nach einem Probelauf den Ausgangsstand wiederherstellen: die Knoten beenden (Strg+C),
+   `pnpm demo:reset`, dann `pnpm demo`. Das dauert eine Sekunde und nimmt alles zurück, was die
+   Probe hinterlassen hat: Meldungen, Urteile, die nachgeschärfte Wache, Vorgänge und
+   Protokolleinträge. Das Material wird nicht neu ausgewertet. Ohne Zurücksetzen träte die
+   Fehlmeldung in der Vorführung nicht mehr auf, weil die Wache schon in Version 2 arbeitet.
 
 ## Ablauf
 
@@ -93,7 +95,7 @@ Wer mehr Zeit zum Erklären braucht, drückt PAUSE; die Uhr und alle Quellen hal
 | 9:00 | VORGÄNGE: VERSIEGELN, dann BERICHT. | „Ein versiegelter Vorgang ist unveränderlich. Der Bericht ist druckbar und nennt Siegel und Protokollstand.“ |
 | 10:00 | LAGE: an Erkunder 1 das Bild mit dem Fachberater öffnen. Gesicht ist verpixelt. ORIGINAL ANFORDERN und den Dialog zeigen. | „Gesichter sind in jedem Bild maskiert. Das Original gibt es nur mit Grund und mit Freigabe durch eine zweite Person, für 15 Minuten.“ |
 | 11:00 | PROTOKOLL: KETTE PRÜFEN. Dann STICHPROBE ZIEHEN. | „Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Die Aufsicht zieht Stichproben, ohne selbst Bilder sehen zu können.“ |
-| 12:00 | WIRKUNG. | „Der Zweck ist messbar: 13 Ereignisse im Drehbuch, 13 erkannt, eine Fehlmeldung. In Echtzeit liegt der Verzug im Median bei 1,1 Sekunden; mit der hier beschleunigten Uhr zeigt die Anzeige zwei bis drei. Diese Zahlen erzeugt das System selbst, bei jeder Übung.“ |
+| 12:00 | WIRKUNG, dann MESSBERICHT öffnen. | „Der Zweck ist messbar: 13 Ereignisse im Drehbuch, 13 erkannt, eine Fehlmeldung. In Echtzeit liegt der Verzug im Median bei 1,1 Sekunden; mit der hier beschleunigten Uhr zeigt die Anzeige zwei bis drei. Diese Zahlen erzeugt das System selbst, bei jeder Übung, als druckbaren Messbericht mit Protokollstand. Die Behörde muss uns nichts glauben; sie misst nach.“ |
 | 13:00 | LAGE: LAGEBERICHT öffnen. | „Am Ende steht ein Lagebericht, der sich drucken oder als GeoJSON und CAP an bestehende Systeme übergeben lässt.“ |
 
 Die Freigabe vollständig zeigen: Niemand kann sich selbst freigeben. In einem zweiten

@@ -3,7 +3,7 @@ import { config } from './config.js';
 import { FaceDetector } from './ml/faces.js';
 import { HazardHead } from './ml/head.js';
 import { SEARCH_CALIBRATION } from './ml/calibration.js';
-import { EmbeddingModel, meanRow } from './ml/model.js';
+import { EmbeddingModel, loadingNotes, meanRow } from './ml/model.js';
 import { loadVocabulary } from './ml/vocab.js';
 import type { SharedRuntime } from './node.js';
 
@@ -28,12 +28,12 @@ export async function createSharedRuntime(say: (line: string) => void): Promise<
     say(`  Gefahren-Modell nicht ladbar: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  let lastMessage = '';
+  // The first start fetches the model files, which takes minutes; the notes show that it moves.
+  const note = loadingNotes();
   model.onState((state) => {
-    if (state.phase === 'loading' && state.message !== lastMessage && !state.message.startsWith('Lade Modellgewichte')) {
-      lastMessage = state.message;
-      say(`  ${state.message}`);
-    }
+    if (state.phase !== 'loading') return;
+    const text = note(state.message);
+    if (text !== null) say(`  ${text}`);
   });
 
   const ready = (async () => {

@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { pipeline as streamPipeline } from 'node:stream/promises';
 import sharp from 'sharp';
@@ -13,7 +14,7 @@ import type { FederationHello, FederationRequest, FederationResponse } from './i
 import { screenPrompt } from './intel/guard.js';
 import { parseStreamAddress, redactStreamAddress } from './intel/live.js';
 import { collectMetrics } from './intel/metrics.js';
-import { caseReport, situationReport } from './intel/report.js';
+import { caseReport, measurementReport, situationReport } from './intel/report.js';
 import type { PlatformNode, RequestContext } from './node.js';
 import { SearchError } from './search.js';
 import { DEFAULT_SOURCE_ID, RM_OPTIONS, frameUrl, isValidVideoId, originalFrameFileName } from './store.js';
@@ -967,6 +968,40 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       store,
     });
     await node.record(ctx, 'report.situation', 'Lagebericht erzeugt', { incidents: incidents.list().filter((i) => i.status !== 'closed').length });
+    return reply.type('text/html; charset=utf-8').send(html);
+  });
+
+  app.get('/api/report/measurement', async (request, reply) => {
+    const ctx = need(request, reply, 'metrics.read');
+    if (!ctx) return reply;
+    const metrics = collectMetrics({
+      store,
+      sources,
+      ledger,
+      watches,
+      scenario,
+      faces: node.shared.faces,
+      hazard: node.shared.hazard,
+      retentionDays: config.retentionDays,
+    });
+    const videos = store.infos().filter((v) => v.status !== 'error');
+    const html = measurementReport({
+      lang: ctx.lang,
+      node: node.info,
+      mandate: ctx.mandate,
+      author: `${ctx.user.name} (${ctx.user.unit})`,
+      scenario: scenario.info(),
+      metrics,
+      recordings: { total: videos.length, analysed: videos.filter((v) => v.status === 'ready').length },
+      machine: { cpu: os.cpus()[0]?.model.trim() ?? 'unbekannt', threads: config.threads, device: model.state.device, modelId: config.modelId },
+      ledgerHead: ledger.headHash,
+      ledgerLength: ledger.length,
+    });
+    await node.record(ctx, 'report.measurement', 'Messbericht erzeugt', {
+      detected: metrics.evaluation?.detected ?? null,
+      events: metrics.evaluation?.total ?? null,
+      falseAlarms: metrics.evaluation?.falseAlarms ?? null,
+    });
     return reply.type('text/html; charset=utf-8').send(html);
   });
 

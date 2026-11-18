@@ -4,7 +4,7 @@ import type { ViewProps } from '../App';
 import { EmbeddingMap } from '../components/EmbeddingMap';
 import type { FrameTarget } from '../components/FrameSheet';
 import { Results } from '../components/Results';
-import { formatClock, formatScore } from '../format';
+import { formatClock, formatCount, formatDecimal, formatScore } from '../format';
 import { useLang } from '../i18n';
 import { MapCanvas, type MapMarker } from '../map/MapCanvas';
 import { Frame, Glyph } from '../ui';
@@ -59,7 +59,7 @@ function Federated({ results }: { results: FederatedResult[] }) {
             </b>
             <span className="low">
               {peer.ok
-                ? `${peer.matched} ${t('Treffer')} · ${peer.tookMs} ms${peer.receipt !== null ? ` · ${t('Beleg')} #${peer.receipt}` : ''}`
+                ? `${peer.matched} ${t('Treffer')} · ${formatDecimal(peer.tookMs, 0)} ms${peer.receipt !== null ? ` · ${t('Beleg')} #${peer.receipt}` : ''}`
                 : t('keine Antwort')}
             </span>
           </div>
@@ -254,7 +254,7 @@ export function Suche({ node, openFrame }: ViewProps) {
             <div className="label">{t('Durchsucht wird')}</div>
             <p>
               {t('{f} Bilder aus {s} Quellen dieses Knotens.', {
-                f: (node.app?.stats.frames ?? 0).toLocaleString('de-DE'),
+                f: formatCount(node.app?.stats.frames ?? 0),
                 s: node.intel?.sources.length ?? 0,
               })}{' '}
               {t('Material einer laufenden Übung zählt ab dem Augenblick, in dem es eingeht.')}

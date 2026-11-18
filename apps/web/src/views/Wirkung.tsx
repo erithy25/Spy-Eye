@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { fetchMetrics } from '../api';
 import type { ViewProps } from '../App';
-import { formatDuration, formatExercise, formatPercent } from '../format';
+import { formatDecimal, formatDuration, formatExercise, formatPercent } from '../format';
 import { useLang } from '../i18n';
 import { useLoad } from '../ui';
 
@@ -38,9 +38,14 @@ export function Wirkung({ node }: ViewProps) {
             )}
           </p>
         </div>
-        <button type="button" className="btn" onClick={metrics.reload}>
-          {t('Aktualisieren')}
-        </button>
+        <div className="btn-row">
+          <a className="btn" href="api/report/measurement" target="_blank" rel="noreferrer">
+            {t('Messbericht')}
+          </a>
+          <button type="button" className="btn" onClick={metrics.reload}>
+            {t('Aktualisieren')}
+          </button>
+        </div>
       </header>
       {metrics.error && <p className="note">{metrics.error}</p>}
 
@@ -48,7 +53,7 @@ export function Wirkung({ node }: ViewProps) {
         <div>
           <div className="label">{t('Erkennungsverzug')}</div>
           <div className="figure">
-            {evaluation?.medianLatencySec !== null && evaluation?.medianLatencySec !== undefined ? evaluation.medianLatencySec.toFixed(1) : '–'}
+            {evaluation?.medianLatencySec !== null && evaluation?.medianLatencySec !== undefined ? formatDecimal(evaluation.medianLatencySec, 1) : '–'}
             <small>{t('s im Median')}</small>
           </div>
           <p>
@@ -119,7 +124,7 @@ export function Wirkung({ node }: ViewProps) {
                     </td>
                     <td className="num dim">{formatExercise(e.onsetSec)}</td>
                     <td className="num">{e.detectedSec !== null ? formatExercise(e.detectedSec) : '—'}</td>
-                    <td className="num strong">{e.latencySec !== null ? `${e.latencySec.toFixed(1)} s` : t('nicht erkannt')}</td>
+                    <td className="num strong">{e.latencySec !== null ? `${formatDecimal(e.latencySec, 1)} s` : t('nicht erkannt')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -140,7 +145,7 @@ export function Wirkung({ node }: ViewProps) {
             <dl className="kv">
               <div>
                 <dt>{t('Auswertung')}</dt>
-                <dd>{m.analysisSpeed !== null ? t('{x}-fache Echtzeit auf diesem Rechner', { x: m.analysisSpeed.toFixed(1) }) : '–'}</dd>
+                <dd>{m.analysisSpeed !== null ? t('{x}-fache Echtzeit auf diesem Rechner', { x: formatDecimal(m.analysisSpeed, 1) }) : '–'}</dd>
               </div>
               <div>
                 <dt>{t('Suchdauer')}</dt>
@@ -218,13 +223,13 @@ export function Wirkung({ node }: ViewProps) {
                 <div>
                   <dt>{t('Trefferquote')}</dt>
                   <dd>
-                    {formatPercent(card.accuracy, 1)} · Makro-F1 {card.macroF1.toFixed(3)}
+                    {formatPercent(card.accuracy, 1)} · Makro-F1 {formatDecimal(card.macroF1, 3)}
                   </dd>
                 </div>
                 <div>
                   <dt>{t('Ohne Training')}</dt>
                   <dd>
-                    {formatPercent(card.zeroShotAccuracy, 1)} · Makro-F1 {card.zeroShotMacroF1.toFixed(3)}
+                    {formatPercent(card.zeroShotAccuracy, 1)} · Makro-F1 {formatDecimal(card.zeroShotMacroF1, 3)}
                   </dd>
                 </div>
                 <div>
@@ -253,9 +258,9 @@ export function Wirkung({ node }: ViewProps) {
                   {card.perClass.map((c) => (
                     <tr key={c.name}>
                       <td>{t(HAZARD_LABEL[c.name] ?? c.name)}</td>
-                      <td className="num">{c.precision.toFixed(3)}</td>
-                      <td className="num">{c.recall.toFixed(3)}</td>
-                      <td className="num">{c.f1.toFixed(3)}</td>
+                      <td className="num">{formatDecimal(c.precision, 3)}</td>
+                      <td className="num">{formatDecimal(c.recall, 3)}</td>
+                      <td className="num">{formatDecimal(c.f1, 3)}</td>
                       <td className="num dim">{c.support}</td>
                     </tr>
                   ))}

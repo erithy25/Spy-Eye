@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { SearchResponse, SearchResult } from '../api';
-import { formatClock, formatCount, formatScore } from '../format';
+import { formatClock, formatCount, formatDecimal, formatScore } from '../format';
 import { useLang } from '../i18n';
 import { Glyph } from '../ui';
 
@@ -91,7 +91,7 @@ export function Results({ response, threshold, onThresholdChange, onOpen }: Resu
         </label>
       </header>
       <p className="meta">
-        {formatCount(response.vectorsSearched)} {t('Vektoren')} · {response.tookMs} ms · cos ≥ {formatScore(response.threshold)}
+        {formatCount(response.vectorsSearched)} {t('Vektoren')} · {formatDecimal(response.tookMs, 0)} ms · cos ≥ {formatScore(response.threshold)}
         {totalAbove > hits.length ? ` · ${t('beste {n} gezeigt', { n: hits.length })}` : ''}
       </p>
 

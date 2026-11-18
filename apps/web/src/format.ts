@@ -9,13 +9,25 @@ export function formatTime(seconds: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-export function formatCount(n: number): string {
-  return n.toLocaleString('de-DE');
+/** Language in which the console writes numbers; the language provider sets it. */
+let numberLocale = 'de-DE';
+
+export function setNumberLocale(locale: string): void {
+  numberLocale = locale;
 }
 
-/** 0.874 -> "0.87" */
+export function formatCount(n: number): string {
+  return n.toLocaleString(numberLocale);
+}
+
+/** A number with a fixed count of decimals in the language of the console: "1,1" or "1.1". */
+export function formatDecimal(value: number, digits: number): string {
+  return value.toLocaleString(numberLocale, { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
+}
+
+/** 0.874 -> "0,87" (German) or "0.87" (English) */
 export function formatScore(value: number | null | undefined): string {
-  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : '–';
+  return typeof value === 'number' && Number.isFinite(value) ? formatDecimal(value, 2) : '–';
 }
 
 export function pad(n: number, width: number): string {
@@ -55,17 +67,17 @@ export function shortHash(hash: string | null | undefined, length = 10): string 
 }
 
 export function formatPercent(value: number, digits = 0): string {
-  return `${(value * 100).toFixed(digits)} %`;
+  return `${formatDecimal(value * 100, digits)} %`;
 }
 
 export function formatDuration(seconds: number): string {
   if (seconds < 90) return `${Math.round(seconds)} s`;
   if (seconds < 5400) return `${Math.round(seconds / 60)} min`;
-  return `${(seconds / 3600).toFixed(1)} h`;
+  return `${formatDecimal(seconds / 3600, 1)} h`;
 }
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1e6) return `${Math.round(bytes / 1e3)} kB`;
-  if (bytes < 1e9) return `${(bytes / 1e6).toFixed(1)} MB`;
-  return `${(bytes / 1e9).toFixed(2)} GB`;
+  if (bytes < 1e9) return `${formatDecimal(bytes / 1e6, 1)} MB`;
+  return `${formatDecimal(bytes / 1e9, 2)} GB`;
 }

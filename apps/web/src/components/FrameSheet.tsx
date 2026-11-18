@@ -14,7 +14,7 @@ import {
   type SceneFrame,
   type SceneFramesResponse,
 } from '../api';
-import { formatClock, formatScore, formatTime, pad } from '../format';
+import { formatClock, formatDecimal, formatScore, formatTime, pad } from '../format';
 import { useLang } from '../i18n';
 import { toMgrs } from '../map/geo';
 import { Dialog, Field, Sev, useAction } from '../ui';
@@ -326,7 +326,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
               {target.score !== null && target.score <= 1 && !alert && (
                 <div>
                   <dt>{t('Ähnlichkeit')}</dt>
-                  <dd>{target.score.toFixed(4)}</dd>
+                  <dd>{formatDecimal(target.score, 4)}</dd>
                 </div>
               )}
               {alert?.secondOpinion && (
@@ -369,7 +369,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
                     <span className="scores-bar">
                       <span style={{ width: `${Math.round(tag.p * 100)}%` }} />
                     </span>
-                    <span className="scores-value">{tag.p.toFixed(2)}</span>
+                    <span className="scores-value">{formatDecimal(tag.p, 2)}</span>
                   </li>
                 ))}
               </ul>

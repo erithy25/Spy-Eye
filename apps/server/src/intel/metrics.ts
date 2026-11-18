@@ -72,13 +72,22 @@ export function evaluateExercise(scenario: ScenarioEngine, sources: Sources, ale
         (alert.exerciseSec as number) >= e.at - TOLERANCE,
     );
   latencies.sort((a, b) => a - b);
+  const unexplained = scored.filter((a) => !explained(a));
   return {
     events,
     total: events.length,
     detected: events.filter((e) => e.detectedSec !== null).length,
     medianLatencySec: percentile(latencies, 0.5),
-    falseAlarms: scored.filter((a) => !explained(a)).length,
+    falseAlarms: unexplained.length,
     alerts: scored.length,
+    unexplained: unexplained.map((a) => ({
+      watchName: a.watchName,
+      watchNameEn: a.watchNameEn,
+      sourceName: a.sourceName,
+      exerciseSec: Math.round((a.exerciseSec as number) * 10) / 10,
+      confidence: Math.round(a.confidence * 1000) / 1000,
+      status: a.status,
+    })),
   };
 }
 

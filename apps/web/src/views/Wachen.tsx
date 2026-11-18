@@ -15,7 +15,7 @@ import {
   type WatchPreview,
 } from '../api';
 import type { ViewProps } from '../App';
-import { formatClock, formatScore } from '../format';
+import { formatClock, formatDecimal, formatScore } from '../format';
 import { useLang } from '../i18n';
 import { Field, Frame, KIND_LABEL, Sev, useAction, useLoad } from '../ui';
 import type { NodeConnection } from '../useNode';
@@ -161,7 +161,7 @@ function Editor({ node, onCreated }: { node: NodeConnection; onCreated: (watch: 
           <p className="dim">
             {t('{n} von {m} Bildern im Bestand hätten gemeldet.', { n: preview.matches, m: preview.framesChecked })}{' '}
             <span className="low">
-              {t('Trennwert')} {preview.cutoff.toFixed(3)}
+              {t('Trennwert')} {formatDecimal(preview.cutoff, 3)}
             </span>
           </p>
           {preview.samples.length > 0 && (
@@ -252,7 +252,7 @@ function Detail({ watch, node, openFrame, onChanged, onRemoved }: { watch: Watch
             )}
             <div>
               <dt>{t('Trennwert')}</dt>
-              <dd title={t('Aus dem eigenen Bildbestand abgeleitet; passt sich an, wenn Material hinzukommt.')}>{watch.cutoff.toFixed(4)}</dd>
+              <dd title={t('Aus dem eigenen Bildbestand abgeleitet; passt sich an, wenn Material hinzukommt.')}>{formatDecimal(watch.cutoff, 4)}</dd>
             </div>
           </>
         ) : (

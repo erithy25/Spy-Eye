@@ -141,6 +141,7 @@ export const EN: Record<string, string> = {
   'Übung beenden? Meldungen und Lagen dieses Laufs werden verworfen.': 'End the exercise? Alerts and incidents of this run are discarded.',
   Ende: 'End',
   Lagebericht: 'Situation report',
+  Messbericht: 'Measurement report',
   Offen: 'Open',
   Quellen: 'Sources',
   Meldungen: 'Alerts',

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { EN } from './en';
+import { setNumberLocale } from './format';
 
 export type Lang = 'de' | 'en';
 
@@ -35,6 +36,9 @@ export function LangProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = next;
     setLangState(next);
   }, []);
+
+  // Numbers follow the language as well: decimal comma in German, decimal point in English.
+  setNumberLocale(lang === 'en' ? 'en-GB' : 'de-DE');
 
   const value = useMemo<LangValue>(
     () => ({

@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import type { Store } from '../store.js';
-import type { Alert, CaseFile, Incident, LedgerEntryInfo, Mandate, NodeInfo, SourceInfo } from '../types.js';
+import type { Alert, CaseFile, Incident, LedgerEntryInfo, Mandate, Metrics, NodeInfo, ScenarioInfo, SourceInfo } from '../types.js';
 
-/** Printable documents: the situation report and the case file. Self-contained HTML, no scripts. */
+/** Printable documents: situation report, case file and measurement report. Self-contained HTML, no scripts. */
 
 export type Lang = 'de' | 'en';
 
@@ -227,4 +227,130 @@ export async function caseReport(input: {
       : `The images shown are the masked versions. The hashes refer to the unaltered original frames held in the system and allow a later disclosure to be checked. Ledger head at the time of export: ${input.ledgerHead}.`
   }</footer>`);
   return page(`${de ? 'Vorgang' : 'Case'} ${file.id}`, lang, parts.join('\n'));
+}
+
+/** Exercise time as T+mm:ss. */
+function exerciseClock(sec: number): string {
+  const whole = Math.max(0, Math.floor(sec));
+  return `T+${String(Math.floor(whole / 60)).padStart(2, '0')}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+/**
+ * The measurement report of an exercise: what the script injected, what the watches reported and
+ * how long it took, with the conditions of the run. It contains no imagery, so the oversight role
+ * can produce it as well.
+ */
+export function measurementReport(input: {
+  lang: Lang;
+  node: NodeInfo;
+  mandate: Mandate | null;
+  author: string;
+  scenario: ScenarioInfo;
+  metrics: Metrics;
+  recordings: { total: number; analysed: number };
+  machine: { cpu: string; threads: number; device: string; modelId: string };
+  ledgerHead: string;
+  ledgerLength: number;
+}): string {
+  const { lang, metrics, scenario } = input;
+  const de = lang === 'de';
+  const num = (value: number, digits = 1): string => value.toLocaleString(de ? 'de-DE' : 'en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  const evaluation = metrics.evaluation;
+  const parts: string[] = [];
+  parts.push(`<div class="banner">${de ? 'ÜBUNG · ÜBUNG · ÜBUNG' : 'EXERCISE · EXERCISE · EXERCISE'}</div>`);
+  parts.push(`<h1>${de ? 'Messbericht' : 'Measurement report'}</h1>`);
+  parts.push(`<p class="sub">${esc(input.node.name)} · ${esc(input.node.operator)} · ${stamp(Date.now(), lang)}</p>`);
+
+  const state: Record<ScenarioInfo['status'], [string, string]> = {
+    absent: ['nicht eingespielt', 'not installed'],
+    installing: ['wird ausgewertet', 'being analysed'],
+    ready: ['bereit, nicht gestartet', 'ready, not started'],
+    running: ['läuft', 'running'],
+    paused: ['angehalten', 'paused'],
+    finished: ['beendet', 'finished'],
+  };
+  parts.push(`<table class="kv">
+    <tr><td>${de ? 'Übung' : 'Exercise'}</td><td>${esc(de ? scenario.title : scenario.titleEn)}</td></tr>
+    <tr><td>${de ? 'Stand' : 'State'}</td><td>${exerciseClock(scenario.elapsedSec)} ${de ? 'von' : 'of'} ${exerciseClock(scenario.durationSec).slice(2)} · ${state[scenario.status][de ? 0 : 1]} · ${de ? 'Übungsuhr' : 'exercise clock'} ${scenario.speed}×</td></tr>
+    <tr><td>${de ? 'Mandat' : 'Mandate'}</td><td>${input.mandate ? `${esc(input.mandate.title)} — ${esc(input.mandate.legalBasis)}` : '—'}</td></tr>
+    <tr><td>${de ? 'Erstellt von' : 'Prepared by'}</td><td>${esc(input.author)}</td></tr>
+    <tr><td>${de ? 'Rechner' : 'Machine'}</td><td>${esc(input.machine.cpu)} · ${input.machine.threads} ${de ? 'Rechenfäden' : 'threads'} · ${esc(input.machine.device)}</td></tr>
+    <tr><td>${de ? 'Bildkodierer' : 'Image encoder'}</td><td>${esc(input.machine.modelId)}</td></tr>
+  </table>`);
+
+  parts.push(`<h2>${de ? 'Ergebnis' : 'Result'}</h2>`);
+  if (!evaluation) {
+    parts.push(`<p>${de ? 'Es liegt kein Übungslauf vor. Der Bericht wird gefüllt, sobald eine Übung läuft oder beendet ist.' : 'There is no exercise run. The report fills once an exercise is running or has finished.'}</p>`);
+  } else {
+    const delays = evaluation.events.map((e) => e.latencySec).filter((v): v is number => v !== null);
+    const range = delays.length > 0 ? `${num(Math.min(...delays))} ${de ? 'bis' : 'to'} ${num(Math.max(...delays))} s` : '—';
+    parts.push(`<table class="kv">
+      <tr><td>${de ? 'Erkannte Ereignisse' : 'Events detected'}</td><td><strong>${evaluation.detected} ${de ? 'von' : 'of'} ${evaluation.total}</strong> ${de ? 'der bis zu diesem Stand eingespielten Ereignisse' : 'of the events injected up to this point'}</td></tr>
+      <tr><td>${de ? 'Erkennungsverzug' : 'Detection delay'}</td><td><strong>${evaluation.medianLatencySec !== null ? `${num(evaluation.medianLatencySec)} s` : '—'}</strong> ${de ? 'im Median, Spanne' : 'median, range'} ${range}</td></tr>
+      <tr><td>${de ? 'Fehlmeldungen' : 'False alerts'}</td><td><strong>${evaluation.falseAlarms} ${de ? 'von' : 'of'} ${evaluation.alerts}</strong> ${de ? 'Meldungen der Übungswachen' : 'alerts of the exercise watches'}</td></tr>
+      <tr><td>${de ? 'Urteile der Auswertenden' : 'Verdicts of the analysts'}</td><td>${metrics.alerts.confirmed} ${de ? 'bestätigt' : 'confirmed'} · ${metrics.alerts.dismissed} ${de ? 'verworfen' : 'dismissed'} · ${metrics.alerts.open} ${de ? 'offen' : 'open'}</td></tr>
+      <tr><td>${de ? 'Sichtungsquote' : 'Coverage'}</td><td>${input.recordings.analysed} ${de ? 'von' : 'of'} ${input.recordings.total} ${de ? 'Aufzeichnungen vollständig ausgewertet' : 'recordings analysed in full'} · ${Math.round(metrics.footageSec / 60)} min · ${metrics.framesAnalysed.toLocaleString(de ? 'de-DE' : 'en-GB')} ${de ? 'Bilder im Verzeichnis' : 'frames indexed'}</td></tr>
+      <tr><td>${de ? 'Auswertegeschwindigkeit' : 'Analysis speed'}</td><td>${metrics.analysisSpeed !== null ? `${num(metrics.analysisSpeed)}${de ? '-fache Echtzeit auf diesem Rechner' : ' times real time on this machine'}` : '—'}</td></tr>
+      <tr><td>${de ? 'Protokollierte Abfragen' : 'Logged queries'}</td><td>${metrics.searches.count} ${de ? 'Suchen, davon' : 'searches, of which'} ${metrics.searches.federated} ${de ? 'im Verbund' : 'federated'} · ${metrics.searches.blocked} ${de ? 'abgelehnt' : 'refused'}</td></tr>
+      <tr><td>${de ? 'Schutz' : 'Protection'}</td><td>${metrics.facesMasked} ${de ? 'Gesichter maskiert' : 'faces masked'} · ${metrics.unmaskEvents} ${de ? 'Freigaben des Originals' : 'releases of the original'}</td></tr>
+    </table>`);
+
+    parts.push(`<h2>${de ? 'Ereignisse des Drehbuchs' : 'Events of the script'}</h2>`);
+    parts.push(`<table><tr><th>#</th><th>${de ? 'Ereignis' : 'Event'}</th><th>${de ? 'Quelle' : 'Source'}</th><th>${de ? 'Beginn' : 'Onset'}</th><th>${de ? 'Meldung' : 'Alert'}</th><th>${de ? 'Verzug' : 'Delay'}</th><th>${de ? 'Wache' : 'Watch'}</th></tr>
+      ${evaluation.events
+        .map(
+          (e, n) =>
+            `<tr><td>${n + 1}</td><td>${esc(e.label)}</td><td>${esc(e.sourceName)}</td><td>${exerciseClock(e.onsetSec)}</td><td>${
+              e.detectedSec !== null ? exerciseClock(e.detectedSec) : `<strong>${de ? 'nicht erkannt' : 'not detected'}</strong>`
+            }</td><td>${e.latencySec !== null ? `${num(e.latencySec)} s` : '—'}</td><td>${e.watchName !== null ? esc(e.watchName) : '—'}</td></tr>`,
+        )
+        .join('\n')}
+    </table>`);
+
+    parts.push(`<h2>${de ? 'Meldungen ohne Ereignis im Drehbuch' : 'Alerts without an event in the script'}</h2>`);
+    if (evaluation.unexplained.length === 0) {
+      parts.push(`<p>${de ? 'Keine.' : 'None.'}</p>`);
+    } else {
+      const verdict: Record<Alert['status'], [string, string]> = { new: ['offen', 'open'], confirmed: ['bestätigt', 'confirmed'], dismissed: ['verworfen', 'dismissed'] };
+      parts.push(`<table><tr><th>${de ? 'Zeit' : 'Time'}</th><th>${de ? 'Wache' : 'Watch'}</th><th>${de ? 'Quelle' : 'Source'}</th><th>${de ? 'Sicherheit' : 'Confidence'}</th><th>${de ? 'Urteil' : 'Verdict'}</th></tr>
+        ${evaluation.unexplained
+          .map(
+            (a) =>
+              `<tr><td>${exerciseClock(a.exerciseSec)}</td><td>${esc(de ? a.watchName : a.watchNameEn)}</td><td>${esc(a.sourceName)}</td><td>${Math.round(a.confidence * 100)} %</td><td>${verdict[a.status][de ? 0 : 1]}</td></tr>`,
+          )
+          .join('\n')}
+      </table>`);
+    }
+  }
+
+  parts.push(`<h2>${de ? 'Wie die Zahlen zu lesen sind' : 'How to read the figures'}</h2>`);
+  parts.push(
+    `<p>${
+      de
+        ? 'Ein Ereignis gilt als erkannt, wenn die dafür vorgesehene Wache an der betroffenen Quelle meldet. Der Verzug zählt in Übungszeit vom Beginn des Ereignisses bis zur Meldung; eine Wache meldet erst, wenn sie über mehrere Bilder hinweg anspricht.'
+        : 'An event counts as detected when the watch assigned to it raises an alert on the source concerned. The delay is counted in exercise time from the onset of the event to the alert; a watch reports only once it responds across several frames.'
+    }</p>`,
+  );
+  if (scenario.speed > 1) {
+    parts.push(
+      `<p>${
+        de
+          ? `Die Übungsuhr lief mit ${scenario.speed}-facher Geschwindigkeit. Der Verzug in Übungszeit steigt dadurch, weil das System weiter in Echtzeit arbeitet; vergleichbar sind nur Läufe mit derselben Uhr.`
+          : `The exercise clock ran at ${scenario.speed} times real time. This raises the delay in exercise time, because the system keeps working in real time; only runs with the same clock are comparable.`
+      }</p>`,
+    );
+  }
+  parts.push(
+    `<p>${
+      de
+        ? 'Die Übung spielt vorab ausgewertetes Material ab. Die Rechenzeit der Auswertung ist im Verzug deshalb nicht enthalten; sie steht oben als Auswertegeschwindigkeit. Die Werte beschreiben diesen Lauf auf diesem Material und diesem Rechner und sagen nichts über die Güte auf anderem Material.'
+        : 'The exercise replays footage that was analysed beforehand. The computing time of the analysis is therefore not part of the delay; it is given above as analysis speed. The figures describe this run on this footage and this machine and say nothing about the quality on other footage.'
+    }</p>`,
+  );
+  parts.push(`<footer>${
+    de
+      ? `Maschinell erzeugt aus den Meldungen und dem Protokoll dieses Knotens; der Bericht enthält kein Bildmaterial. Protokollstand: Eintrag ${input.ledgerLength}, Hash ${input.ledgerHead}.`
+      : `Generated from the alerts and the ledger of this node; the report contains no imagery. Ledger state: entry ${input.ledgerLength}, hash ${input.ledgerHead}.`
+  }</footer>`);
+  return page(de ? 'Messbericht' : 'Measurement report', lang, parts.join('\n'));
 }

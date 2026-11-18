@@ -47,6 +47,9 @@ function cosineRows(a: Float32Array, i: number, b: Float32Array, j: number, dim:
   return dot;
 }
 
+/** Seconds without transfer progress after which a notice is given while model files are fetched. */
+const STALL_NOTICE_SEC = 90;
+
 /** Throws when an encoder returned NaN/Infinity or an all-zero row. */
 function assertUsable(data: Float32Array, rows: number, what: string): void {
   const dim = data.length / rows;
@@ -205,6 +208,8 @@ export class EmbeddingModel {
   private readonly textCache = new Map<string, Float32Array>();
   /** Share of the mean text embedding that search queries are reduced by; null: none. */
   private searchCentre: Float32Array | null = null;
+  /** Watches the transfer of the model files while they are loaded. */
+  private stallTimer: NodeJS.Timeout | null = null;
   private loadPromise: Promise<void> | null = null;
 
   imageSize = 224;
@@ -248,12 +253,17 @@ export class EmbeddingModel {
 
   /** Loads tokenizer and both towers. Safe to call multiple times. */
   load(): Promise<void> {
-    this.loadPromise ??= this.doLoad().catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
-      this.updateState({ phase: 'error', message: `Modell konnte nicht geladen werden: ${message}` });
-      this.loadPromise = null;
-      throw err;
-    });
+    this.loadPromise ??= this.doLoad()
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        this.updateState({ phase: 'error', message: `Modell konnte nicht geladen werden: ${message}` });
+        this.loadPromise = null;
+        throw err;
+      })
+      .finally(() => {
+        if (this.stallTimer) clearInterval(this.stallTimer);
+        this.stallTimer = null;
+      });
     return this.loadPromise;
   }
 
@@ -265,12 +275,30 @@ export class EmbeddingModel {
     // Aggregate download progress across files so the UI shows one bar.
     const files = new Map<string, { loaded: number; total: number }>();
     let lastEmit = 0;
+    let lastProgress = Date.now();
+    // A transfer that stops without an error would look like a hang: say so after a while.
+    this.stallTimer = setInterval(() => {
+      let loaded = 0;
+      let total = 0;
+      for (const f of files.values()) {
+        loaded += f.loaded;
+        total += f.total;
+      }
+      const idleSec = Math.round((Date.now() - lastProgress) / 1000);
+      if (total > 0 && loaded < total && idleSec >= STALL_NOTICE_SEC) {
+        this.updateState({
+          message: `Abruf der Modelle stockt seit ${idleSec} s (${(loaded / 1e6).toFixed(0)} von ${(total / 1e6).toFixed(0)} MB). Netzverbindung prüfen; ein Neustart setzt bei den fertig geladenen Dateien fort.`,
+        });
+      }
+    }, 30_000);
+    this.stallTimer.unref();
     const progress_callback = (info: unknown): void => {
       if (info === null || typeof info !== 'object') return;
       const p = info as { status?: string; file?: string; loaded?: number; total?: number };
       if (p.status !== 'progress' || typeof p.file !== 'string') return;
       if (typeof p.loaded !== 'number' || typeof p.total !== 'number' || p.total <= 0) return;
       files.set(p.file, { loaded: p.loaded, total: p.total });
+      lastProgress = Date.now();
       const now = Date.now();
       if (now - lastEmit < 200) return;
       lastEmit = now;
@@ -525,6 +553,30 @@ export class EmbeddingModel {
     }
     return mean;
   }
+}
+
+/**
+ * Turns the loader's state messages into occasional console lines. Reading the model files from
+ * the local cache also reports progress but is over within seconds; only a transfer that lasts
+ * longer is shown, with one line per 100 MB.
+ */
+export function loadingNotes(): (message: string) => string | null {
+  let last = '';
+  let transferSince: number | null = null;
+  return (message) => {
+    const transfer = /^Lade Modellgewichte … (\d+) \/ (\d+) MB/.exec(message);
+    let note = message;
+    if (transfer) {
+      transferSince ??= Date.now();
+      if (Date.now() - transferSince < 4000) return null;
+      note = `Lade Modellgewichte … ${Math.floor(Number(transfer[1]) / 100) * 100} / ${transfer[2]} MB`;
+    } else {
+      transferSince = null;
+    }
+    if (note === last) return null;
+    last = note;
+    return note;
+  };
 }
 
 /** Mean of the rows of a matrix of row vectors. */

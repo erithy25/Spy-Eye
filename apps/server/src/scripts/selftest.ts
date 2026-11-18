@@ -6,7 +6,7 @@
 import os from 'node:os';
 import { config } from '../config.js';
 import { checkFfmpeg } from '../media/ffmpeg.js';
-import { EmbeddingModel } from '../ml/model.js';
+import { EmbeddingModel, loadingNotes } from '../ml/model.js';
 
 const line = (label: string, value: string): void => {
   process.stdout.write(`${label.padEnd(18)}${value}\n`);
@@ -29,6 +29,13 @@ try {
 }
 
 const model = new EmbeddingModel();
+// Loading can take minutes on the first run (the model files are fetched); show what happens.
+const note = loadingNotes();
+model.onState((state) => {
+  if (state.phase !== 'loading') return;
+  const text = note(state.message);
+  if (text !== null) line('', text);
+});
 try {
   const started = Date.now();
   await model.load();

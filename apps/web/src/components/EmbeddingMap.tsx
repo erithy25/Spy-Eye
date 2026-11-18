@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { fetchEmbeddingMap, type MapPoint, type MapResponse, type VideoInfo } from '../api';
-import { formatScore, formatTime } from '../format';
+import { formatDecimal, formatScore, formatTime } from '../format';
 import { useLang } from '../i18n';
 
 interface EmbeddingMapProps {
@@ -151,7 +151,7 @@ export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOp
         </h2>
         <span className="meta">
           {hover
-            ? `x ${hover.point.x.toFixed(3)}  y ${hover.point.y.toFixed(3)}`
+            ? `x ${formatDecimal(hover.point.x, 3)}  y ${formatDecimal(hover.point.y, 3)}`
             : `${t('Hauptachsen')} · ${Math.round(data.explainedVariance * 100)} % ${t('der Streuung')}`}
         </span>
       </header>

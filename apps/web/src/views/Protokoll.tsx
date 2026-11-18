@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchLedger, sampleLedger, verifyLedger, type LedgerEntryInfo, type LedgerVerificationInfo } from '../api';
 import type { ViewProps } from '../App';
-import { shortHash } from '../format';
+import { formatDecimal, shortHash } from '../format';
 import { useLang } from '../i18n';
 import { useAction } from '../ui';
 
@@ -134,7 +134,7 @@ export function Protokoll({ node }: ViewProps) {
                 {verification.ok ? t('Kette unversehrt') : t('Kette gebrochen')}
               </div>
               <p>
-                {verification.entries} {t('Einträge')} · {verification.tookMs} ms
+                {verification.entries} {t('Einträge')} · {formatDecimal(verification.tookMs, 0)} ms
                 {verification.brokenAt !== null ? ` · ${t('ab Eintrag')} ${verification.brokenAt}: ${verification.reason ?? ''}` : ''}
               </p>
             </>

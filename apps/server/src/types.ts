@@ -649,6 +649,15 @@ export interface ExerciseEvaluation {
   medianLatencySec: number | null;
   falseAlarms: number;
   alerts: number;
+  /** The alerts counted as false alarms: raised by a watch of the exercise without an event of the script. */
+  unexplained: {
+    watchName: string;
+    watchNameEn: string;
+    sourceName: string;
+    exerciseSec: number;
+    confidence: number;
+    status: Alert['status'];
+  }[];
 }
 
 export interface Metrics {

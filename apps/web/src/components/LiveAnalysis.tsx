@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FrameEvent, SceneInfo, VideoInfo } from '../api';
-import { formatTime, pad } from '../format';
+import { formatDecimal, formatTime, pad } from '../format';
 import { useLang } from '../i18n';
 import type { LiveFeed } from '../useNode';
 
@@ -198,7 +198,7 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
                 <span className="scores-bar">
                   <span style={{ width: `${Math.round(tag.p * 100)}%` }} />
                 </span>
-                <span className="scores-value">{tag.p.toFixed(2)}</span>
+                <span className="scores-value">{formatDecimal(tag.p, 2)}</span>
               </li>
             ))}
           </ul>
