@@ -97,7 +97,7 @@ export async function loadVocabulary(
     .update(`${config.modelId}|${config.modelDtype}|${model.dim}|${prompts.join('\n')}`)
     .digest('hex')
     .slice(0, 16);
-  const cacheFile = path.join(config.dataDir, 'cache', `vocab-${hash}.f32`);
+  const cacheFile = path.join(config.modelCacheDir, 'derived', `vocab-${hash}.f32`);
   const expectedBytes = prompts.length * model.dim * 4;
 
   try {

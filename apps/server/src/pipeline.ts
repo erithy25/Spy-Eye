@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import sharp from 'sharp';
 import { config } from './config.js';
 import type { EventHub } from './events.js';
 import { extractFrames, extractKeyframes, probeVideo, type FrameExtraction } from './media/ffmpeg.js';
 import { GrowableMatrix, dotAt, sigmoid } from './ml/math.js';
+import { pixelate, type FaceDetector } from './ml/faces.js';
 import type { EmbeddingModel, ModelFamily } from './ml/model.js';
 import {
   decodeFrame,
@@ -91,7 +93,12 @@ interface PreparedPreview {
   durationSec: number | null;
   width: number;
   height: number;
-  frames: { n: number; time: number; pixels: Float32Array }[];
+  frames: { n: number; time: number; pixels: Float32Array; faces: number[][] | undefined }[];
+}
+
+export interface PipelineHooks {
+  /** Called after the dense index of a recording has replaced its preview. */
+  onRecordingReady?: (entry: VideoEntry) => void;
 }
 
 class CancelledError extends Error {}
@@ -135,9 +142,36 @@ export class Pipeline {
   constructor(
     private readonly store: Store,
     private readonly model: EmbeddingModel,
+    private readonly faces: FaceDetector,
     private readonly hub: EventHub,
     private readonly log: Logger,
+    private readonly hooks: PipelineHooks = {},
   ) {}
+
+  /**
+   * Masks the faces of one extracted frame: the pixelated version becomes the file that is
+   * served, the extracted original is kept next to it for authorized unmasking and for evidence
+   * hashes. Returns the masked rectangles in normalized coordinates, or undefined if there are none.
+   */
+  private async maskFaces(id: string, n: number, decoded: DecodedFrame): Promise<number[][] | undefined> {
+    if (!this.faces.ready) return undefined;
+    const boxes = await this.faces.detect(decoded);
+    if (boxes.length === 0) return undefined;
+    const served = this.store.framePath(id, n);
+    await fs.rename(served, this.store.originalFramePath(id, n));
+    const copy: DecodedFrame = { data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height };
+    pixelate(copy, boxes);
+    await sharp(copy.data, { raw: { width: copy.width, height: copy.height, channels: 3 } })
+      .jpeg({ quality: 84 })
+      .toFile(served);
+    const round = (v: number): number => Math.round(v * 10000) / 10000;
+    return boxes.map((b) => [
+      round(b.left / decoded.width),
+      round(b.top / decoded.height),
+      round(b.width / decoded.width),
+      round(b.height / decoded.height),
+    ]);
+  }
 
   setVocabulary(vocabulary: VocabularyIndex): void {
     this.vocabulary = vocabulary;
@@ -248,6 +282,7 @@ export class Pipeline {
           this.current = null;
           this.store.version++;
           this.broadcastVideo(entry);
+          this.hooks.onRecordingReady?.(entry);
         } catch (err: unknown) {
           this.current = null;
           if (entry.cancelled || err instanceof CancelledError) continue;
@@ -314,7 +349,8 @@ export class Pipeline {
         if (entry.cancelled || entry.info.status !== 'queued' || !store.get(entry.info.id)) continue;
 
         const segment = item.durationSec !== null ? item.durationSec / count : 1;
-        entry.frames = item.frames.map((f, i): FrameRecord => ({ n: f.n, t: f.time, s: i }));
+        entry.frames = item.frames.map((f, i): FrameRecord => (f.faces ? { n: f.n, t: f.time, s: i, f: f.faces } : { n: f.n, t: f.time, s: i }));
+        entry.info.facesMasked = item.frames.reduce((sum, f) => sum + (f.faces?.length ?? 0), 0);
         entry.scenes = item.frames.map((f, i): SceneRecord => {
           const tags = this.vocabulary
             ? this.topTags(this.scoreLabels(vectors, i * dim, 1, this.vocabulary), this.vocabulary, MAX_TAGS_PER_SCENE)
@@ -388,7 +424,8 @@ export class Pipeline {
         const pixels = new Float32Array(plane);
         const full: PixelRect = { left: 0, top: 0, width: decoded.width, height: decoded.height };
         await writeTile(decoded, full, size, model.imageMean, model.imageStd, pixels, 0);
-        frames.push({ n: request.n, time: request.time, pixels });
+        const faces = await this.maskFaces(id, request.n, decoded);
+        frames.push({ n: request.n, time: request.time, pixels, faces });
       };
       for (const request of requests) await load(request);
 
@@ -424,7 +461,7 @@ export class Pipeline {
     // Results are built in a draft and swapped in at the end, so the preview index of this
     // video stays searchable while the dense pass is running.
     const draft: VideoEntry = {
-      info: { ...entry.info },
+      info: { ...entry.info, facesMasked: 0 },
       sourceFile: entry.sourceFile,
       frames: [],
       scenes: [],
@@ -566,6 +603,8 @@ export class Pipeline {
               ),
             ),
           );
+          // The model sees the extracted pixels; what is stored for viewing has faces masked.
+          const masked = await Promise.all(kept.map((frame) => this.maskFaces(id, frame.n, frame.decoded)));
           const inferStart = Date.now();
           const embedded = await model.embedPixels(pixels, kept.length * tilesPerFrame);
           const perFrame = (Date.now() - inferStart) / kept.length;
@@ -618,7 +657,13 @@ export class Pipeline {
             scene.record.end = frame.time + 1 / fps;
             for (let i = 0; i < dim; i++) scene.sum[i] = (scene.sum[i] as number) + (full[i] as number);
 
-            draft.frames.push({ n: frame.n, t: frame.time, s: scene.record.index });
+            const faceBoxes = masked[f];
+            draft.frames.push(
+              faceBoxes
+                ? { n: frame.n, t: frame.time, s: scene.record.index, f: faceBoxes }
+                : { n: frame.n, t: frame.time, s: scene.record.index },
+            );
+            if (faceBoxes) draft.info.facesMasked += faceBoxes.length;
             draft.embeddings.append(embedded, rowOffset, tilesPerFrame);
 
             let tags: Tag[] = [];
@@ -688,6 +733,7 @@ export class Pipeline {
     entry.info.tilesPerFrame = draft.info.tilesPerFrame;
     entry.info.framesIndexed = draft.frames.length;
     entry.info.sceneCount = draft.scenes.length;
+    entry.info.facesMasked = draft.info.facesMasked;
     entry.info.coarse = false;
     store.version++;
     for (const name of await fs.readdir(framesDir)) {

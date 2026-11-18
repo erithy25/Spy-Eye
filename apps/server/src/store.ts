@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from './config.js';
+import { writeFileAtomic } from './core/json.js';
 import { GrowableMatrix } from './ml/math.js';
 import { tileLayout, type PixelRect } from './ml/preprocess.js';
 import type { DetailLevel, SceneInfo, Stats, Tag, VideoInfo } from './types.js';
@@ -13,6 +14,8 @@ export interface FrameRecord {
   t: number;
   /** Index of the scene this frame belongs to. */
   s: number;
+  /** Masked face rectangles [x, y, w, h] in normalized frame coordinates; absent when none. */
+  f?: number[][];
 }
 
 export interface SceneRecord {
@@ -51,6 +54,8 @@ interface PersistedMeta {
 }
 
 const ID_PATTERN = /^[a-f0-9]{16}$/;
+/** Source that receives uploads which are not assigned to a specific sensor. */
+export const DEFAULT_SOURCE_ID = 'eingang';
 const IDENTICAL_FRAMES_MIN = 4;
 const PLAYABLE_EXTENSIONS = new Set(['.mp4', '.m4v', '.webm', '.mov', '.ogv']);
 
@@ -65,6 +70,10 @@ export function frameFileName(n: number): string {
   return `${String(n).padStart(7, '0')}.jpg`;
 }
 
+export function originalFrameFileName(n: number): string {
+  return `${String(n).padStart(7, '0')}.o.jpg`;
+}
+
 export function frameUrl(videoId: string, n: number): string {
   // Relative on purpose: the client resolves it against its own base URL, so the app also works
   // behind a reverse proxy that serves it under a path prefix.
@@ -75,21 +84,18 @@ export function sceneId(videoId: string, index: number): string {
   return `${videoId}:${index}`;
 }
 
-async function writeFileAtomic(file: string, data: string | Buffer): Promise<void> {
-  const tmp = `${file}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, data);
-  await fs.rename(tmp, file);
-}
-
 /** On-disk dataset plus the in-memory vector index. No database, no external service. */
 export class Store {
   private readonly entries = new Map<string, VideoEntry>();
+
+  constructor(readonly dataDir: string) {}
+
   private readonly layouts = new Map<string, PixelRect[]>();
   /** Incremented whenever searchable content changes (used for cache invalidation). */
   version = 0;
 
   get videosDir(): string {
-    return path.join(config.dataDir, 'videos');
+    return path.join(this.dataDir, 'videos');
   }
 
   videoDir(id: string): string {
@@ -100,8 +106,28 @@ export class Store {
     return path.join(this.videoDir(id), 'frames');
   }
 
+  /** The frame as served to clients: faces masked. */
   framePath(id: string, n: number): string {
     return path.join(this.framesDir(id), frameFileName(n));
+  }
+
+  /**
+   * The frame as extracted. Exists only when faces were masked; otherwise the served file is the
+   * original and this path does not exist (see `analysisFramePath`).
+   */
+  originalFramePath(id: string, n: number): string {
+    return path.join(this.framesDir(id), originalFrameFileName(n));
+  }
+
+  /** Path of the unmasked pixels for analysis and evidence hashing. */
+  async analysisFramePath(id: string, n: number): Promise<string> {
+    const original = this.originalFramePath(id, n);
+    try {
+      await fs.access(original);
+      return original;
+    } catch {
+      return this.framePath(id, n);
+    }
   }
 
   sourcePath(entry: VideoEntry): string {
@@ -148,6 +174,20 @@ export class Store {
     return { videos: this.entries.size, scenes, frames, vectors, indexBytes };
   }
 
+  /** Total duration of fully analysed recordings in seconds, and the analysis time spent on them. */
+  footage(): { footageSec: number; processingSec: number; facesMasked: number } {
+    let footageSec = 0;
+    let processingSec = 0;
+    let facesMasked = 0;
+    for (const e of this.entries.values()) {
+      facesMasked += e.info.facesMasked;
+      if (e.info.status !== 'ready' || e.info.durationSec === null) continue;
+      footageSec += e.info.durationSec;
+      processingSec += e.info.processingMs / 1000;
+    }
+    return { footageSec, processingSec, facesMasked };
+  }
+
   /** Creates the directory for a new upload and returns its id. */
   async allocate(): Promise<string> {
     await fs.mkdir(this.videosDir, { recursive: true });
@@ -170,6 +210,9 @@ export class Store {
     sizeBytes: number;
     sampleFps: number;
     detail: DetailLevel;
+    sourceId: string;
+    capturedAt?: number;
+    scenario?: string | null;
   }): VideoEntry {
     const ext = path.extname(params.sourceFile).toLowerCase();
     const entry: VideoEntry = {
@@ -192,6 +235,11 @@ export class Store {
         progress: 0,
         processingMs: 0,
         playable: PLAYABLE_EXTENSIONS.has(ext),
+        sourceId: params.sourceId,
+        capturedAt: params.capturedAt ?? Date.now(),
+        scenario: params.scenario ?? null,
+        facesMasked: 0,
+        deleteAfter: null,
         coarse: false,
       },
       sourceFile: params.sourceFile,
@@ -216,6 +264,7 @@ export class Store {
     entry.info.processingMs = 0;
     entry.info.error = null;
     entry.info.coarse = false;
+    entry.info.facesMasked = 0;
     this.version++;
   }
 
@@ -297,8 +346,16 @@ export class Store {
       }
 
       const entry: VideoEntry = {
-        // `coarse` is absent in metadata written by earlier versions.
-        info: { ...meta.info, coarse: false },
+        // Fields added after the first release are absent in older metadata.
+        info: {
+          ...meta.info,
+          coarse: false,
+          sourceId: meta.info.sourceId ?? DEFAULT_SOURCE_ID,
+          capturedAt: meta.info.capturedAt ?? meta.info.createdAt,
+          scenario: meta.info.scenario ?? null,
+          facesMasked: meta.info.facesMasked ?? 0,
+          deleteAfter: meta.info.deleteAfter ?? null,
+        },
         sourceFile: meta.sourceFile,
         frames: meta.frames,
         scenes: meta.scenes,

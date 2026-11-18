@@ -44,11 +44,23 @@ export const config = {
   dataDir: resolveFromRoot(envString('DATA_DIR', 'data')),
   modelCacheDir: resolveFromRoot(envString('MODEL_CACHE_DIR', '.models')),
   webDistDir: resolveFromRoot(envString('WEB_DIST_DIR', 'apps/web/dist')),
+  /** Exercise scenario definitions (scenario.json plus a clips/ folder each). */
+  scenariosDir: resolveFromRoot(envString('SCENARIOS_DIR', 'scenarios')),
+  /** Static assets shipped with the server (trained heads, place index). */
+  assetsDir: resolveFromRoot(envString('ASSETS_DIR', 'apps/server/assets')),
+  /**
+   * Days after which a recording is deleted unless a case holds evidence from it. 0 disables
+   * automatic deletion. The default follows the two-month limit that disaster-control law in
+   * Rhineland-Palatinate sets for drone footage (§ 60 LBKG).
+   */
+  retentionDays: envNumber('SICHT_RETENTION_DAYS', 60, 0, 3650),
+  /** Password of the seeded demonstration accounts (first start only). */
+  demoPassword: envString('SICHT_DEMO_PASSWORD', 'lagebild'),
   /** Hugging Face model id (ONNX export) of a CLIP- or SigLIP-style dual encoder. */
   modelId: envString('MODEL_ID', 'Xenova/mobileclip_s2'),
   modelDtype: parseDtype(envString('MODEL_DTYPE', 'fp32')),
   /** When true the model must already be in the local cache; no network access at all. */
-  offline: envBool('SPY_EYE_OFFLINE', false),
+  offline: envBool('SICHT_OFFLINE', envBool('SPY_EYE_OFFLINE', false)),
   /**
    * onnxruntime execution provider: cpu, dml (DirectML, any DirectX 12 GPU on Windows),
    * cuda (Linux, NVIDIA) or auto (try the GPU provider of this platform, fall back to cpu).

@@ -1,8 +1,9 @@
 /**
  * Downloads the model weights into the local cache so the app can run fully offline afterwards
- * (start the server with SPY_EYE_OFFLINE=1 to forbid any network access).
+ * (start the server with SICHT_OFFLINE=1 to forbid any network access).
  */
 import { config } from '../config.js';
+import { FaceDetector } from '../ml/faces.js';
 import { EmbeddingModel } from '../ml/model.js';
 
 const model = new EmbeddingModel();
@@ -17,6 +18,10 @@ model.onState((state) => {
 try {
   await model.load();
   process.stdout.write(`\nModell ${config.modelId} (${config.modelDtype}) liegt in ${config.modelCacheDir}\n`);
+  const faces = new FaceDetector();
+  await faces.load();
+  process.stdout.write(faces.ready ? 'Gesichts-Detektor für die Maskierung liegt vor.\n' : `Gesichts-Detektor fehlt: ${faces.problem ?? ''}\n`);
+  process.exit(faces.ready ? 0 : 1);
 } catch (err: unknown) {
   process.stderr.write(`\nDownload fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}\n`);
   process.exit(1);

@@ -1,0 +1,474 @@
+import Fastify, { LogController, type FastifyInstance, type FastifyRequest } from 'fastify';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { config } from './config.js';
+import { Auth, can, PERMISSIONS, type Permission, type Session } from './core/auth.js';
+import { Ledger } from './core/ledger.js';
+import { Mandates } from './core/mandates.js';
+import { EventHub } from './events.js';
+import { Cases } from './intel/cases.js';
+import { Federation, type PeerRecord } from './intel/federation.js';
+import { Incidents } from './intel/incidents.js';
+import { scenarioWatchId } from './intel/metrics.js';
+import type { Lang } from './intel/report.js';
+import { ScenarioEngine, type Observation, type ScenarioDefinition } from './intel/scenario.js';
+import type { SearchScope } from './intel/scoring.js';
+import { Sources } from './intel/sources.js';
+import { WatchEngine } from './intel/watches.js';
+import type { FaceDetector } from './ml/faces.js';
+import type { HazardHead } from './ml/head.js';
+import type { EmbeddingModel } from './ml/model.js';
+import type { VocabularyIndex } from './ml/vocab.js';
+import { Pipeline } from './pipeline.js';
+import { registerRoutes } from './routes.js';
+import { SearchEngine } from './search.js';
+import { Store, type VideoEntry } from './store.js';
+import type { AppState, Mandate, NodeInfo, SessionInfo, UserInfo } from './types.js';
+
+export const VERSION = '0.4.0';
+
+export interface NodeConfig {
+  id: string;
+  name: string;
+  operator: string;
+  region: string;
+  lat: number;
+  lon: number;
+  host: string;
+  port: number;
+  dataDir: string;
+  peers: PeerRecord[];
+}
+
+/** Things every node in this process shares: the models are loaded once. */
+export interface SharedRuntime {
+  model: EmbeddingModel;
+  faces: FaceDetector;
+  hazard: HazardHead | null;
+  /** Resolves when the model and the tag vocabulary are ready. */
+  ready: Promise<VocabularyIndex>;
+}
+
+export interface RequestContext {
+  user: UserInfo;
+  session: Session;
+  mandate: Mandate | null;
+  lang: Lang;
+}
+
+export interface UnmaskGrant {
+  id: string;
+  videoId: string;
+  userId: string;
+  approver: string;
+  expires: number;
+}
+
+/**
+ * One installation of the platform: its own footage, index, users, mandates and ledger.
+ * Several nodes can run in one process (each on its own port) and talk to each other only
+ * through the federation protocol, exactly as nodes on different machines would.
+ */
+export class PlatformNode {
+  readonly info: NodeInfo;
+  readonly hub = new EventHub();
+  readonly store: Store;
+  readonly ledger: Ledger;
+  readonly auth: Auth;
+  readonly mandates: Mandates;
+  readonly sources: Sources;
+  readonly incidents: Incidents;
+  readonly cases: Cases;
+  readonly federation: Federation;
+  readonly watches: WatchEngine;
+  readonly scenario: ScenarioEngine;
+  readonly pipeline: Pipeline;
+  readonly search: SearchEngine;
+  readonly grants = new Map<string, UnmaskGrant>();
+  private app: FastifyInstance | null = null;
+  private retentionTimer: NodeJS.Timeout | null = null;
+  private readonly cookieName: string;
+
+  constructor(
+    readonly cfg: NodeConfig,
+    readonly shared: SharedRuntime,
+  ) {
+    this.info = {
+      id: cfg.id,
+      name: cfg.name,
+      operator: cfg.operator,
+      region: cfg.region,
+      lat: cfg.lat,
+      lon: cfg.lon,
+      version: VERSION,
+    };
+    this.cookieName = `sicht_${cfg.id.replace(/[^a-z0-9]/gi, '')}`;
+    const d = (name: string): string => path.join(cfg.dataDir, name);
+
+    this.store = new Store(cfg.dataDir);
+    this.ledger = new Ledger(d('ledger.jsonl'));
+    this.auth = new Auth(d('users.json'));
+    this.mandates = new Mandates(d('mandates.json'));
+    this.sources = new Sources(d('sources.json'));
+    this.incidents = new Incidents(d('incidents.json'), path.join(config.assetsDir, 'places.json'), this.hub);
+    this.cases = new Cases(d('cases'), this.store, this.sources);
+    this.federation = new Federation(
+      d('peers.json'),
+      () => this.info,
+      () => this.ledger.headHash,
+      (peer, head) => {
+        void this.ledger.append({
+          actor: 'system',
+          role: 'system',
+          mandateId: null,
+          action: 'ledger.witness',
+          summary: `Protokollstand von ${peer.name} bezeugt`,
+          data: { peer: peer.id, head },
+        });
+      },
+    );
+
+    const log = {
+      info: (msg: string): void => this.log(msg),
+      error: (msg: string): void => this.log(msg, true),
+    };
+    this.pipeline = new Pipeline(this.store, shared.model, shared.faces, this.hub, log, {
+      onRecordingReady: (entry) => this.onRecordingReady(entry),
+    });
+
+    this.watches = new WatchEngine({
+      model: shared.model,
+      store: this.store,
+      sources: this.sources,
+      incidents: this.incidents,
+      hub: this.hub,
+      ledger: this.ledger,
+      hazard: shared.hazard,
+      scopes: () => this.scopes(),
+      currentObservations: () => this.currentObservations(),
+      clockRate: () => (this.scenario.isExerciseActive ? this.scenario.info().speed : 1),
+      files: { watches: d('watches.json'), alerts: d('alerts.json'), feedback: d('feedback.json') },
+    });
+
+    this.scenario = new ScenarioEngine({
+      store: this.store,
+      sources: this.sources,
+      pipeline: this.pipeline,
+      hub: this.hub,
+      scenariosDir: config.scenariosDir,
+      stateFile: d('exercise.json'),
+      onObservation: (observation) => this.watches.observe(observation),
+      onReset: () => {
+        this.watches.clearExercise();
+        this.incidents.clearExercise();
+        this.hub.broadcast({ type: 'intel-reset' });
+      },
+      onInstalled: (definition) => void this.installExerciseDefaults(definition),
+      activeAlerts: (sourceId) => this.watches.activeAlertsOf(sourceId),
+      log: (msg) => this.log(msg),
+    });
+
+    this.search = new SearchEngine(this.store, shared.model, this.sources, () => this.scopes());
+  }
+
+  log(message: string, error = false): void {
+    (error ? process.stderr : process.stdout).write(`  [${this.cfg.id}] ${message}\n`);
+  }
+
+  /** Footage that can be searched right now: the archive plus what an exercise has revealed. */
+  scopes(): SearchScope[] {
+    const scopes: SearchScope[] = [];
+    for (const entry of this.store.all()) {
+      if (entry.info.scenario !== null || !entry.embeddings) continue;
+      const base = entry.info.capturedAt;
+      scopes.push({
+        entry,
+        sourceId: entry.info.sourceId,
+        frames: null,
+        timeOf: (frameIdx) => base + Math.round((entry.frames[frameIdx]?.t ?? 0) * 1000),
+      });
+    }
+    return scopes.concat(this.scenario.scopes());
+  }
+
+  private currentObservations(): Observation[] {
+    const out: Observation[] = [];
+    if (!this.scenario.isExerciseActive) return out;
+    const elapsed = this.scenario.elapsedSec;
+    for (const feed of this.scenario.feeds()) {
+      if (!feed.videoId || feed.frameNumber === null || feed.at === null) continue;
+      const entry = this.store.get(feed.videoId);
+      const frameIdx = entry ? entry.frames.findIndex((f) => f.n === feed.frameNumber) : -1;
+      if (entry && frameIdx >= 0) out.push({ sourceId: feed.sourceId, entry, frameIdx, at: feed.at, exerciseSec: elapsed });
+    }
+    return out;
+  }
+
+  /** A finished upload is run past every watch, in recording order, like a delayed live feed. */
+  private onRecordingReady(entry: VideoEntry): void {
+    void this.enforceRetention();
+    this.watches.recalibrateAll();
+    if (entry.info.scenario !== null) {
+      this.hub.broadcast({ type: 'feeds', feeds: this.scenario.feeds(), scenario: this.scenario.info() });
+      return;
+    }
+    this.watches.observeRecording(entry);
+  }
+
+  /** Creates the exercise mandate and the scenario's standard watches (once). */
+  private async installExerciseDefaults(definition: ScenarioDefinition): Promise<void> {
+    const mandateId = `md_exercise_${definition.id}`;
+    if (!this.mandates.get(mandateId)) {
+      this.mandates.create(
+        {
+          title: definition.mandate.title,
+          titleEn: definition.mandate.titleEn,
+          legalBasis: definition.mandate.legalBasis,
+          purpose: definition.mandate.purpose,
+          issuedBy: definition.mandate.issuedBy,
+          validFrom: Date.now(),
+          validTo: null,
+          exercise: true,
+          personDescriptions: true,
+        },
+        mandateId,
+      );
+      await this.ledger.append({
+        actor: 'system',
+        role: 'system',
+        mandateId,
+        action: 'mandate.create',
+        summary: `Übungsmandat „${definition.mandate.title}“ angelegt`,
+        data: { legalBasis: definition.mandate.legalBasis },
+      });
+    }
+    for (const w of definition.watches) {
+      const id = scenarioWatchId(w.key);
+      if (this.watches.getWatch(id)) continue;
+      if (w.kind === 'hazard' && !this.shared.hazard) continue;
+      await this.watches.create(
+        {
+          name: w.name,
+          nameEn: w.nameEn,
+          kind: w.kind,
+          prompt: w.prompt,
+          exclude: w.exclude,
+          hazardClass: w.hazardClass,
+          severity: w.severity,
+          threshold: w.threshold,
+          persistence: w.persistence,
+          cooldownSec: w.cooldownSec,
+          sourceKinds: w.sourceKinds,
+        },
+        null,
+        mandateId,
+        id,
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------- request helpers
+
+  langOf(request: FastifyRequest): Lang {
+    const query = request.query as Record<string, unknown> | null;
+    const explicit = typeof query?.['lang'] === 'string' ? query['lang'] : this.cookie(request, 'sicht_lang');
+    if (explicit === 'en' || explicit === 'de') return explicit;
+    return (request.headers['accept-language'] ?? '').toLowerCase().startsWith('en') ? 'en' : 'de';
+  }
+
+  cookie(request: FastifyRequest, name: string): string | undefined {
+    const header = request.headers.cookie;
+    if (!header) return undefined;
+    for (const part of header.split(';')) {
+      const eq = part.indexOf('=');
+      if (eq > 0 && part.slice(0, eq).trim() === name) return decodeURIComponent(part.slice(eq + 1).trim());
+    }
+    return undefined;
+  }
+
+  sessionCookie(token: string | null): string {
+    const base = `${this.cookieName}=${token ?? ''}; Path=/; HttpOnly; SameSite=Lax`;
+    return token === null ? `${base}; Max-Age=0` : `${base}; Max-Age=43200`;
+  }
+
+  contextOf(request: FastifyRequest): RequestContext | null {
+    const resolved = this.auth.resolve(this.cookie(request, this.cookieName));
+    if (!resolved) return null;
+    const mandate = resolved.session.mandateId ? (this.mandates.get(resolved.session.mandateId) ?? null) : null;
+    return {
+      user: resolved.user,
+      session: resolved.session,
+      mandate: mandate && this.mandates.isUsable(mandate) ? mandate : null,
+      lang: this.langOf(request),
+    };
+  }
+
+  sessionInfo(ctx: RequestContext): SessionInfo {
+    return { user: ctx.user, permissions: [...PERMISSIONS[ctx.user.role]], mandate: ctx.mandate };
+  }
+
+  allowed(ctx: RequestContext, permission: Permission): boolean {
+    return can(ctx.user.role, permission);
+  }
+
+  /** Writes a ledger entry on behalf of a user. */
+  record(ctx: RequestContext, action: string, summary: string, data: Record<string, unknown> = {}): Promise<unknown> {
+    return this.ledger.append({
+      actor: ctx.user.id,
+      role: ctx.user.role,
+      mandateId: ctx.mandate?.id ?? null,
+      action,
+      summary,
+      data,
+    });
+  }
+
+  hasGrant(ctx: RequestContext, videoId: string): boolean {
+    const now = Date.now();
+    for (const [id, grant] of this.grants) {
+      if (grant.expires <= now) this.grants.delete(id);
+      else if (grant.userId === ctx.user.id && grant.videoId === videoId) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Applies the retention rule: sets the deletion date of every archive recording and deletes
+   * those that are due. Recordings referenced by a case are held for as long as the case exists.
+   */
+  async enforceRetention(): Promise<void> {
+    const days = config.retentionDays;
+    const held = new Set<string>();
+    for (const file of this.cases.list()) for (const item of file.items) held.add(item.videoId);
+    const now = Date.now();
+    for (const entry of this.store.all()) {
+      if (entry.info.scenario !== null) continue;
+      const due = days > 0 && !held.has(entry.info.id) ? entry.info.capturedAt + days * 86_400_000 : null;
+      if (entry.info.deleteAfter !== due) {
+        entry.info.deleteAfter = due;
+        this.hub.broadcast({ type: 'video', video: entry.info, stats: this.store.stats(), queueLength: this.pipeline.queueLength });
+      }
+      if (due !== null && due <= now && entry.info.status !== 'processing') {
+        this.pipeline.cancel(entry.info.id);
+        await this.store.remove(entry.info.id);
+        this.hub.broadcast({ type: 'video-removed', videoId: entry.info.id, stats: this.store.stats() });
+        await this.ledger.append({
+          actor: 'system',
+          role: 'system',
+          mandateId: null,
+          action: 'retention.delete',
+          summary: `Aufzeichnung „${entry.info.name}“ nach Ablauf der Löschfrist (${days} Tage) gelöscht`,
+          data: { videoId: entry.info.id, capturedAt: entry.info.capturedAt, days },
+        });
+      }
+    }
+  }
+
+  appState(): AppState {
+    return {
+      model: this.shared.model.state,
+      videos: this.store.infos(),
+      stats: this.store.stats(),
+      queueLength: this.pipeline.queueLength,
+    };
+  }
+
+  // ---------------------------------------------------------------- lifecycle
+
+  async start(serveConsole: boolean): Promise<void> {
+    await fs.mkdir(this.cfg.dataDir, { recursive: true });
+    await this.ledger.open();
+    await this.auth.open(config.demoPassword);
+    await this.mandates.open();
+    if (this.auth.demoMode && this.mandates.list().length === 0) {
+      // A fresh demonstration node gets a trial mandate so that own test footage can be evaluated.
+      this.mandates.create(
+        {
+          title: 'Erprobung',
+          titleEn: 'Evaluation',
+          legalBasis: 'Kein Echtbetrieb: Erprobung mit eigenem, frei verwendbarem Material',
+          purpose: 'Funktionsprüfung des Systems ohne personenbezogene Echtdaten.',
+          issuedBy: 'System',
+          validFrom: Date.now(),
+          validTo: null,
+          exercise: true,
+          personDescriptions: true,
+        },
+        'md_erprobung',
+      );
+      await this.ledger.append({
+        actor: 'system',
+        role: 'system',
+        mandateId: 'md_erprobung',
+        action: 'mandate.create',
+        summary: 'Mandat „Erprobung“ für den Testbetrieb angelegt',
+        data: {},
+      });
+    }
+    await this.sources.open();
+    await this.incidents.open();
+    await this.cases.open();
+    await this.federation.open();
+    this.federation.configure(this.cfg.peers);
+    await this.watches.open();
+
+    const pending = await this.store.load((msg) => this.log(msg));
+    for (const id of this.store.degenerateVideoIds()) {
+      const entry = this.store.get(id);
+      if (!entry) continue;
+      this.log(`Index of "${entry.info.name}" consists of identical vectors (broken encoder run); re-indexing.`);
+      this.store.resetAnalysis(entry);
+      entry.info.status = 'queued';
+      if (!pending.includes(id)) pending.push(id);
+    }
+    await this.scenario.open();
+
+    const app = Fastify({
+      logger: { level: process.env['LOG_LEVEL'] ?? 'warn' },
+      logController: new LogController({ disableRequestLogging: true }),
+      bodyLimit: 1024 * 1024,
+    });
+    this.app = app;
+    this.shared.model.onState((state) => this.hub.broadcast({ type: 'model', model: state }));
+    this.ledger.onAppend((entry) => this.hub.broadcast({ type: 'ledger', head: entry.hash, length: entry.seq }));
+    await registerRoutes(app, this, serveConsole);
+
+    this.pipeline.setReadyGate(
+      this.shared.ready.then((vocabulary) => {
+        this.pipeline.setVocabulary(vocabulary);
+      }),
+    );
+    this.shared.ready
+      .then(async () => {
+        await this.watches.prepareAll();
+        this.watches.recalibrateAll();
+        for (const id of pending) this.pipeline.enqueue(id);
+      })
+      .catch((err: unknown) => this.log(`Model initialisation failed: ${err instanceof Error ? err.message : String(err)}`, true));
+
+    await this.enforceRetention();
+    this.retentionTimer = setInterval(() => void this.enforceRetention(), 10 * 60 * 1000);
+    this.retentionTimer.unref();
+
+    await app.listen({ host: this.cfg.host, port: this.cfg.port });
+    await this.ledger.append({
+      actor: 'system',
+      role: 'system',
+      mandateId: null,
+      action: 'node.start',
+      summary: `Knoten ${this.cfg.name} gestartet (Version ${VERSION})`,
+      data: { videos: this.store.all().length, masking: this.shared.faces.ready },
+    });
+  }
+
+  async stop(): Promise<void> {
+    if (this.retentionTimer) clearInterval(this.retentionTimer);
+    this.pipeline.shutdown();
+    this.scenario.shutdown();
+    this.watches.shutdown();
+    this.federation.shutdown();
+    this.hub.close();
+    await Promise.allSettled([this.watches.flush(), this.incidents.flush(), this.sources.flush(), this.mandates.flush()]);
+    await this.app?.close();
+  }
+}

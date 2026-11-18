@@ -47,6 +47,16 @@ export interface VideoInfo {
   processingMs: number;
   /** Whether the browser can likely play the source file directly. */
   playable: boolean;
+  /** Source (camera, drone, upload inbox) this recording belongs to. */
+  sourceId: string;
+  /** Wall-clock time of the first frame (epoch ms); the upload time when unknown. */
+  capturedAt: number;
+  /** Set for clips that belong to an exercise scenario; they are replayed by the scenario clock. */
+  scenario: string | null;
+  /** Faces masked in the stored frames of this recording. */
+  facesMasked: number;
+  /** When the recording will be deleted (epoch ms); null while it is held as evidence or retention is off. */
+  deleteAfter: number | null;
   /**
    * True while only the quick first-pass index exists (a few whole-frame keyframes).
    * The video is already searchable; the dense analysis replaces this index when it finishes.
@@ -128,6 +138,11 @@ export interface FrameEvent {
 }
 
 export type ServerEvent =
+  | { type: 'feeds'; feeds: FeedState[]; scenario: ScenarioInfo }
+  | { type: 'alert'; alert: Alert }
+  | { type: 'incident'; incident: Incident }
+  | { type: 'intel-reset' }
+  | { type: 'ledger'; head: string; length: number }
   | { type: 'state'; state: AppState }
   | { type: 'ping' }
   | { type: 'model'; model: ModelState }
@@ -156,6 +171,13 @@ export interface SearchResult {
   box: NormRect | null;
   tags: Tag[];
   playable: boolean;
+  sourceId: string;
+  sourceName: string;
+  sourceKind: SourceKind;
+  lat: number | null;
+  lon: number | null;
+  /** Wall-clock time of the frame (epoch ms). */
+  at: number;
 }
 
 export interface SearchResponse {
@@ -173,6 +195,10 @@ export interface SearchResponse {
   distribution: number[];
   /** Per-scene confidence keyed by scene id, for colouring the embedding map. */
   sceneScores: Record<string, number>;
+  /** Best confidence per source, for highlighting sources on the map. */
+  sourceScores: Record<string, number>;
+  /** Results from peer nodes, when the search was federated. */
+  federated: FederatedResult[];
 }
 
 export interface ExplainResponse {
@@ -232,4 +258,396 @@ export interface SceneFramesResponse {
   video: VideoInfo;
   scene: SceneInfo;
   frames: SceneFrame[];
+}
+
+// ---------------------------------------------------------------- platform
+
+export type Role = 'operator' | 'supervisor' | 'auditor';
+
+export interface UserInfo {
+  id: string;
+  name: string;
+  role: Role;
+  unit: string;
+}
+
+export interface Mandate {
+  id: string;
+  /** Short name of the operation or exercise. */
+  title: string;
+  titleEn?: string;
+  /** Legal basis as cited by the authority, e.g. a section of a disaster-control act. */
+  legalBasis: string;
+  /** What the system may be used for under this mandate. */
+  purpose: string;
+  issuedBy: string;
+  validFrom: number;
+  validTo: number | null;
+  status: 'open' | 'closed';
+  createdAt: number;
+  closedAt: number | null;
+  /** True for exercise / demonstration mandates. */
+  exercise: boolean;
+  /**
+   * Whether prompts may describe persons by sex or age group ("a child", "an elderly man").
+   * Identifying features and protected attributes are refused regardless.
+   */
+  personDescriptions: boolean;
+}
+
+export interface NodeInfo {
+  id: string;
+  /** Display name of the installation, e.g. the control centre operating it. */
+  name: string;
+  /** Operating authority. */
+  operator: string;
+  /** Short location label. */
+  region: string;
+  lat: number;
+  lon: number;
+  version: string;
+}
+
+export interface SessionInfo {
+  user: UserInfo;
+  permissions: string[];
+  mandate: Mandate | null;
+}
+
+export interface PublicInfo {
+  node: NodeInfo;
+  /** Present while the node only has seeded demonstration accounts. */
+  demo: { users: UserInfo[]; passwordHint: string } | null;
+}
+
+export interface LedgerEntryInfo {
+  seq: number;
+  ts: string;
+  actor: string;
+  role: string;
+  mandateId: string | null;
+  action: string;
+  summary: string;
+  data: Record<string, unknown>;
+  prev: string;
+  hash: string;
+}
+
+export interface LedgerPage {
+  head: string;
+  length: number;
+  entries: LedgerEntryInfo[];
+}
+
+export interface LedgerVerificationInfo {
+  ok: boolean;
+  entries: number;
+  head: string;
+  brokenAt: number | null;
+  reason: string | null;
+  checkedAt: string;
+  tookMs: number;
+}
+
+// ---------------------------------------------------------------- sources, exercise, watches
+
+export type SourceKind = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload';
+export const SOURCE_KINDS: readonly SourceKind[] = [
+  'drone', 'helicopter', 'fixed', 'vehicle', 'bodycam', 'citizen', 'satellite', 'upload',
+];
+
+export interface SourceInfo {
+  id: string;
+  name: string;
+  /** English display name, when it differs. */
+  nameEn?: string;
+  kind: SourceKind;
+  /** Organisation that owns the sensor. */
+  owner: string;
+  description: string;
+  lat: number | null;
+  lon: number | null;
+  /** archive: uploaded recordings · exercise: driven by the scenario clock · live: connected stream. */
+  mode: 'archive' | 'exercise' | 'live';
+  /** Whether peer nodes may search this source. */
+  shared: boolean;
+  createdAt: number;
+}
+
+/** Current picture of one source, for the live wall and the map. */
+export interface FeedState {
+  sourceId: string;
+  online: boolean;
+  videoId: string | null;
+  frameNumber: number | null;
+  frameUrl: string | null;
+  /** Wall-clock time of the frame (epoch ms). */
+  at: number | null;
+  label: string;
+  activeAlerts: number;
+}
+
+export interface ScenarioInfo {
+  id: string;
+  title: string;
+  titleEn: string;
+  description: string;
+  descriptionEn: string;
+  durationSec: number;
+  /** absent: footage not installed · installing: clips are being analysed. */
+  status: 'absent' | 'installing' | 'ready' | 'running' | 'paused' | 'finished';
+  clipsTotal: number;
+  clipsReady: number;
+  elapsedSec: number;
+  speed: number;
+  startedAt: number | null;
+  center: { lat: number; lon: number; zoom: number };
+  /** Why the footage cannot be installed, if so. */
+  problem: string | null;
+}
+
+export type Severity = 1 | 2 | 3;
+
+export interface Watch {
+  id: string;
+  name: string;
+  nameEn?: string;
+  /** What to look for, in the model's language (English). Empty for hazard-model watches. */
+  prompt: string;
+  /** Phrases that must match less well than the prompt (suppresses look-alikes). */
+  exclude: string[];
+  /** text: open-vocabulary prompt · hazard: class of the trained hazard model. */
+  kind: 'text' | 'hazard';
+  hazardClass: string | null;
+  severity: Severity;
+  /** Minimum confidence (0..1) for a frame to count. */
+  threshold: number;
+  /** Consecutive matching frames before an alert is raised. */
+  persistence: number;
+  /** Seconds without a match after which an alert ends. */
+  cooldownSec: number;
+  /** Restrict to these source kinds; empty means all. */
+  sourceKinds: SourceKind[];
+  enabled: boolean;
+  mandateId: string;
+  createdBy: string;
+  createdAt: number;
+  /** Similarity above which a frame counts as a match, derived from the indexed footage. */
+  cutoff: number;
+  feedback: { confirmed: number; dismissed: number };
+  /** True once analyst feedback has been used to train this watch. */
+  learned: boolean;
+  /** Increases with every explicit retraining or reset; version 1 is the plain prompt. */
+  version: number;
+  /** Verdicts recorded since the last retraining; they have no effect until someone retrains. */
+  pendingFeedback: number;
+}
+
+export interface WatchPreview {
+  cutoff: number;
+  /** Frames in the current index that would have matched. */
+  matches: number;
+  framesChecked: number;
+  samples: { frameUrl: string; confidence: number; sourceName: string; at: number }[];
+}
+
+export interface Alert {
+  id: string;
+  watchId: string;
+  watchName: string;
+  watchNameEn: string;
+  /** Seconds on the exercise clock when the alert was raised; null outside exercises. */
+  exerciseSec: number | null;
+  severity: Severity;
+  sourceId: string;
+  sourceName: string;
+  sourceKind: SourceKind;
+  lat: number | null;
+  lon: number | null;
+  videoId: string;
+  frameNumber: number;
+  frameUrl: string;
+  box: NormRect | null;
+  confidence: number;
+  score: number;
+  firstSeen: number;
+  lastSeen: number;
+  /** Matching frames so far. */
+  frames: number;
+  /** True while the condition is still being observed. */
+  active: boolean;
+  status: 'new' | 'confirmed' | 'dismissed';
+  reviewedBy: string | null;
+  incidentId: string | null;
+  exercise: boolean;
+}
+
+export interface Incident {
+  id: string;
+  title: string;
+  titleEn: string;
+  /** Nearest named place. */
+  place: string;
+  mgrs: string;
+  severity: Severity;
+  status: 'open' | 'acknowledged' | 'closed';
+  lat: number;
+  lon: number;
+  alertIds: string[];
+  sourceIds: string[];
+  watchNames: string[];
+  firstSeen: number;
+  lastSeen: number;
+  /** Independent sources reporting the same thing. */
+  corroboration: number;
+  exercise: boolean;
+}
+
+export interface IntelSnapshot {
+  sources: SourceInfo[];
+  feeds: FeedState[];
+  scenario: ScenarioInfo;
+  watches: Watch[];
+  alerts: Alert[];
+  incidents: Incident[];
+}
+
+// ---------------------------------------------------------------- cases
+
+export interface CaseItem {
+  id: string;
+  videoId: string;
+  frameNumber: number;
+  frameUrl: string;
+  sourceId: string;
+  sourceName: string;
+  /** Wall-clock time of the frame (epoch ms). */
+  at: number;
+  note: string;
+  /** SHA-256 of the unmasked frame as stored at ingest. */
+  sha256: string;
+  query: string | null;
+  box: NormRect | null;
+  addedBy: string;
+  addedAt: number;
+}
+
+export interface CaseNote {
+  id: string;
+  text: string;
+  by: string;
+  at: number;
+}
+
+export interface CaseFile {
+  id: string;
+  title: string;
+  mandateId: string;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+  items: CaseItem[];
+  notes: CaseNote[];
+  sealedAt: number | null;
+  sealedBy: string | null;
+  /** SHA-256 over the canonical content at sealing time; also written to the ledger. */
+  sealHash: string | null;
+}
+
+// ---------------------------------------------------------------- federation
+
+export interface PeerInfo {
+  id: string;
+  name: string;
+  operator: string;
+  region: string;
+  url: string;
+  lat: number;
+  lon: number;
+  online: boolean;
+  latencyMs: number | null;
+  lastSeen: number | null;
+  /** Latest ledger head of the peer that this node has witnessed. */
+  witnessedHead: string | null;
+  sources: number;
+  frames: number;
+}
+
+export interface FederatedHit {
+  sourceName: string;
+  sourceKind: SourceKind;
+  lat: number | null;
+  lon: number | null;
+  at: number;
+  confidence: number;
+  score: number;
+  /** Small masked preview as a data URL; raw footage stays on the peer. */
+  thumbnail: string;
+  tags: Tag[];
+}
+
+export interface FederatedResult {
+  peerId: string;
+  peerName: string;
+  ok: boolean;
+  error: string | null;
+  tookMs: number;
+  matched: number;
+  /** Ledger sequence under which the peer recorded this request. */
+  receipt: number | null;
+  hits: FederatedHit[];
+}
+
+// ---------------------------------------------------------------- measurement
+
+export interface HazardModelCard {
+  name: string;
+  version: string;
+  trainedOn: string;
+  license: string;
+  classes: string[];
+  trainImages: number;
+  testImages: number;
+  accuracy: number;
+  macroF1: number;
+  zeroShotAccuracy: number;
+  zeroShotMacroF1: number;
+  perClass: { name: string; precision: number; recall: number; f1: number; support: number }[];
+  confusion: number[][];
+  encoder: string;
+}
+
+export interface ExerciseEvaluation {
+  events: {
+    label: string;
+    sourceName: string;
+    onsetSec: number;
+    detectedSec: number | null;
+    latencySec: number | null;
+    watchName: string | null;
+  }[];
+  total: number;
+  detected: number;
+  medianLatencySec: number | null;
+  falseAlarms: number;
+  alerts: number;
+}
+
+export interface Metrics {
+  /** Days after which recordings are deleted unless held in a case; 0 = no automatic deletion. */
+  retentionDays: number;
+  footageSec: number;
+  framesAnalysed: number;
+  vectors: number;
+  sources: number;
+  facesMasked: number;
+  maskingActive: boolean;
+  searches: { count: number; blocked: number; federated: number; medianMs: number | null; p95Ms: number | null };
+  alerts: { total: number; confirmed: number; dismissed: number; open: number };
+  unmaskEvents: number;
+  ledgerEntries: number;
+  /** Seconds of footage per second of analysis on this machine, from completed recordings. */
+  analysisSpeed: number | null;
+  evaluation: ExerciseEvaluation | null;
+  hazardModel: HazardModelCard | null;
 }

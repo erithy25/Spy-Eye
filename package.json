@@ -1,17 +1,18 @@
 {
-  "name": "spy-eye",
+  "name": "sicht",
   "private": true,
   "version": "0.1.0",
-  "description": "Local, self-hosted semantic video search: upload a video dataset, index it with a local vision-language model, search scenes by free text.",
+  "description": "Sicht: the civil operating picture. Sovereign visual intelligence for civil protection, running entirely on local infrastructure.",
   "engines": {
     "node": ">=20.11"
   },
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
-    "start": "pnpm --filter @spy-eye/server start",
+    "start": "pnpm --filter @sicht/server start",
     "typecheck": "pnpm -r typecheck",
-    "models:download": "pnpm --filter @spy-eye/server models:download",
-    "selftest": "pnpm --filter @spy-eye/server selftest"
+    "models:download": "pnpm --filter @sicht/server models:download",
+    "selftest": "pnpm --filter @sicht/server selftest",
+    "test": "pnpm --filter @sicht/server test"
   }
 }

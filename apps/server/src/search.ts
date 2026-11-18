@@ -1,37 +1,12 @@
+import type { Sources } from './intel/sources.js';
+import { scoreFrame, type SearchScope } from './intel/scoring.js';
+import { RELEVANCE, adaptiveCutoff } from './ml/calibration.js';
 import { dotAt, pca2, sigmoid } from './ml/math.js';
-import type { EmbeddingModel, ModelFamily } from './ml/model.js';
+import type { EmbeddingModel } from './ml/model.js';
 import { decodeFrame, explainWindows, toNormRect, writeTile, type PixelRect } from './ml/preprocess.js';
 import { frameUrl, sceneId, type Store, type VideoEntry } from './store.js';
 import type { ExplainResponse, MapPoint, MapResponse, NormRect, SearchResponse, SearchResult } from './types.js';
 
-/**
- * Relevance calibration (cosine similarity space).
- *
- * Raw image-text similarities are not comparable across queries: "a wedding" and "street" have
- * very different baselines. The cut-off is therefore derived per query from the score
- * distribution of the dataset (robust median + k * sigma: a match has to stand out from the
- * rest) and clamped to an absolute band so it also behaves when nothing or everything matches.
- */
-interface RelevanceCalibration {
-  /** Below this similarity nothing counts as a match. */
-  floor: number;
-  /** At or above this similarity everything counts as a match. */
-  ceiling: number;
-  /** Cut-off used when the dataset is too small for meaningful statistics. */
-  prior: number;
-  /** Similarity distance that maps to one logit of confidence. */
-  width: number;
-  /** Number of robust standard deviations above the median. */
-  k: number;
-}
-
-const RELEVANCE: Readonly<Record<ModelFamily, RelevanceCalibration>> = {
-  siglip: { floor: 0.06, ceiling: 0.09, prior: 0.075, width: 0.012, k: 2.5 },
-  clip: { floor: 0.24, ceiling: 0.285, prior: 0.27, width: 0.012, k: 2.5 },
-  mobileclip: { floor: 0.225, ceiling: 0.26, prior: 0.245, width: 0.012, k: 2.5 },
-};
-
-const MIN_SCENES_FOR_STATS = 40;
 const DISTRIBUTION_BINS = 40;
 
 export class SearchError extends Error {
@@ -45,18 +20,11 @@ export class SearchError extends Error {
 }
 
 interface SceneHit {
-  entry: VideoEntry;
+  scope: SearchScope;
   sceneIndex: number;
   score: number;
   frameIdx: number;
   tileIdx: number;
-}
-
-function median(sorted: Float64Array): number {
-  const n = sorted.length;
-  if (n === 0) return 0;
-  const mid = n >> 1;
-  return n % 2 === 1 ? (sorted[mid] as number) : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
 }
 
 export class SearchEngine {
@@ -66,24 +34,16 @@ export class SearchEngine {
   constructor(
     private readonly store: Store,
     private readonly model: EmbeddingModel,
+    private readonly sources: Sources,
+    /** Everything that may be searched right now. */
+    private readonly scopes: () => SearchScope[],
   ) {}
 
-  /** Query-specific similarity cut-off for "this scene matches". */
-  private cutoff(sceneScores: Float64Array): number {
-    const cal = RELEVANCE[this.model.family];
-    const n = sceneScores.length;
-    if (n === 0) return cal.prior;
-    const sorted = Float64Array.from(sceneScores).sort();
-    const med = median(sorted);
-    const deviations = Float64Array.from(sorted, (v) => Math.abs(v - med)).sort();
-    const sigma = 1.4826 * median(deviations);
-    const adaptive = Math.min(cal.ceiling, Math.max(cal.floor, med + cal.k * sigma));
-    // Blend towards the prior for small datasets where the statistics are unreliable.
-    const weight = Math.min(1, n / MIN_SCENES_FOR_STATS);
-    return cal.prior * (1 - weight) + adaptive * weight;
-  }
-
-  async search(params: { query: string; limit: number; videoId: string | null }): Promise<SearchResponse> {
+  /**
+   * Finds the best frame per scene for a free-text query.
+   * `sharedOnly` restricts the search to sources that are released to peer nodes.
+   */
+  async search(params: { query: string; limit: number; videoId: string | null; sharedOnly?: boolean }): Promise<SearchResponse> {
     const started = performance.now();
     if (!this.model.ready) throw new SearchError('Das Modell wird noch geladen.', 503);
     let queryVector: Float32Array;
@@ -97,63 +57,59 @@ export class SearchEngine {
 
     const hits: SceneHit[] = [];
     let framesSearched = 0;
-    let vectorsSearched = 0;
 
-    for (const entry of this.store.all()) {
+    for (const scope of this.scopes()) {
+      const { entry } = scope;
       if (params.videoId !== null && entry.info.id !== params.videoId) continue;
+      if (params.sharedOnly && !this.sources.resolve(scope.sourceId).shared) continue;
       const emb = entry.embeddings;
       const tiles = entry.info.tilesPerFrame;
       if (!emb || tiles <= 0 || emb.dim !== dim) continue;
-      const frameCount = Math.min(entry.frames.length, Math.floor(emb.rows / tiles));
-      const data = emb.data;
+      const available = Math.min(entry.frames.length, Math.floor(emb.rows / tiles));
       const perScene = new Map<number, SceneHit>();
-      for (let f = 0; f < frameCount; f++) {
-        let best = -Infinity;
-        let bestTile = 0;
-        const base = f * tiles * dim;
-        for (let t = 0; t < tiles; t++) {
-          const raw = dotAt(data, base + t * dim, queryVector, 0, dim);
-          const s = Number.isFinite(raw) ? raw : -1;
-          if (s > best) {
-            best = s;
-            bestTile = t;
-          }
-        }
+      const visit = (f: number): void => {
+        if (f < 0 || f >= available) return;
+        const { score, tile } = scoreFrame(entry, f, queryVector);
         const sceneIndex = (entry.frames[f] as { s: number }).s;
         const current = perScene.get(sceneIndex);
-        if (!current || best > current.score) {
-          perScene.set(sceneIndex, { entry, sceneIndex, score: best, frameIdx: f, tileIdx: bestTile });
+        if (!current || score > current.score) {
+          perScene.set(sceneIndex, { scope, sceneIndex, score, frameIdx: f, tileIdx: tile });
         }
-      }
-      framesSearched += frameCount;
-      vectorsSearched += frameCount * tiles;
+        framesSearched++;
+      };
+      if (scope.frames) for (const f of scope.frames) visit(f);
+      else for (let f = 0; f < available; f++) visit(f);
       for (const hit of perScene.values()) hits.push(hit);
     }
 
     const cal = RELEVANCE[this.model.family];
-    const cutoff = this.cutoff(Float64Array.from(hits, (h) => h.score));
+    const cutoff = adaptiveCutoff(Float64Array.from(hits, (h) => h.score), cal);
     const confidenceOf = (score: number): number => sigmoid((score - cutoff) / cal.width);
 
     const distribution = new Array<number>(DISTRIBUTION_BINS).fill(0);
     const sceneScores: Record<string, number> = {};
+    const sourceScores: Record<string, number> = {};
     let matched = 0;
     for (const hit of hits) {
       const c = confidenceOf(hit.score);
       if (c >= 0.5) matched++;
       const bin = Math.min(DISTRIBUTION_BINS - 1, Math.floor(c * DISTRIBUTION_BINS));
       distribution[bin] = (distribution[bin] as number) + 1;
-      sceneScores[sceneId(hit.entry.info.id, hit.sceneIndex)] = Math.round(c * 1000) / 1000;
+      const rounded = Math.round(c * 1000) / 1000;
+      sceneScores[sceneId(hit.scope.entry.info.id, hit.sceneIndex)] = rounded;
+      if (rounded > (sourceScores[hit.scope.sourceId] ?? 0)) sourceScores[hit.scope.sourceId] = rounded;
     }
 
     hits.sort((a, b) => b.score - a.score);
     const results: SearchResult[] = [];
     for (const hit of hits.slice(0, params.limit)) {
-      const { entry } = hit;
+      const { entry } = hit.scope;
       const scene = entry.scenes[hit.sceneIndex];
       const frame = entry.frames[hit.frameIdx];
       if (!scene || !frame) continue;
       const layout = this.store.layout(entry);
       const tile = hit.tileIdx > 0 ? layout[hit.tileIdx] : undefined;
+      const source = this.sources.resolve(hit.scope.sourceId);
       results.push({
         sceneId: sceneId(entry.info.id, scene.index),
         videoId: entry.info.id,
@@ -170,6 +126,12 @@ export class SearchEngine {
         box: tile ? toNormRect(tile, entry.info.frameWidth, entry.info.frameHeight) : null,
         tags: scene.tags,
         playable: entry.info.playable,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceKind: source.kind,
+        lat: source.lat,
+        lon: source.lon,
+        at: hit.scope.timeOf(hit.frameIdx),
       });
     }
 
@@ -179,12 +141,14 @@ export class SearchEngine {
       embedMs: Math.round(embedMs * 10) / 10,
       scenesSearched: hits.length,
       framesSearched,
-      vectorsSearched,
+      vectorsSearched: countVectors(this.scopes(), params, this.sources, dim),
       threshold: Math.round(cutoff * 10000) / 10000,
       matched,
       results,
       distribution,
       sceneScores,
+      sourceScores,
+      federated: [],
     };
   }
 
@@ -205,7 +169,7 @@ export class SearchEngine {
       this.explainCache.delete(key);
       this.explainCache.set(key, cached);
     } else {
-      const frame = await decodeFrame(this.store.framePath(params.videoId, params.frameNumber));
+      const frame = await decodeFrame(await this.store.analysisFramePath(params.videoId, params.frameNumber));
       const windows = explainWindows(frame.width, frame.height);
       const size = this.model.imageSize;
       const plane = 3 * size * size;
@@ -277,14 +241,14 @@ export class SearchEngine {
     };
   }
 
-  /** 2D projection (PCA) of one whole-frame embedding per scene. */
+  /** 2D projection (PCA) of one whole-frame embedding per scene of the archive. */
   map(): MapResponse {
     if (this.mapCache && this.mapCache.version === this.store.version) return this.mapCache;
     const dim = this.model.dim;
     const candidates: { entry: VideoEntry; sceneIndex: number; frameIdx: number }[] = [];
     for (const entry of this.store.all()) {
       const emb = entry.embeddings;
-      if (!emb || emb.dim !== dim || entry.info.tilesPerFrame <= 0) continue;
+      if (!emb || emb.dim !== dim || entry.info.tilesPerFrame <= 0 || entry.info.scenario !== null) continue;
       const maxFrame = Math.floor(emb.rows / entry.info.tilesPerFrame);
       for (const scene of entry.scenes) {
         if (scene.keyframe < maxFrame) candidates.push({ entry, sceneIndex: scene.index, frameIdx: scene.keyframe });
@@ -324,6 +288,27 @@ export class SearchEngine {
     this.mapCache = { version: this.store.version, points, explainedVariance: Math.round(explainedVariance * 1000) / 1000 };
     return this.mapCache;
   }
+}
+
+/** Number of vectors a search over the given scopes compares against. */
+function countVectors(
+  scopes: SearchScope[],
+  params: { videoId: string | null; sharedOnly?: boolean },
+  sources: Sources,
+  dim: number,
+): number {
+  let total = 0;
+  for (const scope of scopes) {
+    const { entry } = scope;
+    if (params.videoId !== null && entry.info.id !== params.videoId) continue;
+    if (params.sharedOnly && !sources.resolve(scope.sourceId).shared) continue;
+    const emb = entry.embeddings;
+    const tiles = entry.info.tilesPerFrame;
+    if (!emb || tiles <= 0 || emb.dim !== dim) continue;
+    const available = Math.min(entry.frames.length, Math.floor(emb.rows / tiles));
+    total += (scope.frames ? scope.frames.filter((f) => f >= 0 && f < available).length : available) * tiles;
+  }
+  return total;
 }
 
 /** Bounding box of the connected region around `peak` whose values are at least `level`. */
