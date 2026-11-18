@@ -77,7 +77,7 @@ Das größte Risiko ist rechtlich: Für die KI-Auswertung von Video im Bevölker
 
 ## 19 · Stand: was läuft, was fehlt, was gesucht wird
 
-Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Den Quelltext hat ein zweiter Prüfer durchgesehen: 21 Befunde, die schweren sind behoben, ein Penetrationstest steht aus. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]
+Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Den Quelltext hat ein zweiter Prüfer durchgesehen: 21 Befunde, die schweren sind behoben, ein Penetrationstest steht aus. Für die Beschaffung liegt eine Stückliste aller Bestandteile mit Lizenzen bei; die Oberfläche besteht die automatische Prüfung auf Barrierefreiheit, ein BITV-Test steht aus. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]
 
 ## 20 · Schluss
 

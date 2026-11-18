@@ -126,3 +126,22 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
 - Papers, website and hand-over notes brought to this state; document folder rebuilt and handed
   over as one archive.
 
+## 09:00 UTC · T+527 min
+
+- Windows: the start through `vorfuehrung.cmd` without a switch is now part of the workflow and
+  passed (nodes up, console answering); two further runs on later commits passed as well.
+- Bill of materials (`pnpm sbom`): 143 packages across all platforms with version, checksum and
+  licence, three models, typeface, map data; CycloneDX 1.5 and a readable paper. No GPL or AGPL.
+  Compared with known vulnerabilities: none in shipped packages, one in a build tool. Two tests
+  hold the list to the lock file.
+- Accessibility: an automatic check with axe-core (WCAG 2.1 A and AA rules) over 15 console
+  states and 3 website states found six violated rules on 364 elements, mostly secondary text at
+  2.7:1. Fixed: text greys now meet 4.5:1, picture buttons and the severity glyph carry names,
+  rows and incidents react to Tab, Enter and Space, new alerts are announced in a live region,
+  the map moves and zooms from the keyboard. Keyboard-only walk: 24 of 24 steps. Not done: a
+  screen reader test, a BITV test.
+- Found while checking screen sizes (1280x720 to 1920x1080): the side column of the situation
+  view was wider than its track, so its right edge was cut off at every size, also in the
+  published pictures. Fixed; pictures taken again.
+- Two more papers in the document folder: bill of materials, accessibility.
+

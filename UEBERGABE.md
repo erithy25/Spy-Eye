@@ -63,6 +63,9 @@ ohne zu starten. Derselbe Befehl läuft auf einem Windows-Rechner von GitHub in 
 - Hauptbildschirm: <http://127.0.0.1:8787>, Anmeldung `leitung`, Passwort `lagebild`, Mandat
   „Übung RHEIN-MOSEL“.
 - Beenden: Strg+C im Fenster. Nach einer Probe einfach `.\vorfuehrung.cmd` wiederholen.
+- Bildschirm: geprüft von 1280 × 720 bis 1920 × 1080. Bei 1280 Breite kürzt die rechte Spalte der
+  Lage lange Titel; für die Vorführung sind 1440 Breite oder mehr besser (Zoom des Browsers auf
+  100 Prozent, Vollbild mit F11).
 - Ohne `ML_DEVICE` starten. Die Auswertung läuft auf dem Prozessor; eine Grafikkarte wird nur
   verwendet, wenn sie nachweislich dasselbe rechnet.
 - Die Kette ohne Sicht nachrechnen, falls jemand fragt:

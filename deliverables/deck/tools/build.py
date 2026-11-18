@@ -29,7 +29,7 @@ MINUS = "−"
 
 # Uploaded pictures of the artifact (the same table is in tools/blobs.json for the local render).
 IMG = {
-    "lage": "/_blob/d48af69efbfd2271d21670811a9cae48",
+    "lage": "/_blob/d1156c873d5319fb47a56dbcff34217f",
     "wachen": "/_blob/468fcb00d1fdc1f73b8a2b89089faa8c",
     "suche": "/_blob/c3abf7cfbe15922abfd3b92987cec815",
     "verbund": "/_blob/905c961d0d04f1e09328675219edb01f",
@@ -657,7 +657,7 @@ add("risiken", "Risiken: sechs Punkte und die Gegenmaßnahmen", f"""
 
 # 19 Stand
 
-_n = "Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Den Quelltext hat ein zweiter Prüfer durchgesehen: 21 Befunde, die schweren sind behoben, ein Penetrationstest steht aus. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]"
+_n = "Was läuft, haben Sie gesehen. Direktbilder sind gebaut und im Labor geprüft, mit etwa einer halben Minute Nachlauf; im Feld erprobt sind sie nicht. Den Quelltext hat ein zweiter Prüfer durchgesehen: 21 Befunde, die schweren sind behoben, ein Penetrationstest steht aus. Für die Beschaffung liegt eine Stückliste aller Bestandteile mit Lizenzen bei; die Oberfläche besteht die automatische Prüfung auf Barrierefreiheit, ein BITV-Test steht aus. Meine Bitte ist konkret: eine Behörde, die Sicht drei Monate in einer Übung erprobt und dafür einen Messbericht bekommt. [Vor dem Termin entscheiden, ob um Finanzierung gebeten wird; die Folie nennt den Mittelbedarf des Basisfalls, aber keine Bitte um eine Summe.]"
 add("stand", "Stand: was läuft, was fehlt, was gesucht wird", f"""
 <section id="stand" data-transition="fade">
 {head("Stand: was läuft, was fehlt, was gesucht wird")}

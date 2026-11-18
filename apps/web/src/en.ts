@@ -158,7 +158,7 @@ export const EN: Record<string, string> = {
   Vorsicht: 'Watch',
   'Keine Meldungen. Wachen melden hier, sobald sie etwas sehen.': 'No alerts. Watches report here as soon as they see something.',
   Lagen: 'Incidents',
-  'Meldungen gleicher Art am selben Ort': 'alerts of the same kind at the same place',
+  'Meldungen gleicher Art am selben Ort': 'same kind, same place',
   'Keine Lagen.': 'No incidents.',
   Aufsicht: 'Oversight',
   'Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Wer einen Eintrag ändert oder entfernt, bricht die Kette ab dieser Stelle; die Prüfung zeigt, wo. Nachbarknoten bezeugen den jeweils letzten Stand.':

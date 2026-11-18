@@ -66,7 +66,7 @@ Bilder der englischen Ausgabe und ihre Adressen im englischen Dokument (`tools/b
 
 | Folie | Datei im Repository | Adresse im Dokument |
 | --- | --- | --- |
-| 6 `lage` | `docs/screens/lage-en.png` | `/_blob/4c5106e400e4b54ded63c38c4c8452b1` |
+| 6 `lage` | `docs/screens/lage-en.png` | `/_blob/d7e5f484b61f6bce5aa8e161b40f1fa6` |
 | 7 `wachen` | `deliverables/deck/assets/en/wachen-ausschnitt.png` | `/_blob/bb49d04bfe6fd8e5153e0dc801ed8691` |
 | 8 `suche` | `docs/screens/suche.png` | `/_blob/c462880c392e11a878d4f8fa8b4a8815` |
 | 9 `verbund` | `deliverables/deck/assets/en/verbund-karte.png` | `/_blob/09ac49e610692389c0db35929f04da4d` |

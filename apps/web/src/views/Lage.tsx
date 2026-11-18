@@ -208,6 +208,9 @@ function AlertRow({ alert, node, onOpen }: { alert: Alert; node: NodeConnection;
     });
   };
   const cls = alert.status === 'dismissed' ? 'alert alert-off' : alert.status === 'new' && alert.active ? 'alert alert-new' : 'alert';
+  // The alert keeps the name its source had when it was raised; the list shows the name in the chosen language.
+  const source = node.intel?.sources.find((s) => s.id === alert.sourceId);
+  const sourceName = source ? pick(source.name, source.nameEn) : alert.sourceName;
   return (
     <li className={cls}>
       <Frame src={alert.frameUrl} box={alert.box} onClick={onOpen} />
@@ -219,7 +222,7 @@ function AlertRow({ alert, node, onOpen }: { alert: Alert; node: NodeConnection;
           <span className="low">{alert.exerciseSec !== null ? formatExercise(alert.exerciseSec) : formatClock(alert.firstSeen, locale)}</span>
         </div>
         <div className="alert-line">
-          <Glyph kind={alert.sourceKind} /> {alert.sourceName}
+          <Glyph kind={alert.sourceKind} /> {sourceName}
         </div>
         <div className="alert-line low">
           {t('Sicherheit')} {formatScore(alert.confidence)} · {n(alert.frames, 'frame')} · {alert.active ? t('dauert an') : t('beendet')}

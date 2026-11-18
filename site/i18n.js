@@ -97,7 +97,7 @@ window.SICHT_EN = {
     'The situation map shows sources, alerts and incidents where they were recorded, with an MGRS grid and the grid reference under the pointer. It is drawn in-house from OpenStreetMap vector data and contour lines and needs no tile service. Alerts of the same kind at the same place become one incident.',
   'mod1.alt': 'Console, LAGE tab: situation map with eleven sources, running alerts, incidents and the frames of the sources',
   'mod1.cap':
-    '<b>Console · LAGE</b> Exercise RHEIN-MOSEL at T+07:09: eleven sources on the map, six of 13 alerts still running, ten incidents.',
+    '<b>Console · LAGE</b> Exercise RHEIN-MOSEL at T+07:10: eleven sources on the map, six of 13 alerts still running, ten incidents.',
   'mod1.dalt': 'Console: an alert of the watch “Brand” (fire) with frame, source, grid reference and the buttons to confirm or dismiss it',
   'mod1.dcap':
     '<b>Detail</b> A single alert: the watch “Brand” (fire) at Erkunder 3, with grid reference and confidence. Whether it is confirmed or dismissed is decided by a person.',

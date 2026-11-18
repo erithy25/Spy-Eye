@@ -94,6 +94,12 @@ Drei Einschränkungen gelten für alle Messwerte:
    Anfragen, Schwellen der Suche, Schlagwortverzeichnis, Berichte und weitere; `pnpm test`).
    Eine unabhängige Durchsicht des Quelltexts mit 21 Befunden und ihrem Stand steht in
    `docs/SICHERHEIT.md`.
+4. Für die Beschaffung liegen zwei weitere Nachweise bei. Die Stückliste nennt alle 143 Pakete,
+   die Modelle, die Schrift und die Daten mit Fassung, Prüfsumme und Lizenz; der Abgleich mit
+   bekannten Schwachstellen vom 18. November 2026 nennt keinen Befund in den ausgelieferten
+   Paketen (`docs/STUECKLISTE.md`). Konsole und Website verletzen keine automatisch prüfbare
+   Regel der WCAG 2.1 in den Stufen A und AA, und die Konsole lässt sich ohne Maus bedienen;
+   ein BITV-Test und ein Test mit Bildschirmleser stehen aus (`docs/BARRIEREFREIHEIT.md`).
 
 ### 3.2 Gebaut und im Labor geprüft, nicht im Feld erprobt
 
