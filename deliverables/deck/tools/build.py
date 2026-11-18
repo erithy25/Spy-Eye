@@ -33,7 +33,7 @@ IMG = {
     "wachen": "/_blob/2c270a1d9c95aed479d9ade2e51d18a0",
     "suche": "/_blob/29897d68d63ba9734c6452ad24f0b489",
     "verbund": "/_blob/884584f768773e791253265dbefec92b",
-    "aufsicht": "/_blob/81544bfaad1138c803db70e4a3f81012",
+    "aufsicht": "/_blob/7f453c7591f03d916a718612d49dddd5",
     "ruecksicht": "/_blob/9cd1635d5b85e492feb7c057509e0720",
 }
 
@@ -406,13 +406,13 @@ product(
 product(
     "aufsicht",
     "Aufsicht: ein Protokoll, das sich prüfen lässt",
-    "Konsole, Reiter Protokoll: Kette unversehrt, darunter eine Stichprobe aus vier Abfragen mit drei Ablehnungen",
+    "Konsole in der Rolle Aufsicht, Reiter Protokoll: Kette unversehrt, darunter eine Stichprobe aus vier Abfragen mit drei Ablehnungen",
     [
         ("Verkettet", "Jeder Eintrag enthält die Prüfsumme seines Vorgängers. Eine Änderung bricht die Kette."),
         ("Stichprobe", "Die Aufsicht zieht zufällige Abfragen und sieht dabei kein Bildmaterial."),
         ("Bezeugt", "Nachbarknoten halten gegenseitig den letzten Protokollstand fest."),
     ],
-    "Reiter PROTOKOLL: Kette geprüft, Stichprobe mit drei Ablehnungen.",
+    "Reiter PROTOKOLL, Rolle Aufsicht: Kette geprüft, Stichprobe gezogen.",
     "Jede Anmeldung, Abfrage, Ablehnung und Freigabe steht in einem verketteten Protokoll. Wer einen Eintrag ändert, bricht die Kette, und die Prüfung zeigt, wo. Die Aufsicht hat eine eigene Rolle: Sie sieht Protokoll und Messwerte, aber kein Bildmaterial. Eine Einschränkung gehört dazu: Anmeldung und Rechte sind für die Vorführung gebaut, mit drei festen Zugängen.",
 )
 

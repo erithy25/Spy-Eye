@@ -70,7 +70,7 @@ Bilder der englischen Ausgabe und ihre Adressen im englischen Dokument (`tools/b
 | 7 `wachen` | `deliverables/deck/assets/en/wachen-ausschnitt.png` | `/_blob/6f2e3dbb499eef32e179d5afbaea6ed2` |
 | 8 `suche` | `docs/screens/suche.png` | `/_blob/367ed61fbe59cd893529971d2310a52c` |
 | 9 `verbund` | `deliverables/deck/assets/en/verbund-karte.png` | `/_blob/3d03a8d4e814c12664fc992d63430b7b` |
-| 10 `aufsicht` | `docs/screens/stichprobe.png` | `/_blob/210c086e6ccc833c553efe6e5e6eda72` |
+| 10 `aufsicht` | `docs/screens/stichprobe.png` | `/_blob/483deb5e0d7e5ab5452f11422b1f7bbd` |
 | 11 `ruecksicht` | `docs/screens/maskiert.png` | `/_blob/0f4bab7d66e54a18e913d53e51dadd26` |
 
 Neue Bildschirmfotos übernehmen:

@@ -6,7 +6,8 @@ export class EventHub {
   private readonly clients = new Set<ServerResponse>();
   private heartbeat: NodeJS.Timeout | null = null;
 
-  add(res: ServerResponse, initial: ServerEvent): void {
+  /** Registers a browser and sends it the events that describe the present state. */
+  add(res: ServerResponse, ...initial: ServerEvent[]): void {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
@@ -14,7 +15,7 @@ export class EventHub {
       'X-Accel-Buffering': 'no',
     });
     res.write('retry: 2000\n\n');
-    this.write(res, initial);
+    for (const event of initial) this.write(res, event);
     this.clients.add(res);
     res.on('close', () => this.clients.delete(res));
     res.on('error', () => this.clients.delete(res));

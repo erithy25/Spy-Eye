@@ -140,8 +140,8 @@ window.SICHT_EN = {
   'mod6.alt': 'Console, PROTOKOLL tab: chain verified and intact, below it the chained entries',
   'mod6.cap':
     '<b>Console · PROTOKOLL</b> Chain verified and intact; below it refusals, a seal and the retraining of a watch.',
-  'mod6.dalt': 'Console: a sample drawn from the recorded queries',
-  'mod6.dcap': '<b>Detail</b> Oversight’s sample: four queries drawn, three of them refusals.',
+  'mod6.dalt': 'Console signed in as oversight: a sample drawn from the recorded queries',
+  'mod6.dcap': '<b>Detail</b> Oversight’s sample: four queries drawn, three of them refusals. The role has no tabs for the situation, search and sources.',
   'mod7.gloss': 'consideration',
   'mod7.tab': 'Throughout, in every tab',
   'mod7.text':

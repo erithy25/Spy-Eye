@@ -168,6 +168,12 @@ export async function caseReport(input: {
   ledgerHead: string;
   store: Store;
   userName: (id: string) => string;
+  /**
+   * Whether the exhibits are shown as pictures. False for a reader whose role may not see
+   * imagery (oversight): the report then lists every exhibit with its source, time and checksums,
+   * which is what a check of the file needs, and says that the pictures were left out.
+   */
+  pictures: boolean;
 }): Promise<string> {
   const { lang, file } = input;
   const de = lang === 'de';
@@ -191,7 +197,7 @@ export async function caseReport(input: {
 
   parts.push(`<h2>${de ? 'Beweisstücke' : 'Exhibits'} (${file.items.length})</h2>`);
   for (const [n, item] of file.items.entries()) {
-    const image = await embedFrame(input.store, item.videoId, item.frameNumber);
+    const image = input.pictures ? await embedFrame(input.store, item.videoId, item.frameNumber) : null;
     parts.push(`<figure>
       ${image ? `<img src="${image}" alt="">` : ''}
       <figcaption>
@@ -221,10 +227,17 @@ export async function caseReport(input: {
       .join('\n')}
   </table>`);
 
+  const aboutPictures = input.pictures
+    ? de
+      ? 'Die abgebildeten Bilder sind die maskierte Fassung.'
+      : 'The images shown are the masked versions.'
+    : de
+      ? 'Diese Ausgabe enthält keine Bilder: Die Rolle, für die sie erzeugt wurde, sieht kein Bildmaterial.'
+      : 'This copy contains no images: the role it was produced for does not see imagery.';
   parts.push(`<footer>${
     de
-      ? `Die abgebildeten Bilder sind die maskierte Fassung. Die Hashwerte beziehen sich auf die unveränderten Originalbilder im System und erlauben den Abgleich einer späteren Herausgabe. Protokollstand bei Erstellung: ${input.ledgerHead}.`
-      : `The images shown are the masked versions. The hashes refer to the unaltered original frames held in the system and allow a later disclosure to be checked. Ledger head at the time of export: ${input.ledgerHead}.`
+      ? `${aboutPictures} Die Hashwerte beziehen sich auf die unveränderten Originalbilder im System und erlauben den Abgleich einer späteren Herausgabe. Protokollstand bei Erstellung: ${input.ledgerHead}.`
+      : `${aboutPictures} The hashes refer to the unaltered original frames held in the system and allow a later disclosure to be checked. Ledger head at the time of export: ${input.ledgerHead}.`
   }</footer>`);
   return page(`${de ? 'Vorgang' : 'Case'} ${file.id}`, lang, parts.join('\n'));
 }

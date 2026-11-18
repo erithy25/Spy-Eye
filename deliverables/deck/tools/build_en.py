@@ -249,13 +249,13 @@ product(
 product(
     "aufsicht",
     "Aufsicht – ledger: a log that can be verified",
-    "Console in German, PROTOKOLL tab (ledger): chain intact, below it a sample of four queries with three refusals",
+    "Console in German, signed in as oversight, PROTOKOLL tab (ledger): chain intact, below it a sample of four queries with three refusals",
     [
         ("Chained", "Every entry contains the checksum of its predecessor. A change breaks the chain."),
         ("Sample", "Oversight draws random queries and sees no footage while doing so."),
         ("Witnessed", "Peer nodes record the latest state of each other’s ledgers."),
     ],
-    "PROTOKOLL tab (shown in German): chain verified, sample drawn.",
+    "Oversight’s view (shown in German): chain verified, sample drawn.",
     "Every sign-in, query, refusal and approval is in a chained ledger. Whoever changes an entry breaks the chain, and the verification shows where. Oversight has a role of its own: it sees the ledger and the measurements, but no footage. One limitation belongs here: sign-in and rights are built for the demonstration, with three fixed accounts. The module is called Aufsicht, German for oversight.",
 )
 

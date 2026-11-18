@@ -361,7 +361,9 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       return;
     }
     reply.hijack();
-    hub.add(reply.raw, { type: 'state', state: node.appState() });
+    // The ledger head is otherwise only announced when an entry is written; a console that has just
+    // signed in would show none until then.
+    hub.add(reply.raw, { type: 'state', state: node.appState() }, { type: 'ledger', head: ledger.headHash, length: ledger.length });
     request.raw.on('close', () => reply.raw.end());
   });
 
@@ -945,8 +947,10 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       ledgerHead: ledger.headHash,
       store,
       userName: (id) => auth.getUser(id)?.name ?? id,
+      // Oversight may read case files but never sees imagery; its copy lists the exhibits without pictures.
+      pictures: node.allowed(ctx, 'media'),
     });
-    await node.record(ctx, 'case.export', `Vorgang „${file.title}“ als Bericht ausgegeben`, { caseId: file.id });
+    await node.record(ctx, 'case.export', `Vorgang „${file.title}“ als Bericht ausgegeben`, { caseId: file.id, pictures: node.allowed(ctx, 'media') });
     return reply.type('text/html; charset=utf-8').send(html);
   });
 

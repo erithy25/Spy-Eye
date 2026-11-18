@@ -275,6 +275,7 @@ export const EN: Record<string, string> = {
   Siegel: 'Seal',
   Beweisstücke: 'Exhibits',
   'Keine Bilder gesichert.': 'No frames secured.',
+  'Bild für diese Rolle gesperrt': 'Frame withheld from this role',
   entfernen: 'remove',
   'gefunden mit': 'found with',
   Vermerke: 'Notes',

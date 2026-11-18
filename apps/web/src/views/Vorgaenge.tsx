@@ -18,6 +18,8 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
   const [note, setNote] = useState('');
   const action = useAction();
   const may = node.can('case.write');
+  /** Oversight reads case files without imagery: the exhibits are listed with their checksums only. */
+  const sees = node.can('media');
   const list = cases.data ?? [];
   const current = list.find((c) => c.id === selected) ?? null;
 
@@ -177,7 +179,11 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
                 <div className="thumbs" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
                   {current.items.map((item, i) => (
                     <div key={item.id}>
-                      <Frame src={item.frameUrl} box={item.box} onClick={() => openFrame(targets[i] as (typeof targets)[number], targets)} />
+                      {sees ? (
+                        <Frame src={item.frameUrl} box={item.box} onClick={() => openFrame(targets[i] as (typeof targets)[number], targets)} />
+                      ) : (
+                        <Frame src={null} empty={t('Bild für diese Rolle gesperrt')} />
+                      )}
                       <div className="thumb-line">
                         <span title={item.sourceName}>{item.sourceName}</span>
                         <span>{formatClock(item.at, locale)}</span>

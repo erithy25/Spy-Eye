@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
-import { measurementReport } from '../src/intel/report.ts';
-import type { Metrics, ScenarioInfo } from '../src/types.ts';
+import { caseReport, measurementReport } from '../src/intel/report.ts';
+import type { Store } from '../src/store.ts';
+import type { CaseFile, Metrics, ScenarioInfo } from '../src/types.ts';
 
 const scenario = {
   id: 'rhein-mosel',
@@ -85,4 +89,68 @@ test('without an exercise run the report says so instead of showing empty tables
   const html = measurementReport({ ...base, lang: 'de', scenario: { ...scenario, status: 'ready', elapsedSec: 0 }, metrics: { ...metrics, evaluation: null } });
   assert.match(html, /Es liegt kein Übungslauf vor/);
   assert.doesNotMatch(html, /Ereignisse des Drehbuchs/);
+});
+
+test('a case report for a role without imagery lists the exhibits but embeds no picture', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sicht-report-'));
+  const frame = path.join(dir, '0000012.jpg');
+  await fs.writeFile(frame, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  const store = { framePath: () => frame } as unknown as Store;
+  const file: CaseFile = {
+    id: 'vg_test',
+    title: 'Überflutung <Moselbogen>',
+    mandateId: 'm1',
+    createdBy: 'leitung',
+    createdAt: Date.UTC(2026, 10, 18, 5, 56),
+    updatedAt: Date.UTC(2026, 10, 18, 5, 56),
+    items: [
+      {
+        id: 'it1',
+        videoId: '072f0bcf12104e01',
+        frameNumber: 12,
+        frameUrl: '/media/072f0bcf12104e01/frames/0000012.jpg',
+        sourceId: 'uas1',
+        sourceName: 'UAS 1 · Moselbogen',
+        at: Date.UTC(2026, 10, 18, 5, 50, 15),
+        note: 'Wiesen stehen unter Wasser.',
+        sha256: 'cd'.repeat(32),
+        query: 'überflutete Wiese',
+        box: null,
+        addedBy: 'leitung',
+        addedAt: Date.UTC(2026, 10, 18, 5, 56),
+      },
+    ],
+    notes: [],
+    sealedAt: null,
+    sealedBy: null,
+    sealHash: null,
+  };
+  const input = {
+    lang: 'de' as const,
+    node: base.node,
+    file,
+    mandate: null,
+    contentHash: 'ef'.repeat(32),
+    ledger: [],
+    ledgerHead: 'ab'.repeat(32),
+    store,
+    userName: (id: string) => id,
+  };
+  try {
+    const withPictures = await caseReport({ ...input, pictures: true });
+    assert.match(withPictures, /<img src="data:image\/jpeg;base64,/);
+    assert.match(withPictures, /maskierte Fassung/);
+
+    const without = await caseReport({ ...input, pictures: false });
+    assert.doesNotMatch(without, /<img/);
+    assert.doesNotMatch(without, /data:image/);
+    assert.match(without, /enthält keine Bilder/);
+    // What a check of the file needs is still there: source, query, checksums.
+    assert.match(without, /UAS 1 · Moselbogen/);
+    assert.match(without, /überflutete Wiese/);
+    assert.match(without, new RegExp('cd'.repeat(32)));
+    assert.match(without, /Überflutung &lt;Moselbogen&gt;/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sicht — One-pager</title>
+<style>
+  @font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url("fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 500; src: url("fonts/JetBrainsMono-Medium.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url("fonts/JetBrainsMono-Bold.woff2") format("woff2"); }
+
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body {
+    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 7.4pt;
+    line-height: 1.45;
+    color: #050505;
+    font-variant-ligatures: none;
+  }
+  .page { width: 210mm; height: 297mm; padding: 11mm 13mm 9mm; display: flex; flex-direction: column; overflow: hidden; }
+
+  .label { font-size: 6.2pt; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: #555; }
+  .rule { border-top: 0.5pt solid #050505; }
+  .hair { border-top: 0.35pt solid #9a9a9a; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 2.6mm; }
+  .wordmark { font-size: 12pt; font-weight: 700; letter-spacing: 0.42em; }
+
+  .hero { position: relative; margin-top: 5.5mm; padding: 7.5mm 8mm 7mm; }
+  .hero i { position: absolute; width: 5mm; height: 5mm; border: 0 solid #050505; }
+  .hero i:nth-of-type(1) { top: 0; left: 0; border-top-width: 0.7pt; border-left-width: 0.7pt; }
+  .hero i:nth-of-type(2) { top: 0; right: 0; border-top-width: 0.7pt; border-right-width: 0.7pt; }
+  .hero i:nth-of-type(3) { bottom: 0; left: 0; border-bottom-width: 0.7pt; border-left-width: 0.7pt; }
+  .hero i:nth-of-type(4) { bottom: 0; right: 0; border-bottom-width: 0.7pt; border-right-width: 0.7pt; }
+  .hero h1 { font-size: 23pt; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+  .hero p { margin-top: 3.4mm; max-width: 158mm; font-size: 8pt; line-height: 1.5; }
+
+  section { margin-top: 5mm; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 9mm; }
+  .cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 7mm; }
+  h2 { padding: 1.8mm 0 1.9mm; }
+  p + p { margin-top: 1.7mm; }
+  .quote { margin-top: 2mm; padding-left: 3mm; border-left: 0.7pt solid #050505; }
+  .src { color: #555; }
+  sup { font-size: 5.4pt; line-height: 0; }
+
+  dl.mod { display: grid; grid-template-columns: 21mm 1fr; row-gap: 1.4mm; }
+  dl.mod dt { font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 6.5pt; padding-top: 0.15mm; }
+
+  .kpi b { display: block; font-size: 8.8pt; font-weight: 700; margin-bottom: 0.7mm; }
+
+  ul { list-style: none; }
+  ul li { padding-left: 4.2mm; text-indent: -4.2mm; }
+  ul li::before { content: "—"; display: inline-block; width: 4.2mm; text-indent: 0; }
+  ul li + li { margin-top: 0.8mm; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 0.9mm 0; vertical-align: top; border-top: 0.35pt solid #9a9a9a; }
+  tr:first-child td { border-top: 0; padding-top: 0; }
+  td.v { width: 1%; font-weight: 700; white-space: nowrap; padding-left: 3mm; text-align: right; }
+  td .c { display: block; padding-top: 0.3mm; color: #555; font-size: 6.4pt; }
+
+  .fine { font-size: 6.5pt; color: #555; }
+  .spacer { flex: 1; }
+  footer { display: grid; grid-template-columns: 1fr auto; column-gap: 9mm; align-items: end; padding-top: 3mm; }
+  .status { font-size: 8.2pt; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="wordmark">SICHT</div>
+    <div class="label">Sicht, German for sight · the image layer for the civil operating picture</div>
+  </header>
+  <div class="rule"></div>
+
+  <div class="hero">
+    <i></i><i></i><i></i><i></i>
+    <h1>No sight without oversight.</h1>
+    <p>Sicht makes the video that authorities record during operations anyway searchable within seconds and watches it for hazards on its own: without identifying people, without pooling data, and with a ledger that accounts for every query.</p>
+  </div>
+
+  <section class="cols">
+    <div>
+      <div class="rule"></div>
+      <h2 class="label">The problem</h2>
+      <p><b>Ahr valley, Germany, 14 July 2021, 22:14 to 22:43.</b> A police helicopter films flooded villages and people signalling with lamps. The videos are “not properly filed”. The parliamentary inquiry and the public prosecutors learn of them only in September 2022.<sup>1</sup></p>
+      <p class="quote">“So the technical incident command did not know what was still to come in the course of the evening.”<sup>2</sup></p>
+      <p class="fine">No source shows that searchable footage would have changed the course of that night. What is documented: the footage existed, was not properly recorded and remained unknown for more than a year. Quotations translated from German.</p>
+    </div>
+    <div>
+      <div class="rule"></div>
+      <h2 class="label">What Sicht does</h2>
+      <dl class="mod">
+        <dt>Einsicht</dt><dd>Insight. Free-text search across all of an authority’s footage, in German or English: “flooded meadow”, “smoke above buildings”.</dd>
+        <dt>Vorsicht</dt><dd>Caution. Standing queries report hazards to the staff with frame, place and time. A person confirms or dismisses.</dd>
+        <dt>Weitsicht</dt><dd>Foresight. Between authorities only the question travels. The image stays where it was recorded.</dd>
+        <dt>Aufsicht</dt><dd>Oversight. Every query has a purpose, a responsible person and an entry in a chained ledger that can be verified.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <div class="rule"></div>
+    <h2 class="label">The measurable purpose: time from recording to awareness</h2>
+    <div class="cols3">
+      <div class="kpi"><b>Detection delay</b>Seconds from an event appearing in the image to the alert on the map. Measured in every exercise, per event.</div>
+      <div class="kpi"><b>Coverage</b>Share of the recordings received that have been analysed in full.</div>
+      <div class="kpi"><b>Recorded queries</b>Number of queries and of refusals. An answer is delivered only after the ledger entry has been written.</div>
+    </div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <div class="rule"></div>
+      <h2 class="label">What Sicht cannot do, by design</h2>
+      <ul>
+        <li>No face recognition, no matching against images of persons. Detected faces are masked.</li>
+        <li>No licence plates: neither read nor searched.</li>
+        <li>No finding again and no tracking of particular persons. Descriptions by sex, age or clothing only under a mandate that permits them: a rule with a ledger, not a technical impossibility.</li>
+        <li>No search by name, origin, religion, health or bodily features; no scoring of persons.</li>
+        <li>No central data pool: footage stays with the authority that recorded it.</li>
+        <li>No silent learning: retraining is a separate, recorded step.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="rule"></div>
+      <h2 class="label">Measured</h2>
+      <table>
+        <tr><td>Exercise: events detected<span class="c">13 events, eleven sources, clock in real time.</span></td><td class="v">13 of 13</td></tr>
+        <tr><td>Detection delay<span class="c">From the arrival of the analysed frame.</span></td><td class="v">1.1&nbsp;s median</td></tr>
+        <tr><td>False alerts<span class="c">None in the following run, after retraining.</span></td><td class="v">1 of 15</td></tr>
+        <tr><td>Analysis speed<span class="c">Four cores, no graphics card.</span></td><td class="v">3.3 × real time</td></tr>
+        <tr><td>Hazard model, AIDERv2 benchmark<span class="c">Errs on exercise footage: second opinion only.</span></td><td class="v">99.1&nbsp;%</td></tr>
+      </table>
+      <p class="fine" style="margin-top:2.2mm">Our own exercise with stock footage; the watches were worded on this footage. The figures show how the system behaves in operation, not its quality on unseen operational footage. Image encoder: SigLIP&nbsp;2 (Google, Apache&nbsp;2.0).</p>
+    </div>
+  </section>
+
+  <div class="spacer"></div>
+
+  <div class="rule"></div>
+  <footer>
+    <div>
+      <div class="label" style="padding-bottom:1.6mm">Status</div>
+      <div class="status">Trial build. Exercise data. No government customers.</div>
+      <p style="margin-top:1.6mm">Today: video files and exercise operation, a federation of three nodes in the demonstration. Live streams from cameras: built and tested in the lab, not tried in the field; alerts follow about half a minute after the event. Not built yet: the coupling to existing command and control systems. Runs on the authority’s own machines, without a network connection.</p>
+    </div>
+    <div class="label" style="text-align:right">Demonstration with<br>exercise scenario<br>on request</div>
+  </footer>
+  <div class="hair" style="margin-top:3mm"></div>
+  <p class="fine" style="padding-top:2mm"><sup>1</sup> dpa via Volksstimme, 5 October 2022; epd via evangelisch.de, 4 October 2022. <sup>2</sup> Public prosecutor’s office Koblenz, as reported by beck-aktuell, 18 April 2024. Figures: own measurement of 18&nbsp;November 2026; conditions in the measurement report. This sheet: November 2026.</p>
+
+</div>
+</body>
+</html>
