@@ -110,7 +110,9 @@ Sage 'Anmeldung: leitung   Passwort: lagebild   Mandat: Übung RHEIN-MOSEL'
 Sage 'Beenden: Strg+C in diesem Fenster. Danach stellt derselbe Befehl den Ausgangsstand wieder her.'
 
 if (-not $OhneBrowser) {
-  # Öffnet den Browser, sobald der erste Knoten antwortet.
+  # Öffnet den Browser, sobald der erste Knoten antwortet. Gelingt das nicht, startet die
+  # Vorführung trotzdem; die Adresse steht oben.
+  try {
   Start-Job -ScriptBlock {
     for ($i = 0; $i -lt 180; $i++) {
       try {
@@ -122,6 +124,9 @@ if (-not $OhneBrowser) {
       }
     }
   } | Out-Null
+  } catch {
+    Sage 'Der Browser ließ sich nicht selbsttätig öffnen. Bitte http://127.0.0.1:8787 von Hand aufrufen.'
+  }
 }
 
 pnpm demo

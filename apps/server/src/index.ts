@@ -4,7 +4,7 @@ import { config, repoRoot } from './config.js';
 import type { PeerRecord } from './intel/federation.js';
 import { externalPeer, pairSecret, type ExternalPeer } from './intel/peerConfig.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
-import { PlatformNode, VERSION, type NodeConfig } from './node.js';
+import { PlatformNode, VERSION, nodeScheme, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
 import { restorePreparedState, snapshotPreparedState } from './scripts/prepared.js';
 
@@ -84,7 +84,7 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
         name: peer.name,
         operator: peer.operator,
         region: peer.region,
-        url: `http://127.0.0.1:${peer.port}`,
+        url: `${nodeScheme()}://127.0.0.1:${peer.port}`,
         lat: peer.lat,
         lon: peer.lon,
         secret: pairSecret(parsed.federationSecret, n.id, peer.id),
@@ -169,7 +169,7 @@ async function main(): Promise<void> {
   const nodes = configs.map((cfg) => new PlatformNode(cfg, shared));
   for (const node of nodes) {
     await node.start(true);
-    say(`  ${node.info.name}: http://${node.cfg.host === '0.0.0.0' ? '127.0.0.1' : node.cfg.host}:${node.cfg.port}`);
+    say(`  ${node.info.name}: ${nodeScheme()}://${node.cfg.host === '0.0.0.0' ? '127.0.0.1' : node.cfg.host}:${node.cfg.port}`);
   }
   const first = nodes[0];
   if (process.argv.includes('--prepare')) {

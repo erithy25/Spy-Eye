@@ -43,6 +43,34 @@ jobs:
       # The same command again, as after a rehearsal: it restores the prepared state and checks.
       - name: vorfuehrung.cmd on a prepared machine
         run: .\vorfuehrung.cmd -NurPruefen
+      # The command without a switch: it starts the nodes. The console has to answer; then the
+      # nodes are stopped the hard way, as closing the window would.
+      - name: vorfuehrung.cmd starts the nodes
+        run: |
+          $p = Start-Process -FilePath cmd.exe -ArgumentList '/c', 'vorfuehrung.cmd' -PassThru -NoNewWindow -RedirectStandardOutput start.log -RedirectStandardError start.err
+          $ok = $false
+          for ($i = 0; $i -lt 300; $i++) {
+            # The preflight inside the command starts nodes of its own; only what answers after
+            # the command has announced the start counts.
+            $announced = (Test-Path start.log) -and (Select-String -Path start.log -Pattern 'Hauptbildschirm' -Quiet)
+            if ($announced) {
+              try {
+                Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8787/api/public/info' -TimeoutSec 2 | Out-Null
+                $ok = $true
+                break
+              } catch {
+                Start-Sleep -Seconds 1
+              }
+            } else {
+              Start-Sleep -Seconds 1
+            }
+          }
+          Get-Content start.log -Tail 25
+          taskkill /PID $p.Id /T /F | Out-Null
+          Start-Sleep -Seconds 3
+          if (-not $ok) { Get-Content start.err -Tail 25; Write-Host 'The console did not answer.'; exit 1 }
+          Write-Host 'The console answered.'
+          exit 0
       # Preparing twice must not change the starting point; the nodes are checked from it once more.
       - run: pnpm demo:prepare
       - run: pnpm demo:check

@@ -65,7 +65,14 @@ export const config = {
    */
   retentionDays: envNumber('SICHT_RETENTION_DAYS', 60, 0, 3650),
   /**
-   * Set to 1 where the node is reached through TLS (a terminating proxy in front of it): the
+   * Certificate and key (PEM files). With both set the node speaks HTTPS itself: sessions, imagery
+   * and federation requests to it are encrypted in transit, and its session cookie is marked
+   * `Secure`. The operator supplies the certificate; peers must trust its issuer.
+   */
+  tlsCertFile: envString('SICHT_TLS_CERT', ''),
+  tlsKeyFile: envString('SICHT_TLS_KEY', ''),
+  /**
+   * Set to 1 where the node is reached through TLS that ends in front of it (a proxy): the
    * session cookie is then marked `Secure` and never travels over an unencrypted connection.
    */
   cookieSecure: envBool('SICHT_COOKIE_SECURE', false),

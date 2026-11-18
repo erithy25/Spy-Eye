@@ -330,7 +330,7 @@ window.SICHT_EN = {
     'Whether an authority may analyse footage in this way is decided by its legal basis. The documentation of Sicht maps the requirements to the safeguards that have been built and names what is missing.',
   'open7.k': 'Reviewed, not attacked',
   'open7.v':
-    'A second reader went through the source code of the node and documented 21 findings; the five severe ones and most of the others are fixed. There has been no penetration test. The node itself does not speak TLS, and nothing on its disk is encrypted.',
+    'A second reader went through the source code of the node and documented 21 findings; the five severe ones and most of the others are fixed. There has been no penetration test. The node encrypts its connections only if the operator supplies a certificate, and nothing on its disk is encrypted.',
   'open6.k': 'Scale',
   'open6.v': 'The search compares every query with every vector. It is designed for a few million vectors per node, not for more.',
   'demo.label': 'A demonstration in 15 minutes',

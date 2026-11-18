@@ -121,8 +121,9 @@ werden: höchstens zwölf verkleinerte, maskierte Vorschaubilder mit Ort und Zei
 Ihres Protokolleintrags als Beleg, und nur aus Quellen, die Sie einzeln freigegeben haben.
 Aufnahmen und Index bleiben bei Ihnen; Ihr Knoten prüft die fremde Frage nach Ihren eigenen
 Regeln und protokolliert sie. Auch ein Vorschaubild ist ein personenbezogenes Datum, die
-Übermittlung braucht also eine Grundlage. Die Verbindung zwischen Knoten ist bisher signiert,
-aber nicht verschlüsselt.
+Übermittlung braucht also eine Grundlage. Die Verbindung zwischen Knoten ist signiert;
+verschlüsselt ist sie, wenn beide Seiten ein Zertifikat hinterlegt haben, was bisher nur im Labor
+geprüft ist.
 
 ### Lernt das System aus unseren Daten?
 
@@ -224,8 +225,8 @@ Den Quelltext, ja; ein laufendes System noch niemand von außen. Ein zweiter Pr�
 Knoten gelesen und 21 Befunde belegt, fünf davon schwer: Bilder waren während der Auswertung
 kurz abrufbar, bevor sie maskiert waren; die Anfrageprüfung ließ sich mit Sonderzeichen umgehen;
 zwei Abfragewege schrieben keinen Protokolleintrag. Diese fünf und die meisten übrigen sind
-behoben und durch Tests oder einen Lauf belegt. Offen sind unter anderem die fehlende
-Transportverschlüsselung im Knoten, die unverschlüsselte Platte und Grenzen gegen Überlastung.
+behoben und durch Tests oder einen Lauf belegt. Offen sind unter anderem die unverschlüsselte
+Platte, die Verwaltung von Zertifikaten und Grenzen gegen Überlastung.
 Die vollständige Liste mit Stand steht in `docs/SICHERHEIT.md`. Ein Penetrationstest durch eine
 dafür zugelassene Stelle steht aus und gehört vor jeden Betrieb mit echten Daten.
 

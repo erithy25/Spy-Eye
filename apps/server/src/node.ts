@@ -1,7 +1,7 @@
 import Fastify, { LogController, type FastifyInstance, type FastifyRequest } from 'fastify';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { config } from './config.js';
+import { config, repoRoot } from './config.js';
 import { Auth, can, PERMISSIONS, type Permission, type Session } from './core/auth.js';
 import { readJson, writeFileAtomic } from './core/json.js';
 import { Ledger } from './core/ledger.js';
@@ -31,6 +31,25 @@ export const VERSION = '0.5.0';
 
 /** How often the witnessed ledger head of one peer is written to this node's own ledger. */
 const WITNESS_INTERVAL_MS = 15 * 60 * 1000;
+
+/** `https` when the node was given a certificate, `http` otherwise. */
+export function nodeScheme(): 'http' | 'https' {
+  return config.tlsCertFile !== '' && config.tlsKeyFile !== '' ? 'https' : 'http';
+}
+
+/** Reads certificate and key when both are configured; one without the other is a mistake. */
+async function loadTls(): Promise<{ cert: Buffer; key: Buffer } | null> {
+  const { tlsCertFile, tlsKeyFile } = config;
+  if (tlsCertFile === '' && tlsKeyFile === '') return null;
+  if (tlsCertFile === '' || tlsKeyFile === '') {
+    throw new Error('SICHT_TLS_CERT und SICHT_TLS_KEY gehören zusammen: Zertifikat und Schlüssel, beide als PEM-Datei.');
+  }
+  try {
+    return { cert: await fs.readFile(path.resolve(repoRoot, tlsCertFile)), key: await fs.readFile(path.resolve(repoRoot, tlsKeyFile)) };
+  } catch (err: unknown) {
+    throw new Error(`Zertifikat oder Schlüssel nicht lesbar (SICHT_TLS_CERT, SICHT_TLS_KEY): ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 export interface NodeConfig {
   id: string;
@@ -119,6 +138,8 @@ export class PlatformNode {
   private app: FastifyInstance | null = null;
   private retentionTimer: NodeJS.Timeout | null = null;
   private readonly cookieName: string;
+  /** Whether the session cookie is marked `Secure`: the node speaks TLS, or TLS ends in front of it. */
+  private secure = config.cookieSecure;
 
   constructor(
     readonly cfg: NodeConfig,
@@ -481,7 +502,7 @@ export class PlatformNode {
   }
 
   sessionCookie(token: string | null): string {
-    const base = `${this.cookieName}=${token ?? ''}; Path=/; HttpOnly; SameSite=Lax${config.cookieSecure ? '; Secure' : ''}`;
+    const base = `${this.cookieName}=${token ?? ''}; Path=/; HttpOnly; SameSite=Lax${this.secure ? '; Secure' : ''}`;
     return token === null ? `${base}; Max-Age=0` : `${base}; Max-Age=43200`;
   }
 
@@ -623,11 +644,15 @@ export class PlatformNode {
     this.watches.clearExercise();
     this.incidents.clearExercise();
 
+    const tls = await loadTls();
+    this.secure = tls !== null || config.cookieSecure;
+    // With a certificate the node speaks HTTPS itself; the routes are the same either way.
     const app = Fastify({
+      ...(tls ? { https: tls } : {}),
       logger: { level: process.env['LOG_LEVEL'] ?? 'warn' },
       logController: new LogController({ disableRequestLogging: true }),
       bodyLimit: 1024 * 1024,
-    });
+    }) as unknown as FastifyInstance;
     this.app = app;
     this.shared.model.onState((state) => this.hub.broadcast({ type: 'model', model: state }));
     this.ledger.onAppend((entry) => this.hub.broadcast({ type: 'ledger', head: entry.hash, length: entry.seq }));

@@ -321,9 +321,12 @@ Gebaut:
 
 Offen, vor einem Betrieb zu lösen:
 
-- Keine Transportverschlüsselung im Knoten selbst. Zwischen Rechnern gehört ein TLS-Abschluss
-  davor, der die Kopfzeile `Host` unverändert durchreicht; mit `SICHT_COOKIE_SECURE=1` trägt das
-  Sitzungs-Cookie dann `Secure`.
+- Transportverschlüsselung ist nicht die Voreinstellung. Mit Zertifikat und Schlüssel
+  (`SICHT_TLS_CERT`, `SICHT_TLS_KEY`) spricht der Knoten HTTPS, auch gegenüber Nachbarn; geprüft
+  mit einem selbst ausgestellten Zertifikat, auch im Verbund zweier getrennter Knoten. Steht
+  stattdessen ein TLS-Abschluss davor, muss er die Kopfzeile `Host` unverändert durchreichen, und
+  `SICHT_COOKIE_SECURE=1` setzt `Secure` am Sitzungs-Cookie. Offen: Verwaltung und Wechsel der
+  Zertifikate, gegenseitige Zertifikate zwischen Knoten.
 - Keine Verschlüsselung der Daten auf der Platte, keine Trennung des Protokolls vom Rechner, auf
   dem es entsteht.
 - Drei feste Zugänge, kein zweiter Faktor, Sitzungen nur im Arbeitsspeicher.

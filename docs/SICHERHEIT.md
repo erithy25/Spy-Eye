@@ -84,7 +84,7 @@ vor der Durchsicht aufgefallen waren (A bis C).
 
 | Bereich | Offen | Warum es zählt |
 | --- | --- | --- |
-| Transport | Der Knoten spricht selbst kein TLS. | Zwischen Rechnern gehört ein TLS-Abschluss davor, der die Kopfzeile `Host` unverändert durchreicht; erst dann sind Sitzung und Verbundschlüssel auf der Leitung geschützt. |
+| Transport | Verschlüsselung ist nicht die Voreinstellung: Der Knoten spricht HTTPS, wenn ihm Zertifikat und Schlüssel gegeben werden (`SICHT_TLS_CERT`, `SICHT_TLS_KEY`); geprüft mit selbst ausgestelltem Zertifikat, auch im Verbund zweier getrennter Knoten. Keine Verwaltung und kein Wechsel von Zertifikaten, keine gegenseitigen Zertifikate. | Ohne Zertifikat sind Sitzung, Bilder und Verbundanfragen auf der Leitung lesbar; das ist nur auf dem eigenen Rechner vertretbar. Steht ein TLS-Abschluss davor, muss er die Kopfzeile `Host` unverändert durchreichen. |
 | Zugänge | Drei feste Zugänge, kein zweiter Faktor, kein Verzeichnisdienst. | Die Rollentrennung ist gebaut, die Bindung an benannte Personen nicht. |
 | Daten auf der Platte | Nichts ist verschlüsselt; das Protokoll liegt auf dem Rechner, auf dem es entsteht. | Wer den Rechner hat, hat Aufnahmen, Originale, Schlüssel und kann das Protokoll löschen. Der Abgleich mit bezeugten Ständen zeigt das, verhindert es aber nicht. |
 | Verbund | Schlüssel ohne Wechsel, keine Zertifikate; zwischen getrennt eingerichteten Knoten erprobt, aber nur auf einem Rechner. | Vor einem Verbund über ein Netz. |

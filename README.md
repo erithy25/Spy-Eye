@@ -104,8 +104,11 @@ node apps/server/dist/index.js --nodes nodes.beispiel.json
 
 Im Reiter VERBUND erscheint der Nachbar als erreichbar, sobald beide laufen. Durchsuchbar sind
 für ihn nur Quellen, die die Leitung einzeln freigegeben hat. Geprüft ist das mit zwei getrennt
-gestarteten und getrennt eingerichteten Knoten auf einem Rechner, nicht über ein Netz; die
-Verbindung ist unverschlüsselt, solange kein TLS-Abschluss davor steht.
+gestarteten und getrennt eingerichteten Knoten auf einem Rechner, nicht über ein Netz. Mit
+`SICHT_TLS_CERT` und `SICHT_TLS_KEY` (Zertifikat und Schlüssel als PEM-Datei) spricht ein Knoten
+HTTPS; die Adresse des Nachbarn beginnt dann mit `https://`, und sein Zertifikat muss dem
+fragenden Knoten als vertrauenswürdig bekannt sein (bei eigener Zertifizierungsstelle über
+`NODE_EXTRA_CA_CERTS`). Ohne Zertifikat ist die Verbindung signiert, aber nicht verschlüsselt.
 
 ### Als Container
 
@@ -201,9 +204,10 @@ fremdem Einsatzmaterial.
   gebauten Vorkehrungen zu und nennt, was fehlt.
 - **Durchgesehen, nicht angegriffen.** Ein zweiter Prüfer hat den Quelltext des Knotens gelesen und
   21 Befunde belegt; die schweren und die meisten übrigen sind behoben
-  ([`docs/SICHERHEIT.md`](docs/SICHERHEIT.md)). Einen Penetrationstest gab es nicht. Der Knoten
-  spricht selbst kein TLS, auf der Platte ist nichts verschlüsselt, und gegen Überlastung durch
-  eine angemeldete Person gibt es nur einzelne Grenzen.
+  ([`docs/SICHERHEIT.md`](docs/SICHERHEIT.md)). Einen Penetrationstest gab es nicht.
+  Verschlüsselt spricht der Knoten nur, wenn der Betreiber ein Zertifikat hinterlegt; auf der
+  Platte ist nichts verschlüsselt, und gegen Überlastung durch eine angemeldete Person gibt es
+  nur einzelne Grenzen.
 - **Größe.** Die Suche vergleicht mit jedem Vektor und ist für einige Millionen Vektoren je Knoten
   ausgelegt, nicht für mehr.
 
@@ -249,6 +253,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `SICHT_NODE_NAME`, `_OPERATOR`, `_REGION`, `_LAT`, `_LON` | Lagezentrum … | Angaben zum einzelnen Knoten |
 | `SICHT_DEMO_PASSWORD` | `lagebild` | Passwort der Vorführzugänge |
 | `SICHT_RETENTION_DAYS` | `60` | Löschfrist für Aufzeichnungen außerhalb von Vorgängen; `0` schaltet sie ab |
+| `SICHT_TLS_CERT`, `SICHT_TLS_KEY` | — | Zertifikat und Schlüssel als PEM-Datei: Der Knoten spricht dann HTTPS, das Sitzungs-Cookie trägt `Secure` |
 | `SICHT_COOKIE_SECURE` | — | `1`, wenn der Knoten über TLS erreicht wird (Abschluss davor): Das Sitzungs-Cookie trägt dann `Secure` |
 | `SICHT_ALLOW_UNMASKED` | — | `1` gibt Bilder auch ohne Gesichtserkenner frei; nur für Material ohne Personen. Ohne diese Angabe wird ohne Erkenner nichts eingespielt |
 | `SICHT_OFFLINE` | — | `1` unterbindet das Nachladen von Modellen aus dem Netz; Verbund und Direktbilder sind Verbindungen, die der Betreiber selbst einrichtet |
