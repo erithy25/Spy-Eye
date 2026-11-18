@@ -150,6 +150,7 @@ liegt dasselbe Programm in Python.
 | --- | --- |
 | Anmeldung schlägt fehl | Passwort ist `lagebild`. Nach einem Neustart sind alle Sitzungen beendet: neu anmelden. |
 | „Übungsmaterial fehlt“ | `pnpm exercise:fetch`, danach `pnpm demo:prepare`. |
+| Das Laden der Modelle bricht ab | Den Befehl wiederholen; Fehlendes wird nachgeladen. Meldet der Knoten danach „Modell konnte nicht geladen werden“, den Ordner `.models` löschen und mit Netz neu starten. |
 | Übung steht auf „Material wird ausgewertet“ | abwarten; der Balken zeigt den Stand. Ohne Vorbereitung dauert es rund zehn Minuten. |
 | Verbund zeigt „nicht erreichbar“ | Die Knoten melden sich alle paar Sekunden; kurz warten. Wurde mit `pnpm start` statt `pnpm demo` gestartet, gibt es keine Nachbarn. |
 | „Anschluss … ist bereits belegt“ | Die Knoten laufen schon in einem anderen Fenster: dort weiterarbeiten oder es mit Strg+C beenden und neu starten. Nennt die Meldung eine frühere Fassung (Spy-Eye) oder ein anderes Programm, dessen Fenster mit Strg+C beenden und neu starten. |

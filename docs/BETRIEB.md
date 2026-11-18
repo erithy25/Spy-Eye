@@ -135,6 +135,8 @@ kein Dauerbetrieb über Tage; der steht aus.
 | --- | --- | --- |
 | „Anschluss … ist bereits belegt“ | Der Knoten läuft schon, oder ein anderes Programm hält den Anschluss | das andere Fenster mit Strg+C beenden; oder `PORT` ändern |
 | „ffmpeg wurde nicht gefunden“ | ffmpeg fehlt im Suchpfad | installieren, neues Terminal öffnen; oder `FFMPEG_PATH` setzen |
+| Das Laden der Modelle wurde unterbrochen | Netz weg oder Fenster geschlossen | den Befehl wiederholen: Der Knoten lädt nur fertige Dateien in den Ordner und holt Fehlendes nach (nachgestellt: nach einem Abbruch war er beim zweiten Start nach 28 s bereit). Liegen gebliebene Dateien mit `.tmp.` im Namen in `.models` dürfen gelöscht werden |
+| „Modell konnte nicht geladen werden … Protobuf parsing failed“ | eine Modelldatei ist beschädigt | den Ordner `.models` löschen und mit Netz neu starten |
 | Hochladen wird mit dem Hinweis auf freien Platz abgelehnt | weniger als `SICHT_MIN_FREE_MB` frei | Platz schaffen; die Löschfrist prüfen |
 | Ein Direktbild bleibt „getrennt“ mit dem Hinweis auf den Betreiber | die Adresse steht nicht in `SICHT_STREAM_HOSTS` | Liste ergänzen und neu starten |
 | Die Prüfung der Kette meldet eine Stelle | die Datei wurde verändert, gekürzt oder ausgetauscht | nicht weiterarbeiten; Export und bezeugte Stände der Nachbarn vergleichen |
