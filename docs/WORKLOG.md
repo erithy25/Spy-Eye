@@ -251,4 +251,8 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   alerts follow); page reloaded, tab closed and reopened (session holds, exercise runs on); node
   process killed hard in the middle (ledger intact with 27 entries, reset restores the prepared
   state, preflight "bereit"). No page error. Measurement paper, section 7.
+- The original use case once more on the final build, in the browser: a folder of 44 own
+  recordings handed to one node; all searchable after 9.9 s, completely analysed after 184 s.
+  "Beach" 0.77, "Man with a cup" 0.96 and 0.91, "Black Car" 0.69, "Hund" 0.77; "Green Bus" no
+  scene above the threshold (there is no green bus in the footage). No page error.
 
