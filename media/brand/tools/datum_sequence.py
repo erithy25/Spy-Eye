@@ -70,7 +70,7 @@ lines = [
     'card|d03-beleg|2.4||JEDE AUSSAGE MIT BELEG.',
     clip('befund', 'raum', 'BEFUND · REFERENZBILDER, UHR, ABLAUF DER ORTUNG'),
     'card|d04-raum|2.8||AUS EINEM BILD WIRD EIN RAUM.',
-    clip('raum', 'gehen', 'RAUM · AUS EINEM EINZIGEN BILD DES VIDEOS'),
+    clip('raum', 'gehen', 'RAUM · AUS EINEM EINZIGEN BILD DES VIDEOS', skip=1.1),
     fast('gehen', 'glen', 'gehen', 'RAUM · BEGEHBAR, NUR AUS DEM VIDEO'),
     '',
     'mark|turn',

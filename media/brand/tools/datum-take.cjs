@@ -116,13 +116,15 @@ const mark = (name) => {
   await page.mouse.move(cx, cy, { steps: 12 });
   await page.mouse.click(cx, cy);
   mark('gehen');
-  await hold('w', 1300);
-  await hold('d', 900);
-  await drag(cx, cy, cx - 220, cy - 10, 50);
-  await wait(700);
-  await hold('a', 1200);
-  await drag(cx, cy, cx + 260, cy + 20, 50);
-  await wait(1600);
+  // Small turns only: beyond the frame's field of view the camera saw nothing. Sideways steps
+  // show the depth (near things move against far ones).
+  await hold('w', 1600);
+  await drag(cx, cy, cx - 90, cy, 40);
+  await hold('d', 1400);
+  await drag(cx, cy, cx + 160, cy + 10, 40);
+  await hold('a', 1000);
+  await hold('s', 800);
+  await wait(1200);
 
   // ---- 6 mountains: the horizon gives the viewing direction
   mark('glen');
