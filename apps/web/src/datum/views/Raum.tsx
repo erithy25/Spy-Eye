@@ -3,6 +3,7 @@ import { useLang } from '../../i18n';
 import { fetchTerrain, rel, type Fix, type TerrainGrid } from '../api';
 import { SpaceView } from '../space/SpaceView';
 import { TerrainView } from '../space/TerrainView';
+import { caseLabel, placeText } from '../labels';
 import { bestWindowText, kmText, useFullFix } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
@@ -18,14 +19,15 @@ function headingFrame(fix: Fix): number | null {
   return fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null;
 }
 
-export function Raum({ node, byId, selected, go }: DatumViewProps) {
-  const { t, locale } = useLang();
+export function Raum({ videos, byId, selected, go }: DatumViewProps) {
+  const lang = useLang();
+  const { t, locale } = lang;
   const summary = selected ? byId.get(selected) : undefined;
   const { fix } = useFullFix(selected, summary);
   const [mode, setMode] = useState<Mode>('video');
   const [keyIndex, setKeyIndex] = useState(0);
   const [terrain, setTerrain] = useState<{ grid: TerrainGrid | null; error: string | null; key: string } | null>(null);
-  const video = node.app?.videos.find((v) => v.id === selected) ?? null;
+  const video = videos.find((v) => v.id === selected) ?? null;
 
   const spaces = (fix?.keyframes ?? []).filter((k) => k.spaceUrl);
   const key = spaces[Math.min(keyIndex, Math.max(0, spaces.length - 1))] ?? null;
@@ -68,7 +70,7 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
     <div className="dt-raum">
       <div className="dt-raum-bar">
         <span className="label">
-          {t('Raum')} <span className="count">{video.name.replace(/\.mp4$/i, '').toUpperCase()}</span>
+          {t('Raum')} <span className="count">{caseLabel(video.name)}</span>
         </span>
         <div className="seg" role="group" aria-label={t('Ansicht')}>
           <button type="button" className={mode === 'video' ? 'on' : ''} onClick={() => setMode('video')}>
@@ -88,7 +90,7 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
           </div>
         )}
         <span className="low" style={{ marginLeft: 'auto' }}>
-          {loc ? `${loc.label} · ± ${kmText(loc.radiusKm, locale)}` : t('Ort unbestimmt')}
+          {loc ? `${placeText(lang, loc, fix)} · ± ${kmText(loc.radiusKm, locale)}` : t('Ort unbestimmt')}
           {bestWindowText(fix) ? ` · ${bestWindowText(fix)}` : ''}
         </span>
         <button type="button" className="text-btn" onClick={() => go('befund')}>
@@ -102,7 +104,7 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
               key={`${fix.videoId}:${key.frame}`}
               gridUrl={rel(key.spaceUrl)}
               imageUrl={rel(key.imageUrl)}
-              label={loc?.label ?? video.name}
+              label={loc ? placeText(lang, loc, fix) : video.name}
               headingDeg={heading?.deg ?? null}
               fovDeg={fix.heading?.fovDeg ?? 62}
               pitchDeg={key.pitchDeg ?? 0}
@@ -110,7 +112,9 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
               onExit={() => go('befund')}
             />
           ) : (
-            <div className="dt-empty-view">{t('Für diese Aufnahme ist kein Raum berechnet.')}</div>
+            <div className="dt-empty-view">
+              {fix.stage === 'quick' ? t('Die Räume folgen, sobald die Auswertung des Videos fertig ist.') : t('Für diese Aufnahme ist kein Raum berechnet.')}
+            </div>
           ))}
         {mode === 'gelaende' &&
           (terrain?.grid && loc && standpoint ? (
@@ -129,10 +133,10 @@ export function Raum({ node, byId, selected, go }: DatumViewProps) {
               sunPath={fix.sun?.path ?? []}
               horizonProfile={fix.horizon?.profile ?? null}
               skyline={matchedKey?.skyline ?? null}
-              label={loc.label}
+              label={placeText(lang, loc, fix)}
             />
           ) : (
-            <div className="dt-empty-view">{terrain?.error ?? t('Gelände wird geladen …')}</div>
+            <div className="dt-empty-view">{terrain?.error ? t(terrain.error) : t('Gelände wird geladen …')}</div>
           ))}
       </div>
     </div>

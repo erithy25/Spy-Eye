@@ -25,6 +25,7 @@ import { Pipeline } from './pipeline.js';
 import { registerRoutes } from './routes.js';
 import { DatumEngine } from './datum/engine.js';
 import { sharedGallery } from './datum/shared.js';
+import { TruthBook } from './datum/truth.js';
 import { SearchEngine } from './search.js';
 import { Store, type VideoEntry } from './store.js';
 import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, SourceKind, UserInfo } from './types.js';
@@ -169,6 +170,11 @@ export class PlatformNode {
   private retentionTimer: NodeJS.Timeout | null = null;
   /** Seed recordings exempt from retention, see `keptSeedRecordings`. */
   private keptSeed: Promise<Set<string>> | null = null;
+  /**
+   * The recordings the seed brings (`seedKey` values), read at start: background work that the
+   * pipeline and DATUM do after everything a person has brought in (see `isBackgroundRecording`).
+   */
+  private seedKeys = new Set<string>();
   private readonly cookieName: string;
   /** Whether the session cookie is marked `Secure`: the node speaks TLS, or TLS ends in front of it. */
   private secure = config.cookieSecure;
@@ -224,6 +230,7 @@ export class PlatformNode {
     };
     this.pipeline = new Pipeline(this.store, shared.model, shared.faces, this.hub, log, {
       onRecordingReady: (entry) => this.onRecordingReady(entry),
+      onRecordingQueued: (entry) => this.onRecordingQueued(entry),
     });
 
     this.watches = new WatchEngine({
@@ -267,6 +274,8 @@ export class PlatformNode {
       gallery: () => sharedGallery(shared.model, shared.ready, (line) => this.log(line.trim())),
       log: (msg) => this.log(msg),
       holdout: process.env['DATUM_HOLDOUT'] === '1',
+      truths: new TruthBook(path.join(cfg.dataDir, 'datum', 'truth.json')),
+      background: (videoId) => this.isBackgroundRecording(videoId),
     });
 
     this.live = new LiveIngest({
@@ -347,6 +356,27 @@ export class PlatformNode {
       if (entry && frameIdx >= 0) out.push({ sourceId: feed.sourceId, entry, frameIdx, at: feed.at, exerciseSec: elapsed });
     }
     return out;
+  }
+
+  /**
+   * Seeded reference footage is background work: an analyst's own upload is analysed and
+   * located before it, however many reference videos are still waiting.
+   */
+  isBackgroundRecording(videoId: string): boolean {
+    const entry = this.store.get(videoId);
+    return entry ? this.seedKeys.has(seedKey(entry.info.sourceId, entry.info.name)) : false;
+  }
+
+  /**
+   * A recording's file is complete and queued for analysis: DATUM locates it from the file at
+   * once (quick stage), so the place is known within seconds while the analysis of a long video
+   * takes minutes. Exercise footage and live segments wait for the analysis as before: an
+   * exercise replays them on its own clock, and a stream delivers a segment every few seconds.
+   */
+  private onRecordingQueued(entry: VideoEntry): void {
+    if (entry.info.scenario !== null) return;
+    if (this.sources.get(entry.info.sourceId)?.mode === 'live') return;
+    this.datum.quick(entry.info.id);
   }
 
   /** A finished upload is run past every watch, in recording order, like a delayed live feed. */
@@ -499,7 +529,8 @@ export class PlatformNode {
           capturedAt: Date.now() - Math.round((clip.daysAgo ?? 1) * 86_400_000),
         });
         await this.store.persistMeta(entry);
-        this.pipeline.enqueue(id);
+        // Reference footage: analysed after anything a person uploads meanwhile.
+        this.pipeline.enqueue(id, { background: true });
         count++;
       }
     }
@@ -589,6 +620,19 @@ export class PlatformNode {
       else if (grant.userId === ctx.user.id && grant.videoId === videoId) return true;
     }
     return false;
+  }
+
+  /** Reads which recordings the seed brings (see `seedKeys`); without a readable seed file, none. */
+  private async loadSeedKeys(): Promise<void> {
+    const dir = this.cfg.seedDir;
+    if (!dir) return;
+    try {
+      const seed = await readJson<SeedFile | null>(path.join(dir, 'seed.json'), null);
+      if (seed) this.seedKeys = seedRecordingKeys(seed);
+    } catch (err: unknown) {
+      // Then every recording counts as a person's: nothing waits longer than before.
+      this.log(`Vorführbestand nicht lesbar, keine Hintergrundreihenfolge: ${err instanceof Error ? err.message : String(err)}`, true);
+    }
   }
 
   /** The seed recordings that retention leaves alone (`keepSeed`), read once from the seed file. */
@@ -696,6 +740,12 @@ export class PlatformNode {
       });
     }
     await this.sources.open();
+    try {
+      await this.datum.truths?.open();
+    } catch (err: unknown) {
+      // An unreadable truth file must not keep the node from starting; it was moved aside.
+      this.log(`Grundwahrheiten nicht lesbar: ${err instanceof Error ? err.message : String(err)}`, true);
+    }
     this.streamAddresses = await readJson<Record<string, string>>(path.join(this.cfg.dataDir, 'streams.json'), {});
     await this.incidents.open();
     await this.cases.open();
@@ -743,9 +793,12 @@ export class PlatformNode {
           await this.installExerciseDefaults(this.scenario.definition);
         }
         this.watches.recalibrateAll();
-        for (const id of pending) this.pipeline.enqueue(id);
-        await this.seedArchive();
+        await this.loadSeedKeys();
+        // Stored fixes first: a recording whose analysis is still outstanding keeps its stored
+        // quick fix instead of being located from the file a second time when it is queued.
         await this.datum.init();
+        for (const id of pending) this.pipeline.enqueue(id, { background: this.isBackgroundRecording(id) });
+        await this.seedArchive();
         await this.live.open();
       })
       .catch((err: unknown) => this.log(`Model initialisation failed: ${err instanceof Error ? err.message : String(err)}`, true));

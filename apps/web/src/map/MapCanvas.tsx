@@ -528,12 +528,17 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const container = useRef<HTMLDivElement>(null);
   const baseCanvas = useRef<HTMLCanvasElement>(null);
   const overlayCanvas = useRef<HTMLCanvasElement>(null);
+  // The crosshair has a layer of its own: moving the pointer redraws two hairlines, not every
+  // circle, country area and contour line of the overlay.
+  const cursorCanvas = useRef<HTMLCanvasElement>(null);
   const state = useRef<ViewState>({ ...project(view.lat, view.lon), zoom: view.zoom });
   const size = useRef({ width: 0, height: 0, dpr: 1 });
   const markersRef = useRef(markers);
   const linksRef = useRef(links ?? []);
   const shapesRef = useRef(shapes ?? []);
-  const dirty = useRef({ base: true, overlay: true });
+  const dirty = useRef({ base: true, overlay: true, cursor: true });
+  /** Position under the pointer, passed to the readout once per frame instead of per event. */
+  const cursorGeo = useRef<{ lat: number; lon: number } | null>(null);
   const frame = useRef<number | null>(null);
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const [cursor, setCursor] = useState<{ lat: number; lon: number } | null>(null);
@@ -819,28 +824,37 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         }
         setSpacing(ctx, '0px');
       }
-
-      const c = cursorRef.current;
-      if (c) {
-        ctx.strokeStyle = 'rgba(237,237,237,0.28)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 4]);
-        ctx.beginPath();
-        ctx.moveTo(Math.round(c.x) + 0.5, 0);
-        ctx.lineTo(Math.round(c.x) + 0.5, height);
-        ctx.moveTo(0, Math.round(c.y) + 0.5);
-        ctx.lineTo(width, Math.round(c.y) + 0.5);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
     },
     [toScreen],
   );
 
+  const drawCursor = useCallback(() => {
+    const canvas = cursorCanvas.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const { width, height, dpr } = size.current;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    const c = cursorRef.current;
+    if (!c) return;
+    ctx.strokeStyle = 'rgba(237,237,237,0.28)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    ctx.moveTo(Math.round(c.x) + 0.5, 0);
+    ctx.lineTo(Math.round(c.x) + 0.5, height);
+    ctx.moveTo(0, Math.round(c.y) + 0.5);
+    ctx.lineTo(width, Math.round(c.y) + 0.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }, []);
+
   const schedule = useCallback(
-    (what: 'base' | 'overlay' | 'both') => {
-      if (what !== 'overlay') dirty.current.base = true;
-      dirty.current.overlay = true;
+    (what: 'base' | 'overlay' | 'both' | 'cursor') => {
+      if (what === 'base' || what === 'both') dirty.current.base = true;
+      if (what !== 'cursor') dirty.current.overlay = true;
+      // The crosshair is cheap and moves with the view, so it is redrawn with everything.
+      dirty.current.cursor = true;
       if (frame.current !== null) return;
       const tick = (now: number): void => {
         frame.current = null;
@@ -848,15 +862,22 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
           dirty.current.base = false;
           drawBase();
         }
-        drawOverlay(now);
-        dirty.current.overlay = false;
         const animated =
           markersRef.current.some((m) => (m.alert ?? 0) > 0) || linksRef.current.some((l) => l.active === true);
+        if (dirty.current.overlay || animated) {
+          dirty.current.overlay = false;
+          drawOverlay(now);
+        }
+        if (dirty.current.cursor) {
+          dirty.current.cursor = false;
+          drawCursor();
+          setCursor(cursorGeo.current);
+        }
         if (animated && !document.hidden) frame.current = requestAnimationFrame(tick);
       };
       frame.current = requestAnimationFrame(tick);
     },
-    [drawBase, drawOverlay],
+    [drawBase, drawOverlay, drawCursor],
   );
 
   // Size and tile loading.
@@ -867,7 +888,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const rect = el.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       size.current = { width: rect.width, height: rect.height, dpr };
-      for (const canvas of [baseCanvas.current, overlayCanvas.current]) {
+      for (const canvas of [baseCanvas.current, overlayCanvas.current, cursorCanvas.current]) {
         if (!canvas) continue;
         canvas.width = Math.round(rect.width * dpr);
         canvas.height = Math.round(rect.height * dpr);
@@ -1038,9 +1059,9 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         }
         cursorRef.current = { x: px, y: py };
         const world = worldSize(state.current.zoom);
-        setCursor(unproject(state.current.x + (px - rect.width / 2) / world, state.current.y + (py - rect.height / 2) / world));
+        cursorGeo.current = unproject(state.current.x + (px - rect.width / 2) / world, state.current.y + (py - rect.height / 2) / world);
         e.currentTarget.style.cursor = d?.moved ? 'grabbing' : hit(px, py) ? 'pointer' : 'crosshair';
-        schedule('overlay');
+        schedule('cursor');
       }}
       onPointerUp={(e) => {
         const d = drag.current;
@@ -1052,8 +1073,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       }}
       onPointerLeave={() => {
         cursorRef.current = null;
-        setCursor(null);
-        schedule('overlay');
+        cursorGeo.current = null;
+        schedule('cursor');
       }}
       onDoubleClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -1062,6 +1083,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     >
       <canvas ref={baseCanvas} className="geo-layer" />
       <canvas ref={overlayCanvas} className="geo-layer" />
+      <canvas ref={cursorCanvas} className="geo-layer" />
       {label && <div className="geo-readout geo-tl">{label}</div>}
       <div className="geo-zoom">
         <button type="button" aria-label={t('Vergrößern')} onClick={() => zoomAt(1, size.current.width / 2, size.current.height / 2)}>

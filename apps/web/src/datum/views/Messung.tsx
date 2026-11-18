@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../../i18n';
 import { pressable } from '../../ui';
 import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '../api';
+import { caseLabel } from '../labels';
+import { TruthControl, useTruthUpload } from '../TruthUpload';
 import { kmText } from '../useFixes';
 import type { DatumViewProps } from './Ortung';
 
@@ -45,8 +47,17 @@ function evalRows(evaluation: unknown, t: (s: string) => string): EvalRow[] {
   return rows;
 }
 
-export function Messung({ fixes, select, go }: DatumViewProps) {
-  const { t, locale } = useLang();
+export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
+  const { t, locale, region } = useLang();
+  const truth = useTruthUpload();
+  // Own recordings with a true place the analyst gave (POST /api/datum/truth), best first.
+  const own = useMemo(() => {
+    const names = new Map(videos.map((v) => [v.id, v.name]));
+    return fixes
+      .filter((f) => f.truth && f.truth.source === 'eigene' && names.has(f.videoId))
+      .map((f) => ({ fix: f, name: names.get(f.videoId)! }))
+      .sort((a, b) => (a.fix.truth?.errorKm ?? Infinity) - (b.fix.truth?.errorKm ?? Infinity));
+  }, [fixes, videos]);
   const [summary, setSummary] = useState<DatumSummary | null>(null);
   const [rows, setRows] = useState<DatasetRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +87,7 @@ export function Messung({ fixes, select, go }: DatumViewProps) {
   }, [version]);
 
   const modes = evalRows(summary?.evaluation, t);
-  const pct = (v: number | null | undefined): string => (v == null ? '–' : `${Math.round(v * 100)} %`);
+  const pct = (v: number | null | undefined): string => (v == null ? '–' : `${Math.round(v * 100).toLocaleString(locale)} %`);
 
   return (
     <div className="view">
@@ -127,6 +138,50 @@ export function Messung({ fixes, select, go }: DatumViewProps) {
           </>
         )}
 
+        <section className="section-gap dt-own" style={{ marginTop: 26 }}>
+          <h3 className="label">
+            {t('Eigene Aufnahmen mit Grundwahrheit')} <span className="count">{own.length}</span>
+          </h3>
+          {can('source.write') && <TruthControl truth={truth} />}
+          {own.length === 0 ? (
+            <p className="hint">{t('Noch keine. Mit einer Grundwahrheit zu eigenen Videos steht hier, wie weit die Ortung danebenliegt.')}</p>
+          ) : (
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>{t('Fall')}</th>
+                  <th>{t('Wahrer Ort')}</th>
+                  <th>{t('Abweichung')}</th>
+                  <th style={{ width: 160 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {own.map(({ fix, name }) => (
+                  <tr
+                    key={fix.videoId}
+                    className="clickable"
+                    {...pressable(() => {
+                      select(fix.videoId);
+                      go('befund');
+                    })}
+                  >
+                    <td className="strong">{caseLabel(name)}</td>
+                    <td>{fix.truth?.label || '–'}</td>
+                    <td>{fix.truth?.errorKm == null ? (fix.status === 'ready' ? '–' : t('wird geortet …')) : kmText(fix.truth.errorKm, locale)}</td>
+                    <td>
+                      {fix.truth?.errorKm != null && (
+                        <div className="dt-bar" title={kmText(fix.truth.errorKm, locale)}>
+                          <i style={{ width: `${Math.min(100, (Math.log10(1 + fix.truth.errorKm) / Math.log10(1 + 5000)) * 100)}%` }} />
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
         {modes.length > 0 && (
           <section className="section-gap" style={{ marginTop: 26 }}>
             <h3 className="label">{t('Gespeicherte Auswertung')}</h3>
@@ -166,7 +221,7 @@ export function Messung({ fixes, select, go }: DatumViewProps) {
 
         <section className="section-gap" style={{ marginTop: 26 }}>
           <h3 className="label">
-            {t('Einzelfälle')} <span className="count">{rows.length}</span>
+            {t('Referenzbestand: Einzelfälle')} <span className="count">{rows.length}</span>
           </h3>
           <table className="tbl">
             <thead>
@@ -190,9 +245,9 @@ export function Messung({ fixes, select, go }: DatumViewProps) {
                       })
                     : {})}
                 >
-                  <td className="strong">{r.name.replace(/\.mp4$/i, '').toUpperCase()}</td>
+                  <td className="strong">{caseLabel(r.name)}</td>
                   <td>{r.label}</td>
-                  <td>{r.country ?? '–'}</td>
+                  <td title={r.country ?? ''}>{r.country ? region(r.country) : '–'}</td>
                   <td>{r.errorKm == null ? '–' : kmText(r.errorKm, locale)}</td>
                   <td>
                     {r.errorKm != null && (

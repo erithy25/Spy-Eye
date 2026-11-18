@@ -2,6 +2,7 @@ import type { Fix } from '../../../../server/src/datum/contract';
 import { formatDateTime, formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
 import { haversineKm, toMgrs } from '../../map/geo';
+import { placeText } from '../labels';
 import { KIND_CODE, KIND_METHOD, Meter, coordParts, fmtCoord, fmtKm, fmtScore } from './common';
 import './panel.css';
 
@@ -79,8 +80,29 @@ function Digits({ value, decimals }: { value: string; decimals: number }) {
   );
 }
 
+/** Where a ground truth comes from, in words: the reference set, the analyst's own list, or a link. */
+function TruthSource({ source, url }: { source: string; url: string | undefined }) {
+  const { t } = useLang();
+  const link = url ?? (/^https?:\/\//.test(source) ? source : null);
+  const name = source === 'referenz' ? t('Referenzbestand') : source === 'eigene' ? t('eigene Angabe') : link ? null : source;
+  return (
+    <>
+      {name}
+      {link && (
+        <>
+          {name ? ' · ' : ''}
+          <a href={link} target="_blank" rel="noreferrer noopener" className="dp-link">
+            {/commons\.wikimedia/.test(link) ? 'Wikimedia Commons' : /wikidata/.test(link) ? 'Wikidata' : t('Quelle')}
+          </a>
+        </>
+      )}
+    </>
+  );
+}
+
 export function FixSummary({ fix }: FixSummaryProps) {
-  const { t, locale } = useLang();
+  const lang = useLang();
+  const { t, locale, region } = lang;
   const loc = fix.location;
   const truth = fix.truth;
   const errorKm = truth && loc ? (truth.errorKm ?? haversineKm(loc.lat, loc.lon, truth.lat, truth.lon)) : (truth?.errorKm ?? null);
@@ -162,12 +184,11 @@ export function FixSummary({ fix }: FixSummaryProps) {
       </div>
       <PrecisionScale radiusKm={loc.radiusKm} errorKm={errorKm} />
       <p className="dp-place">
-        <span className="dp-strong">{loc.label}</span>
-        {loc.countryName && (
+        <span className="dp-strong">{placeText(lang, loc, fix)}</span>
+        {loc.country && (
           <span className="dp-mid">
             {' · '}
-            {loc.countryName}
-            {loc.country && ` (${loc.country})`}
+            {region(loc.country, loc.countryName)} ({loc.country})
           </span>
         )}
       </p>
@@ -198,7 +219,7 @@ export function FixSummary({ fix }: FixSummaryProps) {
             {t('Abweichung')} <span className="dp-strong">{errorKm !== null ? fmtKm(errorKm) : '—'}</span>
             <span className="dp-low">
               {' · '}
-              {t('Quelle')}: {truth.source}
+              {t('Quelle')}: <TruthSource source={truth.source} url={truth.url} />
             </span>
           </p>
         </div>

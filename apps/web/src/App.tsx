@@ -1,25 +1,29 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Activity, Suspense, lazy, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createMandate, errorText, fetchMandates, selectMandate, type Mandate, type Role } from './api';
-import { FrameSheet, type FrameTarget } from './components/FrameSheet';
+import type { FrameTarget } from './components/FrameSheet';
 import { formatCount, formatExercise, shortHash } from './format';
 import { LangProvider, useLang } from './i18n';
 import { MapCanvas, type MapMarker } from './map/MapCanvas';
 import { Dialog, Field, pressable, useAction } from './ui';
 import { useNode, type NodeConnection } from './useNode';
-import { Lage } from './views/Lage';
-import { Protokoll } from './views/Protokoll';
-import { Quellen } from './views/Quellen';
-import { Suche } from './views/Suche';
-import { Verbund } from './views/Verbund';
-import { Vorgaenge } from './views/Vorgaenge';
-import { Wachen } from './views/Wachen';
-import { Wirkung } from './views/Wirkung';
 import './datum/datum.css';
 import { useFixes } from './datum/useFixes';
-import { Befund } from './datum/views/Befund';
-import { Messung } from './datum/views/Messung';
-import { Ortung } from './datum/views/Ortung';
-import { Raum } from './datum/views/Raum';
+import { Ortung, type DatumViewProps } from './datum/views/Ortung';
+
+// Every view but ORTUNG, the first one, is loaded when it is first opened: the 3D views alone are
+// a large part of the console, and a slow machine should not parse them before the map shows.
+const Befund = lazy(() => import('./datum/views/Befund').then((m) => ({ default: m.Befund })));
+const Raum = lazy(() => import('./datum/views/Raum').then((m) => ({ default: m.Raum })));
+const Messung = lazy(() => import('./datum/views/Messung').then((m) => ({ default: m.Messung })));
+const Suche = lazy(() => import('./views/Suche').then((m) => ({ default: m.Suche })));
+const Quellen = lazy(() => import('./views/Quellen').then((m) => ({ default: m.Quellen })));
+const Protokoll = lazy(() => import('./views/Protokoll').then((m) => ({ default: m.Protokoll })));
+const Lage = lazy(() => import('./views/Lage').then((m) => ({ default: m.Lage })));
+const Wachen = lazy(() => import('./views/Wachen').then((m) => ({ default: m.Wachen })));
+const Vorgaenge = lazy(() => import('./views/Vorgaenge').then((m) => ({ default: m.Vorgaenge })));
+const Verbund = lazy(() => import('./views/Verbund').then((m) => ({ default: m.Verbund })));
+const Wirkung = lazy(() => import('./views/Wirkung').then((m) => ({ default: m.Wirkung })));
+const FrameSheet = lazy(() => import('./components/FrameSheet').then((m) => ({ default: m.FrameSheet })));
 
 type TabId = 'ortung' | 'befund' | 'raum' | 'suche' | 'quellen' | 'messung' | 'protokoll' | 'lage' | 'wachen' | 'vorgaenge' | 'verbund' | 'wirkung';
 
@@ -146,8 +150,8 @@ function Login({ node }: { node: NodeConnection }) {
         </div>
         {info && (
           <div className="gate-node">
-            <div className="strong">{info.node.name}</div>
-            <div className="dim">{info.node.operator}</div>
+            <div className="strong">{t(info.node.name)}</div>
+            <div className="dim">{t(info.node.operator)}</div>
           </div>
         )}
         <form className="form" onSubmit={submit}>
@@ -183,7 +187,7 @@ function Login({ node }: { node: NodeConnection }) {
                       {u.id}
                     </td>
                     <td>{t(ROLE_LABEL[u.role])}</td>
-                    <td className="dim">{u.name}</td>
+                    <td className="dim">{t(u.name)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -375,6 +379,11 @@ function initialSelection(): string | null {
   return /^[a-f0-9]{16}$/.test(part) ? part : null;
 }
 
+function ViewLoading() {
+  const { t } = useLang();
+  return <div className="dt-empty-view">{t('Wird geladen …')}</div>;
+}
+
 function Shell({ node }: { node: NodeConnection }) {
   const { t, pick } = useLang();
   const session = node.session;
@@ -420,14 +429,14 @@ function Shell({ node }: { node: NodeConnection }) {
   const current = sheet ? (sheet.list[sheet.index] ?? null) : null;
   const props: ViewProps = { node, openFrame };
   const newAlerts = (node.intel?.alerts ?? []).filter((a) => a.status === 'new' && a.active).length;
-  const datumProps = {
-    node,
-    fixes: datum.fixes,
-    byId: datum.byId,
-    selected,
-    select: setSelected,
-    go: (next: 'ortung' | 'befund' | 'raum') => setTab(next),
-  };
+  const go = useCallback((next: 'ortung' | 'befund' | 'raum') => setTab(next), []);
+  // Stable as long as fixes, recordings and the selection stay; the memoised DATUM views then
+  // skip the renders the shell does for the ledger, the connection and other events.
+  const videos = node.app?.videos;
+  const datumProps = useMemo<DatumViewProps>(
+    () => ({ videos: videos ?? [], can: node.can, fixes: datum.fixes, byId: datum.byId, selected, select: setSelected, go }),
+    [videos, node.can, datum.fixes, datum.byId, selected, go],
+  );
   const located = datum.fixes.filter((f) => f.status === 'ready').length;
   const locating = datum.fixes.filter((f) => f.status === 'pending' || f.status === 'running').length;
 
@@ -444,7 +453,7 @@ function Shell({ node }: { node: NodeConnection }) {
       <header className="top">
         <div className="wordmark">
           <b>{MARK}</b>
-          <span>{node.info?.node.name ?? ''}</span>
+          <span>{t(node.info?.node.name ?? '')}</span>
         </div>
         <nav className="tabs" aria-label={t('Bereiche')}>
           {tabs.filter((x) => allowed.includes(x.id)).map((x) => (
@@ -462,7 +471,7 @@ function Shell({ node }: { node: NodeConnection }) {
             </button>
           )}
           <span className="who">
-            <b>{session.user.name}</b> · {t(ROLE_LABEL[session.user.role])}
+            <b>{t(session.user.name)}</b> · {t(ROLE_LABEL[session.user.role])}
           </span>
           <LangSwitch />
           <button type="button" className="text-btn" onClick={() => void node.signOut()}>
@@ -472,18 +481,26 @@ function Shell({ node }: { node: NodeConnection }) {
       </header>
 
       <main className="view">
-        {tab === 'ortung' && <Ortung {...datumProps} />}
-        {tab === 'befund' && <Befund {...datumProps} />}
-        {tab === 'raum' && <Raum {...datumProps} />}
-        {tab === 'suche' && <Suche {...props} />}
-        {tab === 'quellen' && <Quellen {...props} />}
-        {tab === 'messung' && <Messung {...datumProps} />}
-        {tab === 'protokoll' && <Protokoll {...props} />}
-        {tab === 'lage' && <Lage {...props} />}
-        {tab === 'wachen' && <Wachen {...props} />}
-        {tab === 'vorgaenge' && <Vorgaenge {...props} />}
-        {tab === 'verbund' && <Verbund {...props} />}
-        {tab === 'wirkung' && <Wirkung {...props} />}
+        {/* ORTUNG stays mounted while another tab is open: going back shows the map and the list as
+            they were, without building them again. */}
+        {allowed.includes('ortung') && (
+          <Activity mode={tab === 'ortung' ? 'visible' : 'hidden'}>
+            <Ortung {...datumProps} />
+          </Activity>
+        )}
+        <Suspense fallback={<ViewLoading />}>
+          {tab === 'befund' && <Befund {...datumProps} />}
+          {tab === 'raum' && <Raum {...datumProps} />}
+          {tab === 'suche' && <Suche {...props} />}
+          {tab === 'quellen' && <Quellen {...props} />}
+          {tab === 'messung' && <Messung {...datumProps} />}
+          {tab === 'protokoll' && <Protokoll {...props} />}
+          {tab === 'lage' && <Lage {...props} />}
+          {tab === 'wachen' && <Wachen {...props} />}
+          {tab === 'vorgaenge' && <Vorgaenge {...props} />}
+          {tab === 'verbund' && <Verbund {...props} />}
+          {tab === 'wirkung' && <Wirkung {...props} />}
+        </Suspense>
       </main>
 
       <footer className="foot">
@@ -522,6 +539,7 @@ function Shell({ node }: { node: NodeConnection }) {
       )}
 
       {current && sheet && (
+        <Suspense fallback={null}>
         <FrameSheet
           target={current}
           node={node}
@@ -529,6 +547,7 @@ function Shell({ node }: { node: NodeConnection }) {
           onPrev={sheet.index > 0 ? () => setSheet({ list: sheet.list, index: sheet.index - 1 }) : null}
           onNext={sheet.index < sheet.list.length - 1 ? () => setSheet({ list: sheet.list, index: sheet.index + 1 }) : null}
         />
+        </Suspense>
       )}
       {mandateDialog && (
         <Dialog title={t('Mandat wählen')} onClose={() => setMandateDialog(false)}>

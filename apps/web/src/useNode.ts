@@ -61,6 +61,8 @@ export interface NodeConnection {
 /** The node pings every 5 s; a longer silence means the event stream is not getting through. */
 const STREAM_SILENCE_MS = 12_000;
 const POLL_INTERVAL_MS = 2_000;
+/** While the stream is not getting through, the list of fixes is read at most this often. */
+const FIXES_POLL_MS = 8_000;
 
 function upsert<T extends { id: string }>(list: T[], item: T, front: boolean): T[] {
   const index = list.findIndex((x) => x.id === item.id);
@@ -144,6 +146,7 @@ export function useNode(): NodeConnection {
       return;
     }
     let lastStreamMessage = 0;
+    let lastFixesPoll = 0;
     let disposed = false;
 
     // Many recordings change state at once (a whole first-pass batch); coalesce the refreshes.
@@ -177,8 +180,13 @@ export function useNode(): NodeConnection {
           if (disposed) return;
           applySnapshot(next);
           setConnected(true);
-          // Without the stream no fix is announced; the fixes are read again with every poll.
-          if (withFixes) setFixesEpoch((n) => n + 1);
+          // Without the stream no fix is announced, so the list of fixes is read again; not with
+          // every poll, though: the list is large (about 10 kB per recording) and the state
+          // poll runs every two seconds.
+          if (withFixes && Date.now() - lastFixesPoll >= FIXES_POLL_MS) {
+            lastFixesPoll = Date.now();
+            setFixesEpoch((n) => n + 1);
+          }
         })
         .catch((err: unknown) => {
           if (disposed) return;
@@ -203,16 +211,15 @@ export function useNode(): NodeConnection {
       if (Date.now() - lastStreamMessage > STREAM_SILENCE_MS) poll(true, true);
     }, POLL_INTERVAL_MS);
 
-    const source = new EventSource('api/events');
-    source.onmessage = (message: MessageEvent<string>) => {
-      let event: ServerEvent;
-      try {
-        event = JSON.parse(message.data) as ServerEvent;
-      } catch {
-        return;
-      }
-      lastStreamMessage = Date.now();
-      setConnected(true);
+    // Events are applied in batches, once per animation frame: while recordings are uploaded and
+    // located the node sends progress and every finished step of every fix, and applying each
+    // on its own re-rendered the whole console dozens of times a second. React renders the
+    // updates of one batch once. In a hidden tab, where frames do not run, a timer takes over.
+    const pending: ServerEvent[] = [];
+    let flushFrame: number | null = null;
+    let flushTimer: number | null = null;
+
+    const apply = (event: ServerEvent, fixPatch: Record<string, Fix>): void => {
       switch (event.type) {
         case 'ping':
           break;
@@ -279,14 +286,49 @@ export function useNode(): NodeConnection {
           setLedger({ head: event.head, length: event.length });
           break;
         case 'datum-fix': {
-          const { fix } = event;
-          setFixes((current) => ({ ...current, [fix.videoId]: fix }));
+          // Collected and applied once per batch: a running fix announces every step.
+          fixPatch[event.fix.videoId] = event.fix;
           break;
         }
       }
     };
+
+    const flush = (): void => {
+      if (flushFrame !== null) cancelAnimationFrame(flushFrame);
+      if (flushTimer !== null) window.clearTimeout(flushTimer);
+      flushFrame = null;
+      flushTimer = null;
+      if (disposed) return;
+      const events = pending.splice(0);
+      const fixPatch: Record<string, Fix> = {};
+      for (const event of events) apply(event, fixPatch);
+      if (Object.keys(fixPatch).length > 0) setFixes((current) => ({ ...current, ...fixPatch }));
+    };
+
+    const scheduleFlush = (): void => {
+      if (flushFrame !== null || flushTimer !== null) return;
+      if (document.hidden) flushTimer = window.setTimeout(flush, 250);
+      else flushFrame = requestAnimationFrame(flush);
+    };
+
+    const source = new EventSource('api/events');
+    source.onmessage = (message: MessageEvent<string>) => {
+      let event: ServerEvent;
+      try {
+        event = JSON.parse(message.data) as ServerEvent;
+      } catch {
+        return;
+      }
+      lastStreamMessage = Date.now();
+      setConnected(true);
+      if (event.type === 'ping') return;
+      pending.push(event);
+      scheduleFlush();
+    };
     return () => {
       disposed = true;
+      if (flushFrame !== null) cancelAnimationFrame(flushFrame);
+      if (flushTimer !== null) window.clearTimeout(flushTimer);
       if (bumpTimer !== null) window.clearTimeout(bumpTimer);
       window.clearInterval(pollTimer);
       source.close();

@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
-import type { FixCandidate } from '../../../../server/src/datum/contract';
+import type { Fix, FixCandidate } from '../../../../server/src/datum/contract';
 import { useLang } from '../../i18n';
+import { placeText } from '../labels';
 import { pressable } from '../../ui';
 import { fmtCoord, fmtKm, fmtScore } from './common';
 import './panel.css';
@@ -10,10 +11,13 @@ export interface CandidateListProps {
   /** Index of the chosen candidate (highlighted). */
   selected?: number;
   onSelect?: (index: number) => void;
+  /** The fix the candidates belong to; its country list names candidates that stand for a country. */
+  fix?: Fix;
 }
 
-export function CandidateList({ candidates, selected, onSelect }: CandidateListProps) {
-  const { t } = useLang();
+export function CandidateList({ candidates, selected, onSelect, fix }: CandidateListProps) {
+  const lang = useLang();
+  const { t, region } = lang;
   const list = useRef<HTMLOListElement>(null);
 
   // Arrow keys walk the list; Enter or space choose (see `pressable`).
@@ -49,8 +53,10 @@ export function CandidateList({ candidates, selected, onSelect }: CandidateListP
               {...(onSelect ? { ...pressable(() => onSelect(i), on), tabIndex: stop ? 0 : -1 } : {})}
             >
               <span className="dp-cand-rank">{String(i + 1).padStart(2, '0')}</span>
-              <span className="dp-cand-label">{c.label}</span>
-              <span className="dp-cand-iso">{c.country ?? '—'}</span>
+              <span className="dp-cand-label">{placeText(lang, c, fix)}</span>
+              <span className="dp-cand-iso" title={c.country ? region(c.country) : ''}>
+                {c.country ?? '—'}
+              </span>
               <span className="dp-cand-score">{fmtScore(c.score)}</span>
               <span className="dp-cand-pos">
                 {fmtCoord(c.lat, c.lon)}

@@ -20,28 +20,57 @@ export function announcementWins(announced: Fix, listed: Fix | undefined, seen: 
   return announced.computedAt >= listed.computedAt;
 }
 
-/** All fixes of the node: the full list, kept current from the event stream and read again when announcements may have been missed. */
+/** After recordings appeared, the list is read once they stop appearing for this long ... */
+const LIST_SETTLE_MS = 1_500;
+/** ... and not more often than this: a folder upload adds one recording after another. */
+const LIST_SPACING_MS = 10_000;
+
+/**
+ * All fixes of the node: the full list, kept current from the event stream and read again when
+ * announcements may have been missed (the stream reconnected) and, as a safety net, after new
+ * recordings appeared. The list is about 10 kB per recording; reading it for every recording of a
+ * folder upload made the node serialise and the console parse tens of megabytes. New recordings
+ * are announced through the stream anyway, so their read waits until the uploads settle.
+ */
 export function useFixes(node: NodeConnection): { fixes: Fix[]; byId: Map<string, Fix>; loading: boolean; error: string | null } {
   const [base, setBase] = useState<Base | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const videoCount = node.app?.videos.length ?? 0;
+  const videos = node.app?.videos;
+  const videoCount = videos?.length ?? 0;
   const announced = useRef(node.fixes);
   announced.current = node.fixes;
+  const lastRead = useRef(0);
+  const readEpoch = useRef<number | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
-    // Everything announced so far reached the console before this request left it.
-    const seen = announced.current;
-    fetchFixes(ctrl.signal)
-      .then((list) => {
-        setBase({ list, seen });
-        setError(null);
-      })
-      .catch((err: unknown) => {
-        if (!ctrl.signal.aborted) setError(err instanceof Error ? err.message : String(err));
-      });
-    return () => ctrl.abort();
+    // A new epoch (first read, stream reconnected) is read at once; new recordings wait.
+    const urgent = readEpoch.current !== node.fixesEpoch;
+    const delay = urgent ? 0 : Math.max(LIST_SETTLE_MS, LIST_SPACING_MS - (Date.now() - lastRead.current));
+    const timer = window.setTimeout(() => {
+      // Everything announced so far reached the console before this request left it.
+      const seen = announced.current;
+      readEpoch.current = node.fixesEpoch;
+      lastRead.current = Date.now();
+      fetchFixes(ctrl.signal)
+        .then((list) => {
+          setBase({ list, seen });
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          if (!ctrl.signal.aborted) setError(err instanceof Error ? err.message : String(err));
+        });
+    }, delay);
+    return () => {
+      window.clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [videoCount, node.fixesEpoch]);
+
+  // The set of recordings changes rarely; their progress changes often. Keying on the ids keeps
+  // the list of fixes (and every view that renders it) still while recordings are analysed.
+  const idsKey = useMemo(() => (videos ?? []).map((v) => v.id).join(','), [videos]);
+  const known = useMemo(() => new Set(idsKey === '' ? [] : idsKey.split(',')), [idsKey]);
 
   return useMemo(() => {
     const byId = new Map<string, Fix>();
@@ -50,48 +79,97 @@ export function useFixes(node: NodeConnection): { fixes: Fix[]; byId: Map<string
       if (announcementWins(f, byId.get(f.videoId), base?.seen)) byId.set(f.videoId, f);
     }
     // Recordings that were removed meanwhile drop out.
-    const known = new Set((node.app?.videos ?? []).map((v) => v.id));
     const fixes = [...byId.values()].filter((f) => known.size === 0 || known.has(f.videoId));
     return { fixes, byId, loading: base === null && error === null, error };
-  }, [base, node.fixes, node.app?.videos, error]);
+  }, [base, node.fixes, known, error]);
 }
 
 /**
- * The full fix with the steps its summary has announced since it was read. While a fix is computed,
- * every finished step is announced as a summary with the same status and computedAt, so the full fix
- * is not read again until the run ends; the summary's longer trace of the same run is shown instead.
+ * What the console shows of one fix: the latest summary from the event stream with the two parts
+ * only the full fix carries (the sun path and the horizon profile), as long as both belong to the
+ * same computation. Steps of a running analysis, a ground truth added later and the stage arrive
+ * with the summary and show at once, without reading the full fix again.
  */
-export function withLiveTrace(full: Fix, summary: Fix | undefined): Fix {
-  if (!summary || summary.videoId !== full.videoId) return full;
-  if (summary.status !== 'running' || full.status !== 'running' || summary.computedAt !== full.computedAt) return full;
-  const trace = summary.trace;
-  if (!trace || trace.length <= (full.trace?.length ?? 0)) return full;
-  return { ...full, trace };
+export function withLiveSummary(full: Fix, summary: Fix | undefined): Fix {
+  if (!summary || summary.videoId !== full.videoId || summary === full) return full;
+  // A newer result (the full analysis after the quick fix, a recomputation) shows at once from
+  // its summary; the sun path and horizon profile follow when its full fix has been read.
+  if (summary.computedAt > full.computedAt) return summary;
+  if (summary.computedAt !== full.computedAt) return full;
+  return {
+    ...summary,
+    sun: summary.sun ? { ...summary.sun, path: summary.sun.path.length > 0 ? summary.sun.path : (full.sun?.path ?? []) } : full.sun,
+    horizon: summary.horizon ? { ...summary.horizon, profile: summary.horizon.profile ?? full.horizon?.profile ?? null } : full.horizon,
+  };
 }
 
-/** The full fix of one recording (with sun path and horizon profile), refreshed when its summary changes. */
+/** Full fixes read before, by recording; switching between ORTUNG, BEFUND and RAUM reads none again. */
+const fullCache = new Map<string, { key: string; fix: Fix }>();
+const fullRequests = new Map<string, Promise<Fix>>();
+const FULL_CACHE_SIZE = 40;
+
+/** The computation a full fix belongs to: a new result (or one that became ready) is read anew. */
+function fullKey(videoId: string, summary: Fix | undefined): string {
+  return summary ? `${videoId}:${summary.computedAt}:${summary.status === 'ready' ? 'ready' : 'open'}` : `${videoId}:?`;
+}
+
+function readFull(videoId: string, key: string): Promise<Fix> {
+  let request = fullRequests.get(key);
+  if (!request) {
+    // Not tied to one view: the request outlives a tab switch and the next view takes its result.
+    request = fetchFix(videoId).then(
+      (fix) => {
+        fullRequests.delete(key);
+        fullCache.delete(videoId);
+        fullCache.set(videoId, { key, fix });
+        while (fullCache.size > FULL_CACHE_SIZE) {
+          const oldest = fullCache.keys().next().value;
+          if (oldest === undefined) break;
+          fullCache.delete(oldest);
+        }
+        return fix;
+      },
+      (err: unknown) => {
+        fullRequests.delete(key);
+        throw err;
+      },
+    );
+    fullRequests.set(key, request);
+  }
+  return request;
+}
+
+/**
+ * The full fix of one recording (with sun path and horizon profile), merged with its latest
+ * summary. It is read once per computation and kept, so that the three views of a recording do
+ * not each read it again; until a new computation has been read, the previous one stands.
+ */
 export function useFullFix(videoId: string | null, summary: Fix | undefined): { fix: Fix | null; error: string | null } {
-  const [fix, setFix] = useState<Fix | null>(null);
+  const key = videoId ? fullKey(videoId, summary) : '';
+  const cached = videoId ? (fullCache.get(videoId) ?? null) : null;
+  const [loaded, setLoaded] = useState<Fix | null>(cached?.fix ?? null);
   const [error, setError] = useState<string | null>(null);
-  const stamp = summary ? `${summary.status}:${summary.computedAt}` : '';
   useEffect(() => {
-    if (!videoId) {
-      setFix(null);
-      return;
-    }
-    const ctrl = new AbortController();
-    fetchFix(videoId, ctrl.signal)
+    if (!videoId) return;
+    if (fullCache.get(videoId)?.key === key) return;
+    let live = true;
+    readFull(videoId, key)
       .then((f) => {
-        setFix(f);
+        if (!live) return;
+        setLoaded(f);
         setError(null);
       })
       .catch((err: unknown) => {
-        if (!ctrl.signal.aborted) setError(err instanceof Error ? err.message : String(err));
+        if (live) setError(err instanceof Error ? err.message : String(err));
       });
-    return () => ctrl.abort();
-  }, [videoId, stamp]);
-  const current = fix && fix.videoId === videoId ? fix : null;
-  const shown = useMemo(() => (current ? withLiveTrace(current, summary) : null), [current, summary]);
+    return () => {
+      live = false;
+    };
+  }, [videoId, key]);
+  // The cache may hold a newer read than this view's state (another view read it meanwhile).
+  const candidate = cached && (!loaded || loaded.videoId !== videoId || cached.fix.computedAt >= loaded.computedAt) ? cached.fix : loaded;
+  const current = candidate && candidate.videoId === videoId ? candidate : null;
+  const shown = useMemo(() => (current ? withLiveSummary(current, summary) : null), [current, summary]);
   return { fix: shown, error };
 }
 

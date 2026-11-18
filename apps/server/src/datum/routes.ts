@@ -12,28 +12,40 @@ import type { PlatformNode, RequestContext } from '../node.js';
 import { isValidVideoId } from '../store.js';
 import type { Fix } from './contract.js';
 import { summarise } from './engine.js';
-import { DATASET_DIR, loadManifest } from './dataset.js';
+import { DATASET_DIR, caseName, loadManifest } from './dataset.js';
 import { terrainGrid } from './terrain.js';
 import { horizonProfile } from './horizon.js';
+import { parseTruthBody, truthKey, type TruthRefusal } from './truth.js';
+import { loadWorld } from './world.js';
 
 type Need = (request: FastifyRequest, reply: FastifyReply, permission: Permission | null) => RequestContext | null;
 type SendError = (reply: FastifyReply, status: number, message: string) => FastifyReply;
 
-/** Accuracy over the fixes that have ground truth (the reference dataset). */
-export interface DatumSummary {
-  recordings: number;
-  ready: number;
-  pending: number;
-  failed: number;
+/** Accuracy of the fixes against one set of truths. */
+export interface TruthAccuracy {
   withTruth: number;
   medianErrorKm: number | null;
   /** Share of fixes within 1, 25, 200, 750, 2500 km of the truth. */
   within: { km: number; share: number; count: number }[];
   /** Share of truths inside the stated uncertainty radius. */
   insideRadius: number | null;
+}
+
+/** Accuracy over the fixes that have ground truth (the reference dataset and own truths). */
+export interface DatumSummary extends TruthAccuracy {
+  recordings: number;
+  ready: number;
+  /** Ready fixes that are still the quick stage (full analysis outstanding). */
+  quick: number;
+  pending: number;
+  failed: number;
   medianRadiusKm: number | null;
   timeKnown: number;
   medianSeconds: number | null;
+  /** The same accuracy split by the source of the truth: reference set and own truths. */
+  bySource: { referenz: TruthAccuracy; eigene: TruthAccuracy };
+  /** Own truths stored in the node (POST /api/datum/truth), matched to a recording or not. */
+  ownTruths: number;
   /** Stored offline evaluation (docs/measurements/datum-geolocation.json), if present. */
   evaluation: unknown;
   holdout: boolean;
@@ -48,16 +60,11 @@ function median(values: number[]): number | null {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
-export function summariseFixes(fixes: Fix[], holdout: boolean, evaluation: unknown): DatumSummary {
-  const ready = fixes.filter((f) => f.status === 'ready');
+function accuracy(ready: readonly Fix[]): TruthAccuracy {
   const truthed = ready.filter((f) => f.truth && f.truth.errorKm !== null);
   const errors = truthed.map((f) => f.truth!.errorKm!);
   const inside = truthed.filter((f) => f.location && f.truth!.errorKm! <= f.location.radiusKm).length;
   return {
-    recordings: fixes.length,
-    ready: ready.length,
-    pending: fixes.filter((f) => f.status === 'pending' || f.status === 'running').length,
-    failed: fixes.filter((f) => f.status === 'error').length,
     withTruth: truthed.length,
     medianErrorKm: median(errors),
     within: THRESHOLDS.map((km) => {
@@ -65,13 +72,52 @@ export function summariseFixes(fixes: Fix[], holdout: boolean, evaluation: unkno
       return { km, count, share: errors.length ? count / errors.length : 0 };
     }),
     insideRadius: truthed.length ? inside / truthed.length : null,
+  };
+}
+
+export function summariseFixes(fixes: Fix[], holdout: boolean, evaluation: unknown, ownTruths = 0): DatumSummary {
+  const ready = fixes.filter((f) => f.status === 'ready');
+  // Fixes of older engine versions name the reference URL as their source.
+  const own = ready.filter((f) => f.truth?.source === 'eigene');
+  const reference = ready.filter((f) => f.truth && f.truth.source !== 'eigene');
+  return {
+    recordings: fixes.length,
+    ready: ready.length,
+    quick: ready.filter((f) => f.stage === 'quick').length,
+    pending: fixes.filter((f) => f.status === 'pending' || f.status === 'running').length,
+    failed: fixes.filter((f) => f.status === 'error').length,
+    ...accuracy(ready),
     medianRadiusKm: median(ready.filter((f) => f.location).map((f) => f.location!.radiusKm)),
     timeKnown: ready.filter((f) => f.time.method !== 'none' && f.time.windows.length > 0).length,
     medianSeconds: median(ready.map((f) => f.elapsedMs / 1000)),
+    bySource: { referenz: accuracy(reference), eigene: accuracy(own) },
+    ownTruths,
     evaluation,
     holdout,
   };
 }
+
+/** One row of the measurement view: a video with a known place, its fix and the error. */
+export interface DatasetRow {
+  index: number;
+  /** 'referenz': the reference set; 'eigene': an own truth given with POST /api/datum/truth. */
+  kind: 'referenz' | 'eigene';
+  name: string;
+  label: string;
+  country: string | null;
+  lat: number;
+  lon: number;
+  /** Where a reference truth comes from (URL); null for own truths. */
+  source: string | null;
+  license: string | null;
+  videoId: string | null;
+  errorKm: number | null;
+  /** Stage of the fix the error belongs to, null without one. */
+  stage: 'quick' | 'full' | null;
+}
+
+/** Body limit of the truth upload: 10 000 entries with long names and labels. */
+const TRUTH_BODY_LIMIT = 4 * 1024 * 1024;
 
 export function registerDatumRoutes(app: FastifyInstance, node: PlatformNode, need: Need, sendError: SendError): void {
   const datum = node.datum;
@@ -159,30 +205,89 @@ export function registerDatumRoutes(app: FastifyInstance, node: PlatformNode, ne
     } catch {
       evaluation = null;
     }
-    return summariseFixes(datum.list(), datum.holdout, evaluation);
+    return summariseFixes(datum.list(), datum.holdout, evaluation, datum.truths?.size ?? 0);
   });
 
-  /** The reference dataset (ground truth), for the measurement view. */
+  /**
+   * The videos with a known place, for the measurement view: the reference set, then the own
+   * truths (each with the first recording of that file name, if there is one).
+   */
   app.get('/api/datum/dataset', async (request, reply) => {
     if (!need(request, reply, 'media')) return reply;
     const videos = await loadManifest();
-    const fixes = datum.list();
-    return videos.map((v, i) => {
-      const name = `datum-${String(i + 1).padStart(3, '0')}.mp4`;
-      const info = store.infos().find((x) => x.name === name) ?? null;
-      const fix = info ? fixes.find((f) => f.videoId === info.id) ?? null : null;
+    const fixes = new Map(datum.list().map((f) => [f.videoId, f]));
+    const infos = store.infos();
+    const row = (base: Omit<DatasetRow, 'index' | 'videoId' | 'errorKm' | 'stage'>, videoId: string | null, index: number): DatasetRow => {
+      const fix = videoId ? (fixes.get(videoId) ?? null) : null;
+      const located = fix?.status === 'ready' && fix.location ? fix.location : null;
       return {
-        index: i + 1,
-        name,
-        label: v.label,
-        country: v.country,
-        lat: v.lat,
-        lon: v.lon,
-        source: v.sourceUrl ?? null,
-        license: v.license ?? null,
-        videoId: info?.id ?? null,
-        errorKm: fix?.location ? haversineKm(fix.location.lat, fix.location.lon, v.lat, v.lon) : null,
+        index,
+        ...base,
+        videoId,
+        errorKm: located ? haversineKm(located.lat, located.lon, base.lat, base.lon) : null,
+        stage: located ? (fix?.stage ?? 'full') : null,
       };
+    };
+    const rows: DatasetRow[] = videos.map((v, i) => {
+      const name = caseName(i);
+      const info = infos.find((x) => x.name === name) ?? null;
+      return row(
+        { kind: 'referenz', name, label: v.label, country: v.country, lat: v.lat, lon: v.lon, source: v.sourceUrl ?? null, license: v.license ?? null },
+        info?.id ?? null,
+        i + 1,
+      );
     });
+    const own = datum.truths?.list() ?? [];
+    if (own.length > 0) {
+      const world = await loadWorld().catch(() => null);
+      const byKey = new Map<string, string>();
+      for (const info of infos) {
+        const key = truthKey(info.name);
+        if (!byKey.has(key)) byKey.set(key, info.id);
+      }
+      for (const t of own) {
+        rows.push(
+          row(
+            { kind: 'eigene', name: t.name, label: t.label ?? t.name, country: world?.countryNear(t.lat, t.lon)?.iso ?? null, lat: t.lat, lon: t.lon, source: null, license: null },
+            byKey.get(truthKey(t.name)) ?? null,
+            rows.length + 1,
+          ),
+        );
+      }
+    }
+    return rows;
+  });
+
+  /** The own truths stored in the node. */
+  app.get('/api/datum/truth', async (request, reply) => {
+    if (!need(request, reply, 'media')) return reply;
+    return { entries: datum.truths?.list() ?? [] };
+  });
+
+  /**
+   * Own ground truth for own videos: { entries: [{ name, lat, lon, label? }] }, matched by file
+   * name with or without extension, in any letter case. Applied to the fixes at once (the error
+   * against the truth is added; nothing is located again). Needs the right to upload footage.
+   */
+  app.post('/api/datum/truth', { bodyLimit: TRUTH_BODY_LIMIT }, async (request, reply) => {
+    const ctx = need(request, reply, 'source.write');
+    if (!ctx) return reply;
+    const say = (refusal: TruthRefusal): string => (ctx.lang === 'en' ? refusal.en : refusal.de);
+    const book = datum.truths;
+    if (!book) return sendError(reply, 404, say({ de: 'Dieser Knoten nimmt keine Grundwahrheit an.', en: 'This node accepts no ground truth.' }));
+    const parsed = parseTruthBody(request.body);
+    if (!('entries' in parsed)) return sendError(reply, 400, say(parsed));
+    const result = await book.put(parsed.entries);
+    if (!('stored' in result)) return sendError(reply, 400, say(result));
+    const matched = await datum.applyTruths(parsed.entries.map((e) => e.name));
+    await node.ledger.append({
+      actor: ctx.user.id,
+      role: ctx.user.role,
+      mandateId: ctx.mandate?.id ?? null,
+      action: 'datum.truth',
+      summary: `Grundwahrheit für ${result.stored} ${result.stored === 1 ? 'Video' : 'Videos'} hinterlegt`,
+      data: { stored: result.stored, matched, total: book.size },
+    });
+    return { stored: result.stored, matched };
   });
 }

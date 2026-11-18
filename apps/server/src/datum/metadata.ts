@@ -23,8 +23,9 @@ export interface VideoMetadata {
   device: string | null;
   /** All tags found (format first, then streams), keys lower-cased. */
   raw: Record<string, string>;
-  /** Why a creation time that was present was not used, if so. */
+  /** Why a creation time that was present was not used, if so (German, and in English). */
   creationRejected?: string;
+  creationRejectedEn?: string;
   durationSec: number | null;
   fps: number | null;
   width: number | null;
@@ -190,19 +191,28 @@ export function parseTagDay(value: string): string | null {
   return m ? validDate(Number(m[1]), Number(m[2]), Number(m[3])) : null;
 }
 
+/** Why a creation time was not believed, in German and in English (the fix carries both). */
+export interface RejectedTime {
+  de: string;
+  en: string;
+}
+
 /**
  * Decides whether a creation time is believable: not before 1990 (encoder defaults of 1904 and
- * 1970 fall here), not in the future, and not the moment a transcoder rewrote the file.
+ * 1970 fall here), not in the future, and not the moment a transcoder rewrote the file. Returns
+ * the reason when it is not, null when it is.
  */
 export function judgeCreationTime(
   t: number,
   context: { encoder: string | null; fileMtimeMs: number | null; now?: number },
-): string | null {
+): RejectedTime | null {
   const now = context.now ?? Date.now();
-  if (t < MIN_PLAUSIBLE) return 'Zeitstempel vor 1990 (Standardwert des Encoders)';
-  if (t > now + 24 * 3600_000) return 'Zeitstempel in der Zukunft';
+  if (t < MIN_PLAUSIBLE) return { de: 'Zeitstempel vor 1990 (Standardwert des Encoders)', en: 'timestamp before 1990 (the encoder\'s default value)' };
+  if (t > now + 24 * 3600_000) return { de: 'Zeitstempel in der Zukunft', en: 'timestamp in the future' };
   if (context.encoder && TRANSCODER.test(context.encoder) && context.fileMtimeMs !== null) {
-    if (Math.abs(t - context.fileMtimeMs) < 15 * 60_000) return `Zeitpunkt der Umkodierung (${context.encoder})`;
+    if (Math.abs(t - context.fileMtimeMs) < 15 * 60_000) {
+      return { de: `Zeitpunkt der Umkodierung (${context.encoder})`, en: `the moment the file was transcoded (${context.encoder})` };
+    }
   }
   return null;
 }
@@ -251,7 +261,7 @@ export function metadataFromProbe(probe: ProbeJson, fileMtimeMs: number | null, 
   const nowMs = now ?? Date.now();
   let creationUtc: number | null = null;
   let creationDate: string | null = null;
-  let creationRejected: string | undefined;
+  let creationRejected: RejectedTime | undefined;
   for (const key of CREATION_KEYS) {
     const v = raw[key];
     if (!v) continue;
@@ -292,7 +302,7 @@ export function metadataFromProbe(probe: ProbeJson, fileMtimeMs: number | null, 
     altitude,
     device,
     raw,
-    ...(creationRejected !== undefined && creationUtc === null ? { creationRejected } : {}),
+    ...(creationRejected !== undefined && creationUtc === null ? { creationRejected: creationRejected.de, creationRejectedEn: creationRejected.en } : {}),
     durationSec: Number.isFinite(durationRaw) && durationRaw > 0 ? durationRaw : null,
     fps,
     width: typeof video?.width === 'number' ? video.width : null,

@@ -84,3 +84,34 @@ export async function recompute(id: string): Promise<void> {
   const response = await fetch(`api/datum/fix/${id}/recompute`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
+
+export interface TruthResult {
+  /** Entries the node now holds from this list. */
+  stored: number;
+  /** Of these, how many name a recording already on the node (their fixes show the deviation at once). */
+  matched: number;
+}
+
+/**
+ * Gives the node the true places of own recordings (POST /api/datum/truth). They are compared with
+ * the fixes on MESSUNG and never go into the localisation.
+ */
+export async function postTruth(entries: { name: string; lat: number; lon: number; label?: string }[]): Promise<TruthResult> {
+  const response = await fetch('api/datum/truth', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ entries }),
+  });
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the status line
+    }
+    throw new Error(message);
+  }
+  return (await response.json()) as TruthResult;
+}

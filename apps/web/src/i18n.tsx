@@ -11,9 +11,40 @@ interface LangValue {
   t: (de: string, vars?: Record<string, string | number>) => string;
   /** Chooses between a German and an English value supplied by the server. */
   pick: (de: string, en?: string | null) => string;
+  /** Chooses between German lines and their English versions (same order) supplied by the server. */
+  pickList: (de: string[], en?: string[] | null) => string[];
   /** A count with its noun in the right number: "1 Quelle", "3 Quellen", "1 source". */
   n: (count: number, noun: CountNoun) => string;
+  /**
+   * Name of a country in the console language from its ISO 3166-1 alpha-2 code ("DE" -> "Germany"),
+   * so that names the server writes in German never show in the English console. Falls back to
+   * `fallback` (or the code) when the code is unknown.
+   */
+  region: (iso: string | null | undefined, fallback?: string | null) => string;
   locale: string;
+}
+
+const regionNames = new Map<string, Intl.DisplayNames | null>();
+
+function regionName(locale: string, iso: string): string | null {
+  let names = regionNames.get(locale);
+  if (names === undefined) {
+    try {
+      names = new Intl.DisplayNames([locale], { type: 'region' });
+    } catch {
+      // Very old engines lack DisplayNames; the server's German name stands in.
+      names = null;
+    }
+    regionNames.set(locale, names);
+  }
+  if (!names) return null;
+  try {
+    const name = names.of(iso.toUpperCase());
+    // DisplayNames echoes codes it does not know.
+    return name && name.toUpperCase() !== iso.toUpperCase() ? name : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Nouns that follow a count somewhere in the console: singular and plural in both languages. */
@@ -25,6 +56,8 @@ const COUNT_NOUNS = {
   entry: { de: ['Eintrag', 'Einträge'], en: ['entry', 'entries'] },
   query: { de: ['Abfrage', 'Abfragen'], en: ['query', 'queries'] },
   hit: { de: ['Treffer', 'Treffer'], en: ['hit', 'hits'] },
+  recording: { de: ['Aufnahme', 'Aufnahmen'], en: ['recording', 'recordings'] },
+  file: { de: ['Datei', 'Dateien'], en: ['file', 'files'] },
 } as const;
 
 export type CountNoun = keyof typeof COUNT_NOUNS;
@@ -61,7 +94,9 @@ export function LangProvider({ children }: { children: ReactNode }) {
       setLang,
       t: (de, vars) => fill(lang === 'en' ? (EN[de] ?? de) : de, vars),
       pick: (de, en) => (lang === 'en' && en !== undefined && en !== null && en !== '' ? en : de),
+      pickList: (de, en) => (lang === 'en' && en && en.length === de.length ? en : de),
       n: (count, noun) => `${formatCount(count)} ${COUNT_NOUNS[noun][lang][count === 1 ? 0 : 1]}`,
+      region: (iso, fallback) => (iso ? (regionName(lang === 'en' ? 'en-GB' : 'de-DE', iso) ?? fallback ?? iso) : (fallback ?? '')),
       locale: lang === 'en' ? 'en-GB' : 'de-DE',
     }),
     [lang, setLang],

@@ -7,7 +7,8 @@
  *    season from vegetation and snow as a range of months (or the date from the file name), and
  *    the sun arithmetic turns band + date + place into local clock windows.
  *
- * Everything is computed locally. Notes for the console are German.
+ * Everything is computed locally. Notes for the console are written in German and in English
+ * (TimeEstimate.notes and notesEn, same order), so the console shows one language throughout.
  */
 import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
@@ -71,6 +72,8 @@ export interface LightClass {
   id: 'night' | 'twilight' | 'horizon' | 'golden' | 'daylight' | 'midday' | 'overcast' | 'indoor';
   /** German name for the notes. */
   name: string;
+  /** English name for the English notes. */
+  nameEn: string;
   /** Apparent sun elevation band (degrees); null: the sun says nothing (indoor). */
   band: [number, number] | null;
   phase: LightPhase;
@@ -81,6 +84,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'night',
     name: 'Nacht',
+    nameEn: 'night',
     band: [-90, -6],
     phase: 'night',
     prompts: [
@@ -94,6 +98,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'twilight',
     name: 'Dämmerung (blaue Stunde)',
+    nameEn: 'twilight (blue hour)',
     band: [-6, 0],
     phase: 'twilight',
     prompts: [
@@ -106,6 +111,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'horizon',
     name: 'Sonnenauf- oder -untergang',
+    nameEn: 'sunrise or sunset',
     band: [-1, 6],
     phase: 'golden',
     prompts: [
@@ -118,6 +124,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'golden',
     name: 'goldene Stunde',
+    nameEn: 'golden hour',
     band: [2, 12],
     phase: 'golden',
     prompts: [
@@ -130,6 +137,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'daylight',
     name: 'Tageslicht am Vor- oder Nachmittag',
+    nameEn: 'daylight in the morning or afternoon',
     band: [12, 35],
     phase: 'day',
     prompts: [
@@ -142,6 +150,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'midday',
     name: 'Mittagssonne',
+    nameEn: 'midday sun',
     band: [35, 90],
     phase: 'day',
     prompts: [
@@ -154,6 +163,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'overcast',
     name: 'bedeckter Himmel',
+    nameEn: 'overcast sky',
     band: [3, 60],
     phase: 'day',
     prompts: [
@@ -166,6 +176,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
   {
     id: 'indoor',
     name: 'Innenraum / Kunstlicht',
+    nameEn: 'indoors / artificial light',
     band: null,
     phase: 'unknown',
     prompts: [
@@ -181,6 +192,7 @@ export const LIGHT_CLASSES: readonly LightClass[] = [
 export interface SeasonClass {
   id: 'winter' | 'bare' | 'spring' | 'summer' | 'autumn' | 'tropical' | 'arid' | 'rain' | 'urban';
   name: string;
+  nameEn: string;
   /** Months for the northern hemisphere (inclusive, may wrap); null: uninformative. */
   months: [number, number] | null;
   prompts: string[];
@@ -190,42 +202,49 @@ export const SEASON_CLASSES: readonly SeasonClass[] = [
   {
     id: 'winter',
     name: 'Schnee und Winter',
+    nameEn: 'snow and winter',
     months: [12, 2],
     prompts: ['a snowy winter landscape', 'snow on the ground in winter', 'a street covered with snow', 'frost and snow in winter'],
   },
   {
     id: 'bare',
     name: 'kahle Bäume',
+    nameEn: 'bare trees',
     months: [11, 3],
     prompts: ['bare leafless trees', 'trees without leaves in winter', 'a park with bare branches and no foliage'],
   },
   {
     id: 'spring',
     name: 'Frühlingsblüte',
+    nameEn: 'spring blossom',
     months: [3, 5],
     prompts: ['trees in spring blossom', 'cherry blossoms in spring', 'fresh light green leaves and flowers in spring'],
   },
   {
     id: 'summer',
     name: 'sattes Sommergrün',
+    nameEn: 'lush summer green',
     months: [5, 9],
     prompts: ['lush green trees in summer', 'dense green summer foliage', 'a green park on a summer day'],
   },
   {
     id: 'autumn',
     name: 'Herbstlaub',
+    nameEn: 'autumn leaves',
     months: [9, 11],
     prompts: ['autumn foliage with red and yellow leaves', 'trees with orange autumn leaves', 'fallen leaves on the ground in autumn'],
   },
   {
     id: 'tropical',
     name: 'tropisch immergrün',
+    nameEn: 'tropical evergreen',
     months: null,
     prompts: ['tropical palm trees', 'tropical evergreen vegetation', 'a tropical beach with palm trees'],
   },
   {
     id: 'arid',
     name: 'trocken, Wüste',
+    nameEn: 'dry, desert',
     months: null,
     prompts: ['a dry desert landscape', 'arid land with sand and rocks', 'dry brown grass and dust'],
   },
@@ -233,12 +252,14 @@ export const SEASON_CLASSES: readonly SeasonClass[] = [
     // Wet, grey scenes otherwise pass for snow.
     id: 'rain',
     name: 'Regen, nasse Straßen',
+    nameEn: 'rain, wet streets',
     months: null,
     prompts: ['a rainy street with wet asphalt', 'heavy rain falling on a street', 'raindrops and wet reflections on the road'],
   },
   {
     id: 'urban',
     name: 'ohne Vegetation',
+    nameEn: 'no vegetation',
     months: null,
     prompts: ['a city street with buildings and no trees', 'an indoor scene', 'a close-up of an object'],
   },
@@ -469,7 +490,23 @@ const MONTHS_DE = [
   'Dezember',
 ] as const;
 
+const MONTHS_EN = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
 const monthName = (m: number): string => MONTHS_DE[(m - 1 + 12) % 12]!;
+const monthNameEn = (m: number): string => MONTHS_EN[(m - 1 + 12) % 12]!;
 
 /** Months 1..12 contained in an inclusive, possibly wrapping range. */
 export function monthsOfRange(range: [number, number]): number[] {
@@ -554,6 +591,20 @@ export interface LabelledPiece {
 /** German labels of the parts of the day; the index addresses the per-bin label mass in coreWindows. */
 const DAY_LABELS = ['Nacht', 'Morgen', 'Vormittag', 'Nachmittag', 'Abend'] as const;
 type DayLabel = (typeof DAY_LABELS)[number];
+
+/**
+ * English words for the window labels, used inside English notes. TimeWindow.label itself stays
+ * the German key; the console translates it.
+ */
+export const DAY_LABELS_EN: Readonly<Record<string, string>> = {
+  Nacht: 'night',
+  Morgen: 'early morning',
+  Vormittag: 'late morning',
+  Nachmittag: 'afternoon',
+  Abend: 'evening',
+  ganztägig: 'all day',
+};
+const dayLabelEn = (label: string): string => DAY_LABELS_EN[label] ?? label;
 
 /** German label of a moment from the sun's elevation, its hour angle and the local clock minute. */
 function labelOfSun(elevationDeg: number, hourAngleDeg: number, localMin: number): DayLabel {
@@ -754,11 +805,19 @@ export function coreWindows(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Formatting helpers (German)
+// Formatting helpers (German and English)
 // ---------------------------------------------------------------------------------------------
+
+/** One note in both languages. */
+interface Note {
+  de: string;
+  en: string;
+}
 
 const deg = (v: number): string => `${v < 0 ? '−' : ''}${Math.abs(Math.round(v))}`;
 const pct = (v: number): string => `${Math.round(v * 100)} %`;
+const pctEn = (v: number): string => `${Math.round(v * 100)}%`;
+const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 const clock = (min: number): string => {
   const m = Math.round(min) % 1440;
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -766,6 +825,11 @@ const clock = (min: number): string => {
 const dateDe = (ymd: string): string => {
   const { year, month, day } = parseYmd(ymd);
   return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
+};
+/** "21 June 2024": unambiguous for readers on either side of the Atlantic. */
+const dateEn = (ymd: string): string => {
+  const { year, month, day } = parseYmd(ymd);
+  return `${day} ${monthNameEn(month)} ${year}`;
 };
 
 /**
@@ -775,6 +839,24 @@ const dateDe = (ymd: string): string => {
  * two pieces; the gaps between ranges are never reported as possible.
  */
 export function possibleClause(windows: ReadonlyArray<TimeWindow>): string {
+  const ranges = possibleRanges(windows);
+  if (ranges === 'none') return 'möglich ist keine Uhrzeit';
+  if (ranges === 'all') return 'möglich ist jede Uhrzeit';
+  const list = ranges.length > 1 ? `${ranges.slice(0, -1).join(', ')} oder ${ranges[ranges.length - 1]!}` : ranges[0]!;
+  return `möglich ist ${list} Uhr`;
+}
+
+/** The same clause in English ("possible times are 05:05–06:23 or 19:53–21:12"). */
+export function possibleClauseEn(windows: ReadonlyArray<TimeWindow>): string {
+  const ranges = possibleRanges(windows);
+  if (ranges === 'none') return 'no time of day is possible';
+  if (ranges === 'all') return 'any time of day is possible';
+  const list = ranges.length > 1 ? `${ranges.slice(0, -1).join(', ')} or ${ranges[ranges.length - 1]!}` : ranges[0]!;
+  return `possible ${ranges.length > 1 ? 'times are' : 'time is'} ${list}`;
+}
+
+/** Clock ranges ("05:05–06:23") of possibleClause, or whether none or all of the day is possible. */
+function possibleRanges(windows: ReadonlyArray<TimeWindow>): string[] | 'none' | 'all' {
   const ranges: Array<{ s: number; e: number }> = [];
   for (const w of [...windows].sort((a, b) => a.startMin - b.startMin)) {
     const last = ranges[ranges.length - 1];
@@ -784,22 +866,26 @@ export function possibleClause(windows: ReadonlyArray<TimeWindow>): string {
   }
   const first = ranges[0];
   const last = ranges[ranges.length - 1];
-  if (!first || !last) return 'möglich ist keine Uhrzeit';
-  if (first === last && first.s === 0 && first.e >= 1439) return 'möglich ist jede Uhrzeit';
+  if (!first || !last) return 'none';
+  if (first === last && first.s === 0 && first.e >= 1439) return 'all';
   if (first !== last && first.s === 0 && last.e >= 1439) {
     // Across midnight: the evening part and the early-morning part are one range.
     ranges.shift();
     last.e = first.e;
   }
-  const parts = ranges.map((r) => `${clock(r.s)}–${clock(r.e)}`);
-  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} oder ${parts[parts.length - 1]!}` : parts[0]!;
-  return `möglich ist ${list} Uhr`;
+  return ranges.map((r) => `${clock(r.s)}–${clock(r.e)}`);
 }
 
 function bandText(band: [number, number]): string {
   if (band[1] <= -6 && band[0] <= -80) return `unter ${deg(band[1])}° (Nacht)`;
   if (band[0] <= -80) return `unter ${deg(band[1])}°`;
   return `${deg(band[0])} bis ${deg(band[1])}°`;
+}
+
+function bandTextEn(band: [number, number]): string {
+  if (band[1] <= -6 && band[0] <= -80) return `below ${deg(band[1])}° (night)`;
+  if (band[0] <= -80) return `below ${deg(band[1])}°`;
+  return `${deg(band[0])} to ${deg(band[1])}°`;
 }
 
 function phaseOfElevation(el: number): LightPhase {
@@ -872,20 +958,31 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
     const tz = zone ?? 'UTC';
     const date = localDateYmd(utc, tz);
     const minute = Math.floor(localMinutes(utc, tz));
-    const notes: string[] = [`Aufnahmezeit aus den Metadaten der Datei: ${dateDe(date)}, ${clock(minute)} Uhr (${zone ?? 'UTC, Ort unbekannt'}).`];
+    const notes: Note[] = [
+      {
+        de: `Aufnahmezeit aus den Metadaten der Datei: ${dateDe(date)}, ${clock(minute)} Uhr (${zone ?? 'UTC, Ort unbekannt'}).`,
+        en: `Recording time from the file's metadata: ${dateEn(date)}, ${clock(minute)} (${zone ?? 'UTC, place unknown'}).`,
+      },
+    ];
     let phase: LightPhase = light.phase;
     let sun: SunReport | null = null;
     if (place) {
       sun = sunReportFor(date, place, utc);
       const el = sun.at!.elevationDeg;
       phase = phaseOfElevation(el);
-      notes.push(`Sonne zu diesem Zeitpunkt: ${deg(el)}° hoch, Azimut ${deg(sun.at!.azimuthDeg)}°.`);
+      notes.push({
+        de: `Sonne zu diesem Zeitpunkt: ${deg(el)}° hoch, Azimut ${deg(sun.at!.azimuthDeg)}°.`,
+        en: `Sun at that moment: ${deg(el)}° above the horizon, azimuth ${deg(sun.at!.azimuthDeg)}°.`,
+      });
       if (light.band && light.confidence >= 0.4) {
         const inside = el >= light.band[0] - 5 && el <= light.band[1] + 5;
         notes.push(
           inside
-            ? 'Das Licht im Bild passt zum Sonnenstand dieser Uhrzeit.'
-            : `Achtung: Das Licht im Bild (${light.top.name}) passt nicht zum Sonnenstand der Metadaten; Zeitstempel prüfen.`,
+            ? { de: 'Das Licht im Bild passt zum Sonnenstand dieser Uhrzeit.', en: "The light in the picture matches the sun's position at that time." }
+            : {
+                de: `Achtung: Das Licht im Bild (${light.top.name}) passt nicht zum Sonnenstand der Metadaten; Zeitstempel prüfen.`,
+                en: `Caution: the light in the picture (${light.top.nameEn}) does not match the sun's position at the time in the metadata; check the timestamp.`,
+              },
         );
       }
     }
@@ -900,25 +997,31 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
       sunElevationBand: light.band,
       phase,
       confidence: 0.95,
-      notes,
+      ...bilingual(notes),
     };
     return { time, sun };
   }
 
   // --- 2. Date: file name or season ---------------------------------------------------------
-  const notes: string[] = [];
+  const notes: Note[] = [];
   const year = new Date(now).getUTCFullYear();
   const inFuture = (ymd: string): boolean => Date.UTC(parseYmd(ymd).year, parseYmd(ymd).month - 1, parseYmd(ymd).day) > now + 86400000;
   let date = validYmd(input.filenameDate);
   let fromTags = false;
   if (date !== null && inFuture(date)) {
-    notes.push(`Datum im Dateinamen (${dateDe(date)}) liegt in der Zukunft und wird nicht verwendet.`);
+    notes.push({
+      de: `Datum im Dateinamen (${dateDe(date)}) liegt in der Zukunft und wird nicht verwendet.`,
+      en: `The date in the file name (${dateEn(date)}) lies in the future and is not used.`,
+    });
     date = null;
   }
   if (date === null) {
     const tagged = validYmd(input.metadataDate ?? null);
     if (tagged !== null && inFuture(tagged)) {
-      notes.push(`Datum in den Metadaten (${dateDe(tagged)}) liegt in der Zukunft und wird nicht verwendet.`);
+      notes.push({
+        de: `Datum in den Metadaten (${dateDe(tagged)}) liegt in der Zukunft und wird nicht verwendet.`,
+        en: `The date in the metadata (${dateEn(tagged)}) lies in the future and is not used.`,
+      });
     } else if (tagged !== null) {
       date = tagged;
       fromTags = true;
@@ -926,29 +1029,39 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
   }
   let monthRange: [number, number] | null = null;
   let dateSource: TimeEstimate['dateSource'] = 'none';
-  let seasonNote: string | null = null;
+  let seasonNote: Note | null = null;
   if (date !== null && fromTags) {
     dateSource = 'metadata';
-    notes.push(`Datum aus den Metadaten der Datei (ohne Uhrzeit): ${dateDe(date)}.`);
+    notes.push({ de: `Datum aus den Metadaten der Datei (ohne Uhrzeit): ${dateDe(date)}.`, en: `Date from the file's metadata (without a time of day): ${dateEn(date)}.` });
   } else if (date !== null) {
     dateSource = 'filename';
-    notes.push(`Datum aus dem Dateinamen: ${dateDe(date)}.`);
+    notes.push({ de: `Datum aus dem Dateinamen: ${dateDe(date)}.`, en: `Date from the file name: ${dateEn(date)}.` });
   } else if (seasonProbs) {
     const season = readSeason(seasonProbs);
     const lat = loc?.lat ?? null;
     if (season.monthsNorth === null) {
-      seasonNote = `Jahreszeit nicht erkennbar (${season.top.name}); alle Monate berücksichtigt.`;
+      seasonNote = {
+        de: `Jahreszeit nicht erkennbar (${season.top.name}); alle Monate berücksichtigt.`,
+        en: `The season cannot be recognised (${season.top.nameEn}); all months considered.`,
+      };
     } else if (lat !== null && Math.abs(lat) < 10) {
-      seasonNote = `Nahe am Äquator sagt die Vegetation (${season.top.name}) nichts über den Monat; alle Monate berücksichtigt.`;
+      seasonNote = {
+        de: `Nahe am Äquator sagt die Vegetation (${season.top.name}) nichts über den Monat; alle Monate berücksichtigt.`,
+        en: `Near the equator the vegetation (${season.top.nameEn}) says nothing about the month; all months considered.`,
+      };
     } else {
       const south = lat !== null && lat < -10;
       monthRange = south ? shiftRange(season.monthsNorth, 6) : season.monthsNorth;
       dateSource = 'season';
       const hemi = lat === null ? ', Nordhalbkugel angenommen' : south ? ', Südhalbkugel' : '';
-      seasonNote = `Jahreszeit aus dem Bild: ${season.top.name} (${pct(season.p)}) – ${monthName(monthRange[0])} bis ${monthName(monthRange[1])}${hemi}.`;
+      const hemiEn = lat === null ? ', northern hemisphere assumed' : south ? ', southern hemisphere' : '';
+      seasonNote = {
+        de: `Jahreszeit aus dem Bild: ${season.top.name} (${pct(season.p)}) – ${monthName(monthRange[0])} bis ${monthName(monthRange[1])}${hemi}.`,
+        en: `Season from the picture: ${season.top.nameEn} (${pctEn(season.p)}) – ${monthNameEn(monthRange[0])} to ${monthNameEn(monthRange[1])}${hemiEn}.`,
+      };
     }
   } else {
-    seasonNote = 'Keine Bildmerkmale für die Jahreszeit; alle Monate berücksichtigt.';
+    seasonNote = { de: 'Keine Bildmerkmale für die Jahreszeit; alle Monate berücksichtigt.', en: 'No image features for the season; all months considered.' };
   }
 
   // --- 3. Light → band → clock windows ------------------------------------------------------
@@ -960,7 +1073,10 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
   const bestDate = date ?? (monthRange ? `${year}-${mm(months[Math.floor((months.length - 1) / 2)]!)}-15` : `${year}-03-20`);
 
   if (band === null) {
-    notes.unshift(`Licht im Bild: ${light.top.name} (${pct(light.probs.indoor)}); die Sonne ist nicht zu sehen, die Uhrzeit bleibt offen.`);
+    notes.unshift({
+      de: `Licht im Bild: ${light.top.name} (${pct(light.probs.indoor)}); die Sonne ist nicht zu sehen, die Uhrzeit bleibt offen.`,
+      en: `Light in the picture: ${light.top.nameEn} (${pctEn(light.probs.indoor)}); the sun cannot be seen, so the time of day stays open.`,
+    });
     if (seasonNote && date === null) notes.push(seasonNote);
     const time: TimeEstimate = {
       method: 'none',
@@ -973,7 +1089,7 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
       sunElevationBand: null,
       phase: 'unknown',
       confidence: 0,
-      notes: notes.slice(0, 5),
+      ...bilingual(notes.slice(0, 5)),
     };
     return { time, sun: place ? sunReportFor(bestDate, place, null) : null };
   }
@@ -981,22 +1097,43 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
   const possible = clockWindows(dates, reasonPlace, band);
   const core = coreWindows(dates, reasonPlace, light.probs);
   const windows = core.windows.length > 0 ? core.windows : possible;
-  const lightNote =
+  const share = pct(light.probs[light.top.id]);
+  const shareEn = pctEn(light.probs[light.top.id]);
+  const lightNote: Note =
     light.top.id === 'night' || light.top.id === 'twilight'
-      ? `Sonnenhöhe aus dem Licht: ${bandText(band)} – ${light.top.name} (${pct(light.probs[light.top.id])}).`
-      : `Sonnenhöhe aus Licht und Schatten: ${bandText(band)} – ${light.top.name} (${pct(light.probs[light.top.id])}).`;
-  const out: string[] = [lightNote, ...notes];
+      ? {
+          de: `Sonnenhöhe aus dem Licht: ${bandText(band)} – ${light.top.name} (${share}).`,
+          en: `Sun elevation from the light: ${bandTextEn(band)} – ${light.top.nameEn} (${shareEn}).`,
+        }
+      : {
+          de: `Sonnenhöhe aus Licht und Schatten: ${bandText(band)} – ${light.top.name} (${share}).`,
+          en: `Sun elevation from light and shadows: ${bandTextEn(band)} – ${light.top.nameEn} (${shareEn}).`,
+        };
+  const out: Note[] = [lightNote, ...notes];
   if (seasonNote && date === null) out.push(seasonNote);
   const am = windows.find((w) => w.label === 'Morgen' || w.label === 'Vormittag');
   const pm = windows.find((w) => w.label === 'Nachmittag' || w.label === 'Abend');
-  if (am && pm) out.push(`${am.label} und ${pm.label} sind aus der Sonnenhöhe allein nicht zu unterscheiden.`);
+  if (am && pm) {
+    out.push({
+      de: `${am.label} und ${pm.label} sind aus der Sonnenhöhe allein nicht zu unterscheiden.`,
+      en: `${capitalise(dayLabelEn(am.label))} and ${dayLabelEn(pm.label)} cannot be told apart from the sun's elevation alone.`,
+    });
+  }
   if (core.windows.length > 0 && possible.length > 0) {
     // The mass the shown windows really hold: plateaus and closed gaps often take it above CORE_MASS.
     const shownMass = core.windows.reduce((a, w) => a + w.probability, 0);
-    out.push(`Gezeigt sind die Zeitfenster mit zusammen ${pct(shownMass)} Wahrscheinlichkeit; ${possibleClause(possible)}.`);
+    out.push({
+      de: `Gezeigt sind die Zeitfenster mit zusammen ${pct(shownMass)} Wahrscheinlichkeit; ${possibleClause(possible)}.`,
+      en: `The windows shown hold ${pctEn(shownMass)} of the probability together; ${possibleClauseEn(possible)}.`,
+    });
   }
-  if (!place) out.push('Ort unbekannt: Uhrzeiten als Sonnenzeit für 45° nördlicher Breite geschätzt.');
-  if (windows.length === 0) out.push('An diesem Ort und Datum erreicht die Sonne diese Höhe nicht; Licht oder Datum prüfen.');
+  if (!place) out.push({ de: 'Ort unbekannt: Uhrzeiten als Sonnenzeit für 45° nördlicher Breite geschätzt.', en: 'Place unknown: times estimated as solar time at 45° north.' });
+  if (windows.length === 0) {
+    out.push({
+      de: 'An diesem Ort und Datum erreicht die Sonne diese Höhe nicht; Licht oder Datum prüfen.',
+      en: 'At this place and date the sun does not reach this elevation; check the light or the date.',
+    });
+  }
 
   const dateFactor = date !== null ? 1 : monthRange ? 0.85 : 0.7;
   const placeFactor = place ? 1 : 0.7;
@@ -1025,9 +1162,14 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
     sunElevationBand: band,
     phase: light.phase,
     confidence,
-    notes: out.slice(0, 5),
+    ...bilingual(out.slice(0, 5)),
   };
   return { time, sun };
+}
+
+/** Notes as TimeEstimate carries them: German and English arrays of the same length and order. */
+function bilingual(notes: readonly Note[]): { notes: string[]; notesEn: string[] } {
+  return { notes: notes.map((n) => n.de), notesEn: notes.map((n) => n.en) };
 }
 
 function labelFor(t: number, place: Place | null, tz: string): string {

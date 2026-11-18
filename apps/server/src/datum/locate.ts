@@ -23,6 +23,7 @@ import type { DetailLevel } from '../types.js';
 import type { CountryProb, Evidence, FixCandidate, FixLocation } from './contract.js';
 import { galleryImageUrl, type Gallery, type GalleryNeighbour, type ImageEmbedder } from './gallery.js';
 import { filenameHints, readMetadata, type FilenameHints, type VideoMetadata } from './metadata.js';
+import { frameStatsFromJpeg, type FrameStats } from './time.js';
 import { DEFAULT_PRIOR_PARAMS, greatCircleKm, loadWorld, type CountryPriorParams, type EmbedTexts, type World } from './world.js';
 
 export interface LocateParams {
@@ -157,6 +158,8 @@ export interface LocateInput {
   params?: Partial<LocateParams>;
   /** Display name of the file (for file-name hints); defaults to the basename of videoPath. */
   fileName?: string;
+  /** The file's tags when the caller has read them already (null: none); read from the file otherwise. */
+  metadata?: VideoMetadata | null;
 }
 
 export interface LocateResult {
@@ -402,11 +405,25 @@ export function confidenceFrom(f: ConfidenceFeatures, c: LocateParams['confidenc
   return Math.min(0.95, Math.max(0.02, sigmoid(z)));
 }
 
+// Every text of a fix is written twice, German and English (Evidence.label/labelEn and
+// detail/detailEn), so that the console never mixes the two languages.
 const fmt = (v: number, digits = 2): string => v.toFixed(digits).replace('.', ',');
+const fmtEn = (v: number, digits = 2): string => v.toFixed(digits);
 const pct = (p: number): string => `${Math.round(p * 100)} %`;
+const pctEn = (p: number): string => `${Math.round(p * 100)}%`;
 
 function formatCoord(lat: number, lon: number): string {
   return `${fmt(Math.abs(lat), 4)}° ${lat >= 0 ? 'N' : 'S'}, ${fmt(Math.abs(lon), 4)}° ${lon >= 0 ? 'O' : 'W'}`;
+}
+
+function formatCoordEn(lat: number, lon: number): string {
+  return `${fmtEn(Math.abs(lat), 4)}° ${lat >= 0 ? 'N' : 'S'}, ${fmtEn(Math.abs(lon), 4)}° ${lon >= 0 ? 'E' : 'W'}`;
+}
+
+/** A name in both languages. */
+export interface Named {
+  de: string;
+  en: string;
 }
 
 /** Everything locate() needs, already computed; the pure part, used directly by the evaluation. */
@@ -480,13 +497,22 @@ function continentPosterior(world: World, countries: readonly CountryProb[]): { 
   return [...sums.entries()].map(([code, p]) => ({ code, p })).sort((a, b) => b.p - a.p);
 }
 
-function placeLabel(world: World, lat: number, lon: number, landmark: string | null): string {
+/**
+ * Name of a place in both languages: the landmark (a proper name, the same in both) with its
+ * city, else the city, else the country, else the coordinates.
+ */
+export function placeLabel(world: World, lat: number, lon: number, landmark: string | null): Named {
   const city = world.nearestCity(lat, lon, { maxKm: 60 });
-  if (landmark && city) return landmark.includes(city.name) ? landmark : `${landmark}, ${city.name}`;
-  if (landmark) return landmark;
-  if (city) return city.distanceKm < 5 ? city.name : `bei ${city.name}`;
+  if (landmark && city) {
+    return {
+      de: landmark.includes(city.name) ? landmark : `${landmark}, ${city.name}`,
+      en: landmark.includes(city.nameEn) || landmark.includes(city.name) ? landmark : `${landmark}, ${city.nameEn}`,
+    };
+  }
+  if (landmark) return { de: landmark, en: landmark };
+  if (city) return city.distanceKm < 5 ? { de: city.name, en: city.nameEn } : { de: `bei ${city.name}`, en: `near ${city.nameEn}` };
   const country = world.countryNear(lat, lon);
-  return country ? country.name_de : formatCoord(lat, lon);
+  return country ? { de: country.name_de, en: country.name_en } : { de: formatCoord(lat, lon), en: formatCoordEn(lat, lon) };
 }
 
 /**
@@ -545,6 +571,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   const countries = countryPosterior(world, zeroShot, refs, params);
   const pCountry = new Map(countries.map((c) => [c.iso, c.p]));
   const countryName = (iso: string | null): string | null => (iso ? (world.country(iso)?.name_de ?? iso) : null);
+  const countryNameEn = (c: CountryProb): string => world.country(c.iso)?.name_en ?? c.iso;
 
   // ---- metadata
   const meta = ev.metadata;
@@ -552,36 +579,45 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   if (meta?.location) {
     const { lat, lon } = meta.location;
     const country = world.countryNear(lat, lon);
+    const name = placeLabel(world, lat, lon, null);
     metaLocation = {
       lat,
       lon,
       radiusKm: 0.05,
       confidence: 0.98,
       method: 'metadata',
-      label: placeLabel(world, lat, lon, null),
+      label: name.de,
+      labelEn: name.en,
       country: country?.iso ?? null,
       countryName: country?.name_de ?? null,
     };
     evidence.push({
       kind: 'metadata',
       label: `GPS in der Datei: ${formatCoord(lat, lon)}`,
+      labelEn: `GPS in the file: ${formatCoordEn(lat, lon)}`,
       detail: `Die Videodatei trägt eine Positionsangabe (ISO 6709${meta.altitude !== null ? `, Höhe ${Math.round(meta.altitude)} m` : ''}${meta.device ? `, Gerät ${meta.device}` : ''}); sie wird als Ort übernommen, sofern sie nicht nachträglich verändert wurde.`,
+      detailEn: `The video file carries a position (ISO 6709${meta.altitude !== null ? `, altitude ${Math.round(meta.altitude)} m` : ''}${meta.device ? `, device ${meta.device}` : ''}); it is taken as the place unless it was altered afterwards.`,
       weight: 0.98,
     });
   }
   if (meta && (meta.creationUtc !== null || meta.creationRejected)) {
+    const stamp = meta.creationUtc !== null ? new Date(meta.creationUtc).toISOString().slice(0, 16).replace('T', ' ') : '';
     evidence.push(
       meta.creationUtc !== null
         ? {
             kind: 'metadata',
-            label: `Aufnahmezeit laut Datei: ${new Date(meta.creationUtc).toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+            label: `Aufnahmezeit laut Datei: ${stamp} UTC`,
+            labelEn: `Recording time according to the file: ${stamp} UTC`,
             detail: `Zeitstempel aus den Container-Angaben${meta.device ? ` (${meta.device})` : ''}; er trägt nicht zum Ort bei.`,
+            detailEn: `Timestamp from the container tags${meta.device ? ` (${meta.device})` : ''}; it does not contribute to the place.`,
             weight: 0,
           }
         : {
             kind: 'metadata',
             label: 'Zeitstempel der Datei verworfen',
+            labelEn: 'Timestamp of the file rejected',
             detail: `Der eingetragene Zeitpunkt ist unplausibel: ${meta.creationRejected}.`,
+            detailEn: `The recorded moment is implausible: ${meta.creationRejectedEn ?? meta.creationRejected}.`,
             weight: 0,
           },
     );
@@ -627,10 +663,12 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
       c.mode.lon,
       params.mergeKm,
     );
+    const name = placeLabel(world, c.mode.lat, c.mode.lon, c.lead.label);
     return {
       lat: c.mode.lat,
       lon: c.mode.lon,
-      label: placeLabel(world, c.mode.lat, c.mode.lon, c.lead.label),
+      label: name.de,
+      labelEn: name.en,
       country: c.iso,
       score: totalScore > 0 ? c.score / totalScore : 0,
       radiusKm: Math.max(0.5, spread),
@@ -676,13 +714,15 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     radiusTier = topGap >= params.strongGap && agreement >= params.agreementMin ? 'strong' : recognised ? 'recognised' : 'similar';
     radiusBaseKm = radiusTier === 'similar' ? support : local;
     const radiusKm = Math.max(params.radiusKm[radiusTier], radiusBaseKm, 0.5);
+    const name = placeLabel(world, first.mode.lat, first.mode.lon, first.lead.label);
     visual = {
       lat: first.mode.lat,
       lon: first.mode.lon,
       radiusKm,
       confidence: confidenceOf('landmark'),
       method: 'landmark',
-      label: placeLabel(world, first.mode.lat, first.mode.lon, first.lead.label),
+      label: name.de,
+      labelEn: name.en,
       country: first.iso,
       countryName: countryName(first.iso),
     };
@@ -708,6 +748,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
         confidence: confidenceOf('country'),
         method: 'region',
         label: world.country(best.iso)?.name_de ?? best.name,
+        labelEn: world.country(best.iso)?.name_en ?? best.name,
         country: best.iso,
         countryName: best.name,
       };
@@ -727,6 +768,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
         confidence: confidenceOf('continent'),
         method: 'region',
         label: info.name_de,
+        labelEn: info.name_en,
         country: null,
         countryName: null,
       };
@@ -740,12 +782,22 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   for (const r of topRefs) {
     const distance = visual ? greatCircleKm(visual.lat, visual.lon, r.lat, r.lon) : null;
     const frame = ev.frameNumbers[pooled.frameOfRow[r.bestRow] ?? r.bestRow];
+    const strength: Named =
+      r.bestSimilarity >= params.landmarkSimilarity
+        ? { de: 'Das ist eine Wiedererkennung.', en: 'That is a recognition.' }
+        : r.bestSimilarity >= params.regionThreshold
+          ? { de: 'Ähnlichkeit, keine sichere Wiedererkennung.', en: 'A resemblance, not a sure recognition.' }
+          : { de: 'Schwache Ähnlichkeit, zählt kaum.', en: 'A weak resemblance; it hardly counts.' };
     evidence.push({
       kind: 'landmark',
       label: `Referenzbild: ${r.label} (${fmt(r.bestSimilarity)})`,
+      labelEn: `Reference picture: ${r.label} (${fmtEn(r.bestSimilarity)})`,
       detail: `Bild ${frame ?? r.bestRow + 1} gleicht dem Referenzbild mit Kosinus ${fmt(r.bestSimilarity)}${
         distance !== null ? `; ${distance < 1 ? 'am Ergebnisort' : `${Math.round(distance)} km vom Ergebnis`}` : ''
-      }. ${r.bestSimilarity >= params.landmarkSimilarity ? 'Das ist eine Wiedererkennung.' : r.bestSimilarity >= params.regionThreshold ? 'Ähnlichkeit, keine sichere Wiedererkennung.' : 'Schwache Ähnlichkeit, zählt kaum.'}`,
+      }. ${strength.de}`,
+      detailEn: `Frame ${frame ?? r.bestRow + 1} resembles the reference picture with a cosine of ${fmtEn(r.bestSimilarity)}${
+        distance !== null ? `; ${distance < 1 ? 'at the place found' : `${Math.round(distance)} km from the result`}` : ''
+      }. ${strength.en}`,
       weight: totalWeight > 0 ? r.weight / totalWeight : 0,
       ...(frame !== undefined ? { frame } : {}),
       refImage: galleryImageUrl(r.id),
@@ -762,10 +814,15 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
     evidence.push({
       kind: 'region',
       label: `Länderschätzung: ${top3.map((c) => `${c.name} ${pct(c.p)}`).join(', ')}`,
+      labelEn: `Country estimate: ${top3.map((c) => `${countryNameEn(c)} ${pctEn(c.p)}`).join(', ')}`,
       detail: `Zero-shot-Vergleich der Bilder mit Beschreibungen aller Länder (Straßen, Landschaft, Gebäude), mit einem milden Bevölkerungsprior. Zusammen mit den Ländern der ähnlichsten Referenzbilder: ${countries
         .slice(0, 3)
         .map((c) => `${c.name} ${pct(c.p)}`)
         .join(', ')}. Wirkt als weiche Gewichtung der Kandidaten; ohne passendes Referenzbild trägt es das Ergebnis allein (Land nur ab ${pct(params.countryMinP)}, sonst Kontinent oder kein Ort).`,
+      detailEn: `Zero-shot comparison of the frames with descriptions of every country (streets, landscape, buildings), with a mild population prior. Combined with the countries of the most similar reference pictures: ${countries
+        .slice(0, 3)
+        .map((c) => `${countryNameEn(c)} ${pctEn(c.p)}`)
+        .join(', ')}. It weights the candidates softly; without a matching reference picture it carries the result alone (a country only from ${pctEn(params.countryMinP)}, otherwise a continent or no place).`,
       weight: method === 'region' ? (top3[0] as CountryProb).p : (top3[0] as CountryProb).p * 0.3,
     });
   }
@@ -774,10 +831,13 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   const hints = ev.hints;
   if (hints && (hints.date || hints.place)) {
     const parts = [hints.date ? `Datum ${hints.date}` : null, hints.place ? `„${hints.place}“` : null].filter(Boolean);
+    const partsEn = [hints.date ? `date ${hints.date}` : null, hints.place ? `“${hints.place}”` : null].filter(Boolean);
     evidence.push({
       kind: 'filename',
       label: `Dateiname: ${parts.join(', ')}`,
+      labelEn: `File name: ${partsEn.join(', ')}`,
       detail: 'Angaben im Dateinamen können vom Absender stammen und falsch sein; sie fließen nicht in die Ortsbestimmung ein.',
+      detailEn: 'What the file name says may come from the sender and may be wrong; it does not enter the localisation.',
       weight: 0.05,
     });
   }
@@ -805,19 +865,27 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   };
 }
 
+/**
+ * Lets the event loop answer waiting requests. The gallery search and the vote are synchronous
+ * and take a few hundred milliseconds each; the node serves the console from the same thread.
+ */
+export const breathe = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
 /** Determines where a video was recorded from its frames, its file tags and its name. */
 export async function locate(input: LocateInput): Promise<LocateResult> {
   const params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, ...input.params };
   const world = input.world ?? (await loadWorld());
   const [metadata, countryCosines] = await Promise.all([
-    readMetadata(input.videoPath).catch(() => null),
+    input.metadata !== undefined ? Promise.resolve(input.metadata) : readMetadata(input.videoPath).catch(() => null),
     world.countryCosines(input.frameVectors, input.dim, input.embedTexts),
   ]);
   const search = { ...(input.excludeWikidata ? { excludeWikidata: input.excludeWikidata } : {}) };
   const hints = filenameHints(input.fileName ?? path.basename(input.videoPath));
   const tiles = params.tilePooling !== 'whole' ? input.tiles : undefined;
+  await breathe();
   if (tiles && tiles.frameRow.length > 0) {
     const neighbours = input.gallery.search(tiles.vectors, params.k, search);
+    await breathe();
     return decideLocation(
       world,
       { neighbours, rowFrame: tiles.frameRow, rowTile: tiles.tile, countryCosines, frameNumbers: input.frameNumbers, metadata, hints },
@@ -825,6 +893,7 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
     );
   }
   const neighbours = input.gallery.search(input.frameVectors, params.k, search);
+  await breathe();
   return decideLocation(world, { neighbours, countryCosines, frameNumbers: input.frameNumbers, metadata, hints }, params);
 }
 
@@ -837,6 +906,8 @@ export interface SampledFrames {
   times: number[];
   /** Tile vectors with the pipeline's tiling (only when opts.detail is not 'fast'). */
   tiles?: { vectors: Float32Array; frameRow: number[]; tile: number[] };
+  /** Light statistics of every kept frame, in row order (only with opts.frameStats). */
+  stats?: FrameStats[];
 }
 
 function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
@@ -869,7 +940,7 @@ function runFfmpeg(args: string[], timeoutMs: number): Promise<void> {
 export async function sampleAndEmbedFrames(
   videoPath: string,
   model: ImageEmbedder,
-  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string; detail?: DetailLevel } = {},
+  opts: { count?: number; durationSec?: number | null; fps?: number | null; tmpDir?: string; detail?: DetailLevel; frameStats?: boolean } = {},
 ): Promise<SampledFrames> {
   const detail = opts.detail ?? 'fast';
   const count = opts.count ?? 6;
@@ -900,17 +971,24 @@ export async function sampleAndEmbedFrames(
     const size = model.imageSize;
     const plane = 3 * size * size;
     const kept: number[] = [];
+    const stats: FrameStats[] = [];
     // Every tile of every readable frame, whole frame first (the pipeline's layout).
     const rects: { frameRow: number; tile: number; pixels: Float32Array }[] = [];
     for (let i = 0; i < count; i++) {
+      const file = path.join(dir, `f${i}.jpg`);
       try {
-        const decoded = await decodeFrame(path.join(dir, `f${i}.jpg`));
+        const decoded = await decodeFrame(file);
         const layout: PixelRect[] = tileLayout(decoded.width, decoded.height, detail);
+        const frameRects: typeof rects = [];
         for (const [t, rect] of layout.entries()) {
           const px = new Float32Array(plane);
           await writeTile(decoded, rect, size, model.imageMean, model.imageStd, px, 0);
-          rects.push({ frameRow: kept.length, tile: t, pixels: px });
+          frameRects.push({ frameRow: kept.length, tile: t, pixels: px });
         }
+        // The same statistics the time engine reads from the analysis frames, so that the quick
+        // stage can estimate the time before the analysis has written any frame.
+        if (opts.frameStats) stats.push(await frameStatsFromJpeg(file));
+        rects.push(...frameRects);
         kept.push(i);
       } catch {
         // A seek past the last frame writes no picture.
@@ -933,6 +1011,7 @@ export async function sampleAndEmbedFrames(
       ...(detail !== 'fast'
         ? { tiles: { vectors: tileVectors, frameRow: rects.map((r) => r.frameRow), tile: rects.map((r) => r.tile) } }
         : {}),
+      ...(opts.frameStats ? { stats } : {}),
     };
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

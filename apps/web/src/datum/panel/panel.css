@@ -1177,3 +1177,13 @@
   color: var(--fg);
   white-space: nowrap;
 }
+
+.dp-link {
+  color: var(--mid);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dp-link:hover {
+  color: var(--fg);
+}

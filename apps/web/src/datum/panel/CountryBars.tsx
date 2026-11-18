@@ -10,7 +10,7 @@ export interface CountryBarsProps {
 }
 
 export function CountryBars({ countries, limit = 5 }: CountryBarsProps) {
-  const { t } = useLang();
+  const { t, region } = useLang();
   const sorted = [...countries].sort((a, b) => b.p - a.p);
   const shown = sorted.slice(0, limit);
   const rest = sorted.slice(limit).reduce((sum, c) => sum + c.p, 0);
@@ -26,7 +26,7 @@ export function CountryBars({ countries, limit = 5 }: CountryBarsProps) {
         {shown.map((c, i) => (
           <li key={c.iso} className={i === 0 ? 'dp-country dp-country-top' : 'dp-country'}>
             <span className="dp-country-iso">{c.iso}</span>
-            <span className="dp-country-name">{c.name}</span>
+            <span className="dp-country-name">{region(c.iso, c.name)}</span>
             <span className="dp-country-bar" aria-hidden="true">
               <span style={{ width: `${Math.max(0, Math.min(1, c.p)) * 100}%`, opacity: 0.45 + 0.55 * (c.p / top) }} />
             </span>

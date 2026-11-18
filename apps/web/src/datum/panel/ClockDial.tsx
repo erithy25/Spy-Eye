@@ -100,7 +100,7 @@ function lightRuns(sun: SunReport, zone: string | null): LightRun[] {
 }
 
 export function ClockDial({ time, sun }: ClockDialProps) {
-  const { t, locale } = useLang();
+  const { t, locale, pickList } = useLang();
   const id = useSvgId('dp-clock');
   const zone = time.timezone;
   const best = bestMinute(time, sun?.at?.at ?? null);
@@ -312,7 +312,7 @@ export function ClockDial({ time, sun }: ClockDialProps) {
                 <span className="dp-window-time">
                   {hhmm(w.startMin)}–{hhmm(w.endMin)}
                 </span>
-                <span className="dp-window-label">{w.label}</span>
+                <span className="dp-window-label">{t(w.label)}</span>
                 <Meter value={w.probability} label={t('Wahrscheinlichkeit')} />
                 <span className="dp-val">{fmtPct(w.probability)}</span>
               </li>
@@ -321,7 +321,7 @@ export function ClockDial({ time, sun }: ClockDialProps) {
         )}
         {time.notes.length > 0 && (
           <ul className="dp-notes">
-            {time.notes.map((note, i) => (
+            {pickList(time.notes, time.notesEn).map((note, i) => (
               <li key={i}>{note}</li>
             ))}
           </ul>

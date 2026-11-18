@@ -67,7 +67,7 @@ function Reference({ item }: { item: Evidence }) {
 }
 
 export function EvidenceList({ evidence, onSelect }: EvidenceListProps) {
-  const { t } = useLang();
+  const { t, pick } = useLang();
   const groups = groupEvidence(evidence);
   return (
     <section className="dp dp-evidence" aria-label={t('Evidenz')}>
@@ -95,12 +95,12 @@ export function EvidenceList({ evidence, onSelect }: EvidenceListProps) {
                   {...(onSelect ? pressable(() => onSelect(item)) : {})}
                 >
                   <div className="dp-ev-top">
-                    <span className="dp-ev-label">{item.label}</span>
+                    <span className="dp-ev-label">{pick(item.label, item.labelEn)}</span>
                     <Meter value={item.weight} label={t('Gewicht')} />
                     <span className="dp-val">{fmtScore(item.weight)}</span>
                   </div>
                   <p className="dp-ev-detail">
-                    {item.detail}
+                    {pick(item.detail, item.detailEn)}
                     {item.frame !== undefined && <span className="dp-ev-frame"> · {t('Bild {n}', { n: item.frame })}</span>}
                   </p>
                   <Reference item={item} />

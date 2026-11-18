@@ -114,6 +114,34 @@ interface PreparedPreview {
 export interface PipelineHooks {
   /** Called after the dense index of a recording has replaced its preview. */
   onRecordingReady?: (entry: VideoEntry) => void;
+  /**
+   * Called when a recording is queued for analysis (upload, seed footage, retry, restart): the
+   * file is complete on disk from here on, so DATUM can locate it from the file alone while the
+   * analysis is still waiting or running.
+   */
+  onRecordingQueued?: (entry: VideoEntry) => void;
+}
+
+export interface EnqueueOptions {
+  /**
+   * Background work (seeded reference footage, restarts of it): analysed after every recording a
+   * person has queued, so that an own upload never waits behind a whole reference set.
+   */
+  background?: boolean;
+}
+
+/**
+ * Puts `id` into a queue that holds foreground ids first and background ids after them, each in
+ * arrival order: a foreground id goes in front of the first background id.
+ */
+export function insertByPriority(queue: string[], id: string, background: boolean, isBackground: (id: string) => boolean): void {
+  if (background) {
+    queue.push(id);
+    return;
+  }
+  const firstBackground = queue.findIndex((queued) => isBackground(queued));
+  if (firstBackground < 0) queue.push(id);
+  else queue.splice(firstBackground, 0, id);
 }
 
 class CancelledError extends Error {}
@@ -155,6 +183,8 @@ export class Pipeline {
   private readyGate: Promise<void> | null = null;
   private uploadsInFlight = 0;
   private lastArrival = 0;
+  /** Queued ids that are background work (see EnqueueOptions). */
+  private readonly background = new Set<string>();
 
   constructor(
     private readonly store: Store,
@@ -245,12 +275,28 @@ export class Pipeline {
     return this.fullQueue.length + (this.current ? 1 : 0);
   }
 
-  enqueue(id: string): void {
+  /**
+   * Queues a recording for analysis. Recordings a person has queued go before background work
+   * (EnqueueOptions.background); a background recording already in the dense pass is not
+   * interrupted, its pass ends first.
+   */
+  enqueue(id: string, opts: EnqueueOptions = {}): void {
     if (this.fullQueue.includes(id) || this.current?.id === id) return;
-    this.previewQueue.push(id);
-    this.fullQueue.push(id);
+    const background = opts.background === true;
+    if (background) this.background.add(id);
+    else this.background.delete(id);
+    const isBackground = (queued: string): boolean => this.background.has(queued);
+    insertByPriority(this.previewQueue, id, background, isBackground);
+    insertByPriority(this.fullQueue, id, background, isBackground);
     this.lastArrival = Date.now();
+    const entry = this.store.get(id);
+    if (entry) this.hooks.onRecordingQueued?.(entry);
     void this.drain();
+  }
+
+  /** The order in which the dense pass will take the waiting recordings (for tests and diagnostics). */
+  get waiting(): readonly string[] {
+    return [...this.fullQueue];
   }
 
   /** Stops work on a video that is being deleted. */
@@ -259,12 +305,14 @@ export class Pipeline {
       const idx = queue.indexOf(id);
       if (idx >= 0) queue.splice(idx, 1);
     }
+    this.background.delete(id);
     if (this.current?.id === id) this.current.extraction?.kill();
   }
 
   shutdown(): void {
     this.previewQueue.length = 0;
     this.fullQueue.length = 0;
+    this.background.clear();
     this.current?.extraction?.kill();
   }
 
@@ -301,6 +349,7 @@ export class Pipeline {
         if (this.previewQueue.length > 0) continue;
         const id = this.fullQueue.shift();
         if (id === undefined) break;
+        this.background.delete(id);
         const entry = this.store.get(id);
         if (!entry || entry.cancelled) continue;
         this.current = { id, extraction: null };

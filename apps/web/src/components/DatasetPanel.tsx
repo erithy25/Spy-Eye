@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { deleteVideo, retryVideo, uploadVideo, type DetailLevel, type VideoInfo } from '../api';
-import { VIDEO_FILE_PATTERN, formatDate, formatTime } from '../format';
+import { deleteVideo, retryVideo, type DetailLevel, type VideoInfo } from '../api';
+import { formatDate, formatPercent, formatTime } from '../format';
 import { useLang } from '../i18n';
+import { VIDEO_ACCEPT, filesFromDrop, uploads as uploadQueue, useUploads } from '../uploads';
 
 interface DatasetPanelProps {
   videos: VideoInfo[];
@@ -12,14 +13,6 @@ interface DatasetPanelProps {
   canWrite: boolean;
 }
 
-interface UploadItem {
-  key: string;
-  name: string;
-  progress: number;
-  status: 'waiting' | 'uploading' | 'failed';
-  error: string | null;
-}
-
 const DETAIL_OPTIONS: { value: DetailLevel; label: string; hint: string }[] = [
   { value: 'fast', label: 'schnell', hint: '1 Vektor je Bild' },
   { value: 'standard', label: 'standard', hint: '4 Vektoren je Bild' },
@@ -27,39 +20,6 @@ const DETAIL_OPTIONS: { value: DetailLevel; label: string; hint: string }[] = [
 ];
 
 const FPS_OPTIONS: readonly number[] = [0.5, 1, 2, 4];
-const PARALLEL_UPLOADS = 4;
-
-/** Recursively collects files from dropped directories. */
-async function filesFromEntry(entry: FileSystemEntry): Promise<File[]> {
-  if (entry.isFile) {
-    return new Promise((resolve) => {
-      (entry as FileSystemFileEntry).file(
-        (file) => resolve([file]),
-        () => resolve([]),
-      );
-    });
-  }
-  if (!entry.isDirectory) return [];
-  const reader = (entry as FileSystemDirectoryEntry).createReader();
-  const children: FileSystemEntry[] = [];
-  for (;;) {
-    const batch = await new Promise<FileSystemEntry[]>((resolve) => reader.readEntries(resolve, () => resolve([])));
-    if (batch.length === 0) break;
-    children.push(...batch);
-  }
-  const nested = await Promise.all(children.map(filesFromEntry));
-  return nested.flat();
-}
-
-async function filesFromDrop(event: DragEvent): Promise<File[]> {
-  const items = Array.from(event.dataTransfer.items);
-  const entries = items
-    .map((item) => (typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null))
-    .filter((entry): entry is FileSystemEntry => entry !== null);
-  if (entries.length === 0) return Array.from(event.dataTransfer.files);
-  const nested = await Promise.all(entries.map(filesFromEntry));
-  return nested.flat();
-}
 
 function statusText(video: VideoInfo, t: (de: string) => string): string {
   switch (video.status) {
@@ -67,7 +27,7 @@ function statusText(video: VideoInfo, t: (de: string) => string): string {
       // "grob": already searchable through the quick first pass, dense analysis pending.
       return video.coarse ? t('grob') : t('wartet');
     case 'processing':
-      return `${Math.round(video.progress * 100)} %`;
+      return formatPercent(video.progress);
     case 'error':
       return t('Fehler');
     case 'ready':
@@ -80,69 +40,25 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect, sourceId, canW
   const [detail, setDetail] = useState<DetailLevel>('standard');
   const [sampleFps, setSampleFps] = useState(1);
   const [dragging, setDragging] = useState(false);
-  const [uploads, setUploads] = useState<UploadItem[]>([]);
+  // The shared queue also holds uploads started on ORTUNG; a finished upload shows here as the
+  // recording itself, so only the ones still in transit or refused are listed.
+  const uploads = useUploads().filter((u) => u.status !== 'done');
   const [notice, setNotice] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
-  const queue = useRef<{ item: UploadItem; file: File; options: { sampleFps: number; detail: DetailLevel; sourceId: string } }[]>([]);
-  const active = useRef(0);
-
-  const patchUpload = useCallback((key: string, patch: Partial<UploadItem>) => {
-    setUploads((list) => list.map((u) => (u.key === key ? { ...u, ...patch } : u)));
-  }, []);
-
-  // Several uploads run at once; analysis on the server does not wait for the last file.
-  const pump = useCallback(() => {
-    while (active.current < PARALLEL_UPLOADS) {
-      const next = queue.current.shift();
-      if (!next) return;
-      const { item, file, options } = next;
-      active.current++;
-      patchUpload(item.key, { status: 'uploading' });
-      uploadVideo(file, options, (fraction) => patchUpload(item.key, { progress: fraction }))
-        .promise.then((result) => {
-          const rejected = result.rejected[0];
-          if (rejected) patchUpload(item.key, { status: 'failed', error: rejected.reason });
-          else setUploads((list) => list.filter((u) => u.key !== item.key));
-        })
-        .catch((err: unknown) => {
-          patchUpload(item.key, { status: 'failed', error: err instanceof Error ? err.message : String(err) });
-        })
-        .finally(() => {
-          active.current--;
-          pump();
-        });
-    }
-  }, [patchUpload]);
 
   const addFiles = useCallback(
     (files: File[]) => {
-      const accepted = files.filter((f) => VIDEO_FILE_PATTERN.test(f.name));
-      const skipped = files.length - accepted.length;
+      const { accepted, skipped } = uploadQueue.add(files, { sampleFps, detail, sourceId });
       setNotice(
-        accepted.length === 0
+        accepted === 0
           ? t('Keine Videodateien gefunden.')
           : skipped > 0
             ? t('{n} Datei(en) übersprungen, kein Videoformat.', { n: skipped })
             : null,
       );
-      if (accepted.length === 0) return;
-      const options = { sampleFps, detail, sourceId };
-      const items = accepted.map((file, i) => {
-        const item: UploadItem = {
-          key: `${Date.now()}-${i}-${file.name}`,
-          name: file.name,
-          progress: 0,
-          status: 'waiting',
-          error: null,
-        };
-        queue.current.push({ item, file, options });
-        return item;
-      });
-      setUploads((list) => [...list, ...items]);
-      pump();
     },
-    [detail, sampleFps, sourceId, pump, t],
+    [detail, sampleFps, sourceId, t],
   );
 
   const onDrop = useCallback(
@@ -197,7 +113,7 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect, sourceId, canW
             {t('Ordner')}
           </button>
         </span>
-        <input ref={fileInput} type="file" accept="video/*,.mkv,.avi,.ts,.mts,.m2ts,.flv,.wmv" multiple hidden onChange={onInputChange} />
+        <input ref={fileInput} type="file" accept={VIDEO_ACCEPT} multiple hidden onChange={onInputChange} />
         <input
           ref={(el) => {
             folderInput.current = el;
@@ -258,21 +174,21 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect, sourceId, canW
                   {u.name}
                 </span>
                 <span className="row-state">
-                  {u.status === 'failed' ? t('Fehler') : u.status === 'waiting' ? t('wartet') : `↑ ${Math.round(u.progress * 100)} %`}
+                  {u.status === 'failed' ? t('Fehler') : u.status === 'waiting' ? t('wartet') : `↑ ${formatPercent(u.progress)}`}
                 </span>
                 {u.status === 'failed' && (
                   <button
                     type="button"
                     className="row-x"
                     aria-label={t('Hinweis entfernen')}
-                    onClick={() => setUploads((list) => list.filter((x) => x.key !== u.key))}
+                    onClick={() => uploadQueue.dismiss(u.key)}
                   >
                     ×
                   </button>
                 )}
               </div>
               {u.status === 'failed' ? (
-                <p className="note">{u.error}</p>
+                <p className="note">{u.error ? t(u.error) : t('Fehler')}</p>
               ) : (
                 <div className="bar">
                   <span style={{ width: `${Math.round(u.progress * 100)}%` }} />

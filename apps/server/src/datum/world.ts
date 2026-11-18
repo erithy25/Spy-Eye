@@ -43,6 +43,7 @@ export interface CountryRef {
 export interface ContinentInfo {
   code: string;
   name_de: string;
+  name_en: string;
   lat: number;
   lon: number;
   /** Radius (km) that covers most of the continent's population around its centre. */
@@ -53,6 +54,11 @@ const CONTINENT_NAMES: Record<string, string> = {
   EU: 'Europa', AS: 'Asien', AF: 'Afrika', NA: 'Nordamerika', SA: 'Südamerika', OC: 'Ozeanien', AN: 'Antarktis',
   Europe: 'Europa', Asia: 'Asien', Africa: 'Afrika', 'North America': 'Nordamerika', 'South America': 'Südamerika',
   Oceania: 'Ozeanien', Antarctica: 'Antarktis',
+};
+
+/** English continent names, so that a continent-level answer reads in the console's language. */
+const CONTINENT_NAMES_EN: Record<string, string> = {
+  EU: 'Europe', AS: 'Asia', AF: 'Africa', NA: 'North America', SA: 'South America', OC: 'Oceania', AN: 'Antarctica',
 };
 
 /** Distance (km) from a point to a ring's edges, in a local equirectangular projection. */
@@ -80,7 +86,10 @@ export function distanceToRingKm(lat: number, lon: number, ring: readonly LonLat
 }
 
 export interface NearestCity {
+  /** German name where the city list has one, else the international name. */
   name: string;
+  /** International (English or local) name of the city, for English texts. */
+  nameEn: string;
   iso: string;
   distanceKm: number;
   pop: number;
@@ -397,7 +406,15 @@ export class World {
         const lon = Math.atan2(y, x) / RAD;
         const dists = points.map((p) => greatCircleKm(lat, lon, p.lat, p.lon)).sort((a, b) => a - b);
         const r80 = dists[Math.floor(dists.length * 0.8)] ?? 2000;
-        cache.set(code, { code, name_de: CONTINENT_NAMES[code] ?? code, lat, lon, radiusKm: Math.max(1500, r80) });
+        cache.set(code, {
+          code,
+          name_de: CONTINENT_NAMES[code] ?? code,
+          // Long codes ("North America") are English names already.
+          name_en: CONTINENT_NAMES_EN[code] ?? code,
+          lat,
+          lon,
+          radiusKm: Math.max(1500, r80),
+        });
       }
       this.continentCache = cache;
     }
@@ -451,7 +468,7 @@ export class World {
       }
     }
     if (!best || bestKm > maxKm) return null;
-    return { name: best.name_de || best.name, iso: best.iso, distanceKm: bestKm, pop: best.pop };
+    return { name: best.name_de || best.name, nameEn: best.name || best.name_de, iso: best.iso, distanceKm: bestKm, pop: best.pop };
   }
 
   /** Most populous city of a country, if the city list has one. */

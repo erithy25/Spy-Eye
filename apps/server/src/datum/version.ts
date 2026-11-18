@@ -4,8 +4,15 @@
  * without loading the engine and its models.
  *
  * Bumped when the engine changes in a way that makes stored fixes outdated: a stored fix of
- * another version is discarded at start and computed again.
+ * another version is computed again at start. One of version OLDEST_SHOWN_VERSION or later stays
+ * on the map until its new fix is there (the fields the console reads have not changed since);
+ * an older one is discarded at once.
  *   5: horizon point (`HorizonMatch.at`), heading pitch/frame/aspect, keyframe pitch, keyframe
  *      with the most sky for the skyline match, date-only file tags no longer taken as an instant.
+ *   6: quick stage (`Fix.stage`), every text in German and English (labelEn, detailEn, notesEn),
+ *      truth source 'referenz' / 'eigene' with the reference URL in `truth.url`.
  */
-export const ENGINE_VERSION = 5;
+export const ENGINE_VERSION = 6;
+
+/** Stored fixes from this version on are shown while they are computed again (see above). */
+export const OLDEST_SHOWN_VERSION = 5;

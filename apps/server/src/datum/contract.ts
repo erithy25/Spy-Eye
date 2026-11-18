@@ -24,6 +24,11 @@ export interface GeoPoint {
 export interface FixCandidate extends GeoPoint {
   /** Human-readable name: nearest reference landmark or region, e.g. "Brandenburger Tor, Berlin". */
   label: string;
+  /**
+   * English version of label (landmark names stay as they are; "bei Köln" becomes "near Cologne").
+   * Missing on fixes of older engine versions.
+   */
+  labelEn?: string;
   /** ISO 3166-1 alpha-2 country code, or null over sea / unknown. */
   country: string | null;
   /** Normalised support 0..1 (candidates sum to <= 1). */
@@ -225,6 +230,8 @@ export interface FixLocation extends GeoPoint {
   confidence: number;
   method: EvidenceKind;
   label: string;
+  /** English version of label, as FixCandidate.labelEn. */
+  labelEn?: string;
   country: string | null;
   countryName: string | null;
 }
@@ -255,9 +262,11 @@ export interface Fix {
   stage?: 'quick' | 'full';
   /**
    * Ground truth, present for videos of the reference dataset (source 'referenz') and for uploaded
-   * videos whose true place was given with the upload (source 'eigene').
+   * videos whose true place was given with the upload (source 'eigene', POST /api/datum/truth).
+   * `url` names where a reference truth comes from (Wikimedia Commons or Wikidata); own truths
+   * have none.
    */
-  truth: (GeoPoint & { label: string; errorKm: number | null; source: string }) | null;
+  truth: (GeoPoint & { label: string; errorKm: number | null; source: string; url?: string }) | null;
 }
 
 /**
