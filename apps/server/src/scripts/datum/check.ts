@@ -12,6 +12,8 @@ import path from 'node:path';
 import { config, repoRoot } from '../../config.js';
 import { haversineKm } from '../../core/geo.js';
 import type { Fix } from '../../datum/contract.js';
+import { modelSlug } from '../../datum/gallery.js';
+import { seedFiles } from '../../datum/gallerySeed.js';
 
 const DATASET = path.join(repoRoot, 'datasets', 'datum');
 const DATA = path.join(repoRoot, 'data-datum');
@@ -68,11 +70,16 @@ line('Tiefenmodell depth-anything-v2-small', await exists(path.join(config.model
 const manifest = await readJson<{ videos: { file: string }[] }>(path.join(DATASET, 'manifest.json'));
 const clips = await count(path.join(DATASET, 'clips'), (n) => n.endsWith('.mp4'));
 line(`Referenzvideos: ${clips} von ${manifest?.videos.length ?? 0}`, !!manifest && clips > 0 && clips >= manifest.videos.length, 'pnpm datum:fetch');
-const gallery = await readJson<{ images: unknown[] }>(path.join(DATASET, 'gallery.json'));
-const galleryFiles = await count(path.join(DATASET, 'gallery'), (n) => n.endsWith('.jpg'));
-line(`Referenzbilder: ${galleryFiles} von ${gallery?.images.length ?? 0}`, !!gallery && galleryFiles > 0 && galleryFiles >= gallery.images.length * 0.98, 'pnpm datum:fetch');
-const vectors = await count(path.join(repoRoot, '.cache', 'datum'), (n) => n.endsWith('.bin'));
-line('Referenzgalerie eingerechnet', vectors > 0, 'pnpm datum:prepare');
+const gallery = await readJson<{ images: { file?: unknown }[] }>(path.join(DATASET, 'gallery.json'));
+// Only the pictures gallery.json lists count; other files in the folder are not used.
+const listed = gallery?.images ?? [];
+const present = (
+  await Promise.all(listed.map((img) => (typeof img?.file === 'string' ? exists(path.join(DATASET, img.file)) : Promise.resolve(false))))
+).filter(Boolean).length;
+line(`Referenzbilder: ${present} von ${listed.length}`, listed.length > 0 && present >= listed.length * 0.98, 'pnpm datum:fetch');
+const cached = await exists(path.join(repoRoot, '.cache', 'datum', `gallery-${modelSlug(config.modelId)}.bin`));
+const shipped = await exists(seedFiles(DATASET, config.modelId).bin);
+line(`Referenzgalerie eingerechnet${cached ? '' : shipped ? ' (mitgelieferte Vektoren, eingelesen beim Start)' : ''}`, cached || shipped, 'pnpm datum:prepare');
 const terrain = await countTree(path.join(DATASET, 'terrain'), '.png');
 line(`Höhendaten: ${terrain} Kacheln`, terrain > 0, 'pnpm datum:fetch');
 line('Ländergrenzen und Orte', (await exists(path.join(config.assetsDir, 'datum', 'countries.json'))) && (await exists(path.join(config.assetsDir, 'datum', 'cities.json'))));

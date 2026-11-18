@@ -700,6 +700,7 @@ export const EN: Record<string, string> = {
   'läuft …': 'running …',
   'Bildmerkmale übernommen': 'Frame features taken over',
   'Metadaten gelesen': 'Metadata read',
+  'Bilder für die Ortung gezogen': 'Frames drawn for the localisation',
   'Mit der Referenzgalerie verglichen': 'Compared with the reference gallery',
   'Raum aus Bild 1 aufgebaut': 'Space built from frame 1',
   'Raum aus Bild 2 aufgebaut': 'Space built from frame 2',

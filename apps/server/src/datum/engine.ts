@@ -18,7 +18,7 @@ import { haversineKm } from '../core/geo.js';
 import type { Evidence, Fix, Keyframe, TimeEstimate, TraceStep } from './contract.js';
 import { truthForName } from './dataset.js';
 import { Gallery } from './gallery.js';
-import { locate } from './locate.js';
+import { locate, sampleAndEmbedFrames } from './locate.js';
 import { filenameHints, readMetadata } from './metadata.js';
 import { estimateTime, frameStatsFromJpeg } from './time.js';
 import { estimateDisparity } from './depth.js';
@@ -27,7 +27,7 @@ import { terrainAvailable } from './terrain.js';
 import { horizonProfile, refinePosition } from './horizon.js';
 
 /** Bumped when the engine changes in a way that makes stored fixes outdated. */
-export const ENGINE_VERSION = 3;
+export const ENGINE_VERSION = 4;
 /** Frames whose whole-frame and crop vectors go into the localisation (as in the evaluation). */
 const LOCATE_FRAMES = 12;
 const SPACE_FRAMES = 3;
@@ -260,12 +260,37 @@ export class DatumEngine {
     const hints = filenameHints(entry.info.name);
     mark('Metadaten gelesen', meta?.location ? 'GPS in der Datei' : meta?.creationUtc ? 'Aufnahmezeit in der Datei' : 'kein Ort, keine Zeit in der Datei');
 
-    const located = await locate({
-      videoPath,
+    // The localisation looks at the same frames as its measurement (docs/DATUM.md): twelve frames
+    // from the middle of equal segments of the video, each whole and in three square crops. The
+    // analysis frames start at second 0 in the pipeline's rhythm, and in close cases (the true
+    // landmark a hundredth ahead of a look-alike) the choice of frames decides; what runs should
+    // be what was measured. If sampling fails, the stored vectors of the analysis are used.
+    let locateFrames: { frameVectors: Float32Array; frameNumbers: number[]; tiles: { vectors: Float32Array; frameRow: number[]; tile: number[] } } = {
       frameVectors,
-      dim,
       frameNumbers,
       tiles: { vectors: tileVectors, frameRow: tileFrameRow, tile: tileIndex },
+    };
+    try {
+      const sampled = await sampleAndEmbedFrames(videoPath, model, {
+        count: LOCATE_FRAMES,
+        durationSec: meta?.durationSec ?? null,
+        fps: meta?.fps ?? null,
+        detail: 'standard',
+      });
+      if (sampled.tiles && sampled.tiles.frameRow.length > 0 && sampled.dim === dim) {
+        locateFrames = { frameVectors: sampled.vectors, frameNumbers: sampled.frameNumbers, tiles: sampled.tiles };
+      }
+      mark('Bilder für die Ortung gezogen', `${sampled.frameNumbers.length} Bilder, ${sampled.tiles?.frameRow.length ?? sampled.frameNumbers.length} Ausschnitte`);
+    } catch (err: unknown) {
+      this.opts.log(`Bilder für die Ortung von "${entry.info.name}" nicht gezogen, nehme die der Auswertung: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    const located = await locate({
+      videoPath,
+      frameVectors: locateFrames.frameVectors,
+      dim,
+      frameNumbers: locateFrames.frameNumbers,
+      tiles: locateFrames.tiles,
       embedTexts,
       gallery,
       fileName: entry.info.name,
