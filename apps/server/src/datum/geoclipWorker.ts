@@ -7,6 +7,7 @@
  * 'building' (unless the caller asked to wait): the quick fix of an upload must not wait for it.
  */
 import { parentPort, workerData } from 'node:worker_threads';
+import { THREAD_CLOSED } from '../ml/workerProtocol.js';
 import { GeoClip, NamedError, compactPrediction, type GeoclipPrediction } from './geoclip.js';
 import { World } from './world.js';
 import {
@@ -137,11 +138,32 @@ async function handle(op: keyof WorldModelOps, args: unknown): Promise<{ value: 
   }
 }
 
+/** Settles when start() has (it may be creating the image tower's session). */
+let started: Promise<unknown> = Promise.resolve();
+
+/**
+ * Finishes the run under way, releases the sessions, sets the shared flag and ends the thread.
+ * A session that is still running when the process tears the thread down makes onnxruntime's
+ * binding throw a C++ exception during teardown, which aborts the whole process (SIGABRT,
+ * "terminate called after throwing an instance of 'Napi::Error'"). The host waits for the flag:
+ * at process exit with Atomics.wait (drainAtExitOf in ml/workerHost.ts), on close before it
+ * would stop the thread by force (stopThread in geoclipService.ts).
+ *
+ * model.stop() makes every later run fail at once, so the prediction, the gallery build and the
+ * start all end at their next run instead of computing on for seconds: what is awaited below is
+ * at most the run that is executing now.
+ */
 async function close(): Promise<void> {
   if (closing) return;
   closing = true;
+  model.stop();
+  await started.catch(() => undefined);
   await chain;
+  // Never rejects; with the model stopped it ends at the next run of the build.
+  await galleryLoad;
   await model.release().catch(() => undefined);
+  Atomics.store(boot.closed, 0, THREAD_CLOSED);
+  Atomics.notify(boot.closed, 0);
   // Without the port nothing keeps this thread's event loop alive: it ends by itself.
   port?.close();
 }
@@ -184,7 +206,9 @@ async function start(): Promise<WorldModelInfo> {
 }
 
 try {
-  post({ type: 'ready', info: await start() });
+  const starting = start();
+  started = starting;
+  post({ type: 'ready', info: await starting });
 } catch (err: unknown) {
   post({ type: 'failed', error: serializeError(err) });
   await close();

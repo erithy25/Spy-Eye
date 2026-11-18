@@ -786,8 +786,27 @@ export class GeoClip {
     return (await Promise.all([exists(f.vision), exists(f.location), exists(f.gallery)])).every(Boolean);
   }
 
+  /** Set by stop(): no session is created and no run is started any more. */
+  private stopped = false;
+
+  /**
+   * Lets the run under way finish and refuses every later one (and every new session), so that
+   * the thread that owns this model reaches a point without a run soon: a run cannot be
+   * interrupted, and a thread torn down inside one aborts the whole process (see
+   * geoclipWorker.ts close). Calls that would start a run fail with a NamedError instead.
+   */
+  stop(): void {
+    this.stopped = true;
+  }
+
+  private stoppedError(): NamedError {
+    return new NamedError('GeoCLIP wird beendet.', 'GeoCLIP is shutting down.');
+  }
+
   private async session(file: string): Promise<Ort.InferenceSession> {
     const ort = await onnx();
+    // Checked after the import: stop() may have come while onnxruntime was loading.
+    if (this.stopped) throw this.stoppedError();
     return ort.InferenceSession.create(file, {
       intraOpNumThreads: this.threads,
       interOpNumThreads: 1,
@@ -800,7 +819,12 @@ export class GeoClip {
   }
 
   private serial<T>(job: () => Promise<T>): Promise<T> {
-    const run = this.queue.then(job);
+    // The check runs when the job's turn comes, not when it was queued: a run queued before
+    // stop() but not started yet is refused as well.
+    const run = this.queue.then(() => {
+      if (this.stopped) throw this.stoppedError();
+      return job();
+    });
     this.queue = run.catch(() => undefined);
     return run;
   }

@@ -27,6 +27,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { config, repoRoot } from '../config.js';
+import { drainAtExitOf } from '../ml/workerHost.js';
+import { THREAD_CLOSED } from '../ml/workerProtocol.js';
 import { GEOCLIP_FILES, NamedError, defaultGeoclipDir, geoclipFilesPresent, type GeoclipPrecision, type GeoclipPrediction } from './geoclip.js';
 import { reportWorldModel } from './settings.js';
 
@@ -50,7 +52,17 @@ export interface WorldModelBoot {
    * thread's life cycle can be tested without the weights.
    */
   testOps: boolean;
+  /**
+   * One Int32 in shared memory, as for the inference threads (ml/workerProtocol.ts WorkerBoot):
+   * THREAD_RUNNING until the thread has finished its last run and released its sessions, then
+   * THREAD_CLOSED. The exiting process waits on it (drainAtExitOf in ml/workerHost.ts), and a
+   * close tells by it whether the thread may be stopped by force (see stopThread).
+   */
+  closed: Int32Array;
 }
+
+/** The settings of the world model's thread, without the flag each started thread gets of its own. */
+export type WorldModelSettings = Omit<WorldModelBoot, 'closed'>;
 
 /** What the thread says once its image tower is loaded. */
 export interface WorldModelInfo {
@@ -193,6 +205,12 @@ interface PendingCall {
   timer: NodeJS.Timeout | null;
 }
 
+/** A started thread: its shared "closed" flag and its end. */
+interface ThreadHandle {
+  closed: Int32Array;
+  exited: Promise<void>;
+}
+
 type HostState = 'idle' | 'starting' | 'ready' | 'restarting' | 'failed' | 'closed';
 
 export interface WorldModelServiceOptions {
@@ -221,7 +239,7 @@ const UNAVAILABLE: Named = {
 };
 
 export class WorldModelService implements WorldModel {
-  readonly boot: WorldModelBoot;
+  readonly boot: WorldModelSettings;
   private readonly callTimeoutMs: number;
   private readonly predictTimeoutMs: number;
   private readonly log: (message: string) => void;
@@ -233,7 +251,8 @@ export class WorldModelService implements WorldModel {
   private restartAllowed = true;
   private nextId = 1;
   private readonly pending = new Map<number, PendingCall>();
-  private readonly workers = new Set<Worker>();
+  /** Every started thread that has not exited, including one still starting or winding down. */
+  private readonly workers = new Map<Worker, ThreadHandle>();
   private gallery: { state: GalleryState; done: number; total: number; reason: string | null } = { state: 'unknown', done: 0, total: 0, reason: null };
   private readonly readyListeners = new Set<(ready: boolean) => void>();
   private files: Promise<{ ok: boolean; missing: string[] }> | null = null;
@@ -380,7 +399,13 @@ export class WorldModelService implements WorldModel {
     this.live.catch(() => undefined);
     this.worker = null;
     this.settleListeners(false);
-    await Promise.all([...this.workers].map((w) => stopWorker(w)));
+    await Promise.all([...this.workers].map(([w, handle]) => stopThread(w, handle)));
+  }
+
+  /** Stops one thread of this service (see stopThread); a no-op for one that has exited. */
+  private stop(worker: Worker): Promise<void> {
+    const handle = this.workers.get(worker);
+    return handle ? stopThread(worker, handle) : Promise.resolve();
   }
 
   private fromReply(
@@ -430,7 +455,8 @@ export class WorldModelService implements WorldModel {
     return new Promise<WorldModelOps[K]['result']>((resolve, reject) => {
       const id = this.nextId++;
       // A run that never answers (a hung thread) must not hold the fix: the call fails and the
-      // thread is stopped; the next call starts it again (restart path).
+      // thread is asked to end; once it has, the next call starts it again (restart path). It is
+      // not terminated on the spot: a thread torn down inside a session run aborts the process.
       const timer =
         op === 'exit'
           ? null
@@ -440,7 +466,7 @@ export class WorldModelService implements WorldModel {
               this.pending.delete(id);
               const secs = Math.round(timeoutMs / 1000);
               call.reject(new NamedError(`keine Antwort nach ${secs} s`, `no answer after ${secs} s`));
-              void worker.terminate();
+              void this.stop(worker);
             }, timeoutMs);
       timer?.unref();
       this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
@@ -520,15 +546,22 @@ export class WorldModelService implements WorldModel {
 
   private spawn(): Promise<Worker> {
     return new Promise((resolve, reject) => {
+      // A flag of its own per thread: a restarted thread must not inherit the state of the old one.
+      const closed = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+      const boot: WorldModelBoot = { ...this.boot, closed };
       let worker: Worker;
       try {
         const execArgv = workerExecArgv();
-        worker = new Worker(workerEntry, { workerData: this.boot, ...(execArgv ? { execArgv } : {}) });
+        worker = new Worker(workerEntry, { workerData: boot, ...(execArgv ? { execArgv } : {}) });
       } catch (err: unknown) {
         reject(err instanceof Error ? err : new Error(String(err)));
         return;
       }
-      this.workers.add(worker);
+      const thread = worker;
+      this.workers.set(worker, { closed, exited: new Promise<void>((resolveExit) => thread.once('exit', () => resolveExit())) });
+      // A process that exits while this thread is inside a run waits for it to finish and release
+      // its sessions first (the same drain as for the inference threads).
+      drainAtExitOf(worker, closed);
       let ready = false;
       let lastError: Error | null = null;
       worker.on('message', (message: ThreadMessage) => {
@@ -539,7 +572,7 @@ export class WorldModelService implements WorldModel {
             break;
           case 'failed':
             lastError = deserializeError(message.error);
-            void stopWorker(worker);
+            void this.stop(worker);
             break;
           case 'event':
             if (worker === this.worker || !ready) this.onEvent(message.event);
@@ -599,7 +632,7 @@ export class WorldModelService implements WorldModel {
     this.live = this.spawn().then(
       (next) => {
         if (this.state === 'closed') {
-          void stopWorker(next);
+          void this.stop(next);
           throw new NamedError('Weltmodell: Rechenthread wurde beendet.', 'world model: its computing thread was ended.');
         }
         this.adopt(next);
@@ -616,9 +649,21 @@ export class WorldModelService implements WorldModel {
   }
 }
 
-/** Asks the thread to release its sessions, and stops it if it does not end by itself. */
-async function stopWorker(worker: Worker): Promise<void> {
-  const exited = new Promise<void>((resolve) => worker.once('exit', () => resolve()));
+/** How long a closing thread may take to end by itself before it is looked at again. */
+const STOP_GRACE_MS = 3_000;
+/** After this long inside one run the thread is left alone (unreferenced): it is hung in native code. */
+const STOP_PATIENCE_MS = 5 * 60_000;
+
+/**
+ * Asks the thread to finish its run, release its sessions and end. It is stopped by force only
+ * once its flag says the sessions are released: terminating a thread inside an onnxruntime
+ * session run aborts the whole process (the binding throws a C++ exception, Napi::Error, while
+ * the thread is torn down). A thread still inside its run after the grace time is given more
+ * time, unreferenced, so that it never keeps an otherwise finished process alive; if the process
+ * ends meanwhile, its exit waits for the thread once more (drainAtExitOf).
+ */
+async function stopThread(worker: Worker, handle: ThreadHandle): Promise<void> {
+  // An idle worker is unreferenced; while it winds down it must keep a waiting caller alive.
   worker.ref();
   try {
     const message: HostMessage = { type: 'close' };
@@ -626,8 +671,24 @@ async function stopWorker(worker: Worker): Promise<void> {
   } catch {
     // Already gone.
   }
-  const timer = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 3000).unref());
-  if ((await Promise.race([exited, timer])) === 'timeout') await worker.terminate();
+  const giveUpAt = Date.now() + STOP_PATIENCE_MS;
+  for (;;) {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<'timeout'>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), STOP_GRACE_MS);
+      timer.unref();
+    });
+    const outcome = await Promise.race([handle.exited.then(() => 'exited' as const), timeout]);
+    clearTimeout(timer);
+    if (outcome === 'exited') return;
+    if (Atomics.load(handle.closed, 0) === THREAD_CLOSED) {
+      // Sessions released, yet the thread lingers (something else keeps its loop busy): safe to end.
+      await worker.terminate();
+      return;
+    }
+    worker.unref();
+    if (Date.now() >= giveUpAt) return;
+  }
 }
 
 // ------------------------------------------------------------------ preparation (download scripts)

@@ -113,10 +113,13 @@ export interface ThreadSpec<Options, Info, Event> {
 /** All threads that were started and not closed, for `closeInferenceThreads`. */
 const open = new Set<InferenceThread<OpMap, unknown, unknown, unknown>>();
 
-/** Every worker of this process that has not exited, with its shared "closed" flag. */
+/**
+ * Every worker of this process that runs onnxruntime and has not exited, with its shared "closed"
+ * flag (see drainAtExitOf).
+ */
 const liveWorkers = new Map<Worker, Int32Array>();
 
-/** How long the exiting process waits for its inference threads to finish their runs. */
+/** How long the exiting process waits for its onnxruntime threads to finish their runs. */
 const EXIT_DRAIN_MS = 5000;
 
 /**
@@ -146,6 +149,23 @@ function drainAtExit(): void {
 }
 
 let drainRegistered = false;
+
+/**
+ * Lets the exit wait for a thread that runs onnxruntime sessions (see drainAtExit). `closed` is
+ * the thread's shared flag: it sets THREAD_CLOSED once its last run has finished and its sessions
+ * are released, and it must take the message { type: 'close' } as the request to do that. Every
+ * such thread of the process registers here, the inference threads of this module and the world
+ * model's thread (datum/geoclipService.ts), so that one exit waits for all of them within one
+ * deadline instead of one deadline per kind of thread.
+ */
+export function drainAtExitOf(worker: Worker, closed: Int32Array): void {
+  liveWorkers.set(worker, closed);
+  worker.once('exit', () => liveWorkers.delete(worker));
+  if (!drainRegistered) {
+    drainRegistered = true;
+    process.on('exit', drainAtExit);
+  }
+}
 
 /**
  * One inference thread running one service. Calls are serialised through the process-wide gate;
@@ -315,11 +335,7 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
         return;
       }
       this.workers.add(worker);
-      liveWorkers.set(worker, closed);
-      if (!drainRegistered) {
-        drainRegistered = true;
-        process.on('exit', drainAtExit);
-      }
+      drainAtExitOf(worker, closed);
       let ready = false;
       let lastError: Error | null = null;
       worker.on('message', (message: ThreadMessage) => {
@@ -364,7 +380,6 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
       });
       worker.on('exit', (code: number) => {
         this.workers.delete(worker);
-        liveWorkers.delete(worker);
         if (!ready) {
           reject(lastError ?? new Error(`${this.spec.name}: Rechenthread endete beim Laden (Code ${code}).`));
           return;

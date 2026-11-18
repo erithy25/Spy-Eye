@@ -660,11 +660,25 @@ export class DatumEngine {
     }
   }
 
-  /** Writes a finished fix next to the recording. */
-  private async persist(fix: Fix, worldBuilding = false): Promise<void> {
+  /**
+   * Writes a finished fix next to the recording. Writes nothing and returns false once the engine
+   * has stopped: a fix that finished after stop() was computed while the node was shutting down
+   * (the world model's thread closed, a stage cut short) and must not be stored, least of all a
+   * full fix as final. Without a stored fix the recording is queued again at the next start.
+   */
+  private async persist(fix: Fix, worldBuilding = false): Promise<boolean> {
+    if (this.stopped) return false;
     await this.ensureDir(fix.videoId);
+    // Again right before the write: stop() may have come while the folder was being made.
+    if (this.stopped) return false;
     const stored: StoredFix = { ...fix, engineVersion: ENGINE_VERSION, ...(worldBuilding ? { worldModel: 'building' as const } : {}) };
     await fs.writeFile(path.join(this.dir(fix.videoId), 'fix.json'), JSON.stringify(stored));
+    return true;
+  }
+
+  /** Notes a result that was dropped because the engine stopped while it was computed. */
+  private dropped(entry: VideoEntry, stage: string): void {
+    this.opts.log(`${stage} "${entry.info.name}" nach dem Anhalten verworfen; sie wird beim nächsten Start neu berechnet`);
   }
 
   private async runQuick(entry: VideoEntry): Promise<void> {
@@ -682,13 +696,22 @@ export class DatumEngine {
       fix.elapsedMs = Date.now() - started;
       // The truth may have been given while the fix was computed.
       fix.truth = await this.truthFor(entry, fix.location);
-      await this.persist(fix);
+      if (!(await this.persist(fix))) {
+        this.dropped(entry, 'Schnellortung');
+        return;
+      }
       this.publish(fix);
       this.opts.onFix?.(fix);
       this.opts.log(`Schnellortung "${entry.info.name}": ${whereText(fix)} in ${(fix.elapsedMs / 1000).toFixed(1)} s`);
     } catch (err: unknown) {
       if (this.gone(entry)) {
         this.forget(id);
+        return;
+      }
+      // Failed because the node is shutting down (the world model's thread closed, a frame
+      // reader stopped): no error to show, the recording is located at the next start.
+      if (this.stopped) {
+        this.dropped(entry, 'Schnellortung');
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
@@ -715,7 +738,12 @@ export class DatumEngine {
       fix.elapsedMs = Date.now() - started;
       fix.truth = await this.truthFor(entry, fix.location);
       const worldBuilding = this.locatedDuringBuild.delete(id);
-      await this.persist(fix, worldBuilding);
+      // Finished after stop(): perhaps without the world model, whose thread was closed; it
+      // would count as final. Dropped; the next start computes it again.
+      if (!(await this.persist(fix, worldBuilding))) {
+        this.dropped(entry, 'Ortung');
+        return;
+      }
       this.stale.delete(id);
       // Located without the world model while its gallery is built: the frames stay for the
       // second run, which then only adds the world model's answer.
