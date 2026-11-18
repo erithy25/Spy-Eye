@@ -516,7 +516,7 @@ python3 tools/track_font.py fonts/JetBrainsMono-Regular.ttf fonts/SichtCard-Regu
 - Die Aufnahmen sind hochgerechnetes 720p. Auf großer Leinwand wirkt das weicher als echtes
   1080p; das Korn im Schnitt überdeckt es weitgehend. Ein Hochrechnen über Higgsfield (Topaz)
   ist möglich, sein Preis ließ sich nicht vorab abfragen.
-- Der Ton wurde nur gemessen, nicht abgehört. Das gilt für alle sechs Filme.
+- Der Ton wurde nur gemessen, nicht abgehört. Das gilt für alle sieben Filme.
 - Im Produktfilm beginnt die Musik erst bei 26,0 s (siehe oben). Wer sie von Anfang an will,
   setzt `MUSIC_TURN` auf einen späteren Anschlag des hellen Klangs; das ist nicht ausprobiert.
 - Der Mitschnitt läuft mit achtfacher Uhr, während der Rechner zugleich das Bild aufzeichnet.
