@@ -41,7 +41,7 @@ function resultTarget(r: SearchResult, query: string): FrameTarget {
 }
 
 function Federated({ results }: { results: FederatedResult[] }) {
-  const { t, locale } = useLang();
+  const { t, locale, n } = useLang();
   return (
     <section className="section-gap">
       <header className="panel-head">
@@ -59,7 +59,7 @@ function Federated({ results }: { results: FederatedResult[] }) {
             </b>
             <span className="low">
               {peer.ok
-                ? `${peer.matched} ${t('Treffer')} · ${formatDecimal(peer.tookMs, 0)} ms${peer.receipt !== null ? ` · ${t('Beleg')} #${peer.receipt}` : ''}`
+                ? `${n(peer.matched, 'hit')} · ${formatDecimal(peer.tookMs, 0)} ms${peer.receipt !== null ? ` · ${t('Beleg')} #${peer.receipt}` : ''}`
                 : t('keine Antwort')}
             </span>
           </div>
@@ -89,7 +89,7 @@ function Federated({ results }: { results: FederatedResult[] }) {
 }
 
 export function Suche({ node, openFrame }: ViewProps) {
-  const { t, pick } = useLang();
+  const { t, pick, n } = useLang();
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
   const [federated, setFederated] = useState(false);
@@ -289,7 +289,7 @@ export function Suche({ node, openFrame }: ViewProps) {
               <header className="panel-head">
                 <h2 className="label">{t('Wo es zu sehen ist')}</h2>
                 <span className="low">
-                  {Object.values(response.sourceScores).filter((v) => v >= threshold).length} {t('Quellen')}
+                  {n(Object.values(response.sourceScores).filter((v) => v >= threshold).length, 'source')}
                 </span>
               </header>
               <div style={{ position: 'relative', height: 300 }}>

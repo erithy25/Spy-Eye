@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { EN } from './en';
-import { setNumberLocale } from './format';
+import { formatCount, setNumberLocale } from './format';
 
 export type Lang = 'de' | 'en';
 
@@ -11,8 +11,23 @@ interface LangValue {
   t: (de: string, vars?: Record<string, string | number>) => string;
   /** Chooses between a German and an English value supplied by the server. */
   pick: (de: string, en?: string | null) => string;
+  /** A count with its noun in the right number: "1 Quelle", "3 Quellen", "1 source". */
+  n: (count: number, noun: CountNoun) => string;
   locale: string;
 }
+
+/** Nouns that follow a count somewhere in the console: singular and plural in both languages. */
+const COUNT_NOUNS = {
+  source: { de: ['Quelle', 'Quellen'], en: ['source', 'sources'] },
+  face: { de: ['Gesicht', 'Gesichter'], en: ['face', 'faces'] },
+  alert: { de: ['Meldung', 'Meldungen'], en: ['alert', 'alerts'] },
+  frame: { de: ['Bild', 'Bilder'], en: ['frame', 'frames'] },
+  entry: { de: ['Eintrag', 'Einträge'], en: ['entry', 'entries'] },
+  query: { de: ['Abfrage', 'Abfragen'], en: ['query', 'queries'] },
+  hit: { de: ['Treffer', 'Treffer'], en: ['hit', 'hits'] },
+} as const;
+
+export type CountNoun = keyof typeof COUNT_NOUNS;
 
 const LangContext = createContext<LangValue | null>(null);
 
@@ -46,6 +61,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
       setLang,
       t: (de, vars) => fill(lang === 'en' ? (EN[de] ?? de) : de, vars),
       pick: (de, en) => (lang === 'en' && en !== undefined && en !== null && en !== '' ? en : de),
+      n: (count, noun) => `${formatCount(count)} ${COUNT_NOUNS[noun][lang][count === 1 ? 0 : 1]}`,
       locale: lang === 'en' ? 'en-GB' : 'de-DE',
     }),
     [lang, setLang],

@@ -8,10 +8,14 @@ import type { EmbeddingModel } from './model.js';
 /**
  * Built-in concept vocabulary used for the live auto-tagging display and scene labels.
  * Search itself is open-vocabulary and does NOT depend on this list.
+ *
+ * The list follows the rules of the prompt guard: no tag describes a person by sex, age,
+ * clothing, occupation or bodily features, none names faces, licence plates, weapons or
+ * assemblies. People appear as "a person" doing something, or as a group.
  */
 export const VOCABULARY: readonly string[] = [
-  // people
-  'a man', 'a woman', 'a child', 'a baby', 'a group of people', 'a crowd', 'a couple', 'a face', 'hands',
+  // people, by what they do
+  'a group of people', 'a crowd', 'hands',
   'a person walking', 'a person running', 'a person sitting', 'a person standing', 'a person talking',
   'a person eating', 'a person drinking', 'a person cooking', 'a person dancing', 'a person sleeping',
   'a person reading', 'a person writing', 'a person working at a computer', 'a person using a phone',
@@ -19,18 +23,22 @@ export const VOCABULARY: readonly string[] = [
   'a person swimming', 'a person skiing', 'a person surfing', 'a person skateboarding', 'a person climbing',
   'a person playing soccer', 'a person playing tennis', 'a person playing basketball', 'a person playing guitar',
   'a person singing', 'a person giving a presentation', 'a person shaking hands', 'a person carrying a bag',
-  'a person holding a cup', 'a person wearing a helmet', 'a person wearing a suit', 'a person wearing a uniform',
-  'a person wearing sunglasses', 'a person wearing a hat', 'a person wearing a mask', 'a police officer',
-  'a construction worker', 'a doctor', 'a chef', 'a soldier', 'a cyclist', 'a pedestrian', 'an athlete',
+  'a person holding a cup', 'a cyclist', 'a pedestrian',
+  // hazards and operations
+  'a flooded street', 'a flooded field', 'a river in flood', 'floodwater around houses', 'a fallen tree',
+  'a tree lying on a car', 'debris', 'rubble', 'a collapsed building', 'a damaged road', 'a landslide',
+  'a burning building', 'flames', 'a wildfire', 'a car accident', 'an overturned truck', 'a rescue boat',
+  'emergency vehicles', 'a rescue operation', 'sandbags', 'a damaged roof', 'a dam', 'a dike',
   // vehicles
   'a car', 'a taxi', 'a police car', 'a sports car', 'a van', 'a pickup truck', 'a truck', 'a bus', 'a school bus',
   'a train', 'a tram', 'a subway train', 'a motorcycle', 'a scooter', 'a bicycle', 'an airplane', 'a helicopter',
   'a boat', 'a ship', 'a sailboat', 'an ambulance', 'a fire truck', 'a tractor', 'a forklift', 'a drone',
-  'a license plate', 'a traffic jam', 'a parked car',
+  'a traffic jam', 'a parked car', 'a crane',
   // street
   'a street', 'a highway', 'an intersection', 'a crosswalk', 'a sidewalk', 'a traffic light', 'a stop sign',
   'a road sign', 'a parking lot', 'a parking garage', 'a gas station', 'a bridge', 'a tunnel', 'a roundabout',
   'a bus stop', 'a train station', 'an airport', 'a harbor', 'a construction site', 'a street at night',
+  'a railway track', 'a power line', 'a wind turbine',
   // animals
   'a dog', 'a cat', 'a horse', 'a cow', 'a sheep', 'a pig', 'a chicken', 'a bird', 'a duck', 'a fish', 'a shark',
   'a whale', 'a dolphin', 'an elephant', 'a giraffe', 'a zebra', 'a lion', 'a tiger', 'a bear', 'a monkey',
@@ -42,7 +50,7 @@ export const VOCABULARY: readonly string[] = [
   'a backpack', 'a handbag', 'a suitcase', 'an umbrella', 'a chair', 'a couch', 'a bed', 'a table', 'a desk',
   'a lamp', 'a door', 'a window', 'stairs', 'an elevator', 'a refrigerator', 'an oven', 'a sink', 'a toilet',
   'a ball', 'a guitar', 'a piano', 'a drum kit', 'a toy', 'a balloon', 'a flag', 'a box', 'a shopping cart',
-  'a shelf', 'a tool', 'a machine', 'a robot', 'a weapon', 'a gun', 'money', 'a credit card', 'a key', 'a fence',
+  'a shelf', 'a tool', 'a machine', 'a robot', 'money', 'a credit card', 'a key', 'a fence',
   'a bench', 'a fire hydrant', 'a trash can', 'a ladder', 'a tent', 'a screen with text', 'a chart', 'a map',
   'a logo', 'a sign with text', 'a poster', 'a painting', 'flowers', 'a christmas tree', 'a candle', 'a cake',
   // food
@@ -57,7 +65,7 @@ export const VOCABULARY: readonly string[] = [
   'a city skyline', 'a skyscraper', 'a house', 'an apartment building', 'a garden', 'a park', 'a playground',
   'a forest', 'a mountain', 'a beach', 'the ocean', 'a lake', 'a river', 'a waterfall', 'a desert', 'a field',
   'a farm', 'a village', 'a snowy landscape', 'a swimming pool', 'a golf course', 'a soccer field',
-  'a tennis court', 'a ski slope', 'a campsite', 'a market', 'a festival', 'a wedding', 'a protest',
+  'a tennis court', 'a ski slope', 'a campsite', 'a market', 'a festival', 'a wedding',
   'a parade', 'a castle', 'a monument',
   // conditions and shot types
   'night', 'sunset', 'sunrise', 'rain', 'snow', 'fog', 'fire', 'smoke', 'an explosion', 'water', 'clouds',
@@ -67,9 +75,7 @@ export const VOCABULARY: readonly string[] = [
   'dashcam footage', 'an underwater scene', 'a news broadcast', 'an interview', 'a sports broadcast',
   // colours on common subjects
   'a red car', 'a black car', 'a white car', 'a blue car', 'a silver car', 'a yellow car', 'a green car',
-  'a red bus', 'a green bus', 'a yellow bus', 'a white van', 'a white truck', 'a person in a red shirt',
-  'a person in a blue shirt', 'a person in a white shirt', 'a person in a black jacket',
-  'a person in a yellow vest',
+  'a red bus', 'a green bus', 'a yellow bus', 'a white van', 'a white truck',
 ];
 
 /** Display form of a vocabulary entry ("a red car" -> "red car"). */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
 import { errorText, type NormRect, type Severity, type SourceKind } from './api';
 import { useLang } from './i18n';
 
@@ -212,4 +212,18 @@ export function useLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: read
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick]);
   return { data, error, reload: useCallback(() => setTick((v) => v + 1), []), set: setData };
+}
+
+/**
+ * Fits a picture stage to its picture: landscape frames fill the width, portrait frames (phone
+ * footage) are limited by the height of the window instead of running out of it. Returns the
+ * style for the stage and the load handler for its image.
+ */
+export function useStageRatio(): [CSSProperties | undefined, (event: SyntheticEvent<HTMLImageElement>) => void] {
+  const [ratio, setRatio] = useState<number | null>(null);
+  const onLoad = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    if (naturalWidth > 0 && naturalHeight > 0) setRatio(Math.round((naturalWidth / naturalHeight) * 1000) / 1000);
+  }, []);
+  return [ratio !== null ? ({ '--ratio': ratio } as CSSProperties) : undefined, onLoad];
 }

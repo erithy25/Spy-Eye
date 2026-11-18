@@ -17,8 +17,9 @@ import {
 import { formatClock, formatDecimal, formatScore, formatTime, pad } from '../format';
 import { useLang } from '../i18n';
 import { toMgrs } from '../map/geo';
-import { Dialog, Field, Sev, useAction } from '../ui';
+import { Dialog, Field, Sev, useAction, useStageRatio } from '../ui';
 import type { NodeConnection } from '../useNode';
+import { tagLabel } from '../tags';
 
 const HAZARD_NAMES: Record<string, string> = { flood: 'Überflutung', fire: 'Brand', collapse: 'Einsturz', normal: 'Unauffällig' };
 
@@ -66,7 +67,8 @@ function drawFocus(canvas: HTMLCanvasElement, explain: ExplainResponse): void {
 }
 
 export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheetProps) {
-  const { t, pick, locale } = useLang();
+  const { t, pick, locale, lang, n } = useLang();
+  const [stageStyle, onStageLoad] = useStageRatio();
   const [details, setDetails] = useState<SceneFramesResponse | null>(null);
   const [frame, setFrame] = useState<SceneFrame>({ frameNumber: target.frameNumber, time: target.time ?? 0, url: target.frameUrl });
   const [explain, setExplain] = useState<ExplainResponse | null>(null);
@@ -210,8 +212,8 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
                 }}
               />
             ) : (
-              <div className="stage">
-                <img src={shownUrl} alt="" />
+              <div className="stage" style={stageStyle}>
+                <img src={shownUrl} alt="" onLoad={onStageLoad} />
                 {explain && showFocus && <canvas ref={focusCanvas} className="focus" aria-hidden="true" />}
                 {box && (showFocus || !explain) && (
                   <div
@@ -355,7 +357,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
                 <div>
                   <dt>{t('Maskiert')}</dt>
                   <dd>
-                    {video.facesMasked} {t('Gesichter')}
+                    {n(video.facesMasked, 'face')}
                   </dd>
                 </div>
               )}
@@ -365,7 +367,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
               <ul className="scores">
                 {scene.tags.map((tag) => (
                   <li key={tag.label}>
-                    <span className="scores-name">{tag.label}</span>
+                    <span className="scores-name">{tagLabel(tag.label, lang)}</span>
                     <span className="scores-bar">
                       <span style={{ width: `${Math.round(tag.p * 100)}%` }} />
                     </span>

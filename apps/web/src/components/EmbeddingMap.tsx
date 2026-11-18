@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import { fetchEmbeddingMap, type MapPoint, type MapResponse, type VideoInfo } from '../api';
 import { formatDecimal, formatScore, formatTime } from '../format';
 import { useLang } from '../i18n';
+import { tagLabel } from '../tags';
 
 interface EmbeddingMapProps {
   videos: VideoInfo[];
@@ -28,7 +29,7 @@ function grey(level: number): string {
 }
 
 export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOpen }: EmbeddingMapProps) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [data, setData] = useState<MapResponse | null>(null);
   const [hover, setHover] = useState<Projected | null>(null);
   const [width, setWidth] = useState(0);
@@ -180,7 +181,7 @@ export function EmbeddingMap({ videos, modelReady, refreshKey, sceneScores, onOp
               <span>{formatTime(hover.point.time)}</span>
             </span>
             <span className="probe-line probe-dim">
-              <span className="probe-name">{hover.point.label}</span>
+              <span className="probe-name">{tagLabel(hover.point.label, lang)}</span>
               {sceneScores && <span>{formatScore(sceneScores[hover.point.sceneId] ?? 0)}</span>}
             </span>
           </div>

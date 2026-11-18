@@ -197,7 +197,7 @@ function ExerciseControl({ node, scenario, elapsed }: { node: NodeConnection; sc
 }
 
 function AlertRow({ alert, node, onOpen }: { alert: Alert; node: NodeConnection; onOpen: () => void }) {
-  const { t, pick, locale } = useLang();
+  const { t, pick, locale, n } = useLang();
   const action = useAction();
   const verdict = (value: 'confirmed' | 'dismissed'): void => {
     void action.run(async () => {
@@ -221,7 +221,7 @@ function AlertRow({ alert, node, onOpen }: { alert: Alert; node: NodeConnection;
           <Glyph kind={alert.sourceKind} /> {alert.sourceName}
         </div>
         <div className="alert-line low">
-          {t('Sicherheit')} {formatScore(alert.confidence)} · {alert.frames} {t('Bilder')} · {alert.active ? t('dauert an') : t('beendet')}
+          {t('Sicherheit')} {formatScore(alert.confidence)} · {n(alert.frames, 'frame')} · {alert.active ? t('dauert an') : t('beendet')}
         </div>
         {alert.secondOpinion && (
           <div className="alert-line low" title={t('Unabhängige Einschätzung des trainierten Gefahrenmodells für Luftbilder')}>
@@ -250,7 +250,7 @@ function AlertRow({ alert, node, onOpen }: { alert: Alert; node: NodeConnection;
 }
 
 function IncidentRow({ incident, node, selected, onSelect }: { incident: Incident; node: NodeConnection; selected: boolean; onSelect: () => void }) {
-  const { t, pick, locale } = useLang();
+  const { t, pick, locale, n } = useLang();
   const action = useAction();
   const set = (status: Incident['status']): void => {
     void action.run(async () => node.patchIncident(await setIncidentStatus(incident.id, status)));
@@ -262,13 +262,13 @@ function IncidentRow({ incident, node, selected, onSelect }: { incident: Inciden
         <span title={pick(incident.title, incident.titleEn)}>{pick(incident.title, incident.titleEn)}</span>
         {incident.corroboration > 1 && (
           <span className="pill pill-on">
-            {incident.corroboration} {t('Quellen')}
+            {n(incident.corroboration, 'source')}
           </span>
         )}
       </h4>
       <div className="alert-line">{incident.mgrs}</div>
       <div className="alert-line low">
-        {incident.alertIds.length} {t('Meldungen')} · {t('seit')} {formatClock(incident.firstSeen, locale)} ·{' '}
+        {n(incident.alertIds.length, 'alert')} · {t('seit')} {formatClock(incident.firstSeen, locale)} ·{' '}
         {incident.status === 'open' ? t('offen') : incident.status === 'acknowledged' ? t('zur Kenntnis genommen') : t('abgeschlossen')}
       </div>
       {selected && (

@@ -3,6 +3,8 @@ import type { FrameEvent, SceneInfo, VideoInfo } from '../api';
 import { formatDecimal, formatTime, pad } from '../format';
 import { useLang } from '../i18n';
 import type { LiveFeed } from '../useNode';
+import { tagLabel } from '../tags';
+import { useStageRatio } from '../ui';
 
 interface LiveAnalysisProps {
   live: LiveFeed;
@@ -82,7 +84,8 @@ function drawFingerprint(canvas: HTMLCanvasElement, values: number[]): void {
 }
 
 export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const [stageStyle, onStageLoad] = useStageRatio();
   const [current, setCurrent] = useState<FrameEvent | null>(null);
   const [scenes, setScenes] = useState<SceneInfo[]>([]);
   const [tick, setTick] = useState(0);
@@ -155,10 +158,10 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
       </header>
 
       <div className="live">
-        <div className="stage">
+        <div className="stage" style={stageStyle}>
           {current ? (
             <>
-              <img src={current.url} alt="" />
+              <img src={current.url} alt="" onLoad={onStageLoad} />
               <div className="stage-layer" key={current.frameNumber} aria-hidden="true">
                 {current.tiles.slice(1).map((tile, i) => (
                   <div
@@ -194,7 +197,7 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
           <ul className="scores">
             {(current?.tags ?? []).map((tag) => (
               <li key={tag.label}>
-                <span className="scores-name">{tag.label}</span>
+                <span className="scores-name">{tagLabel(tag.label, lang)}</span>
                 <span className="scores-bar">
                   <span style={{ width: `${Math.round(tag.p * 100)}%` }} />
                 </span>
@@ -219,7 +222,7 @@ export function LiveAnalysis({ live, videos }: LiveAnalysisProps) {
               <img src={scene.keyframeUrl} alt="" loading="lazy" />
               <span className="strip-line">
                 <span>{formatTime(scene.start)}</span>
-                <span className="strip-tag">{scene.tags[0]?.label ?? ''}</span>
+                <span className="strip-tag">{scene.tags[0] ? tagLabel(scene.tags[0].label, lang) : ''}</span>
               </span>
             </li>
           ))}

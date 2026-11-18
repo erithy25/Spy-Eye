@@ -46,7 +46,7 @@ function EntryRows({ entries, open, onToggle }: { entries: LedgerEntryInfo[]; op
 }
 
 export function Protokoll({ node }: ViewProps) {
-  const { t } = useLang();
+  const { t, n } = useLang();
   const [entries, setEntries] = useState<LedgerEntryInfo[]>([]);
   const [filter, setFilter] = useState('');
   const [open, setOpen] = useState<number | null>(null);
@@ -134,7 +134,7 @@ export function Protokoll({ node }: ViewProps) {
                 {verification.ok ? t('Kette unversehrt') : t('Kette gebrochen')}
               </div>
               <p>
-                {verification.entries} {t('Einträge')} · {formatDecimal(verification.tookMs, 0)} ms
+                {n(verification.entries, 'entry')} · {formatDecimal(verification.tookMs, 0)} ms
                 {verification.brokenAt !== null ? ` · ${t('ab Eintrag')} ${verification.brokenAt}: ${verification.reason ?? ''}` : ''}
               </p>
             </>
@@ -149,7 +149,7 @@ export function Protokoll({ node }: ViewProps) {
           <header className="panel-head">
             <h2 className="label">
               {t('Stichprobe')} <span className="count">{sample.entries.length}</span>
-              <span className="count-of">/ {sample.population} {t('Abfragen')}</span>
+              <span className="count-of">/ {n(sample.population, 'query')}</span>
             </h2>
             <button type="button" className="text-btn" onClick={() => setSample(null)}>
               {t('schließen')}

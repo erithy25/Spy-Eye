@@ -8,7 +8,7 @@ import { useLoad } from '../ui';
 const HAZARD_LABEL: Record<string, string> = { flood: 'Überflutung', fire: 'Brand', collapse: 'Einsturz', normal: 'Unauffällig' };
 
 export function Wirkung({ node }: ViewProps) {
-  const { t, locale } = useLang();
+  const { t, locale, n } = useLang();
   const metrics = useLoad(() => fetchMetrics(), []);
   const m = metrics.data;
   const scenarioStatus = node.intel?.scenario.status;
@@ -94,7 +94,7 @@ export function Wirkung({ node }: ViewProps) {
             <h2 className="label">{t('Übung: Ereignis und Meldung')}</h2>
             {evaluation && (
               <span className="low">
-                {evaluation.alerts} {t('Meldungen')}
+                {n(evaluation.alerts, 'alert')}
               </span>
             )}
           </header>
@@ -187,7 +187,7 @@ export function Wirkung({ node }: ViewProps) {
               <div>
                 <dt>{t('Protokoll')}</dt>
                 <dd>
-                  {m.ledgerEntries} {t('Einträge')}
+                  {n(m.ledgerEntries, 'entry')}
                 </dd>
               </div>
             </dl>

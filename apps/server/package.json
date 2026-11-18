@@ -14,6 +14,7 @@
     "exercise:fetch": "tsx src/scripts/fetchFootage.ts",
     "exercise:evaluate": "tsx src/scripts/runExercise.ts",
     "search:evaluate": "tsx src/scripts/evaluateSearch.ts",
+    "centre:build": "tsx src/scripts/buildTextCentre.ts",
     "map:extract": "tsx src/scripts/map/extractTiles.ts"
   },
   "dependencies": {
