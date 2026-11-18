@@ -30,7 +30,15 @@ Voraussetzungen: Node ab 20.11, pnpm, ffmpeg (`winget install Gyan.FFmpeg`, dana
 Terminal öffnen). Beim ersten Mal werden rund 950 MB Modelle und rund 300 MB Übungsmaterial
 geladen; danach braucht nichts mehr ein Netz.
 
-**Der kurze Weg.** Im Ordner des Repositorys:
+**Der kurze Weg.** Im Ordner des Repositorys den Stand dieses Zweigs holen und starten:
+
+```bash
+git fetch origin
+```
+
+```bash
+git checkout claude/video-dataset-keyword-search-8h6kxd
+```
 
 ```bash
 git pull
@@ -39,6 +47,10 @@ git pull
 ```bash
 .\vorfuehrung.cmd
 ```
+
+Bricht `git pull` mit dem Hinweis auf lokale Änderungen ab (meist die Datei `pnpm-lock.yaml`,
+die eine ältere pnpm-Fassung umgeschrieben hat): `git stash`, dann noch einmal `git pull`. Der
+Ordner `data` früherer Fassungen wird nicht angefasst und nicht mehr gebraucht.
 
 Der Befehl prüft die Voraussetzungen und nennt, was fehlt; richtet ein und baut; lädt beim ersten
 Mal das Material und wertet es aus (fünf bis zehn Minuten); stellt bei jedem weiteren Mal den
@@ -85,6 +97,10 @@ pnpm demo
   FEHLT den nächsten Schritt.
 - Nach einer Probe: Knoten mit Strg+C beenden, `pnpm demo:reset`, dann wieder `pnpm demo`.
 
+Zwei Rechner im Verbund, mit oder ohne Verschlüsselung: Die Vorlage ist `nodes.beispiel.json`,
+die Schritte stehen im [`README.md`](README.md) unter „Zwei Rechner im Verbund“. Für die
+Vorführung ist das nicht nötig; sie läuft mit drei Knoten auf einem Rechner.
+
 Für eigenes Material statt der Übung: `pnpm start`, anmelden, Mandat „Erprobung“, im Reiter
 QUELLEN Dateien oder einen Ordner ablegen, im Reiter SUCHE fragen. Bilder erscheinen erst, wenn
 sie auf Gesichter geprüft sind; eine Aufnahme lässt sich abspielen, sobald sie vollständig
@@ -109,9 +125,9 @@ ausgewertet ist und kein Gesicht gefunden wurde, sonst nur mit Freigabe.
 | Suche auf allgemeinem Material: 54 von 66 Anfragen beantwortet, erster Treffer bei 64 von 66 passend (`pnpm search:evaluate`) | Nachfrage: Es gibt kein Gespräch mit einer Behörde und keine Zusage |
 | 44 Aufnahmen durchsuchbar 8 s nach Beginn des Hochladens; Auswertung in 3,3-facher Echtzeit auf vier Kernen ohne Grafikkarte | Rechtsgrundlage: kein Gutachten; `docs/COMPLIANCE.md` ordnet zu, ersetzt es nicht |
 | Der ganze Vorführweg unter Windows PowerShell (`.github/workflows/windows.yml`) | Direktbilder echter Kameras: nur gegen eine simulierte Kamera geprüft |
-| Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen | Verbund über ein echtes Netz, mehr als drei Knoten |
+| Verbund über drei Knoten auf einem Rechner; dazu zwei getrennt gestartete und getrennt eingerichtete Knoten, die einander mit Adresse kennen, auch über HTTPS mit selbst ausgestelltem Zertifikat | Verbund über ein echtes Netz, mehr als drei Knoten |
 | Während der Auswertung von 44 Aufnahmen war kein unmaskiertes Bild und keine ungeprüfte Aufzeichnung abrufbar (`docs/SICHERHEIT.md`) | Sicherheit eines laufenden Systems gegen einen Angreifer: Es gab eine Durchsicht des Quelltexts, keinen Penetrationstest |
-| 77 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
+| 81 automatische Prüfungen (`pnpm test`), darunter zwei unabhängige Prüfprogramme für das Protokoll | Wie viele Gesichter der Erkenner übersieht |
 
 Die Wachen der Übung wurden am Übungsmaterial formuliert, die Schwellen der Suche an den
 gemessenen Anfragen eingestellt. Diese Einschränkung gehört zu jeder Nennung der Zahlen.

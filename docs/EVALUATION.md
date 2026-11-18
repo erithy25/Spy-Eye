@@ -174,7 +174,7 @@ einer Luftbildquelle, und frei formulierte Wachen sind der Regelfall.
 pnpm test
 ```
 
-77 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
+81 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
 körperliche Merkmale, Herkunft und Aussehen von Personen, Wiederfinden und Verfolgen ab, auch in
 vollbreiten Buchstaben, mit unsichtbaren Zeichen, mit Bindestrich und in anderen Schriften, und
 lässt Lagebeschreibungen durch; die Protokollkette erkennt geänderte, entfernte und umgestellte
@@ -215,7 +215,7 @@ Stand nach der Sicherheitsdurchsicht:
 | `pnpm ledger:verify` und `ledger_verify.py` auf dem Protokoll des Knotens Koblenz | beide: Kette unversehrt, 14 Einträge, derselbe letzte Stand |
 
 Die Erkennung stimmt mit dem Lauf auf dem Entwicklungsrechner überein (dort bei achtfacher Uhr
-2,3 bis 2,4 s im Median; der Windows-Rechner ist langsamer). Die 77 automatischen Prüfungen laufen
+2,3 bis 2,4 s im Median; der Windows-Rechner ist langsamer). Die 81 automatischen Prüfungen laufen
 dort ebenfalls, einschließlich der beiden Prüfprogramme für das Protokoll.
 
 **Was die Gegenprobe gezeigt hat.** Die ersten beiden Läufe fielen anders aus: Eine Suche auf dem

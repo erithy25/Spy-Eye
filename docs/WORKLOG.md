@@ -105,3 +105,24 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
   console take; vertical teasers in German and English (5 generations, 31.25 credits).
 - Short pitch in three lengths (German and English), brand files (wordmark as outlines, share
   card), sales templates.
+
+## 08:15 UTC · T+482 min
+
+- One command for the demonstration on Windows: `vorfuehrung.cmd` checks the requirements,
+  installs, builds, fetches and analyses on the first run, restores the prepared state on every
+  later run, checks the three nodes, starts them and opens the browser. The Windows workflow
+  runs it on a fresh and on a prepared machine and, since this stretch, also starts the nodes
+  through it and waits for the console to answer.
+- `demo:prepare` restores the prepared state first, so a rehearsal can no longer become the
+  baseline by accident.
+- Federation between machines: a node file may name a peer by address; both sides derive the key
+  of their pair. `nodes.beispiel.json` is the template. Checked with two nodes started and
+  configured separately on one machine, not across a network.
+- A node speaks HTTPS when the operator supplies a certificate (`SICHT_TLS_CERT`,
+  `SICHT_TLS_KEY`); its session cookie is then marked Secure. Checked with a self-issued
+  certificate for one node and for two nodes asking each other. Not the default.
+- Three more review points closed: unhandled rejections are logged instead of ending the node,
+  slow event-stream clients are dropped, an alert is written to the ledger before it is shown.
+- Papers, website and hand-over notes brought to this state; document folder rebuilt and handed
+  over as one archive.
+
