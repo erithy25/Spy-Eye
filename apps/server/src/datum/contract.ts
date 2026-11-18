@@ -2,9 +2,13 @@
  * DATUM: the shared contract between the localisation engine, the time and sun engine, the
  * spatial reconstruction, the HTTP routes and the console.
  *
- * Everything a fix contains is derived on this machine from the video itself, from data shipped
- * with the node (reference gallery, country shapes, elevation and map tiles) and from
- * astronomical arithmetic. No service is asked at run time.
+ * Almost everything a fix contains is derived on this machine from the video itself, from data
+ * and models shipped with or downloaded once by the node (reference gallery, world model, country
+ * shapes, elevation and map tiles) and from astronomical arithmetic. The one exception is the
+ * street-level comparison (evidence kind 'streetlevel'): when it is switched on (DatumSettings),
+ * the full stage asks public street-level picture services (Panoramax, and Mapillary when a key
+ * is stored) for pictures around a recognised place. Those services then learn which area is
+ * being examined; no video, frame or vector ever leaves the node.
  *
  * Conventions:
  *   - Latitude/longitude in decimal degrees (WGS 84).
@@ -45,7 +49,9 @@ export type EvidenceKind =
   | 'sun' // sun elevation / azimuth read from light and shadows
   | 'season' // vegetation, snow, light
   | 'text' // signs, scripts, file name
-  | 'filename'; // a date or place written in the file name
+  | 'filename' // a date or place written in the file name
+  | 'worldmodel' // GeoCLIP: the frames scored against 100 000 places on Earth
+  | 'streetlevel'; // frames compared with public street-level pictures around a recognised place
 
 export interface Evidence {
   kind: EvidenceKind;
@@ -67,6 +73,37 @@ export interface Evidence {
   refLon?: number;
   /** Similarity of the frame to the reference (cosine), if any. */
   similarity?: number;
+  /**
+   * Page where a person can look at the reference at its source (e.g. the Panoramax or Mapillary
+   * viewer for a street-level picture). Opened by the analyst's browser on request only.
+   */
+  refUrl?: string;
+  /**
+   * Remote thumbnail behind `refImage` for street-level evidence. Only the node fetches it (through
+   * GET /api/datum/fixes/:videoId/street/:n, see `refImage`); the console never loads it directly.
+   */
+  refSource?: string;
+}
+
+/** Settings of the node's DATUM engine that an operator can change (GET/PUT /api/datum/settings). */
+export interface DatumSettings {
+  streetLevel: {
+    /** Whether the full stage compares frames with public street-level pictures. */
+    enabled: boolean;
+    /** True when the environment (DATUM_STREETLEVEL=0) switches it off, whatever `enabled` says. */
+    forcedOff: boolean;
+    /** Services that would be asked: Panoramax always, Mapillary only with a stored key. */
+    providers: Array<'panoramax' | 'mapillary'>;
+    /** Whether a Mapillary key is stored (from MAPILLARY_TOKEN or saved by an operator). Never the key. */
+    mapillaryKey: boolean;
+    /** Where the key comes from; 'env' cannot be changed from the console. */
+    mapillaryKeySource: 'env' | 'stored' | 'none';
+  };
+  worldModel: {
+    /** Whether the GeoCLIP weights are on this machine. */
+    available: boolean;
+    precision: 'int8' | 'fp32';
+  };
 }
 
 export interface CountryProb {

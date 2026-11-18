@@ -248,6 +248,8 @@ export const KIND_CODE: Record<EvidenceKind, string> = {
   season: 'JAHRESZEIT',
   text: 'TEXT',
   filename: 'DATEINAME',
+  worldmodel: 'WELTMODELL',
+  streetlevel: 'STRASSENBILD',
 };
 
 /** How a location was obtained, as a phrase. */
@@ -260,4 +262,6 @@ export const KIND_METHOD: Record<EvidenceKind, string> = {
   season: 'Jahreszeit',
   text: 'Schrift im Bild',
   filename: 'Angabe im Dateinamen',
+  worldmodel: 'Weltmodell (GeoCLIP)',
+  streetlevel: 'Abgleich mit Straßenbildern',
 };
