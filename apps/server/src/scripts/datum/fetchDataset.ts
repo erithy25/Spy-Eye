@@ -54,6 +54,8 @@ const FLAG_GALLERY_ONLY = ARGS.has('--gallery-only');
 const FLAG_RESELECT = ARGS.has('--reselect');
 const FLAG_SELECT_ONLY = ARGS.has('--select-only');
 const FLAG_EXTEND = ARGS.has('--extend');
+/** Replace videos whose clip cannot be downloaded by other candidates (changes manifest.json). */
+const FLAG_REPLACE_FAILED = ARGS.has('--replace-failed');
 // Group (d) is off by default: measured on the train half, the 17 945-picture gallery it gives
 // located worse than the 6 393 pictures without it (more look-alikes outrank the true place;
 // docs/DATUM.md). --extend --extra-target=N reproduces the experiment.
@@ -895,8 +897,13 @@ async function runVideos(countries: () => Promise<Map<string, CountryInfo>>, vid
   await Promise.all(Array.from({ length: 2 }, worker));
   await writeJson(MANIFEST_PATH, current);
 
-  // Replace videos whose clip could not be cut by the next candidates of the pool.
-  if (failed.length > 0 && pool) {
+  // Replace videos whose clip could not be cut by the next candidates of the pool, only when
+  // asked: the reference set is versioned (manifest.json, evaluation, shipped clips), and a
+  // temporary download error (Wikimedia throttling) must not change it on one machine.
+  if (failed.length > 0 && !FLAG_REPLACE_FAILED) {
+    log(`  ${failed.length} Clip(s) nicht geladen; der Bestand bleibt unverändert. Später erneut: pnpm datum:fetch (oder --replace-failed, um sie zu ersetzen).`);
+  }
+  if (failed.length > 0 && pool && FLAG_REPLACE_FAILED) {
     log(`  ${failed.length} Clip(s) fehlgeschlagen, ersetze aus dem Kandidatenpool …`);
     const failedIds = new Set(failed.map((f) => f.wikidata));
     const keep = current.videos.filter((v) => !failedIds.has(v.wikidata));
@@ -1198,6 +1205,10 @@ async function fetchBuffer(url: string, maxBytes: number): Promise<{ status: num
 }
 
 let globalPauseUntil = 0;
+/** Time spent waiting for Wikimedia after 429/503 answers (ms). */
+let throttledMs = 0;
+/** After this much throttling the thumbnails are left for a later run: they are only previews. */
+const THROTTLE_LIMIT_MS = 3 * 60_000;
 
 async function downloadThumb(candidate: GalleryCandidate): Promise<'ok' | 'skip' | 'fail'> {
   const target = path.join(GALLERY_DIR, `${candidate.id}.jpg`);
@@ -1211,7 +1222,10 @@ async function downloadThumb(candidate: GalleryCandidate): Promise<'ok' | 'skip'
       try {
         const { status, body, retryAfter } = await fetchBuffer(url, isOriginal ? 6_000_000 : 8_000_000);
         if (status === 429 || status === 503) {
-          globalPauseUntil = Date.now() + Math.max(retryAfter * 1000, 5000 * attempt);
+          const pause = Math.max(retryAfter * 1000, 5000 * attempt);
+          globalPauseUntil = Date.now() + pause;
+          throttledMs += pause;
+          if (throttledMs > THROTTLE_LIMIT_MS) return 'fail';
           continue;
         }
         if (!body) break; // 4xx: try the next URL form
@@ -1246,7 +1260,17 @@ async function writeGalleryJson(candidates: GalleryCandidate[], testItems: Set<s
 
 async function runGallery(countries: () => Promise<Map<string, CountryInfo>>, videoItems: () => Promise<Map<string, VideoItem>>): Promise<void> {
   await fs.mkdir(GALLERY_DIR, { recursive: true });
-  let candidates = FLAG_RESELECT ? null : await readJson<GalleryCandidate[]>(CANDIDATES_PATH);
+  // The versioned gallery.json is the selection: the shipped vectors and the measurement belong to
+  // it. Only --reselect (new query) or --extend (extra layer) change it; a fresh machine must not
+  // query Wikidata again and end up with another gallery.
+  const selectionChanges = FLAG_RESELECT || FLAG_EXTEND;
+  const listed = selectionChanges ? null : await readJson<{ images: GalleryImage[] }>(GALLERY_PATH);
+  let candidates: GalleryCandidate[] | null =
+    listed && listed.images.length > 0
+      ? listed.images.map((g) => ({ id: g.id, label: g.label, lat: g.lat, lon: g.lon, country: g.country, commonsFile: g.commonsFile, hasVideo: g.hasVideo, group: 'listed' }))
+      : FLAG_RESELECT
+        ? null
+        : await readJson<GalleryCandidate[]>(CANDIDATES_PATH);
   if (!candidates) {
     log('Galerie: Auswahl aus Wikidata (P18 Bild + P625 Koordinate) …');
     candidates = await selectGallery(await countries(), await videoItems());
@@ -1285,11 +1309,16 @@ async function runGallery(countries: () => Promise<Map<string, CountryInfo>>, vi
   let ok = 0;
   let failed = 0;
   let stoppedByTime = false;
+  let stoppedByThrottle = false;
   const queue = [...missing];
   const worker = async (): Promise<void> => {
     for (;;) {
       if (Date.now() > deadline) {
         stoppedByTime = true;
+        return;
+      }
+      if (throttledMs > THROTTLE_LIMIT_MS) {
+        stoppedByThrottle = true;
         return;
       }
       const candidate = queue.shift();
@@ -1302,14 +1331,20 @@ async function runGallery(countries: () => Promise<Map<string, CountryInfo>>, vi
         const rate = done / Math.max(1, (Date.now() - started) / 1000);
         log(`  ${String(done).padStart(5)}/${missing.length}  ok ${ok}, Fehler ${failed}, ${rate.toFixed(1)}/s, Rest ~${((missing.length - done) / Math.max(rate, 0.01) / 60).toFixed(0)} min`);
       }
-      if (done % 500 === 0) await writeGalleryJson(candidates, testItems);
+      if (selectionChanges && done % 500 === 0) await writeGalleryJson(candidates, testItems);
     }
   };
   await Promise.all(Array.from({ length: GALLERY_CONCURRENCY }, worker));
-  const count = await writeGalleryJson(candidates, testItems);
+  // A new selection is written with the pictures that arrived; an unchanged one stays as it is
+  // in the repository (missing pictures only lack their thumbnail, their vectors are shipped).
+  const count = selectionChanges ? await writeGalleryJson(candidates, testItems) : candidates.length;
   const bytes = await totalBytes(GALLERY_DIR, '.jpg');
   log(`Galerie fertig: ${count} Bilder in gallery.json, ${(bytes / 1e6).toFixed(1)} MB, ${failed} Fehler, ${((Date.now() - started) / 60000).toFixed(1)} min.`);
   if (stoppedByTime) log(`  Zeitlimit (${GALLERY_MINUTES} min) erreicht; erneuter Aufruf lädt den Rest.`);
+  if (stoppedByThrottle) {
+    log('  Wikimedia drosselt die Abrufe; die übrigen Vorschaubilder werden beim nächsten pnpm datum:fetch geladen.');
+    log('  Die Ortung ist davon nicht betroffen: die Vektoren der Galerie liegen dem Repository bei.');
+  }
 }
 
 // ---------------------------------------------------------------------------------------------

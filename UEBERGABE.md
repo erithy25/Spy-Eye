@@ -29,9 +29,11 @@ git pull
 .\datum.cmd
 ```
 
-- Der erste Lauf lädt Modelle (rund 1 GB), 60 Referenzvideos, rund 6 400 Referenzbilder und
-  Höhendaten (zusammen gut 1,5 GB) und wertet alles aus. Die Galerie muss dabei nicht mehr
-  eingerechnet werden, ihre Vektoren liegen im Repository bei. Das dauert je nach Rechner und Netz
+- Der erste Lauf lädt Modelle (rund 1 GB), Vorschaubilder der Referenzgalerie und Höhendaten
+  und wertet alles aus. Die 60 Referenzclips und die Vektoren der Galerie liegen im Repository
+  bei; Wikimedia drosselt Abrufe, deshalb hängt der Start nicht mehr davon ab. Drosselt Wikimedia
+  die Vorschaubilder, bricht dieser Teil nach drei Minuten Wartezeit ab und lädt den Rest beim
+  nächsten Mal; die Ortung ist davon nicht betroffen. Das dauert je nach Rechner und Netz
   20 bis 40 Minuten (gemessen unter Linux auf vier Kernen: Ortung aller 60 Videos 5,7 Minuten;
   die Messung auf einem Windows-Rechner läuft in der CI); danach startet derselbe Befehl in unter
   einer Minute und ohne Netz.

@@ -53,7 +53,7 @@ Eigene Videos im Reiter BESTAND ablegen; jede Aufnahme wird nach der Auswertung 
 
 | Befehl | Tut |
 | --- | --- |
-| `pnpm datum:fetch` | lädt Referenzvideos, Referenzbilder und Höhendaten (setzt nach Abbruch fort) |
+| `pnpm datum:fetch` | lädt Vorschaubilder der Referenzgalerie und Höhendaten (setzt nach Abbruch fort); die 60 Referenzclips (mit Lizenzen in `datasets/datum/clips/LIZENZEN.md`) und die Galerie-Vektoren liegen dem Repository bei |
 | `pnpm datum:prepare` | wertet den Referenzbestand aus, rechnet die Galerie ein, ortet jede Aufnahme |
 | `pnpm datum:check` | prüft, ob alles da ist; jede Zeile endet mit OK oder FEHLT |
 | `pnpm datum` | startet den Knoten auf Anschluss 8787 |

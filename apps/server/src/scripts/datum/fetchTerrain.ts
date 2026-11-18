@@ -417,7 +417,9 @@ async function terrain(file: RegionsFile, prune: boolean): Promise<void> {
   process.stdout.write(`  total ${(total / 1e6).toFixed(1)} MB\n`);
   if (failures.length > 0) {
     process.stdout.write(`Failed (re-run to retry):\n  ${failures.slice(0, 10).join('\n  ')}\n`);
-    process.exitCode = 1;
+    // A few missing tiles only leave holes in the terrain of some places; the start goes on.
+    // Many failures mean no usable network, and the step reports an error.
+    if (failures.length > keys.length * 0.02) process.exitCode = 1;
   }
 }
 

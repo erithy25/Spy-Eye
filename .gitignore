@@ -33,7 +33,9 @@ media/product/
 deliverables/film/
 
 # DATUM: reference dataset, gallery and elevation tiles are downloaded by "pnpm datum:fetch"
-datasets/datum/clips/
+# The 60 reference clips (49 MB) are versioned, with their licences in clips/LIZENZEN.md.
+datasets/datum/clips/*.part
+datasets/datum/clips/selection-pool.json
 datasets/datum/gallery/
 datasets/datum/terrain/
 .goal-start-a
