@@ -555,6 +555,9 @@ export const EN: Record<string, string> = {
   'Weltmodell befragt': 'World model consulted',
   'Mit Straßenbildern verglichen': 'Compared with street-level pictures',
   'Stand der Konsole': 'Console build',
+  'Im Video sind Gesichter maskiert; das Original gibt es nur mit Freigabe. Gezeigt wird das Schlüsselbild.': 'Faces in this video are masked; the original needs an approval. The keyframe is shown instead.',
+  'Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.': 'The video is still being checked for faces; until then the keyframe is shown.',
+  'Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.': 'The video cannot be played here. The keyframe is shown instead.',
   WELTMODELL: 'WORLD MODEL',
   STRASSENBILD: 'STREET LEVEL',
   'Weltmodell (GeoCLIP)': 'World model (GeoCLIP)',
@@ -912,7 +915,6 @@ export const EN: Record<string, string> = {
   'Die Schwellen der Ortung wurden nur an der Abstimmungshälfte eingestellt; die Prüfhälfte zeigt, was ohne Anpassung herauskommt.':
     'The thresholds of the locator were tuned on the tuning half only; the test half shows what comes out without tuning.',
   // Finisher: evidence, holdings and ledger wording.
-  '{n} Szenen': '{n} scenes',
   '{faces} maskiert': '{faces} masked',
   'gelöscht ab {date}': 'deleted from {date}',
   UTMREF: 'MGRS',

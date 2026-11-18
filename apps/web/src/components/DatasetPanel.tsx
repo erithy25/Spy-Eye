@@ -21,7 +21,7 @@ const DETAIL_OPTIONS: { value: DetailLevel; label: string; hint: string }[] = [
 
 const FPS_OPTIONS: readonly number[] = [0.5, 1, 2, 4];
 
-function statusText(video: VideoInfo, t: (de: string, vars?: Record<string, string | number>) => string): string {
+function statusText(video: VideoInfo, t: (de: string) => string, n: (count: number, noun: 'scene') => string): string {
   switch (video.status) {
     case 'queued':
       // "grob": already searchable through the quick first pass, dense analysis pending.
@@ -31,7 +31,7 @@ function statusText(video: VideoInfo, t: (de: string, vars?: Record<string, stri
     case 'error':
       return t('Fehler');
     case 'ready':
-      return t('{n} Szenen', { n: video.sceneCount });
+      return n(video.sceneCount, 'scene');
   }
 }
 
@@ -213,7 +213,7 @@ export function DatasetPanel({ videos, selectedVideoId, onSelect, sourceId, canW
                 >
                   {video.name}
                 </button>
-                <span className="row-state">{statusText(video, t)}</span>
+                <span className="row-state">{statusText(video, t, n)}</span>
                 {canWrite && (
                   <button type="button" className="row-x" aria-label={t('löschen')} onClick={() => onDelete(video)}>
                     ×

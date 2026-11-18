@@ -855,6 +855,10 @@
   color: var(--mid);
 }
 
+.dt-figure span .unit {
+  text-transform: none;
+}
+
 .dt-bar {
   height: 3px;
   background: var(--line-2);

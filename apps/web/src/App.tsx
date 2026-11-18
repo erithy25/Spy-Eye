@@ -544,6 +544,8 @@ function Shell({ node }: { node: NodeConnection }) {
           title={[model && model.phase === 'ready' ? `${model.modelId} · ${model.device}` : '', `${t('Stand der Konsole')}: ${__DATUM_BUILD__}`].filter((x) => x !== '').join('\n')}
         >
           {node.connected ? t('verbunden') : t('getrennt')} · <span className="unit">v{node.info?.node.version ?? ''}</span>
+          {/* The commit stays visible: it is how an operator checks that the browser shows the current build. */}
+          <span className="unit">{` · ${__DATUM_BUILD__.split(' · ')[0] ?? ''}`}</span>
         </span>
       </footer>
 

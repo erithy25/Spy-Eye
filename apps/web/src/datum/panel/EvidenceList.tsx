@@ -117,7 +117,7 @@ function Detail({ text, frame }: { text: string; frame: number | undefined }) {
   const long = text.length > LONG_DETAIL;
   // The frame is named once: at the end only when the text does not name it already.
   const frameText = frame !== undefined ? t('Bild {n}', { n: frame }) : '';
-  const showFrame = frameText !== '' && !text.includes(frameText);
+  const showFrame = frameText !== '' && !text.toLocaleLowerCase().includes(frameText.toLocaleLowerCase());
   const toggle = (): void => setOpen((v) => !v);
   return (
     <p
@@ -214,7 +214,7 @@ export function EvidenceList({ evidence, onSelect, at = null }: EvidenceListProp
           // only its label for screen readers.
           <div className="dp-ev-group" key={group.kind} role="group" aria-label={t(kindMethod(group.kind))}>
             <div className="dp-ev-body">
-              {weighed.length > 0 && <ul className="dp-ev-items">{weighed.map((e, i) => item(e, i, i < 2))}</ul>}
+              {weighed.length > 0 && <ul className="dp-ev-items">{weighed.map((e, i) => item(e, i, i < 2 || e.kind === 'streetlevel'))}</ul>}
               {nil.length > 0 &&
                 (weighed.length === 0 && nil.length === 1 ? (
                   <ul className="dp-ev-items">{item(nil[0]!, 0, false)}</ul>

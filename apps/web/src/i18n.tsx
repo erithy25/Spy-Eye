@@ -60,6 +60,7 @@ const COUNT_NOUNS = {
   file: { de: ['Datei', 'Dateien'], en: ['file', 'files'] },
   dataset: { de: ['Datensatz', 'Datensätze'], en: ['dataset', 'datasets'] },
   video: { de: ['Video', 'Videos'], en: ['video', 'videos'] },
+  scene: { de: ['Szene', 'Szenen'], en: ['scene', 'scenes'] },
 } as const;
 
 export type CountNoun = keyof typeof COUNT_NOUNS;

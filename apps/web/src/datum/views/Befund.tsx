@@ -28,6 +28,13 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const [candidate, setCandidate] = useState(0);
   // The picture under the video's place: the video itself, or the keyframe with its skyline drawn.
   const [showSkyline, setShowSkyline] = useState(false);
+  /**
+   * The node hands out the original recording only once it is fully checked for faces and none
+   * were found (or with an approval); otherwise the request is refused and the keyframe is shown
+   * with the reason instead of a player that does nothing.
+   */
+  const [videoRefused, setVideoRefused] = useState<string | null>(null);
+  useEffect(() => setVideoRefused(null), [selected]);
   const [countries, setCountries] = useState<CountryShape[]>([]);
   const action = useAction();
   const video = videos.find((v) => v.id === selected) ?? null;
@@ -151,11 +158,29 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
           <section className="dt-section">
             {skylineOn && key ? (
               <SkylineFrame imageUrl={rel(key.imageUrl)} skyline={key.skyline} horizonProfile={fix.horizon?.profile ?? null} heading={headingHere} />
-            ) : video.playable ? (
-              <video className="dt-video" src={`media/${video.id}/source`} poster={key ? rel(key.imageUrl) : undefined} controls muted playsInline preload="metadata" />
+            ) : video.playable && videoRefused === null ? (
+              <video
+                className="dt-video"
+                src={`media/${video.id}/source`}
+                poster={key ? rel(key.imageUrl) : undefined}
+                controls
+                muted
+                playsInline
+                preload="metadata"
+                onError={() =>
+                  setVideoRefused(
+                    video.status === 'ready' && video.facesMasked > 0
+                      ? t('Im Video sind Gesichter maskiert; das Original gibt es nur mit Freigabe. Gezeigt wird das Schlüsselbild.')
+                      : video.status !== 'ready'
+                        ? t('Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.')
+                        : t('Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.'),
+                  )
+                }
+              />
             ) : (
               key && <img className="dt-video" src={rel(key.imageUrl)} alt="" />
             )}
+            {videoRefused !== null && !skylineOn && <p className="note">{videoRefused}</p>}
             {skyline && (
               <div className="dt-media-switch" role="group" aria-label={t('Ansicht')}>
                 <button type="button" className="text-btn" aria-pressed={!skylineOn} onClick={() => setShowSkyline(false)}>
