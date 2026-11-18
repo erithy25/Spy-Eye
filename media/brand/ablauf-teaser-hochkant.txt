@@ -1,0 +1,23 @@
+# Sicht — Teaser im Hochformat (1080x1920), rund 19 Sekunden, für soziale Netze.
+#
+#   SEQ=ablauf-teaser-hochkant.txt ./build.sh        danach: SEQ=ablauf-teaser-hochkant.txt ./build.sh web
+#
+# Drei Bilder, drei Tafeln, Schlusstafel. Der Film trägt ohne Ton (alles Wesentliche steht auf
+# den Tafeln) und mit Ton: dasselbe Musikstück wie im Markenfilm, "mark|turn" legt den hellen
+# Klang auf die Tafel 03, am Ende wird ausgeblendet. Die Aufnahmen kommen aus shots-hochkant/
+# (aus raw-hochkant/*.kling.mp4; "SEQ=ablauf-teaser-hochkant.txt ./build.sh shots" gleicht sie an).
+# Wortlaut der Tafeln wie im Markenfilm; im Hochformat höchstens 25 Zeichen je Zeile.
+# Englische Fassung: ablauf-teaser-vertical-en.txt, gleiche Bilder und Standzeiten.
+
+set|OUT|sicht-teaser-hochkant.mp4
+set|FORMAT|hochkant
+
+shot|h1-tal-flut.mp4|0.8|1.8
+card|01-hubschrauber|4.4|QUELLEN: DPA, EPD · OKTOBER 2022|AHRTAL · 14. JULI 2021|EIN POLIZEIHUBSCHRAUBER|FILMT MENSCHEN|AUF DÄCHERN.
+shot|h2-leitstand.mp4|0.4|1.6
+card|02-nicht-verbucht|3.3|QUELLEN: DPA, EPD · OKTOBER 2022|DIE VIDEOS WERDEN|„NICHT ORDNUNGSGEMÄSS|VERBUCHT“.
+
+mark|turn
+card|03-durchsuchbar|3.2||SICHT MACHT|EINSATZBILDER|IN SEKUNDEN|DURCHSUCHBAR.
+shot|h5-tastatur.mp4|0.2|1.6
+end|3.6

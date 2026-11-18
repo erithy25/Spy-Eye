@@ -48,24 +48,57 @@ const SEGMENT_SEC = Math.min(120, Math.max(5, Number(process.env['SICHT_LIVE_SEG
 const SCAN_MS = 2000;
 const ALLOWED_PROTOCOLS = ['rtsp:', 'rtsps:', 'http:', 'https:', 'rtmp:', 'rtmps:', 'srt:', 'udp:', 'tcp:'];
 
-/** Accepts stream addresses only; local files and device names are not streams. */
+/**
+ * Accepts stream addresses only; local files and device names are not streams. The node connects
+ * to a stream, it does not wait for one: an address that would make ffmpeg open a listening port
+ * (`?listen`, `mode=listener`) is refused.
+ */
 export function parseStreamAddress(raw: string): URL | null {
   try {
     const url = new URL(raw.trim());
-    return ALLOWED_PROTOCOLS.includes(url.protocol) && url.hostname !== '' ? url : null;
+    if (!ALLOWED_PROTOCOLS.includes(url.protocol) || url.hostname === '') return null;
+    const listen = url.searchParams.get('listen');
+    if (listen !== null && listen !== '0') return null;
+    const mode = (url.searchParams.get('mode') ?? '').toLowerCase();
+    if (mode === 'listener' || mode === 'rendezvous') return null;
+    return url;
   } catch {
     return null;
   }
 }
 
-/** The address without credentials, for display and for the ledger. */
+/**
+ * The address without anything that grants access, for display and for the ledger: no user name,
+ * no password, no query string, and for RTMP no stream key (everything after the application
+ * name is the key there).
+ */
 export function redactStreamAddress(raw: string): string {
   const url = parseStreamAddress(raw);
   if (!url) return '';
   url.username = '';
   url.password = '';
   url.search = '';
-  return url.toString();
+  url.hash = '';
+  if (url.protocol === 'rtmp:' || url.protocol === 'rtmps:') {
+    const [app] = url.pathname.split('/').filter((part) => part !== '');
+    url.pathname = app !== undefined ? `/${app}/…` : '/';
+  }
+  return decodeURI(url.toString());
+}
+
+/**
+ * A line of ffmpeg's output for display. ffmpeg names the input it failed on, and with it the
+ * credentials in the address; every address in the text is replaced by its redacted form.
+ */
+export function redactStreamText(text: string): string {
+  return text
+    .replace(/[a-z][a-z0-9+.-]*:\/\/[^\s'"<>]+/gi, (address) => {
+      // Punctuation that follows the address in the sentence is not part of it.
+      const tail = /[:,.;)\]]+$/.exec(address)?.[0] ?? '';
+      const core = tail === '' ? address : address.slice(0, -tail.length);
+      return (redactStreamAddress(core) || '[Adresse]') + tail;
+    })
+    .slice(0, 240);
 }
 
 /** `20261118T142233.mp4` -> epoch ms (local time, as ffmpeg's strftime writes it). */
@@ -171,13 +204,14 @@ export class LiveIngest {
       stderr = (stderr + chunk.toString('utf8')).slice(-600);
     });
     child.on('error', (err) => {
-      stream.lastError = err.message;
+      stream.lastError = redactStreamText(err.message);
     });
     child.on('exit', (code) => {
       stream.child = null;
       if (stream.stopped) return;
       stream.state = 'offline';
-      stream.lastError = stderr.trim().split('\n').pop() ?? (code === 0 ? 'Der Strom ist zu Ende.' : `ffmpeg endete mit Code ${code ?? '?'}`);
+      const lastLine = stderr.trim().split('\n').pop() ?? '';
+      stream.lastError = lastLine !== '' ? redactStreamText(lastLine) : code === 0 ? 'Der Strom ist zu Ende.' : `ffmpeg endete mit Code ${code ?? '?'}`;
       this.deps.log(`Stream of "${this.deps.sources.get(stream.sourceId)?.name ?? stream.sourceId}" ended: ${stream.lastError}`);
       this.deps.onChange();
       // A segment that was being written when the stream ended is complete now.

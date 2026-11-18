@@ -62,6 +62,9 @@ async function loadNodeConfigs(): Promise<NodeConfig[]> {
   }
   const parsed = JSON.parse(await fs.readFile(fromRoot(file), 'utf8')) as NodesFile;
   if (!Array.isArray(parsed.nodes) || parsed.nodes.length === 0) throw new Error(`${file}: no nodes defined`);
+  if (parsed.nodes.some((n) => n.peers.length > 0) && (typeof parsed.federationSecret !== 'string' || parsed.federationSecret.length < 16)) {
+    throw new Error(`${file}: "federationSecret" fehlt oder ist kürzer als 16 Zeichen; aus ihm werden die Schlüssel zwischen den Knoten abgeleitet.`);
+  }
   const byId = new Map(parsed.nodes.map((n) => [n.id, n]));
   return parsed.nodes.map((n): NodeConfig => {
     const peers: PeerRecord[] = [];
@@ -171,6 +174,11 @@ async function main(): Promise<void> {
     );
     setTimeout(() => process.exit(0), 4000).unref();
   };
+  // Work that runs beside a request (delayed writes, retention, stream scans) reports its failure
+  // here instead of ending the process: a full disk must not take three nodes down mid-operation.
+  process.on('unhandledRejection', (reason: unknown) => {
+    console.error(`  Fehler im Hintergrund: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`);
+  });
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
   // A parent that started the nodes as a child process (the demonstration check) asks for an

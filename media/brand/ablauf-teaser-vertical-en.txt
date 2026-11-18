@@ -1,0 +1,23 @@
+# Sicht — vertical teaser (1080x1920), about 19 seconds, English cards.
+#
+#   SEQ=ablauf-teaser-vertical-en.txt ./build.sh        then: SEQ=ablauf-teaser-vertical-en.txt ./build.sh web
+#
+# Same pictures, same music and the same durations as the German teaser
+# (ablauf-teaser-hochkant.txt). Wording as in the English brand film: card 02 gives the police
+# statement in translation and in quotation marks; see SHOTS.md, "Hochkant-Teaser".
+
+set|OUT|sicht-teaser-vertical-en.mp4
+set|FORMAT|hochkant
+set|SHOT_LABEL|SYMBOLIC IMAGE · AI-GENERATED
+set|END_LINE|NO SIGHT WITHOUT OVERSIGHT.
+set|END_NOTE|SYMBOLIC IMAGES, AI-GENERATED · TRIAL BUILD
+
+shot|h1-tal-flut.mp4|0.8|1.8
+card|01-helicopter|4.4|SOURCES: DPA, EPD · OCTOBER 2022|AHR VALLEY · 14 JULY 2021|A POLICE HELICOPTER|FILMS PEOPLE|ON ROOFTOPS.
+shot|h2-leitstand.mp4|0.4|1.6
+card|02-not-filed|3.3|SOURCES: DPA, EPD · OCTOBER 2022|THE VIDEOS ARE|“NOT PROPERLY FILED”.
+
+mark|turn
+card|03-searchable|3.2||SICHT MAKES|OPERATIONAL FOOTAGE|SEARCHABLE|WITHIN SECONDS.
+shot|h5-tastatur.mp4|0.2|1.6
+end|3.6

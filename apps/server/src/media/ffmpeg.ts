@@ -54,7 +54,7 @@ export interface ProbeResult {
 /** Reads container duration and checks for a video stream by parsing `ffmpeg -i` output. */
 export async function probeVideo(inputPath: string): Promise<ProbeResult> {
   // ffmpeg exits with 1 because no output file is given; the stream info is on stderr.
-  const { stderr } = await runCapture(['-hide_banner', '-nostdin', '-i', inputPath], 60_000);
+  const { stderr } = await runCapture(['-hide_banner', '-nostdin', ...LOCAL_INPUT, '-i', inputPath], 60_000);
   const duration = /Duration:\s*(\d+):(\d{2}):(\d{2}(?:\.\d+)?)/.exec(stderr);
   let durationSec: number | null = null;
   if (duration) {
@@ -77,6 +77,19 @@ export interface FrameExtraction {
   kill(): void;
 }
 
+/**
+ * An uploaded file is read as a local file and nothing else: whatever it claims to be (a playlist,
+ * a list of other inputs), ffmpeg opens no network address and no second protocol for it.
+ */
+const LOCAL_INPUT: readonly string[] = ['-protocol_whitelist', 'file,crypto,data'];
+
+/**
+ * Most frames one recording may yield. Timestamps with a gap of days make the frame-rate filter
+ * repeat a picture for every missing second; the cap ends that after about 70 hours at one frame
+ * per second.
+ */
+const MAX_FRAMES = 250_000;
+
 export interface ExtractOptions {
   inputPath: string;
   /** printf-style output pattern, e.g. /data/frames/%07d.jpg */
@@ -95,6 +108,7 @@ export function extractFrames(options: ExtractOptions): FrameExtraction {
     '-nostdin',
     '-loglevel', 'error',
     '-y',
+    ...LOCAL_INPUT,
     '-i', options.inputPath,
     '-map', '0:v:0',
     '-an',
@@ -102,6 +116,7 @@ export function extractFrames(options: ExtractOptions): FrameExtraction {
     '-vf', `fps=${options.fps},scale=w='min(${options.maxWidth},iw)':h=-2:flags=bicubic`,
     '-pix_fmt', 'yuvj420p',
     '-q:v', '3',
+    '-frames:v', String(MAX_FRAMES),
     '-progress', 'pipe:1',
     '-stats_period', '0.25',
     '-nostats',
@@ -201,7 +216,7 @@ export async function extractKeyframes(inputPath: string, requests: KeyframeRequ
   // keyframe at or after its timestamp without decoding the frames in between. For a preview any
   // nearby picture will do, and it cuts the decode time by a factor of three or more.
   for (const request of requests) {
-    args.push('-threads', '1', '-skip_frame', 'nokey', '-ss', Math.max(0, request.time).toFixed(3), '-i', inputPath);
+    args.push('-threads', '1', '-skip_frame', 'nokey', '-ss', Math.max(0, request.time).toFixed(3), ...LOCAL_INPUT, '-i', inputPath);
   }
   requests.forEach((request, i) => {
     args.push(

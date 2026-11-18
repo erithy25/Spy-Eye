@@ -45,6 +45,9 @@ function parseDtype(raw: string): ModelDtype {
  */
 const DEFAULT_MODEL_ID = 'onnx-community/siglip2-base-patch32-256-ONNX';
 
+/** The published password of the demonstration accounts. Only this one is ever shown as a hint. */
+export const PUBLISHED_DEMO_PASSWORD = 'lagebild';
+
 export const config = {
   host: envString('HOST', '127.0.0.1'),
   port: envNumber('PORT', 8787, 1, 65535),
@@ -61,8 +64,18 @@ export const config = {
    * Rhineland-Palatinate sets for drone footage (§ 60 LBKG).
    */
   retentionDays: envNumber('SICHT_RETENTION_DAYS', 60, 0, 3650),
+  /**
+   * Set to 1 where the node is reached through TLS (a terminating proxy in front of it): the
+   * session cookie is then marked `Secure` and never travels over an unencrypted connection.
+   */
+  cookieSecure: envBool('SICHT_COOKIE_SECURE', false),
+  /**
+   * Without the face detector no frame is released for viewing. Set to 1 only for footage that is
+   * known to show no people (test material); frames are then stored as extracted.
+   */
+  allowUnmasked: envBool('SICHT_ALLOW_UNMASKED', false),
   /** Password of the seeded demonstration accounts (first start only). */
-  demoPassword: envString('SICHT_DEMO_PASSWORD', 'lagebild'),
+  demoPassword: envString('SICHT_DEMO_PASSWORD', PUBLISHED_DEMO_PASSWORD),
   /** Hugging Face model id (ONNX export) of a CLIP- or SigLIP-style dual encoder. */
   modelId: envString('MODEL_ID', DEFAULT_MODEL_ID),
   modelDtype: parseDtype(envString('MODEL_DTYPE', 'fp32')),

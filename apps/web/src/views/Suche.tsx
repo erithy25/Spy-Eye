@@ -19,6 +19,7 @@ const RULE_LABEL: Record<string, string> = {
   'identifying-feature': 'Identifizierende Merkmale',
   'person-description': 'Personenbeschreibung',
   'licence-plate': 'Kennzeichen',
+  'unsupported-script': 'Schrift außerhalb von Deutsch und Englisch',
 };
 
 function resultTarget(r: SearchResult, query: string): FrameTarget {

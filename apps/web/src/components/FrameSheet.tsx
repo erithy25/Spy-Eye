@@ -87,6 +87,8 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
 
   const video = details?.video ?? node.app?.videos.find((v) => v.id === target.videoId) ?? null;
   const masked = (video?.facesMasked ?? 0) > 0;
+  /** Only a recording that has been analysed in full is known to be free of faces. */
+  const checked = video !== null && video.status === 'ready' && !video.coarse;
   const unmasked = grantUntil !== null && grantUntil > Date.now();
 
   // Reset when navigating to another frame.
@@ -159,7 +161,7 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
   const scene = details?.scene ?? null;
   const isOriginalFrame = frame.frameNumber === target.frameNumber;
   const box = explain ? explain.box : isOriginalFrame ? target.box : null;
-  const canPlay = video?.playable === true && !videoError && scene !== null && (!masked || unmasked);
+  const canPlay = video?.playable === true && !videoError && scene !== null && ((checked && !masked) || unmasked);
   const shownUrl = unmasked ? `media/${target.videoId}/original/${pad(frame.frameNumber, 7)}.jpg` : frame.url;
   const title = alert ? pick(alert.watchName, alert.watchNameEn) : (target.sourceName ?? video?.name ?? '');
 
@@ -297,6 +299,9 @@ export function FrameSheet({ target, node, onClose, onPrev, onNext }: FrameSheet
             {filed && <p className="hint">{filed}</p>}
             {masked && !unmasked && scene && (
               <p className="hint">{t('Die Aufzeichnung enthält maskierte Gesichter. Abspielen und Original erfordern eine Freigabe durch eine zweite Person.')}</p>
+            )}
+            {!masked && !checked && !unmasked && scene && (
+              <p className="hint">{t('Die Aufzeichnung wird noch ausgewertet. Abspielen ist möglich, sobald sie vollständig auf Gesichter geprüft ist.')}</p>
             )}
             {explainError && <p className="note">{explainError}</p>}
 

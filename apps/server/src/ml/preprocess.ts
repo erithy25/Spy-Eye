@@ -42,8 +42,9 @@ function spread(total: number, window: number, count: number): number[] {
 function squareGrid(width: number, height: number, side: number, maxStrideFraction: number): PixelRect[] {
   const s = Math.max(8, Math.min(side, width, height));
   const stride = s * maxStrideFraction;
-  const cols = width > s ? Math.ceil((width - s) / stride) + 1 : 1;
-  const rows = height > s ? Math.ceil((height - s) / stride) + 1 : 1;
+  // At most twelve positions per side, so that an extreme format cannot ask for thousands of squares.
+  const cols = width > s ? Math.min(12, Math.ceil((width - s) / stride) + 1) : 1;
+  const rows = height > s ? Math.min(12, Math.ceil((height - s) / stride) + 1) : 1;
   const xs = spread(width, s, cols);
   const ys = spread(height, s, rows);
   const rects: PixelRect[] = [];
@@ -66,7 +67,9 @@ export function tileLayout(width: number, height: number, detail: DetailLevel): 
 
   // Overlapping full-height squares along the long axis.
   if (aspect >= 1.15) {
-    const count = Math.max(2, Math.round(aspect * 1.7));
+    // Up to six squares along the long side: a 32:9 panorama gets all of them, a strip of a
+    // picture that is hundreds of times longer than high does not become hundreds of tiles.
+    const count = Math.min(6, Math.max(2, Math.round(aspect * 1.7)));
     const positions = spread(long, short, count);
     for (const pos of positions) {
       tiles.push(

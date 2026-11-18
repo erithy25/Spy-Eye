@@ -66,3 +66,77 @@ test('removing an entry is detected', async () => {
   assert.equal(result.ok, false);
   assert.equal(result.brokenAt, 2);
 });
+
+test('line separators inside a text neither split an entry nor change its hash', async () => {
+  const file = await tempFile();
+  const ledger = new Ledger(file);
+  await ledger.open();
+  const awkward = 'vor nach ende\rund\nzeile';
+  const written = await ledger.append({ ...entry(1), actor: awkward, summary: awkward, data: { query: awkward } });
+  await ledger.append(entry(2));
+
+  const text = await fs.readFile(file, 'utf8');
+  assert.equal(text.includes(' ') || text.includes(' '), false, 'the separators are written as escapes');
+  assert.equal(text.split('\n').filter((line) => line !== '').length, 2);
+
+  const reopened = new Ledger(file);
+  await reopened.open();
+  assert.equal(reopened.length, 2);
+  const read = reopened.list({ limit: 10 }).find((e) => e.seq === 1);
+  assert.equal(read?.summary, awkward);
+  assert.equal(read?.hash, written.hash);
+  assert.equal((await reopened.verify()).ok, true);
+});
+
+test('a file written with the separators left raw is still read as one entry per line', async () => {
+  const file = await tempFile();
+  const first = new Ledger(file);
+  await first.open();
+  const written = await first.append({ ...entry(1), summary: 'a b' });
+  // As earlier versions wrote it: the separator unescaped inside the line.
+  await fs.writeFile(file, `${JSON.stringify(written)}\n`);
+  assert.equal((await fs.readFile(file, 'utf8')).includes(' '), true);
+
+  const reopened = new Ledger(file);
+  await reopened.open();
+  assert.equal(reopened.length, 1);
+  assert.equal(reopened.headHash, written.hash);
+});
+
+test('verification notices a file that was cut off or exchanged while the node runs', async () => {
+  const file = await tempFile();
+  const ledger = new Ledger(file);
+  await ledger.open();
+  for (const i of [1, 2, 3]) await ledger.append(entry(i));
+  assert.equal((await ledger.verify()).ok, true);
+
+  const lines = (await fs.readFile(file, 'utf8')).split('\n').filter((line) => line !== '');
+  await fs.writeFile(file, `${lines.slice(0, 2).join('\n')}\n`);
+  const cut = await ledger.verify();
+  assert.equal(cut.ok, false);
+  assert.equal(cut.brokenAt, 3);
+  assert.match(cut.reason ?? '', /endet bei Eintrag 2, der Knoten hält Eintrag 3/);
+
+  // Another chain of the same length, consistent in itself.
+  const otherFile = await tempFile();
+  const other = new Ledger(otherFile);
+  await other.open();
+  for (const i of [7, 8, 9]) await other.append(entry(i));
+  await fs.copyFile(otherFile, file);
+  const exchanged = await ledger.verify();
+  assert.equal(exchanged.ok, false);
+});
+
+test('appending and verifying at the same time neither forks the chain nor reports a false break', async () => {
+  const file = await tempFile();
+  const ledger = new Ledger(file);
+  await ledger.open();
+  const work: Promise<unknown>[] = [];
+  for (let i = 0; i < 40; i++) {
+    work.push(ledger.append(entry(i)));
+    if (i % 5 === 0) work.push(ledger.verify().then((result) => assert.equal(result.ok, true)));
+  }
+  await Promise.all(work);
+  const final = await ledger.verify();
+  assert.deepEqual([final.ok, final.entries], [true, 40]);
+});

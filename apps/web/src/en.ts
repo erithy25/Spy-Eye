@@ -276,6 +276,10 @@ export const EN: Record<string, string> = {
   Beweisstücke: 'Exhibits',
   'Keine Bilder gesichert.': 'No frames secured.',
   'Bild für diese Rolle gesperrt': 'Frame withheld from this role',
+  'Versiegeln ist der Leitung vorbehalten.': 'Sealing is reserved for the supervisor.',
+  'Das Passwort der Vorführzugänge hat der Betreiber gesetzt.': 'The operator has set the password of the demonstration accounts.',
+  'Die Aufzeichnung wird noch ausgewertet. Abspielen ist möglich, sobald sie vollständig auf Gesichter geprüft ist.':
+    'The recording is still being analysed. It can be played once it has been checked for faces in full.',
   entfernen: 'remove',
   'gefunden mit': 'found with',
   Vermerke: 'Notes',

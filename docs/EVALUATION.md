@@ -174,17 +174,27 @@ einer Luftbildquelle, und frei formulierte Wachen sind der Regelfall.
 pnpm test
 ```
 
-52 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
-körperliche Merkmale, Herkunft und Aussehen von Personen, Wiederfinden und Verfolgen ab und lässt
-Lagebeschreibungen durch; die Protokollkette erkennt geänderte und entfernte Einträge; Koordinaten
-werden gegen bekannte UTMREF-Werte geprüft; Meldungen werden nur bei gleicher Art, Nähe und Zeit
-zu einer Lage; der Verbund weist veränderte, fremd signierte und veraltete Anfragen zurück;
-Stromadressen werden auf Netzprotokolle beschränkt und ohne Zugangsdaten angezeigt; die
+77 automatische Prüfungen: Die Anfrageprüfung lehnt Namen, Gesichter, Kennzeichen, geschützte und
+körperliche Merkmale, Herkunft und Aussehen von Personen, Wiederfinden und Verfolgen ab, auch in
+vollbreiten Buchstaben, mit unsichtbaren Zeichen, mit Bindestrich und in anderen Schriften, und
+lässt Lagebeschreibungen durch; die Protokollkette erkennt geänderte, entfernte und umgestellte
+Einträge und eine abgeschnittene Datei, und zwei vom Knoten unabhängige Prüfprogramme kommen zum
+selben Ergebnis; Koordinaten werden gegen bekannte UTMREF-Werte geprüft; Meldungen werden nur bei
+gleicher Art, Nähe und Zeit zu einer Lage; der Verbund weist veränderte, fremd signierte,
+veraltete, wiederholte und zurückgespielte Anfragen zurück und übernimmt aus Antworten nur
+eingebettete Vorschaubilder; Anfragen, die eine fremde Seite oder ein untergeschobener Verweis
+auslöst, werden abgelehnt; Stromadressen werden auf Netzprotokolle beschränkt und ohne
+Zugangsdaten angezeigt; der Bericht eines Vorgangs enthält für die Aufsicht keine Bilder; die
 Schwellen der Suche und der Wachen bleiben in ihren Grenzen; das Schlagwortverzeichnis enthält
 keine Personenmerkmale und besteht selbst die Anfrageprüfung; der Messbericht nennt Ergebnis,
 Ereignisse und Protokollstand; der vorbereitete Stand einer Vorführung lässt sich
 wiederherstellen. Im Browser geprüft (Abläufe als Leitung, Auswertung und Aufsicht): Maskierung,
 Vier-Augen-Freigabe, Beweissicherung mit Siegel, Verbundfrage mit Beleg, Stichprobe.
+
+Eine unabhängige Durchsicht des Quelltexts hat 21 Befunde ergeben; welche behoben sind und welche
+offen bleiben, steht in [`SICHERHEIT.md`](SICHERHEIT.md). Dazu gehört ein Lauf mit 44 Aufnahmen,
+bei dem während der Auswertung fortlaufend versucht wurde, noch nicht freigegebene Bilder und
+noch nicht geprüfte Aufzeichnungen abzurufen.
 
 ## 6. Gegenprobe auf einem Windows-Rechner
 

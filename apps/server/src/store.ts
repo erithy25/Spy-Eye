@@ -74,6 +74,17 @@ export function originalFrameFileName(n: number): string {
   return `${String(n).padStart(7, '0')}.o.jpg`;
 }
 
+/**
+ * Name under which ffmpeg writes a frame. It is never served: a frame gets its served name only
+ * once it has been checked for faces (see Pipeline.releaseFrame).
+ */
+export function rawFrameFileName(n: number): string {
+  return `${String(n).padStart(7, '0')}.x.jpg`;
+}
+
+/** ffmpeg output pattern that produces `rawFrameFileName` for consecutive frame numbers. */
+export const RAW_FRAME_PATTERN = '%07d.x.jpg';
+
 export function frameUrl(videoId: string, n: number): string {
   // Relative on purpose: the client resolves it against its own base URL, so the app also works
   // behind a reverse proxy that serves it under a path prefix.
@@ -109,6 +120,11 @@ export class Store {
   /** The frame as served to clients: faces masked. */
   framePath(id: string, n: number): string {
     return path.join(this.framesDir(id), frameFileName(n));
+  }
+
+  /** The frame as written by ffmpeg, before it has been checked for faces. Never served. */
+  rawFramePath(id: string, n: number): string {
+    return path.join(this.framesDir(id), rawFrameFileName(n));
   }
 
   /**

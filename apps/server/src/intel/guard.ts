@@ -279,7 +279,47 @@ function originOfPerson(words: readonly string[]): string | undefined {
   return undefined;
 }
 
+/**
+ * The text as the model will read it. The encoder folds compatibility forms (full-width and
+ * mathematical letters, ligatures) into plain letters and ignores characters without width, so the
+ * screen has to look at the same folded text: otherwise "ｆａｃｅ" passes every rule and still
+ * reaches the model as "face". Dashes of every kind become a hyphen, and a capital inside a word
+ * starts a new word ("AngelaMerkel").
+ */
+export function canonicalPrompt(raw: string): string {
+  return raw
+    .normalize('NFKC')
+    .replace(/[\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180e\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/g, '')
+    .replace(/[\u2010-\u2015\u2212\ufe58\ufe63\uff0d]/g, '-')
+    .replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2');
+}
+
+/** A letter outside the Latin script: the word lists of this screen cannot judge it. */
+const FOREIGN_LETTER = /(?!\p{Script=Latin})\p{L}/u;
+
+/**
+ * Screens a prompt. The text is folded to what the model reads and then judged twice, as typed
+ * and with every hyphen read as a space ("tattooed-man", "angela-merkel"); either refusal counts.
+ * Text in another script than Latin is refused as a whole: the model would understand it, the
+ * word lists would not.
+ */
 export function screenPrompt(raw: string, options: GuardOptions = { personDescriptions: true }): GuardVerdict {
+  const typed = canonicalPrompt(raw);
+  if (FOREIGN_LETTER.test(typed)) {
+    return refuse(
+      'unsupported-script',
+      'Die Anfrage enthält Schriftzeichen außerhalb des lateinischen Alphabets. Die Anfrageprüfung kennt Deutsch und Englisch; anderes kann sie nicht beurteilen und lehnt es deshalb ab.',
+      'The request contains letters outside the Latin alphabet. The query check knows German and English; it cannot judge anything else and therefore refuses it.',
+    );
+  }
+  const asTyped = screenText(typed, options);
+  if (!asTyped.allowed || !typed.includes('-')) return asTyped;
+  const spaced = screenText(typed.replace(/-+/g, ' '), options);
+  if (!spaced.allowed) return spaced;
+  return { ...asTyped, flags: [...new Set([...asTyped.flags, ...spaced.flags])] };
+}
+
+function screenText(raw: string, options: GuardOptions): GuardVerdict {
   const text = normalize(raw);
   const words = tokens(text);
   const cased = casedTokens(raw);

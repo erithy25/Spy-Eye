@@ -23,6 +23,8 @@ function NewSource({ node, onClose }: { node: NodeConnection; onClose: () => voi
   const [streamUrl, setStreamUrl] = useState('');
   const action = useAction();
   const mayLive = node.can('source.live');
+  /** Opening a source to the peers is the supervisor's decision. */
+  const mayShare = node.can('federation.write');
   const number = (text: string): number | null => {
     const value = Number(text.replace(',', '.'));
     return text.trim() !== '' && Number.isFinite(value) ? value : null;
@@ -66,10 +68,12 @@ function NewSource({ node, onClose }: { node: NodeConnection; onClose: () => voi
             <input value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtsp://kamera.example/stream1" spellCheck={false} autoComplete="off" />
           </Field>
         )}
-        <label className="check">
-          <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
-          {t('Nachbarknoten dürfen diese Quelle im Verbund befragen')}
-        </label>
+        {mayShare && (
+          <label className="check">
+            <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
+            {t('Nachbarknoten dürfen diese Quelle im Verbund befragen')}
+          </label>
+        )}
         {action.error && <p className="note">{action.error}</p>}
         <div className="btn-row">
           <button
@@ -115,6 +119,8 @@ export function Quellen({ node, openFrame }: ViewProps) {
   const videos = node.app?.videos ?? [];
   const archive = useMemo(() => videos.filter((v) => v.scenario === null), [videos]);
   const may = node.can('source.write');
+  /** Opening a source to the peers is the supervisor's decision. */
+  const mayShare = node.can('federation.write');
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const v of videos) map.set(v.sourceId, (map.get(v.sourceId) ?? 0) + 1);
@@ -201,7 +207,7 @@ export function Quellen({ node, openFrame }: ViewProps) {
                   </td>
                   <td className="num">{counts.get(s.id) ?? 0}</td>
                   <td>
-                    {may && s.mode !== 'exercise' ? (
+                    {mayShare && s.mode !== 'exercise' ? (
                       <button
                         type="button"
                         className="text-btn"

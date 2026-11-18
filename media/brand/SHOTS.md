@@ -1,4 +1,4 @@
-# Sicht — Markenfilm: Aufnahmen, Tafeln, Ton
+# Sicht — Filme: Aufnahmen, Tafeln, Ton
 
 Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` neu bauen.
 
@@ -6,16 +6,27 @@ Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` ne
 
 | Datei | Inhalt |
 | --- | --- |
-| `sicht-markenfilm-v1.mp4` | Erster Schnitt, 39,6 s, 1920×1080, 25 B/s, H.264/AAC, 29 MB |
-| `sicht-markenfilm-v1-web.mp4` | Dieselbe Fassung in 1280×720 zum Einbetten, 2,8 MB |
+| `sicht-markenfilm-v1.mp4` | Markenfilm, erster Schnitt, 40,2 s, 1920×1080, 25 B/s, H.264/AAC, 29 MB |
+| `sicht-brandfilm-en.mp4` | Derselbe Schnitt mit englischen Tafeln, 40,2 s, 29 MB |
+| `sicht-markenfilm-lang.mp4` | Langfassung mit drei Ausschnitten aus der Konsole, 66,8 s, 37 MB |
+| `sicht-produktfilm.mp4` | Produktfilm aus dem Mitschnitt der Konsole, 142,6 s, 28 MB |
+| `sicht-teaser-hochkant.mp4` | Teaser im Hochformat, 19,5 s, 1080×1920, 7,2 MB |
+| `sicht-teaser-vertical-en.mp4` | Derselbe Teaser mit englischen Tafeln, 19,5 s, 7,2 MB |
+| `*-web.mp4` | Zu jeder Fassung eine leichte Datei zum Einbetten (1280×720, im Hochformat 720×1280): 2,8 · 2,8 · 4,2 · 6,8 · 0,8 · 0,8 MB |
 | `shots/*.mp4` | Neun angeglichene Aufnahmen, je 4,84 s, 1920×1080, Schwarzweiß, ohne Korn, ohne Einblendung, ohne Ton |
-| `cards/*.mp4` | Die Tafeln des ersten Schnitts als einzelne Clips |
-| `cards/ablauf-lang/*.mp4` | Die Tafeln der Langfassung |
-| `audio/bed-elevenlabs.mp3` | Tonbett, 90 s |
-| `raw/*.kling.mp4` | Die Aufnahmen, wie Higgsfield sie geliefert hat (1280×720, 24 B/s) |
+| `shots-hochkant/*.mp4` | Fünf angeglichene Aufnahmen im Hochformat, je 4,84 s, 1080×1920 |
+| `cards/*.mp4`, `cards/<ablauf>/*.mp4` | Die Tafeln jedes Schnitts als einzelne Clips |
+| `audio/bed-elevenlabs.mp3` | Tonbett, 90 s; `audio/bed-lang.mp3` ist dasselbe Stück zweimal hintereinander, 172 s |
+| `raw/*.kling.mp4`, `raw-hochkant/*.kling.mp4` | Die Aufnahmen, wie Higgsfield sie geliefert hat (1280×720 und 720×1280, 24 B/s) |
 | `raw/verworfen/` | Verworfene Aufnahme (siehe unten) |
-| `build.sh`, `ablauf-lang.txt` | Schnitt als Skript; Vorlage für die Langfassung mit Konsolenaufnahmen |
+| `build.sh` | Schnitt als Skript; der erste Schnitt steht darin, jeder andere in einer Ablaufdatei |
+| `ablauf-v1-en.txt`, `ablauf-lang.txt`, `ablauf-produktfilm.txt`, `ablauf-teaser-hochkant.txt`, `ablauf-teaser-vertical-en.txt` | Die Abläufe der übrigen Fassungen |
 | `fonts/`, `tools/track_font.py` | JetBrains Mono (SIL OFL 1.1) und die daraus abgeleiteten gesperrten Schnitte |
+
+Videos, Aufnahmen, Tafeln und Ton liegen nicht im Repository (`.gitignore`); im Repository
+stehen Skript, Abläufe, Schriften und dieses Dokument. Die fertigen Filme werden als Dateien
+übergeben (`deliverables/film/`), die leichte Fassung des ersten Schnitts liegt zusätzlich unter
+`site/assets/film/sicht-markenfilm.mp4`.
 
 ## Guthaben
 
@@ -25,7 +36,19 @@ Stand: 18. November 2026. Alles in diesem Ordner lässt sich mit `./build.sh` ne
 | Nachher | 378,50 |
 | Verbraucht | 75,58 (zehn Aufnahmen zu je 6,25 · ein Musikstück zu 13,08) |
 
-Der Auftrag erlaubte 260. Die Kostenabfrage vor der Erzeugung (`get_cost`) lieferte für fünf
+Für den Hochkant-Teaser kamen fünf Aufnahmen dazu:
+
+| | Credits |
+| --- | --- |
+| Vor den Hochkant-Aufnahmen | 378,50 |
+| Nachher | 347,25 |
+| Verbraucht | 31,25 (fünf Aufnahmen zu je 6,25) |
+
+Vier davon (`h1` bis `h4`) stammen aus einem Lauf um 05:09 UTC, der danach abbrach; sie fanden
+sich über die Auftragsliste des Kontos wieder und wurden von dort geladen. Die fünfte (`h5`) kam
+um 06:13 UTC dazu. Erlaubt waren für den Teaser fünf Erzeugungen und 40 Credits.
+
+Der erste Auftrag erlaubte 260. Die Kostenabfrage vor der Erzeugung (`get_cost`) lieferte für fünf
 Einstellungen einen Preis und wurde danach vom Server abgelehnt; erzeugt wurde nur mit
 Einstellungen, deren Preis vorher feststand.
 
@@ -133,6 +156,66 @@ bank, trees standing in the water on the far side. Slow, steady push-in toward t
 the mast. Monochrome, high contrast, shallow depth of field, fine 35mm film grain,
 photorealistic. No text, no numbers, no labels, no logos, no people.
 
+## Aufnahmen im Hochformat
+
+Alle mit `kling3_0`, `mode: std`, `sound: off`, `duration: 5`, `aspect_ratio: 9:16`.
+Geliefert in 720×1280; auf 1080×1920 hochgerechnet, entsättigt und leicht gradiert wie die
+Aufnahmen im Querformat (`SEQ=ablauf-teaser-hochkant.txt ./build.sh shots`). Jede Aufnahme
+wurde vor der Verwendung an Standbildern vom Anfang, aus der Mitte und vom Ende geprüft:
+keine Gesichter, keine lesbare Schrift, keine Hoheitszeichen, keine verformten Hände.
+
+| Datei | Auftrag (job_id) | Credits | Im Teaser | Urteil |
+| --- | --- | --- | --- | --- |
+| `h1-tal-flut` | `05474a65-a71e-4975-9b10-61fcd7facba2` | 6,25 | ja, erstes Bild | stark; überflutete Uferstraße, Kirche, Hang; winzige helle Fahrzeuge auf der Straße, ein Mast auf dem Höhenzug |
+| `h2-leitstand` | `15082ec0-d290-4ead-97b9-4c7be29510f6` | 6,25 | ja | gut; hohe Bildschirmwand mit Flutbildern, leere Stühle; winzige unleserliche Scheinbeschriftung auf den Bildschirmen und zwei Aushänge an der Wand, links ein heller Mauervorsprung |
+| `h3-drohne` | `030b2141-7faa-421c-bd46-67261d114d2e` | 6,25 | nein, Reserve | stark, ruhig; die rote Positionsleuchte der Drohne verschwindet mit der Entsättigung |
+| `h4-tal-morgen` | `36637977-58c0-4bf1-839c-dbd2a861113d` | 6,25 | nein, Reserve | stark; abgestellte Fahrzeuge, keine Schrift |
+| `h5-tastatur` | `ac878216-3b13-4d4e-a293-c23c9ba1f7fd` | 6,25 | ja, nur der Anfang | brauchbar; die Hand ist stimmig, auf einigen Tasten stehen unscharfe Scheinzeichen, die mit der Kamerafahrt deutlicher werden; verwendet sind deshalb nur die ersten 1,8 s |
+
+### Prompts im Hochformat
+
+**h1 Tal, Flut** — Black-and-white documentary aerial footage in vertical portrait format.
+High-altitude drone view looking along a narrow European river valley at dusk. The river has
+burst its banks: streets and gardens of a small town lie under dark, slowly moving water; only
+pitched roofs, a church tower and tree crowns stand out above the surface. The flooded valley
+runs from the bottom of the frame up into the distance between steep wooded hills; a low
+overcast sky fills the top of the frame, the last light reflects on the water. The camera
+pushes forward slowly and steadily along the valley. Monochrome, high contrast, fine 35mm film
+grain, restrained, photorealistic. No people, no moving vehicles, no text, no signs, no logos.
+
+**h2 Leitstand** — Black-and-white cinematic footage in vertical portrait format of an empty,
+dark control room at night with nobody present. A tall wall of screens, stacked in rows from
+the middle to the top of the frame, plays grainy black-and-white aerial video of a flooded
+landscape, water and rooftops seen from above. In the lower part of the frame a row of empty
+office chairs and bare desks is lit faintly by the flickering screens. Very slow push-in toward
+the screens. Monochrome, deep blacks, high contrast, slight haze, quiet and still,
+photorealistic. No people, no readable text, no letters, no logos, no insignia.
+
+**h3 Drohne** — Black-and-white cinematic footage in vertical portrait format at dawn. A small
+quadcopter drone hovers low over wide, calm floodwater, seen from behind and slightly below as
+a dark silhouette in the upper third of the frame against a pale misty sky. Its reflection and
+long ripples fill the lower part of the frame; mist drifts over the water, half-submerged trees
+and fence posts fade into the distance. The drone holds its position with spinning rotors, then
+drifts slowly forward while the camera follows gently. Monochrome, high contrast, soft fog,
+fine 35mm film grain, photorealistic. No people, no text, no markings or logos on the drone.
+
+**h4 Tal, Morgen** — Black-and-white documentary aerial footage in vertical portrait format.
+Wide, almost static high view down a small European river valley at dawn after a flood. The
+water has receded into the riverbed, which winds from the bottom of the frame into the
+distance; wet streets, rooftops and mud-covered meadows glisten, thin mist lies in the valley,
+the first light breaks over wooded hills under a tall pale sky. Very slow, barely perceptible
+forward drift of the camera. Calm and quiet. Monochrome, high contrast, fine 35mm film grain,
+photorealistic. No people, no vehicles, no text, no signs.
+
+**h5 Tastatur** — Black-and-white macro close-up in vertical portrait format, in a dark room.
+One hand rests on a plain matte black keyboard in the centre of the frame, seen from the side
+at a low angle; the index finger slowly presses a single key and rests again, calm and
+deliberate. The keyboard recedes from the bottom of the frame into soft-focus darkness at the
+top; only the faint cool glow of a screen outside the frame lights the fingertips and the edges
+of the keys. Very shallow depth of field, slow subtle push-in. Monochrome, deep blacks, high
+contrast, fine 35mm film grain, photorealistic. Blank keycaps without letters or symbols, no
+logos, no text, no face in frame, no screen in frame, no jewellery.
+
 ## Ton
 
 `audio/bed-elevenlabs.mp3` — `elevenlabs_music_v2_5`, `duration: 90`, `force_instrumental: true`,
@@ -148,7 +231,7 @@ Auftrag `5bcbbf10-a8df-49f4-9cf0-67aa066c3e0b`, 13,08 Credits.
 Gemessen, nicht gehört: Der helle Klang setzt in der Datei bei 21,2 s ein und wird danach etwa
 alle 5,3 s neu angeschlagen; Schlagzeug ist im Spektrum nicht zu erkennen. `build.sh` schiebt
 das Stück so, dass der Einsatz auf `mark|turn` fällt — im ersten Schnitt auf die Tafel „Sicht
-macht Einsatzbilder in Sekunden durchsuchbar“ bei 20,52 s. Zu jeder Tafel kommt ein leiser,
+macht Einsatzbilder in Sekunden durchsuchbar“ bei 21,04 s. Zu jeder Tafel kommt ein leiser,
 mit ffmpeg erzeugter Tick. Der fertige Ton liegt bei −17,0 LUFS, Spitze −3,0 dBFS.
 
 **Vor der Vorführung einmal anhören.** Wer das Stück nicht will: `BED=synth ./build.sh` erzeugt
@@ -164,7 +247,7 @@ Schreibmarke. Standzeit: rund 18 Zeichen je Sekunde plus eine halbe Sekunde.
 | --- | --- | --- |
 | 01 | AHRTAL · 14. JULI 2021 · 22:14 UHR | |
 | 02 | EIN POLIZEIHUBSCHRAUBER FILMT / MENSCHEN AUF DÄCHERN. | QUELLEN: DPA, EPD · OKTOBER 2022 |
-| 03 | DIE AUFNAHMEN WERDEN NICHT WEITERGEGEBEN. | QUELLEN: DPA, EPD · OKTOBER 2022 |
+| 03 | DIE VIDEOS WERDEN / „NICHT ORDNUNGSGEMÄSS VERBUCHT“. | QUELLEN: DPA, EPD · OKTOBER 2022 |
 | 04 | BILDER, DIE KEINER SIEHT, / HELFEN NIEMANDEM. | |
 | 05 | SICHT MACHT EINSATZBILDER / IN SEKUNDEN DURCHSUCHBAR. | |
 | 06 | OHNE PERSONEN ZU IDENTIFIZIEREN. | |
@@ -176,12 +259,15 @@ video“):
 - Die Aufnahmen entstanden zwischen 22.14 und 22.43 Uhr über den Ahr-Orten Mayschoß bis Schuld
   (dpa, 5. Oktober 2022) und zeigen unter anderem Menschen, die mit Lampen von Dächern oder
   Fenstern auf sich aufmerksam machen (epd, 4. Oktober 2022).
-- Die Videos wurden nach Darstellung der Polizei „nicht ordnungsgemäß verbucht“ und nicht
-  weitergegeben; Untersuchungsausschuss und Staatsanwaltschaft gingen bis September 2022 davon
-  aus, dass es sie nicht gibt (epd, 4. Oktober 2022).
+- Tafel 03 gibt die Darstellung der Polizei im Wortlaut wieder: Die Videos seien „nicht
+  ordnungsgemäß verbucht“ worden (epd, 4. Oktober 2022). Untersuchungsausschuss und
+  Staatsanwaltschaft gingen bis September 2022 davon aus, dass es solche Aufnahmen nicht gibt
+  (ebenda). Website, Präsentation, Einseiter und `docs/BRAND.md` führen dieselbe Wendung; die
+  frühere Tafel („Die Aufnahmen werden nicht weitergegeben.“) sagte mehr als sie und ist
+  ersetzt. Die Tafel hat 50 Zeichen und steht deshalb 3,3 statt 2,8 Sekunden; die
+  Anführungszeichen „ “ sind in den gesperrten Schriften enthalten.
 - **Nicht** behauptet wird, die Bilder hätten die Einsatzleitung nicht erreicht: Dafür gibt es
-  in der Recherche keinen Beleg in die eine oder andere Richtung. Die im Auftrag als Beispiel
-  genannte Tafel dazu ist deshalb durch Tafel 03 ersetzt.
+  in der Recherche keinen Beleg in die eine oder andere Richtung.
 
 Jede erzeugte Aufnahme trägt im Schnitt unten links den Hinweis `SYMBOLBILD · KI-GENERIERT`,
 weil die erste direkt auf die Datumstafel folgt. Nichts im Film gibt vor, die echte Aufnahme
@@ -195,16 +281,158 @@ zu sein.
 | 2,40 | 3,00 | 01 Tal, Dämmerung |
 | 5,40 | 3,20 | Tafel 02 |
 | 8,60 | 3,20 | 07 Hubschrauber, Nacht |
-| 11,80 | 2,80 | Tafel 03 |
-| 14,60 | 3,00 | 08 Leerer Leitstand |
-| 17,60 | 2,92 | Tafel 04 |
-| 20,52 | 3,20 | Tafel 05 — hier setzt der helle Klang ein |
-| 23,72 | 1,80 | 04 Tastatur |
-| 25,52 | 2,20 | 02 Brücke, Treibgut |
-| 27,72 | 2,60 | 03 Lagezentrum |
-| 30,32 | 2,32 | Tafel 06 |
-| 32,64 | 2,80 | 06 Tal, Morgen |
-| 35,44 | 4,20 | Schlusstafel |
+| 11,80 | 3,32 | Tafel 03 |
+| 15,12 | 3,00 | 08 Leerer Leitstand |
+| 18,12 | 2,92 | Tafel 04 |
+| 21,04 | 3,20 | Tafel 05 — hier setzt der helle Klang ein |
+| 24,24 | 1,80 | 04 Tastatur |
+| 26,04 | 2,20 | 02 Brücke, Treibgut |
+| 28,24 | 2,60 | 03 Lagezentrum |
+| 30,84 | 2,32 | Tafel 06 |
+| 33,16 | 2,80 | 06 Tal, Morgen |
+| 35,96 | 4,20 | Schlusstafel |
+
+Standzeiten rundet das Skript auf ganze Bilder auf (3,3 s werden 3,32 s). Das Vorschaubild der
+Website (`site/assets/film/poster.webp`) zeigt den leeren Leitstand; dasselbe Bild steht im
+Film jetzt bei 16,0 statt bei 15,5 Sekunden.
+
+## Englische Fassung
+
+`ablauf-v1-en.txt` ist der erste Schnitt mit englischen Tafeln: dieselben Bilder, dieselbe
+Musik, dieselben Standzeiten, also dieselbe Länge (40,16 s). Die Datei setzt Ausgabename,
+Einblendung und Schlusstafel selbst (`set|...`-Zeilen), der Aufruf braucht keine weiteren
+Angaben:
+
+```bash
+SEQ=ablauf-v1-en.txt ./build.sh
+```
+
+```bash
+SEQ=ablauf-v1-en.txt ./build.sh web
+```
+
+| Tafel | Text | Fußzeile |
+| --- | --- | --- |
+| 01 | AHR VALLEY · 14 JULY 2021 · 22:14 | |
+| 02 | A POLICE HELICOPTER FILMS / PEOPLE ON ROOFTOPS. | SOURCES: DPA, EPD · OCTOBER 2022 |
+| 03 | THE VIDEOS ARE “NOT PROPERLY FILED”. | SOURCES: DPA, EPD · OCTOBER 2022 |
+| 04 | IMAGES NO ONE SEES / HELP NO ONE. | |
+| 05 | SICHT MAKES OPERATIONAL FOOTAGE / SEARCHABLE WITHIN SECONDS. | |
+| 06 | WITHOUT IDENTIFYING PEOPLE. | |
+| Schluss | SICHT / NO SIGHT WITHOUT OVERSIGHT. | SYMBOLIC IMAGES, AI-GENERATED · TRIAL BUILD |
+
+Zum Wortlaut:
+
+- Tafel 03 gibt die Darstellung der Polizei in Übersetzung und in Anführungszeichen wieder,
+  so wie die englische Website (dort: the videos were “not properly filed”, mit dem Zusatz
+  „Quotation translated from German“) und die englische Präsentation. Ohne Anführungszeichen
+  stünde die Aussage als eigene Feststellung da.
+- Zeitform wie im Deutschen: Gegenwart. Die Uhrzeit steht ohne „Uhr“, das Datum in britischer
+  Schreibweise, beides wie auf der englischen Website.
+- „Einsatzbilder“ heißt „operational footage“, die Einblendung auf den Aufnahmen
+  `SYMBOLIC IMAGE · AI-GENERATED`, der Leitsatz wie in `docs/BRAND.md`
+  („No sight without oversight.“).
+- Tafel 03 steht wie im Deutschen 3,3 Sekunden, obwohl der englische Text kürzer ist; so
+  bleiben beide Fassungen bildgleich geschnitten.
+
+## Mitschnitt der Konsole: Produktfilm und Langfassung
+
+Beide Filme zeigen Ausschnitte aus einem durchgehenden Mitschnitt der Konsole,
+`media/product/take.mp4` (129,88 s, 1920×1080, 25 B/s, H.264, 37 MB; nicht im Repository). Er
+entsteht mit einem Playwright-Skript gegen die laufende Vorführung (Übung RHEIN-MOSEL, Uhr
+achtfach) als WebM und wird so umgewandelt:
+
+```bash
+ffmpeg -i take.webm -an -vf "fps=25,scale=1920:1080:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 14 -pix_fmt yuv420p -r 25 -movflags +faststart media/product/take.mp4
+```
+
+Das Skript schreibt Schnittmarken mit (Sekunden ab Beginn des Mitschnitts). Im jetzigen
+Mitschnitt: Anmeldung 5,7 · Mandat 9,6 · Lage 13,1 · Start der Übung 17,9 · erste Meldung 28,9 ·
+Karte 36,4 · Fehlmeldung 51,9 · Wachen 61,4 · Suche 69,9 · Treffer 77,3 · Vorgang 84,7 ·
+Ablehnung 96,0 · Verbund 105,3 · Protokoll 111,3 · Wirkung 120,1 · Schluss 125,5 · Ende 129,9.
+
+Ausschnitte des Produktfilms (`ablauf-produktfilm.txt`), Start und Dauer in Sekunden des
+Mitschnitts:
+
+| Beschriftung | Start | Dauer |
+| --- | --- | --- |
+| ANMELDUNG · MANDAT: OHNE ZWECK KEINE AUSWERTUNG | 5,2 | 9,1 |
+| LAGE · DIE ERSTE MELDUNG STEHT NACH ZWEI BILDERN | 16,6 | 20,2 |
+| LAGE · MELDUNGEN GLEICHER ART WERDEN ZU LAGEN | 39,2 | 12,4 |
+| WACHE · VERSION 2, AUSDRÜCKLICH UND IM PROTOKOLL | 51,8 | 17,8 |
+| SUCHE · ANTWORTEN DER NACHBARKNOTEN MIT BELEG | 70,0 | 14,6 |
+| VORGANG · BILD MIT PRÜFSUMME GESICHERT | 84,6 | 10,7 |
+| ANFRAGEPRÜFUNG · GESICHTER UND KENNZEICHEN | 96,2 | 9,2 |
+| VERBUND · DREI KNOTEN, KEIN GEMEINSAMER DATENBESTAND | 105,4 | 5,9 |
+| PROTOKOLL · KETTE GEPRÜFT | 111,4 | 8,5 |
+| WIRKUNG · 13 VON 13 EREIGNISSEN, EINE FEHLMELDUNG | 120,2 | 9,3 |
+
+Ausschnitte der Langfassung (`ablauf-lang.txt`):
+
+| Beschriftung | Start | Dauer |
+| --- | --- | --- |
+| KONSOLE · SUCHE IN WORTEN · ÜBUNGSDATEN | 72,0 | 8,0 |
+| KONSOLE · LAGE · ÜBUNGSDATEN | 40,2 | 7,0 |
+| KONSOLE · ANFRAGE ABGELEHNT · ÜBUNGSDATEN | 98,6 | 6,0 |
+
+Nach einem neuen Mitschnitt verschiebt sich jeder Ausschnitt um den Versatz der Marke davor;
+danach wird jeder an seinem ersten, mittleren und letzten Bild geprüft. Die Regeln dafür:
+
+- Kein Ausschnitt beginnt oder endet in einem Seitenwechsel, in einem halb getippten Wort oder
+  während sich ein Dialog öffnet. Der Ausschnitt zur Ablehnung in der Langfassung beginnt
+  deshalb erst, wenn die Anfrage ausgeschrieben ist und die Ablehnung steht (98,6).
+- Was die Beschriftung sagt, ist im Ausschnitt zu sehen. Weicht der Bildschirm ab, wird die
+  Beschriftung geändert, nie umgekehrt. Geprüft am jetzigen Mitschnitt: Die erste Meldung
+  erscheint mit „2 Bilder“; der Reiter Wirkung zeigt „13 von 13 Ereignissen der Übung
+  erkannt. Fehlmeldungen: 1.“
+- Folgen zwei Ausschnitte ohne Tafel aufeinander und schließen sie im Mitschnitt aneinander an,
+  dann endet der erste genau dort, wo der zweite beginnt (84,6 und 105,4); nur die
+  Beschriftung wechselt.
+- Starts liegen auf geraden Zehnteln, damit sie bei 25 Bildern je Sekunde auf ein ganzes Bild
+  fallen.
+- Der Ausschnitt zum Vorgang endet auf dem Blatt mit dem Vermerk „Im Vorgang … gesichert“,
+  bevor es sich schließt.
+
+Im Produktfilm liegt `mark|turn` vor der Tafel „Eine Fehlmeldung. Verworfen. Nachgeschärft.“
+bei 47,5 s. Weil der helle Klang des Stücks bei Sekunde 21,2 einsetzt, beginnt die Musik dort
+erst bei 26,3 s; bis dahin sind nur die Ticks der Tafeln zu hören.
+
+## Hochkant-Teaser
+
+Für soziale Netze, 19,5 Sekunden, 1080×1920, deutsch und englisch. Drei Bilder, drei Tafeln,
+Schlusstafel; er trägt ohne Ton, weil alles Wesentliche auf den Tafeln steht.
+
+```bash
+SEQ=ablauf-teaser-hochkant.txt ./build.sh
+```
+
+```bash
+SEQ=ablauf-teaser-vertical-en.txt ./build.sh
+```
+
+| Beginn | Dauer | Inhalt (deutsch · englisch) |
+| --- | --- | --- |
+| 0,00 | 1,80 | `h1` Tal, Flut |
+| 1,80 | 4,40 | AHRTAL · 14. JULI 2021 / EIN POLIZEIHUBSCHRAUBER / FILMT MENSCHEN / AUF DÄCHERN. · AHR VALLEY · 14 JULY 2021 / A POLICE HELICOPTER / FILMS PEOPLE / ON ROOFTOPS. (mit Quellenzeile) |
+| 6,20 | 1,60 | `h2` Leitstand |
+| 7,80 | 3,32 | DIE VIDEOS WERDEN / „NICHT ORDNUNGSGEMÄSS / VERBUCHT“. · THE VIDEOS ARE / “NOT PROPERLY FILED”. (mit Quellenzeile) |
+| 11,12 | 3,20 | SICHT MACHT / EINSATZBILDER / IN SEKUNDEN / DURCHSUCHBAR. · SICHT MAKES / OPERATIONAL FOOTAGE / SEARCHABLE / WITHIN SECONDS. — hier setzt der helle Klang ein |
+| 14,32 | 1,60 | `h5` Tastatur |
+| 15,92 | 3,60 | Schlusstafel: SICHT / KEINE SICHT OHNE AUFSICHT. · NO SIGHT WITHOUT OVERSIGHT.; darunter SYMBOLBILDER, KI-GENERIERT / ERPROBUNGSSTAND · SYMBOLIC IMAGES, AI-GENERATED / TRIAL BUILD |
+
+- **Wortlaut** wie im Markenfilm, nur anders umbrochen; nichts geht über die Quellen hinaus.
+  Datum und Hubschrauber stehen auf einer Tafel, die Uhrzeit entfällt.
+- **Format** (`set|FORMAT|hochkant`): Tafeltext 48 statt 36 Pixel, höchstens 25 Zeichen je
+  Zeile; Fußzeilen und Einblendungen 28 statt 20 Pixel. Soziale Netze legen oben und unten
+  Bedienelemente über das Bild und zeigen Hochformat in der Übersicht teils nur als
+  4:5-Ausschnitt. Eckmarken, Text, Quellenzeile und Hinweise stehen deshalb in einem Feld, das
+  oben 288 und unten 480 Pixel frei lässt; die Aufnahme füllt das ganze Bild, die Einblendung
+  `SYMBOLBILD · KI-GENERIERT` steht unten links in diesem Feld. Passt der Hinweis der
+  Schlusstafel nicht in eine Zeile, teilt ihn das Skript am „ · “.
+- **Ton**: dasselbe Musikstück, ab Sekunde 10,1 des Stücks, so dass der helle Klang auf die
+  dritte Tafel fällt; am Ende über 2,6 Sekunden ausgeblendet. −17,0 LUFS.
+- **Bilder**: neu erzeugt (siehe „Aufnahmen im Hochformat“). `h3` und `h4` sind angeglichen
+  vorhanden und nicht verwendet.
 
 ## Neu bauen und erweitern
 
@@ -220,6 +448,15 @@ zu sein.
 SEQ=ablauf-lang.txt OUT=sicht-markenfilm-lang.mp4 ./build.sh
 ```
 
+```bash
+END_NOTE='BILDSCHIRMAUFNAHME DER KONSOLE · ÜBUNGSDATEN · ERPROBUNGSSTAND' SEQ=ablauf-produktfilm.txt OUT=sicht-produktfilm.mp4 MUSIC=audio/bed-lang.mp3 CLIP_W=1728 CLIP_H=972 ./build.sh
+```
+
+Die leichte Fassung entsteht jeweils mit denselben Angaben und dem Wort `web` am Ende. Läuft
+nebenher anderes auf dem Rechner, begrenzt `THREADS=2 nice -n 10 ./build.sh` ffmpeg auf zwei
+Rechenfäden; immer nur einen Schnitt zur selben Zeit bauen, die Zwischendateien in `work/`
+teilen sich alle.
+
 Der Ablauf besteht aus Zeilen:
 
 ```
@@ -228,7 +465,11 @@ shot|<datei in shots/>|<start s>|<dauer s>
 clip|<pfad>|<start s>|<dauer s>|<beschriftung oder leer>
 mark|turn
 end|<sekunden>
+set|<NAME>|<wert>
 ```
+
+`set` gibt es nur in Ablaufdateien: `OUT`, `FORMAT` (`quer` oder `hochkant`), `SHOT_LABEL`,
+`END_LINE`, `END_NOTE`, `MUSIC`, `MUSIC_TURN`. Eine gleichnamige Umgebungsvariable hat Vorrang.
 
 **Konsolenaufnahmen einfügen:** in `ablauf-lang.txt` (oder im Feld `SEQUENCE` von `build.sh`)
 eine `clip`-Zeile an die gewünschte Stelle setzen. Die Aufnahme darf jede Größe und Bildrate
@@ -256,8 +497,17 @@ python3 tools/track_font.py fonts/JetBrainsMono-Regular.ttf fonts/SichtCard-Regu
 - Die Aufnahmen sind hochgerechnetes 720p. Auf großer Leinwand wirkt das weicher als echtes
   1080p; das Korn im Schnitt überdeckt es weitgehend. Ein Hochrechnen über Higgsfield (Topaz)
   ist möglich, sein Preis ließ sich nicht vorab abfragen.
-- Der Ton wurde nur gemessen, nicht abgehört.
+- Der Ton wurde nur gemessen, nicht abgehört. Das gilt für alle sechs Filme.
+- Im Produktfilm beginnt die Musik erst bei 26,3 s (siehe oben). Wer sie von Anfang an will,
+  setzt `MUSIC_TURN` auf einen späteren Anschlag des hellen Klangs; das ist nicht ausprobiert.
+- Die Tafel des Produktfilms nennt elf Quellen, so wie alle Unterlagen zur Übung und wie die
+  Bildleiste der Lage. Der Reiter Wirkung zeigt im selben Film unter „Betrieb“ die Zahl 12
+  (Quellen des Knotens).
+- Der Teaser wurde an Standbildern geprüft, nicht auf einem Telefon und nicht in den Netzen
+  selbst. Die Freiräume oben und unten sind Erfahrungswerte, keine nachgeschlagenen Vorgaben
+  der Plattformen.
 - Nutzungsrechte an den erzeugten Aufnahmen und am Musikstück richten sich nach den
   Bedingungen des Higgsfield-Kontos; vor einer öffentlichen Verwendung prüfen.
-- Der Ordner ist rund 125 MB groß (`raw/` 42 MB, `shots/` 52 MB, Schnitt 29 MB). Ob Videos
-  ins Repository gehören, ist offen; `work/` ist bereits ausgenommen.
+- Der Ordner ist mit allen Fassungen mehrere hundert MB groß. Videos, Aufnahmen, Tafeln und
+  Ton sind vom Repository ausgenommen; wer neu baut, braucht `raw/`, `raw-hochkant/`, `audio/`
+  und für Produktfilm und Langfassung `media/product/take.mp4`.

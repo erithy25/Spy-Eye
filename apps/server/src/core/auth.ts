@@ -1,4 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { PUBLISHED_DEMO_PASSWORD } from '../config.js';
 import { Collection } from './json.js';
 import type { Role, UserInfo } from '../types.js';
 
@@ -43,7 +44,10 @@ export function can(role: Role, permission: Permission): boolean {
   return (PERMISSIONS[role] as readonly string[]).includes(permission);
 }
 
+/** A session ends after this long without a request … */
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+/** … and at the latest this long after sign-in, however busy it was. */
+const SESSION_MAX_MS = 24 * 60 * 60 * 1000;
 
 function hashPassword(password: string, salt: string): string {
   return scryptSync(password, salt, 32).toString('hex');
@@ -76,7 +80,9 @@ export class Auth {
       await this.users.flush();
     }
     this.demoMode = this.users.all().every((u) => u.demo);
-    this.demoPasswordHint = this.demoMode ? demoPassword : '';
+    // The sign-in page shows the password of a demonstration to whoever opens it. That is only
+    // right for the published one; a password the operator chose is never handed out.
+    this.demoPasswordHint = this.demoMode && demoPassword === PUBLISHED_DEMO_PASSWORD ? demoPassword : '';
   }
 
   info(user: UserRecord): UserInfo {
@@ -115,6 +121,10 @@ export class Auth {
     const user = this.verify(userId, password);
     if (!user) return null;
     const now = Date.now();
+    // Sessions nobody came back to are cleared out whenever someone signs in.
+    for (const [token, old] of this.sessions) {
+      if (now - old.lastSeen > SESSION_TTL_MS || now - old.createdAt > SESSION_MAX_MS) this.sessions.delete(token);
+    }
     const session: Session = {
       token: randomBytes(24).toString('hex'),
       userId: user.id,
@@ -131,7 +141,7 @@ export class Auth {
     const session = this.sessions.get(token);
     if (!session) return null;
     const now = Date.now();
-    if (now - session.lastSeen > SESSION_TTL_MS) {
+    if (now - session.lastSeen > SESSION_TTL_MS || now - session.createdAt > SESSION_MAX_MS) {
       this.sessions.delete(token);
       return null;
     }

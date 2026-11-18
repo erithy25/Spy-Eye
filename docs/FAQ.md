@@ -218,6 +218,17 @@ startet. Verlässlicher als ein Versprechen sind drei Dinge, die noch ausstehen:
 Zusage gegenüber jeder Behörde, Einsicht in den Quelltext für deren Prüfer und der Ausschluss der
 Polizei als Kunde. Über die Offenlegung des Quelltexts ist noch nicht entschieden.
 
+### Hat jemand die Software auf Sicherheit geprüft?
+
+Den Quelltext, ja; ein laufendes System noch niemand von außen. Ein zweiter Prüfer hat den ganzen
+Knoten gelesen und 21 Befunde belegt, fünf davon schwer: Bilder waren während der Auswertung
+kurz abrufbar, bevor sie maskiert waren; die Anfrageprüfung ließ sich mit Sonderzeichen umgehen;
+zwei Abfragewege schrieben keinen Protokolleintrag. Diese fünf und die meisten übrigen sind
+behoben und durch Tests oder einen Lauf belegt. Offen sind unter anderem die fehlende
+Transportverschlüsselung im Knoten, die unverschlüsselte Platte und Grenzen gegen Überlastung.
+Die vollständige Liste mit Stand steht in `docs/SICHERHEIT.md`. Ein Penetrationstest durch eine
+dafür zugelassene Stelle steht aus und gehört vor jeden Betrieb mit echten Daten.
+
 ### Wurde das je im Ernstfall erprobt?
 
 Nein. Es gibt keinen Behördenkunden, keine Erprobung mit einer Behörde und keinen Einsatz.

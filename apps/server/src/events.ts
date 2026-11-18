@@ -1,6 +1,9 @@
 import type { ServerResponse } from 'node:http';
 import type { ServerEvent } from './types.js';
 
+/** Bytes that may wait to be sent to one browser before it is considered gone. */
+const MAX_PENDING_BYTES = 1024 * 1024;
+
 /** Fan-out of server-sent events to all connected browsers. */
 export class EventHub {
   private readonly clients = new Set<ServerResponse>();
@@ -31,7 +34,15 @@ export class EventHub {
   broadcast(event: ServerEvent): void {
     if (this.clients.size === 0) return;
     const payload = `data: ${JSON.stringify(event)}\n\n`;
-    for (const client of this.clients) client.write(payload);
+    for (const client of this.clients) {
+      // A browser that has stopped reading is let go; it reconnects and gets the present state.
+      if (client.writableLength > MAX_PENDING_BYTES) {
+        this.clients.delete(client);
+        client.destroy();
+        continue;
+      }
+      client.write(payload);
+    }
   }
 
   close(): void {

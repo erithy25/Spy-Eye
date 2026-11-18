@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import readline from 'node:readline';
 
 /**
  * Append-only, hash-chained record of everything that happens on a node.
@@ -73,6 +72,34 @@ function bodyOf(entry: LedgerEntry): LedgerBody {
 
 export type LedgerListener = (entry: LedgerEntry) => void;
 
+/**
+ * One entry as a line of the file. JSON leaves the separators U+2028 and U+2029 as they are, and
+ * some readers end a line there; written as escapes they parse to the same text, so the hash of
+ * the entry is unaffected.
+ */
+export function entryLine(entry: LedgerEntry): string {
+  return JSON.stringify(entry).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+
+/**
+ * The lines of the file, ended by a line feed and by nothing else. Reading bytes instead of text
+ * keeps the split independent of what a runtime considers a line ending.
+ */
+async function* fileLines(file: string): AsyncGenerator<string> {
+  let rest: Buffer = Buffer.alloc(0);
+  for await (const chunk of createReadStream(file) as AsyncIterable<Buffer>) {
+    let data: Buffer = rest.length > 0 ? Buffer.concat([rest, chunk]) : chunk;
+    let at = data.indexOf(0x0a);
+    while (at >= 0) {
+      yield data.subarray(0, at).toString('utf8');
+      data = data.subarray(at + 1);
+      at = data.indexOf(0x0a);
+    }
+    rest = data;
+  }
+  if (rest.length > 0) yield rest.toString('utf8');
+}
+
 export class Ledger {
   private head = GENESIS_HASH;
   private seq = 0;
@@ -117,7 +144,7 @@ export class Ledger {
       const body: LedgerBody = { seq: this.seq + 1, ts: new Date().toISOString(), ...input };
       const hash = entryHash(this.head, body);
       const entry: LedgerEntry = { ...body, prev: this.head, hash };
-      await fs.appendFile(this.file, `${JSON.stringify(entry)}\n`);
+      await fs.appendFile(this.file, `${entryLine(entry)}\n`);
       this.head = hash;
       this.seq = body.seq;
       this.recent.push(entry);
@@ -146,10 +173,30 @@ export class Ledger {
     return out;
   }
 
-  /** Recomputes the whole chain from the file. */
-  async verify(): Promise<LedgerVerification> {
-    await this.queue;
-    return this.scan(() => undefined);
+  /**
+   * Recomputes the whole chain from the file and compares its end with the state this node holds.
+   * A file that was cut off or replaced while the node runs is consistent in itself; it is the
+   * comparison that shows it. The check takes its turn in the write queue, so no entry is
+   * appended while it reads.
+   */
+  verify(): Promise<LedgerVerification> {
+    const run = this.queue.then(async () => {
+      const result = await this.scan(() => undefined);
+      if (result.ok && (result.head !== this.head || result.entries !== this.seq)) {
+        return {
+          ...result,
+          ok: false,
+          brokenAt: Math.min(result.entries, this.seq) + 1,
+          reason: `Die Datei endet bei Eintrag ${result.entries}, der Knoten hält Eintrag ${this.seq}`,
+        };
+      }
+      return result;
+    });
+    this.queue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 
   private async scan(visit: (entry: LedgerEntry) => void): Promise<LedgerVerification> {
@@ -163,8 +210,7 @@ export class Ledger {
     } catch {
       return { ok: true, entries: 0, head: prev, brokenAt: null, reason: null, checkedAt: new Date().toISOString(), tookMs: 0 };
     }
-    const lines = readline.createInterface({ input: createReadStream(this.file, 'utf8'), crlfDelay: Infinity });
-    for await (const line of lines) {
+    for await (const line of fileLines(this.file)) {
       if (line.trim() === '') continue;
       let entry: LedgerEntry;
       try {
@@ -193,7 +239,6 @@ export class Ledger {
       count++;
       visit(entry);
     }
-    lines.close();
     return {
       ok: brokenAt === null,
       entries: count,

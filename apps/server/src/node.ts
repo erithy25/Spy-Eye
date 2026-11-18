@@ -468,13 +468,20 @@ export class PlatformNode {
     if (!header) return undefined;
     for (const part of header.split(';')) {
       const eq = part.indexOf('=');
-      if (eq > 0 && part.slice(0, eq).trim() === name) return decodeURIComponent(part.slice(eq + 1).trim());
+      if (eq > 0 && part.slice(0, eq).trim() === name) {
+        try {
+          return decodeURIComponent(part.slice(eq + 1).trim());
+        } catch {
+          // A value that is not valid percent-encoding is no cookie of ours.
+          return undefined;
+        }
+      }
     }
     return undefined;
   }
 
   sessionCookie(token: string | null): string {
-    const base = `${this.cookieName}=${token ?? ''}; Path=/; HttpOnly; SameSite=Lax`;
+    const base = `${this.cookieName}=${token ?? ''}; Path=/; HttpOnly; SameSite=Lax${config.cookieSecure ? '; Secure' : ''}`;
     return token === null ? `${base}; Max-Age=0` : `${base}; Max-Age=43200`;
   }
 

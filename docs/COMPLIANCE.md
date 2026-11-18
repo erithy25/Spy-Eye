@@ -44,9 +44,14 @@ Die ausführliche Liste mit 26 Einzelanforderungen steht in `docs/research/legal
   je Bild nur die Lage der verpixelten Flächen, kein Merkmal eines Gesichts.
 - Kennzeichen werden nicht maskiert. Sie werden auch nicht gelesen; Anfragen nach Kennzeichen
   lehnt die Anfrageprüfung ab.
-- Lässt sich der Erkenner nicht laden, verarbeitet der Knoten weiter und zeigt Bilder
-  unmaskiert. Er meldet das beim Start und in den Kennzahlen, hält aber nicht an
-  (`pipeline.ts`, `maskFaces`). Für den Einsatz mit echten Daten muss das umgekehrt sein.
+- Ein Bild erhält seinen abrufbaren Namen erst, nachdem es auf Gesichter geprüft ist; bis dahin
+  liegt es unter einem Namen, den die Schnittstelle nicht ausliefert. Lässt sich der Erkenner
+  nicht laden, gibt der Knoten kein Bild frei und bricht die Auswertung mit einer Meldung ab
+  (`pipeline.ts`, `releaseFrame`). Nur für Material ohne Personen lässt sich das mit
+  `SICHT_ALLOW_UNMASKED=1` aufheben.
+- Die Aufzeichnung selbst gibt es ohne Freigabe erst, wenn sie vollständig ausgewertet ist und
+  dabei kein Gesicht gefunden wurde. Diese Aussage ist so gut wie der Erkenner: Er sieht ein Bild
+  je Sekunde in verkleinerter Auflösung, nicht jedes Bild der Aufnahme.
 
 ## 3. KI-Verordnung: Einordnung
 

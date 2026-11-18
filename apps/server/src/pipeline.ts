@@ -22,7 +22,7 @@ import {
   type PixelRect,
 } from './ml/preprocess.js';
 import type { VocabularyIndex } from './ml/vocab.js';
-import { RM_OPTIONS, frameUrl, type FrameRecord, type SceneRecord, type Store, type VideoEntry } from './store.js';
+import { RAW_FRAME_PATTERN, RM_OPTIONS, frameUrl, type FrameRecord, type SceneRecord, type Store, type VideoEntry } from './store.js';
 import type { FrameEvent, NormRect, Tag } from './types.js';
 
 /** Scene segmentation thresholds on cosine distance between whole-frame embeddings. */
@@ -166,21 +166,36 @@ export class Pipeline {
   ) {}
 
   /**
-   * Masks the faces of one extracted frame: the pixelated version becomes the file that is
-   * served, the extracted original is kept next to it for authorized unmasking and for evidence
-   * hashes. Returns the masked rectangles in normalized coordinates, or undefined if there are none.
+   * Releases one extracted frame for viewing. ffmpeg writes frames under a name that is never
+   * served; a frame gets its served name only here, after it has been checked for faces. Without
+   * a face the extracted file is served as it is. With faces the pixelated version is written
+   * under the served name first, then the extracted original is put next to it for authorized
+   * unmasking and for evidence hashes. Returns the masked rectangles in normalized coordinates,
+   * or undefined if there are none.
    */
-  private async maskFaces(id: string, n: number, decoded: DecodedFrame): Promise<number[][] | undefined> {
-    if (!this.faces.ready) return undefined;
-    const boxes = await this.faces.detect(decoded);
-    if (boxes.length === 0) return undefined;
+  private async releaseFrame(id: string, n: number, decoded: DecodedFrame): Promise<number[][] | undefined> {
+    const raw = this.store.rawFramePath(id, n);
     const served = this.store.framePath(id, n);
-    await renameRetry(served, this.store.originalFramePath(id, n));
+    if (!this.faces.ready) {
+      if (!config.allowUnmasked) {
+        throw new Error(
+          `Die Gesichtsmaskierung ist nicht verfügbar (${this.faces.problem ?? 'unbekannt'}); ohne sie wird kein Bild freigegeben. Für Material ohne Personen: SICHT_ALLOW_UNMASKED=1.`,
+        );
+      }
+      await renameRetry(raw, served);
+      return undefined;
+    }
+    const boxes = await this.faces.detect(decoded);
+    if (boxes.length === 0) {
+      await renameRetry(raw, served);
+      return undefined;
+    }
     const copy: DecodedFrame = { data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height };
     pixelate(copy, boxes);
     await sharp(copy.data, { raw: { width: copy.width, height: copy.height, channels: 3 } })
       .jpeg({ quality: 84 })
       .toFile(served);
+    await renameRetry(raw, this.store.originalFramePath(id, n));
     const round = (v: number): number => Math.round(v * 10000) / 10000;
     return boxes.map((b) => [
       round(b.left / decoded.width),
@@ -269,7 +284,8 @@ export class Pipeline {
     this.cancel(id);
     this.store.resetAnalysis(entry);
     entry.info.status = 'error';
-    entry.info.error = message;
+    // What the console shows names the recording, not where it lies on this machine.
+    entry.info.error = message.split(this.store.videoDir(id)).join('…').split(this.store.videosDir).join('…').slice(0, 400);
     await fs.rm(this.store.framesDir(id), RM_OPTIONS).catch(() => undefined);
     await this.store.persistMeta(entry).catch(() => undefined);
     this.broadcastVideo(entry);
@@ -422,7 +438,7 @@ export class Pipeline {
       const grab = (list: typeof requests): Promise<void> =>
         extractKeyframes(
           store.sourcePath(entry),
-          list.map((r) => ({ time: r.time, outputPath: store.framePath(id, r.n) })),
+          list.map((r) => ({ time: r.time, outputPath: store.rawFramePath(id, r.n) })),
           config.frameWidth,
         );
       await grab(requests);
@@ -433,7 +449,7 @@ export class Pipeline {
       const load = async (request: (typeof requests)[number]): Promise<void> => {
         let decoded: DecodedFrame;
         try {
-          decoded = await decodeFrame(store.framePath(id, request.n));
+          decoded = await decodeFrame(store.rawFramePath(id, request.n));
         } catch {
           return; // No keyframe after this timestamp, so ffmpeg wrote no picture for it.
         }
@@ -441,12 +457,13 @@ export class Pipeline {
           width = decoded.width;
           height = decoded.height;
         } else if (decoded.width !== width || decoded.height !== height) {
+          await fs.rm(store.rawFramePath(id, request.n), { force: true, maxRetries: 8, retryDelay: 150 });
           return;
         }
         const pixels = new Float32Array(plane);
         const full: PixelRect = { left: 0, top: 0, width: decoded.width, height: decoded.height };
         await writeTile(decoded, full, size, model.imageMean, model.imageStd, pixels, 0);
-        const faces = await this.maskFaces(id, request.n, decoded);
+        const faces = await this.releaseFrame(id, request.n, decoded);
         frames.push({ n: request.n, time: request.time, pixels, faces });
       };
       for (const request of requests) await load(request);
@@ -494,8 +511,9 @@ export class Pipeline {
     await fs.mkdir(framesDir, { recursive: true });
     const isPreviewFile = (name: string): boolean => Number.parseInt(name, 10) > PREVIEW_FRAME_OFFSET;
     for (const name of await fs.readdir(framesDir)) {
-      // Left-overs of an interrupted earlier run; the preview frames are still referenced.
-      if (!isPreviewFile(name)) await fs.rm(path.join(framesDir, name), RM_OPTIONS);
+      // Left-overs of an interrupted earlier run; the preview frames are still referenced. A frame
+      // that was extracted but never released belongs to no index, whatever its number.
+      if (!isPreviewFile(name) || name.endsWith('.x.jpg')) await fs.rm(path.join(framesDir, name), RM_OPTIONS);
     }
 
     const probe = await probeVideo(store.sourcePath(entry));
@@ -505,7 +523,7 @@ export class Pipeline {
 
     const extraction = extractFrames({
       inputPath: store.sourcePath(entry),
-      outputPattern: `${framesDir}/%07d.jpg`,
+      outputPattern: `${framesDir}/${RAW_FRAME_PATTERN}`,
       fps,
       maxWidth: config.frameWidth,
     });
@@ -571,7 +589,7 @@ export class Pipeline {
         const events: FrameEvent[] = [];
         for (let n = next; n <= batchEnd; n++) {
           const time = (n - 1) / fps;
-          const decoded = await decodeFrame(store.framePath(id, n));
+          const decoded = await decodeFrame(store.rawFramePath(id, n));
           if (!layout) {
             layout = tileLayout(decoded.width, decoded.height, entry.info.detail);
             tilesPerFrame = layout.length;
@@ -607,7 +625,7 @@ export class Pipeline {
               tiles: [],
               msPerFrame,
             });
-            await fs.rm(store.framePath(id, n), { force: true, maxRetries: 8, retryDelay: 150 });
+            await fs.rm(store.rawFramePath(id, n), { force: true, maxRetries: 8, retryDelay: 150 });
             continue;
           }
           lastSignature = signature;
@@ -626,7 +644,7 @@ export class Pipeline {
             ),
           );
           // The model sees the extracted pixels; what is stored for viewing has faces masked.
-          const masked = await Promise.all(kept.map((frame) => this.maskFaces(id, frame.n, frame.decoded)));
+          const masked = await Promise.all(kept.map((frame) => this.releaseFrame(id, frame.n, frame.decoded)));
           const inferStart = Date.now();
           const embedded = await model.embedPixels(pixels, kept.length * tilesPerFrame);
           const perFrame = (Date.now() - inferStart) / kept.length;

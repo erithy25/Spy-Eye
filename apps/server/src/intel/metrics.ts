@@ -1,7 +1,7 @@
 import type { Ledger } from '../core/ledger.js';
 import type { FaceDetector } from '../ml/faces.js';
 import type { HazardHead } from '../ml/head.js';
-import type { Store } from '../store.js';
+import { DEFAULT_SOURCE_ID, type Store } from '../store.js';
 import type { Alert, ExerciseEvaluation, Metrics } from '../types.js';
 import type { ScenarioEngine } from './scenario.js';
 import type { Sources } from './sources.js';
@@ -118,12 +118,15 @@ export function collectMetrics(deps: {
   }
   searchTimes.sort((a, b) => a - b);
   const alerts = deps.watches.listAlerts();
+  const inboxUsed = deps.store.all().some((entry) => entry.info.sourceId === DEFAULT_SOURCE_ID);
   return {
     retentionDays: deps.retentionDays,
     footageSec: Math.round(footage.footageSec),
     framesAnalysed: stats.frames,
     vectors: stats.vectors,
-    sources: deps.sources.list().length,
+    // The inbox for uploads without a sensor exists on every node; it counts as a source only
+    // once something has been filed there, so that an exercise with eleven sources shows eleven.
+    sources: deps.sources.list().filter((source) => source.id !== DEFAULT_SOURCE_ID || inboxUsed).length,
     facesMasked: footage.facesMasked,
     maskingActive: deps.faces.ready,
     searches: {

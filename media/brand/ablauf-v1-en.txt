@@ -1,0 +1,30 @@
+# Sicht — brand film, first cut, English cards.
+#
+#   SEQ=ablauf-v1-en.txt ./build.sh        then: SEQ=ablauf-v1-en.txt ./build.sh web
+#
+# Same pictures, same music and the same card durations as the German first cut (the SEQUENCE
+# in build.sh), so both films have the same length. Card 03 gives the police statement
+# ("nicht ordnungsgemäß verbucht", epd, 4 October 2022) in translation and in quotation marks,
+# as the English website and the English deck do; see SHOTS.md, "Englische Fassung".
+
+set|OUT|sicht-brandfilm-en.mp4
+set|SHOT_LABEL|SYMBOLIC IMAGE · AI-GENERATED
+set|END_LINE|NO SIGHT WITHOUT OVERSIGHT.
+set|END_NOTE|SYMBOLIC IMAGES, AI-GENERATED · TRIAL BUILD
+
+card|01-date|2.4||AHR VALLEY · 14 JULY 2021 · 22:14
+shot|01-tal-daemmerung.mp4|0.6|3.0
+card|02-helicopter|3.2|SOURCES: DPA, EPD · OCTOBER 2022|A POLICE HELICOPTER FILMS|PEOPLE ON ROOFTOPS.
+shot|07-hubschrauber-nacht.mp4|0.8|3.2
+card|03-not-filed|3.3|SOURCES: DPA, EPD · OCTOBER 2022|THE VIDEOS ARE “NOT PROPERLY FILED”.
+shot|08-leerer-leitstand.mp4|0.6|3.0
+card|04-no-one-sees|2.9||IMAGES NO ONE SEES|HELP NO ONE.
+
+mark|turn
+card|05-searchable|3.2||SICHT MAKES OPERATIONAL FOOTAGE|SEARCHABLE WITHIN SECONDS.
+shot|04-tastatur.mp4|1.0|1.8
+shot|02-bruecke-treibgut.mp4|1.4|2.2
+shot|03-lagezentrum.mp4|1.0|2.6
+card|06-without-identifying|2.3||WITHOUT IDENTIFYING PEOPLE.
+shot|06-tal-morgen.mp4|0.8|2.8
+end|4.2

@@ -225,6 +225,8 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `SICHT_NODE_NAME`, `_OPERATOR`, `_REGION`, `_LAT`, `_LON` | Lagezentrum … | Angaben zum einzelnen Knoten |
 | `SICHT_DEMO_PASSWORD` | `lagebild` | Passwort der Vorführzugänge |
 | `SICHT_RETENTION_DAYS` | `60` | Löschfrist für Aufzeichnungen außerhalb von Vorgängen; `0` schaltet sie ab |
+| `SICHT_COOKIE_SECURE` | — | `1`, wenn der Knoten über TLS erreicht wird (Abschluss davor): Das Sitzungs-Cookie trägt dann `Secure` |
+| `SICHT_ALLOW_UNMASKED` | — | `1` gibt Bilder auch ohne Gesichtserkenner frei; nur für Material ohne Personen. Ohne diese Angabe wird ohne Erkenner nichts eingespielt |
 | `SICHT_OFFLINE` | — | `1` unterbindet das Nachladen von Modellen aus dem Netz; Verbund und Direktbilder sind Verbindungen, die der Betreiber selbst einrichtet |
 | `SICHT_LIVE_SEGMENT_SEC` | `20` | Länge der Abschnitte, in die ein Direktbild geschnitten wird (5 bis 120) |
 | `MODEL_ID`, `MODEL_DTYPE`, `MODEL_TEXT_DTYPE` | SigLIP 2, `fp32`, `fp16` | Kodierer und Genauigkeit |
@@ -239,9 +241,12 @@ apps/web        Konsole (React, Vite); Karte aus apps/web/public/map
 scenarios/      Drehbuch der Übung RHEIN-MOSEL
 seeds/          Bestände der Nachbarknoten für die Vorführung
 site/           Website (statisch, ohne Bauschritt)
-docs/           Strategie, Marke, Rechtszuordnung, Fragen, Messbericht, Vorführung
-deliverables/   Finanzmodell, Einseiter
-media/brand/    Markenfilm: Drehbuch und Schnittwerkzeug
+docs/           Strategie, Marke, Rechtszuordnung, Architektur, Sicherheitsdurchsicht, Fragen,
+                Messbericht, Vorführung, Vertriebsvorlagen
+deliverables/   Präsentation, Einseiter, Finanzmodell, Unterlagenmappe
+tools/pruefen/  zwei Programme, die ein exportiertes Protokoll ohne Sicht nachrechnen
+brand/          Wortmarke als Datei
+media/brand/    Filme: Drehbuch und Schnittwerkzeug
 ```
 
 ## Weitere Unterlagen
@@ -250,6 +255,10 @@ media/brand/    Markenfilm: Drehbuch und Schnittwerkzeug
 - [`docs/STRATEGY.md`](docs/STRATEGY.md) – These, Belege, Wettbewerb, Käufer, Geschäftsmodell, Risiken
 - [`docs/BRAND.md`](docs/BRAND.md) – Name, Leitsatz, Wortschatz, Gestaltung, was behauptet werden darf
 - [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) – rechtliche Anforderungen und gebaute Vorkehrungen
+- [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md) – Weg eines Bildes, Speicherformate, Protokoll, Rollen,
+  Verbund, Schnittstelle
+- [`docs/SICHERHEIT.md`](docs/SICHERHEIT.md) – unabhängige Durchsicht des Quelltexts: 21 Befunde,
+  ihr Stand, was offen bleibt
 - [`docs/FAQ.md`](docs/FAQ.md) – harte Fragen, kurze Antworten
 - [`docs/EVALUATION.md`](docs/EVALUATION.md) – Messbericht
 - [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung; zum Ausdrucken

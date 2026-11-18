@@ -14,6 +14,14 @@
 #   SEQ=ablauf.txt OUT=sicht-markenfilm-lang.mp4 ./build.sh
 #                           anderer Ablauf aus einer Datei (eine Zeile je Eintrag, # = Kommentar);
 #                           Pfade gelten ab diesem Ordner
+#   SEQ=ablauf-v1-en.txt ./build.sh
+#                           englische Fassung des ersten Schnitts; die Datei setzt Ausgabename,
+#                           Einblendung und Schlusstafel selbst ("set|..."-Zeilen)
+#   SEQ=ablauf-teaser-hochkant.txt ./build.sh        (englisch: ablauf-teaser-vertical-en.txt)
+#                           Hochkant-Teaser 1080x1920 aus raw-hochkant/ und shots-hochkant/;
+#                           Text und Eckmarken stehen im Feld, das soziale Netze frei lassen
+#   THREADS=2 nice -n 10 ./build.sh
+#                           ffmpeg auf zwei Rechenfäden begrenzen, wenn nebenher anderes läuft
 #
 # Braucht nur ffmpeg (>= 6, mit libfreetype und libx264) und awk. Die gesperrten Schriften in
 # fonts/SichtCard-*.ttf sind aus JetBrains Mono abgeleitet (tools/track_font.py); sie liegen
@@ -33,6 +41,9 @@ cd "$(dirname "$0")"
 #   clip|<pfad>|<start s>|<dauer s>|<beschriftung oder leer>     Bildschirmaufnahme, eingerückt
 #   mark|turn                                                    ab hier hellt das Tonbett auf
 #   end|<sekunden>
+#   set|<NAME>|<wert>        nur in einer Ablaufdatei: Einstellung des Schnitts. Erlaubt sind
+#                            OUT, FORMAT (quer|hochkant), SHOT_LABEL, END_LINE, END_NOTE, MUSIC,
+#                            MUSIC_TURN. Eine gleichnamige Umgebungsvariable hat Vorrang.
 #
 # Tafeln: rund 18 Zeichen je Sekunde Lesezeit plus eine halbe Sekunde. Text in Versalien.
 
@@ -43,7 +54,7 @@ SEQUENCE=(
   "shot|01-tal-daemmerung.mp4|0.6|3.0"
   "card|02-hubschrauber|3.2|$QUELLE|EIN POLIZEIHUBSCHRAUBER FILMT|MENSCHEN AUF DÄCHERN."
   "shot|07-hubschrauber-nacht.mp4|0.8|3.2"
-  "card|03-nicht-weitergegeben|2.8|$QUELLE|DIE AUFNAHMEN WERDEN NICHT WEITERGEGEBEN."
+  "card|03-nicht-verbucht|3.3|$QUELLE|DIE VIDEOS WERDEN|„NICHT ORDNUNGSGEMÄSS VERBUCHT“."
   "shot|08-leerer-leitstand.mp4|0.6|3.0"
   "card|04-keiner-sieht|2.9||BILDER, DIE KEINER SIEHT,|HELFEN NIEMANDEM."
   "mark|turn"
@@ -69,6 +80,17 @@ if [[ -n ${SEQ:-} ]]; then
   while IFS= read -r line || [[ -n $line ]]; do
     line=${line%$'\r'}
     [[ -z ${line//[[:space:]]/} || ${line#"${line%%[![:space:]]*}"} == \#* ]] && continue
+    if [[ $line == set\|* ]]; then
+      IFS='|' read -r _ set_name set_value <<< "$line"
+      case $set_name in
+        OUT|FORMAT|SHOT_LABEL|END_LINE|END_NOTE|MUSIC|MUSIC_TURN)
+          # Was in der Umgebung gesetzt ist, gilt; sonst der Wert aus der Datei.
+          if [[ -z ${!set_name+x} ]]; then printf -v "$set_name" '%s' "$set_value"; fi
+          ;;
+        *) echo "Unbekannte Einstellung im Ablauf: $line" >&2; exit 1 ;;
+      esac
+      continue
+    fi
     SEQUENCE+=("$line")
   done < "$SEQ"
 fi
@@ -77,15 +99,19 @@ OUT=${OUT:-sicht-markenfilm-v1.mp4}
 BED=${BED:-auto}
 MUSIC=${MUSIC:-audio/bed-elevenlabs.mp3}
 MUSIC_TURN=${MUSIC_TURN:-21.2}   # Sekunde, in der im Musikstück der helle Klang einsetzt; wird auf "mark|turn" gelegt
-SHOT_LABEL='SYMBOLBILD · KI-GENERIERT'
+SHOT_LABEL=${SHOT_LABEL:-'SYMBOLBILD · KI-GENERIERT'}
 END_WORD='SICHT'
-END_LINE='KEINE SICHT OHNE AUFSICHT.'
+END_LINE=${END_LINE:-'KEINE SICHT OHNE AUFSICHT.'}
 END_NOTE=${END_NOTE:-'SYMBOLBILDER, KI-GENERIERT · ERPROBUNGSSTAND'}
+FORMAT=${FORMAT:-quer}            # quer: 1920x1080 · hochkant: 1080x1920 für Hochkant-Teaser
+THREADS=${THREADS:-0}             # 0: ffmpeg entscheidet; sonst Zahl der Rechenfäden
 
 # ------------------------------------------------------------------ Maße und Farben
 
 W=1920; H=1080; FPS=25
 BG=0x050505; FG=0xededed; MID=0x8a8a8a; LOW=0x555555; RULE=0x333333
+RAW_DIR=raw; SHOTS_DIR=shots     # gelieferte und angeglichene Aufnahmen
+WEB_W=1280; WEB_H=720            # leichte Fassung zum Einbetten
 
 F_TEXT=fonts/SichtCard-Regular-t150.ttf    # Zeichenzelle = 0,75 x Schriftgröße
 F_LABEL=fonts/SichtCard-Regular-t250.ttf   # Zeichenzelle = 0,85 x Schriftgröße
@@ -101,7 +127,31 @@ CAP=26         # Versalhöhe
 LH=68          # Zeilenabstand
 MASK_UP=40; MASK_H=54
 CUR_W=20; CUR_H=30; CUR_UP=28
-LABEL_FS=20; LABEL_STEP=17
+LABEL_FS=20; LABEL_STEP=17     # Fußzeilen, Einblendungen, Hinweis; Zeichenzelle = 0,85 x Schriftgröße
+LABEL_REST=5                   # Sperrung hinter dem letzten Zeichen (0,25 x Schriftgröße)
+TOP=$IN; BOT=$IN               # Abstand der Eckmarken vom oberen und vom unteren Bildrand
+
+TRACK_REST=5       # Sperrung hinter dem letzten Zeichen einer Zeile, für die Zentrierung
+
+# Hochkant: schmaleres Bild, deshalb größere Schrift (kurze Zeilen, höchstens 25 Zeichen) und
+# eigene Ordner für die Aufnahmen. Die Maße der Tafel wachsen mit der Schriftgröße (48 statt 36).
+# Soziale Netze legen oben und unten Bedienelemente über das Bild und zeigen Hochformat in der
+# Übersicht teils nur als 4:5-Ausschnitt. Eckmarken, Tafeltext, Fußzeilen und Hinweise stehen
+# deshalb in einem Feld, das oben 288 und unten 480 Pixel frei lässt (TOP, BOT); die Aufnahme
+# selbst füllt das ganze Bild. Bildschirmaufnahmen ("clip") sind für das Querformat gedacht.
+if [[ $FORMAT == hochkant ]]; then
+  W=1080; H=1920
+  RAW_DIR=raw-hochkant; SHOTS_DIR=shots-hochkant
+  WEB_W=720; WEB_H=1280
+  FS=48; STEP=36; CAP=35; LH=92
+  MASK_UP=53; MASK_H=72
+  CUR_W=27; CUR_H=40; CUR_UP=37
+  TRACK_REST=7
+  TOP=288; BOT=480
+  LABEL_FS=28; LABEL_STEP=23.8; LABEL_REST=7
+elif [[ $FORMAT != quer ]]; then
+  echo "FORMAT muss quer oder hochkant sein, nicht \"$FORMAT\"." >&2; exit 1
+fi
 
 TYPE_START=0.16   # Sekunden bis zum ersten Zeichen
 TYPE_DT=0.02      # Sekunden je Zeichen
@@ -113,11 +163,19 @@ GRAIN=6                   # Filmkorn auf den Aufnahmen (0 = keins)
 
 SEG_ENC=(-c:v libx264 -preset veryfast -crf 12 -pix_fmt yuv420p -r "$FPS" -an)
 FF=(ffmpeg -hide_banner -loglevel error -y)
+ENC_THREADS=()
+if ((THREADS > 0)); then
+  FF+=(-filter_threads "$THREADS" -filter_complex_threads "$THREADS")
+  ENC_THREADS=(-threads "$THREADS")
+  SEG_ENC+=("${ENC_THREADS[@]}")
+fi
 
-mkdir -p shots "$CARDS_DIR" work/seg work/txt audio
+mkdir -p "$SHOTS_DIR" "$CARDS_DIR" work/seg work/txt audio
 
 calc() { awk "BEGIN { printf \"%.3f\", $* }"; }
 round() { awk "BEGIN { printf \"%d\", ($*) + 0.5 }"; }
+# Sichtbare Breite einer Zeile in der Schrift der Fußzeilen.
+label_width() { round "${#1} * $LABEL_STEP - $LABEL_REST"; }
 
 # Vier Eckmarken um ein Rechteck: x0 y0 x1 y1 farbe [strichstärke] [schenkellänge]
 brackets() {
@@ -152,13 +210,13 @@ textfile() {
 # bleibt; das Korn kommt erst im Schnitt dazu (GRAIN).
 normalise_shots() {
   local src name
-  for src in raw/*.kling.mp4; do
+  for src in "$RAW_DIR"/*.kling.mp4; do
     name=$(basename "$src" .kling.mp4)
     "${FF[@]}" -i "$src" -an -vf "setpts=PTS*24/25,fps=$FPS,scale=$W:$H:flags=lanczos,format=gray,\
 eq=contrast=1.06:gamma=0.98,curves=all='0/0 0.15/0.11 0.5/0.5 0.85/0.89 1/1',\
 unsharp=5:5:0.4:5:5:0,format=yuv420p" \
-      -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r "$FPS" -movflags +faststart "shots/$name.mp4"
-    echo "shots/$name.mp4  $(ffprobe -v error -show_entries format=duration -of csv=p=0 "shots/$name.mp4") s"
+      -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r "$FPS" "${ENC_THREADS[@]}" -movflags +faststart "$SHOTS_DIR/$name.mp4"
+    echo "$SHOTS_DIR/$name.mp4  $(ffprobe -v error -show_entries format=duration -of csv=p=0 "$SHOTS_DIR/$name.mp4") s"
   done
 }
 
@@ -171,7 +229,7 @@ render_card() {
   local out=$1 dur=$2 foot=$3; shift 3
   local n=$# i=0 line len x0 y end hold prev tf
   local block=$(( (n - 1) * LH + CAP ))
-  local base=$(( (H - block) / 2 + CAP ))
+  local base=$(( TOP + (H - TOP - BOT - block) / 2 + CAP ))
   local t0=$TYPE_START
   local id; id=$(basename "$out" .mp4)
 
@@ -186,7 +244,7 @@ render_card() {
   i=0
   for line in "$@"; do
     len=${#line}
-    x0=$(( (W - (len * STEP - 5)) / 2 ))
+    x0=$(( (W - (len * STEP - TRACK_REST)) / 2 ))
     y=$(( base + i * LH ))
     xs+=("$x0"); ys+=("$y"); lens+=("$len")
     tf=$(textfile "$id-$i" "$line")
@@ -208,10 +266,10 @@ render_card() {
     t0=$(calc "$end + $TYPE_GAP")
   done
 
-  graph+="[$prev]$(brackets "$IN" "$IN" $((W - IN)) $((H - IN)) "$MID")"
+  graph+="[$prev]$(brackets "$IN" "$TOP" $((W - IN)) $((H - BOT)) "$MID")"
   if [[ -n $foot ]]; then
     tf=$(textfile "$id-foot" "$foot")
-    graph+=",drawtext=fontfile=$F_LABEL:textfile=$tf:expansion=none:fontsize=$LABEL_FS:fontcolor=$MID:x=$((IN + ARM + 18)):y=h-$((IN + 8))-text_h"
+    graph+=",drawtext=fontfile=$F_LABEL:textfile=$tf:expansion=none:fontsize=$LABEL_FS:fontcolor=$MID:x=$((IN + ARM + 18)):y=h-$((BOT + 8))-text_h"
   fi
   graph+="[v]"
   "${FF[@]}" -filter_complex "$graph" -map "[v]" -t "$dur" "${SEG_ENC[@]}" "$out"
@@ -224,19 +282,30 @@ render_end() {
   local width=$(( ${#END_WORD} * word_step - 81 ))             # sichtbare Breite der Wortmarke
   local x0=$(( (W - width) / 2 ))
   local word_cap=110 line_cap=29
-  local top=$(( (H - (word_cap + 46 + 1 + 40 + line_cap)) / 2 ))
+  local top=$(( TOP + (H - TOP - BOT - (word_cap + 46 + 1 + 40 + line_cap)) / 2 ))
   local word_y=$(( top + word_cap )) rule_y=$(( top + word_cap + 46 )) line_y=$(( top + word_cap + 46 + 1 + 40 + line_cap ))
   local line_w=$(( ${#END_LINE} * line_step - 6 ))
   local line_x=$(( (W - line_w) / 2 ))
-  local note_w=$(( ${#END_NOTE} * LABEL_STEP - 5 ))
-  local note_x=$(( (W - note_w) / 2 ))
+  # Der Hinweis steht zwischen den unteren Eckmarken. Passt er dort nicht in eine Zeile, wird er
+  # an dem " · " geteilt, das zwei möglichst gleich lange Zeilen ergibt.
+  local -a notes=("$END_NOTE")
+  local note_max=$(( W - 2 * (IN + ARM + 18) )) note_pitch=$(( LABEL_FS * 8 / 5 ))
+  if (( $(label_width "$END_NOTE") > note_max )) && [[ $END_NOTE == *" · "* ]]; then
+    local left="" rest=$END_NOTE diff best=100000
+    while [[ $rest == *" · "* ]]; do
+      left+="${left:+ · }${rest%%" · "*}"
+      rest=${rest#*" · "}
+      diff=$(( ${#left} - ${#rest} )); (( diff < 0 )) && diff=$(( -diff ))
+      if (( diff < best )); then best=$diff; notes=("$left" "$rest"); fi
+    done
+  fi
   local t_word=0.40 dt_word=0.11
   local t_rule t_line t_line_end
   t_rule=$(calc "$t_word + ${#END_WORD} * $dt_word + 0.12")
   t_line=$(calc "$t_rule + 0.16")
   t_line_end=$(calc "$t_line + ${#END_LINE} * $TYPE_DT")
-  local tw tl tn
-  tw=$(textfile end-word "$END_WORD"); tl=$(textfile end-line "$END_LINE"); tn=$(textfile end-note "$END_NOTE")
+  local tw tl tn k
+  tw=$(textfile end-word "$END_WORD"); tl=$(textfile end-line "$END_LINE")
 
   local graph="color=c=$BG:s=${W}x${H}:r=$FPS:d=$dur,format=yuv420p[bg];"
   graph+="color=c=$BG:s=${W}x170:r=$FPS:d=$dur,format=yuv420p[mw];"
@@ -249,8 +318,20 @@ render_end() {
   graph+="[b][cl]overlay=x='$line_x+$line_step*min(${#END_LINE},floor(max(0,t-$t_line)/$TYPE_DT+0.001))':y=$((line_y - 31)):eval=frame"
   graph+=":enable='between(t,$t_line,$(calc "$t_line_end + $CUR_HOLD"))'[c];"
   graph+="[c]drawbox=x=$x0:y=$rule_y:w=$width:h=1:color=$RULE:t=fill:enable='gte(t,$t_rule)',"
-  graph+="$(brackets "$IN" "$IN" $((W - IN)) $((H - IN)) "$MID"),"
-  graph+="drawtext=fontfile=$F_LABEL:textfile=$tn:expansion=none:fontsize=$LABEL_FS:fontcolor=$MID:x=$note_x:y=h-$((IN + 8))-text_h[v]"
+  graph+="$(brackets "$IN" "$TOP" $((W - IN)) $((H - BOT)) "$MID")"
+  if (( ${#notes[@]} == 1 )); then
+    tn=$(textfile end-note "$END_NOTE")
+    graph+=",drawtext=fontfile=$F_LABEL:textfile=$tn:expansion=none:fontsize=$LABEL_FS:fontcolor=$MID"
+    graph+=":x=$(( (W - $(label_width "$END_NOTE")) / 2 )):y=h-$((BOT + 8))-text_h"
+  else
+    # Zwei Zeilen stehen auf festen Grundlinien, die untere dort, wo sonst die einzige steht.
+    for k in 0 1; do
+      tn=$(textfile "end-note-$k" "${notes[$k]}")
+      graph+=",drawtext=fontfile=$F_LABEL:textfile=$tn:expansion=none:fontsize=$LABEL_FS:fontcolor=$MID"
+      graph+=":x=$(( (W - $(label_width "${notes[$k]}")) / 2 )):y=$(( H - BOT - 8 - (1 - k) * note_pitch ))-ascent"
+    done
+  fi
+  graph+="[v]"
   "${FF[@]}" -filter_complex "$graph" -map "[v]" -t "$dur" "${SEG_ENC[@]}" "$out"
 }
 
@@ -260,10 +341,10 @@ render_end() {
 render_shot() {
   local out=$1 file=$2 start=$3 dur=$4 tf
   tf=$(textfile shot-label "$SHOT_LABEL")
-  "${FF[@]}" -ss "$start" -t "$dur" -i "shots/$file" -vf "noise=c0s=$GRAIN:c0f=t+u,\
-$(brackets_on_footage "$IN" "$IN" $((W - IN)) $((H - IN))),\
+  "${FF[@]}" -ss "$start" -t "$dur" -i "$SHOTS_DIR/$file" -vf "noise=c0s=$GRAIN:c0f=t+u,\
+$(brackets_on_footage "$IN" "$TOP" $((W - IN)) $((H - BOT))),\
 drawtext=fontfile=$F_LABEL:textfile=$tf:expansion=none:fontsize=$LABEL_FS:fontcolor=$FG@0.92:\
-box=1:boxcolor=$BG@0.55:boxborderw=9:x=$((IN + ARM + 18)):y=h-$((IN + 8))-text_h,format=yuv420p" \
+box=1:boxcolor=$BG@0.55:boxborderw=9:x=$((IN + ARM + 18)):y=h-$((BOT + 8))-text_h,format=yuv420p" \
     -t "$dur" "${SEG_ENC[@]}" "$out"
 }
 
@@ -394,7 +475,7 @@ assemble() {
   done
   graph+="concat=n=${#segs[@]}:v=1:a=0,format=yuv420p[v]"
   "${FF[@]}" "${inputs[@]}" -i work/audio.wav -filter_complex "$graph" -map "[v]" -map "$i:a" \
-    -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -r "$FPS" -c:a aac -b:a 192k \
+    -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -r "$FPS" "${ENC_THREADS[@]}" -c:a aac -b:a 192k \
     -movflags +faststart -shortest "$OUT"
   echo "$OUT  $(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT") s"
 }
@@ -414,8 +495,8 @@ render_cards_only() {
 render_web() {
   local web="${OUT%.mp4}-web.mp4"
   [[ -f $OUT ]] || { echo "$OUT fehlt; erst ./build.sh ausführen" >&2; exit 1; }
-  "${FF[@]}" -i "$OUT" -vf "scale=1280:720:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 25 \
-    -pix_fmt yuv420p -r "$FPS" -c:a aac -b:a 128k -movflags +faststart "$web"
+  "${FF[@]}" -i "$OUT" -vf "scale=$WEB_W:$WEB_H:flags=lanczos,format=yuv420p" -c:v libx264 -preset slow -crf 25 \
+    -pix_fmt yuv420p -r "$FPS" "${ENC_THREADS[@]}" -c:a aac -b:a 128k -movflags +faststart "$web"
   echo "$web  $(du -h "$web" | cut -f1)"
 }
 
@@ -424,7 +505,7 @@ case ${1:-all} in
   cards) render_cards_only ;;
   web) render_web ;;
   all)
-    if ! compgen -G "shots/*.mp4" > /dev/null; then normalise_shots; fi
+    if ! compgen -G "$SHOTS_DIR/*.mp4" > /dev/null; then normalise_shots; fi
     assemble
     ;;
   *) echo "Aufruf: $0 [all|shots|cards|web]" >&2; exit 1 ;;

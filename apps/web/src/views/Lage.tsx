@@ -16,6 +16,7 @@ import type { FrameTarget } from '../components/FrameSheet';
 import { formatClock, formatExercise, formatScore, formatTime } from '../format';
 import { useLang } from '../i18n';
 import { MapCanvas, type MapMarker, type MapView } from '../map/MapCanvas';
+import { tagLabel } from '../tags';
 import { Frame, Glyph, KIND_LABEL, Sev, useAction } from '../ui';
 import type { NodeConnection } from '../useNode';
 
@@ -296,7 +297,7 @@ function IncidentRow({ incident, node, selected, onSelect }: { incident: Inciden
 }
 
 export function Lage({ node, openFrame }: ViewProps) {
-  const { t, pick, locale } = useLang();
+  const { t, pick, locale, lang } = useLang();
   const intel = node.intel;
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
@@ -438,7 +439,7 @@ export function Lage({ node, openFrame }: ViewProps) {
               )}
               {sourceFeed?.label ? (
                 <div className="alert-line low">
-                  {t('im Bild')}: {sourceFeed.label}
+                  {t('im Bild')}: {tagLabel(sourceFeed.label, lang)}
                   {sourceFeed.at !== null ? ` · ${formatClock(sourceFeed.at, locale)}` : ''}
                 </div>
               ) : null}

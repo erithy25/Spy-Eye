@@ -139,3 +139,54 @@ test('the same words stay usable for things, places and clothing', () => {
     assert.equal(strict.rule, 'person-description', query);
   }
 });
+
+test('the screen reads the text the way the model does', () => {
+  // Compatibility forms fold to plain letters before any rule looks at them.
+  const folded: [string, string][] = [
+    ['ｆａｃｅ ｏｆ ａｎｇｅｌａ ｍｅｒｋｅｌ', 'identification'],
+    ['𝐚𝐧𝐠𝐞𝐥𝐚 𝐦𝐞𝐫𝐤𝐞𝐥', 'named-person'],
+    ['ﬁnd peter', 'named-person'],
+    ['an​gela mer­kel', 'named-person'],
+    ['licen‍se plate of the van', 'licence-plate'],
+    ['Ｋｅｎｎｚｅｉｃｈｅｎ KO AB 123', 'licence-plate'],
+  ];
+  for (const [prompt, rule] of folded) {
+    const verdict = screenPrompt(prompt, { personDescriptions: true });
+    assert.equal(verdict.allowed, false, prompt);
+    assert.equal(verdict.rule, rule, prompt);
+  }
+});
+
+test('a hyphen or a capital inside a word does not hide a term', () => {
+  const joined: [string, string][] = [
+    ['angela-merkel', 'named-person'],
+    ['AngelaMerkel', 'named-person'],
+    ['tattooed-man', 'identifying-feature'],
+    ['bearded–man', 'identifying-feature'],
+    ['muslim-woman', 'protected-attribute'],
+    ['a red-haired woman', 'identifying-feature'],
+  ];
+  for (const [prompt, rule] of joined) {
+    const verdict = screenPrompt(prompt, { personDescriptions: true });
+    assert.equal(verdict.allowed, false, prompt);
+    assert.equal(verdict.rule, rule, prompt);
+  }
+  // Hyphenated descriptions of things stay possible.
+  for (const prompt of ['a fire-engine', 'T-junction with a lorry', 'Hochwasser-Schutzwand', 'a two-storey building', 'Rhein-Mosel-Dreieck']) {
+    assert.equal(screenPrompt(prompt, { personDescriptions: false }).allowed, true, prompt);
+  }
+  // A description of a person joined by a hyphen is still a description of a person.
+  assert.equal(screenPrompt('woman-in-red', { personDescriptions: false }).rule, 'person-description');
+  assert.deepEqual(screenPrompt('woman-in-red', { personDescriptions: true }).flags, ['person-description']);
+});
+
+test('text in another script is refused as a whole, Latin text with accents is not', () => {
+  for (const prompt of ['лицо Ангелы Меркель', 'πρόσωπο', 'وجه', '人脸', 'fаce of the driver' /* Cyrillic a */]) {
+    const verdict = screenPrompt(prompt, { personDescriptions: true });
+    assert.equal(verdict.allowed, false, prompt);
+    assert.equal(verdict.rule, 'unsupported-script', prompt);
+  }
+  for (const prompt of ['überflutete Wiese', 'Straße gesperrt', 'café terrace', 'Fähre am Anleger', 'señal de tráfico', '3 Löschfahrzeuge 🚒', 'Pegel 7,40 m']) {
+    assert.equal(screenPrompt(prompt, { personDescriptions: false }).allowed, true, prompt);
+  }
+});

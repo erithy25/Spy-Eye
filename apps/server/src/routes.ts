@@ -10,7 +10,8 @@ import sharp from 'sharp';
 import { VIDEO_EXTENSIONS, config } from './config.js';
 import type { Permission } from './core/auth.js';
 import { newId } from './core/json.js';
-import type { FederationHello, FederationRequest, FederationResponse } from './intel/federation.js';
+import { foreignRequest } from './core/origin.js';
+import { PEER_BUDGET, PEER_BUDGET_WINDOW_MS, type FederationHello, type FederationResponse } from './intel/federation.js';
 import { screenPrompt } from './intel/guard.js';
 import { parseStreamAddress, redactStreamAddress } from './intel/live.js';
 import { collectMetrics } from './intel/metrics.js';
@@ -190,6 +191,26 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     limits: { fileSize: config.maxUploadBytes, files: 500, fields: 20, parts: 600 },
   });
   await app.register(fastifyStatic, { root: store.videosDir, serve: false });
+
+  // Nobody but the console itself, a person at the address bar or a program with its own
+  // credentials starts requests to the interface (see core/origin.ts).
+  app.addHook('onRequest', async (request, reply) => {
+    const foreign = foreignRequest(request.headers, request.url, request.method);
+    if (foreign === null) return;
+    const en = node.langOf(request) === 'en';
+    return sendError(
+      reply,
+      403,
+      foreign === 'cross-site'
+        ? en
+          ? 'Refused: the request was started by another site.'
+          : 'Abgelehnt: Die Anfrage wurde von einer fremden Seite ausgelöst.'
+        : en
+          ? 'Refused: queries are made in the console, not by following a link.'
+          : 'Abgelehnt: Abfragen werden in der Konsole gestellt, nicht über einen Verweis.',
+      { code: 'foreign-request' },
+    );
+  });
 
   // Headers for every answer: the console needs nothing from other origins.
   app.addHook('onSend', async (_request, reply) => {
@@ -437,10 +458,25 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const entry = isValidVideoId(id) ? store.get(id) : undefined;
     if (!entry) return sendError(reply, 404, 'Video nicht gefunden.');
     if (entry.info.scenario !== null) return sendError(reply, 409, say(ctx, 'Übungsmaterial wird über die Übung entfernt.', 'Exercise footage is removed with the exercise.'));
+    // A recording that a case holds a picture from stays, as it does past the retention period.
+    const held = cases.list().filter((file) => file.items.some((item) => item.videoId === id));
+    if (held.length > 0) {
+      return sendError(
+        reply,
+        409,
+        say(
+          ctx,
+          `Aus dieser Aufzeichnung ist ein Bild in einem Vorgang gesichert („${held[0]?.title ?? ''}“). Sie bleibt erhalten, solange der Vorgang besteht.`,
+          `A case holds a frame from this recording ("${held[0]?.title ?? ''}"). It is kept for as long as the case exists.`,
+        ),
+        { code: 'held-by-case' },
+      );
+    }
+    // The entry first: a deletion that is not on record must not happen.
+    await node.record(ctx, 'recording.delete', `Aufzeichnung „${entry.info.name}“ gelöscht`, { videoId: id });
     pipeline.cancel(id);
     await store.remove(id);
     hub.broadcast({ type: 'video-removed', videoId: id, stats: store.stats() });
-    await node.record(ctx, 'recording.delete', `Aufzeichnung „${entry.info.name}“ gelöscht`, { videoId: id });
     return reply.code(204).send();
   });
 
@@ -542,8 +578,22 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!isValidVideoId(videoId) || !Number.isInteger(frameNumber) || frameNumber < 1) {
       return sendError(reply, 400, 'Ungültige Frame-Referenz.');
     }
-    if (!screenPrompt(query, guardOptions(ctx)).allowed) return sendError(reply, 422, say(ctx, 'Anfrage nicht zulässig.', 'Request not permitted.'));
-    return search.explain({ videoId, frameNumber, query });
+    const verdict = screenPrompt(query, guardOptions(ctx));
+    if (!verdict.allowed) {
+      await node.record(ctx, 'search.refused', `Anfrage abgelehnt (${verdict.rule})`, { query, rule: verdict.rule, via: 'explain' });
+      return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
+    }
+    const result = await search.explain({ videoId, frameNumber, query });
+    // Showing where a text applies in one picture is a query of its own. The console asks this for
+    // texts that are on record already (the person's own search, the description of a watch); only
+    // a text that is on record nowhere gets an entry here, so that no question goes unrecorded.
+    const onRecord =
+      watches.listWatches().some((watch) => watch.prompt === query) ||
+      ledger.list({ limit: 200, actor: ctx.user.id, action: 'search.query' }).some((entry) => entry.data['query'] === query);
+    if (!onRecord) {
+      await node.record(ctx, 'search.explain', `Fundstelle zu „${query}“ in einem Bild gezeigt`, { query, videoId, frame: frameNumber, flags: verdict.flags });
+    }
+    return result;
   });
 
   app.get('/api/embedding-map', async (request, reply) => {
@@ -590,6 +640,10 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
         );
       }
     }
+    // Opening a source to the peers is a decision about what leaves the house.
+    if (body.flag('shared', false) && !node.allowed(ctx, 'federation.write')) {
+      return sendError(reply, 403, say(ctx, 'Eine Quelle für den Verbund freigeben darf nur die Leitung.', 'Only a supervisor may release a source to the federation.'));
+    }
     const source = sources.create({
       name,
       kind,
@@ -616,7 +670,12 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const body = new Body(request.body);
     const patch: Parameters<typeof sources.update>[1] = {};
     if (body.has('name') && body.text('name', 80).length >= 2) patch.name = body.text('name', 80);
-    if (body.has('shared')) patch.shared = body.flag('shared', false);
+    if (body.has('shared')) {
+      if (!node.allowed(ctx, 'federation.write')) {
+        return sendError(reply, 403, say(ctx, 'Eine Quelle für den Verbund freigeben oder sperren darf nur die Leitung.', 'Only a supervisor may release a source to the federation or withdraw it.'));
+      }
+      patch.shared = body.flag('shared', false);
+    }
     if (body.has('lat')) patch.lat = body.nullableNumber('lat', -90, 90);
     if (body.has('lon')) patch.lon = body.nullableNumber('lon', -180, 180);
     const source = sources.update(request.params.id, patch);
@@ -743,9 +802,21 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (prompt.length < 3) return sendError(reply, 400, say(ctx, 'Beschreibung fehlt.', 'Description is missing.'));
     for (const text of [prompt, ...exclude]) {
       const verdict = screenPrompt(text, guardOptions(ctx));
-      if (!verdict.allowed) return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
+      if (!verdict.allowed) {
+        await node.record(ctx, 'watch.refused', `Wache abgelehnt (${verdict.rule})`, { prompt: text, rule: verdict.rule, via: 'preview' });
+        return sendError(reply, 422, say(ctx, verdict.reason ?? '', verdict.reasonEn ?? ''), { code: 'refused', rule: verdict.rule });
+      }
     }
-    return watches.preview(prompt, exclude);
+    // Trying a description on the stock answers with a count and sample pictures: that is a
+    // search, and it is recorded as one before the answer goes out.
+    const preview = await watches.preview(prompt, exclude);
+    await node.record(ctx, 'watch.preview', `Beschreibung am Bestand geprüft: „${prompt}“, ${preview.matches} von ${preview.framesChecked} Bildern`, {
+      prompt,
+      exclude,
+      matches: preview.matches,
+      framesChecked: preview.framesChecked,
+    });
+    return preview;
   });
 
   app.post('/api/watches', async (request, reply) => {
@@ -920,7 +991,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   });
 
   app.post<{ Params: { id: string } }>('/api/cases/:id/seal', async (request, reply) => {
-    const ctx = need(request, reply, 'case.write');
+    // Sealing closes a case for good; it is the supervisor's step, not the analyst's.
+    const ctx = need(request, reply, 'case.seal');
     if (!ctx) return reply;
     const file = await cases.seal(request.params.id, ctx.user);
     if (!file) return sendError(reply, 409, say(ctx, 'Vorgang nicht gefunden oder bereits versiegelt.', 'Case not found or already sealed.'));
@@ -1061,7 +1133,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!ctx) return reply;
     const sizeRaw = Number(queryString(request.query, 'n') ?? '10');
     const size = Number.isFinite(sizeRaw) ? Math.min(50, Math.max(1, Math.floor(sizeRaw))) : 10;
-    const pool = ledger.list({ limit: 4000 }).filter((e) => e.action === 'search.query' || e.action === 'search.refused' || e.action === 'federation.inbound');
+    const QUERIES = ['search.query', 'search.refused', 'search.explain', 'watch.preview', 'watch.refused', 'federation.inbound', 'federation.refused'];
+    const pool = ledger.list({ limit: 4000 }).filter((e) => QUERIES.includes(e.action));
     const sample: typeof pool = [];
     const copy = [...pool];
     while (sample.length < size && copy.length > 0) {
@@ -1169,16 +1242,27 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     return ctx ? federation.list() : reply;
   });
 
-  const peerOf = (request: FastifyRequest): ReturnType<typeof federation.authenticate> =>
+  const header = (request: FastifyRequest, name: string): string | undefined => {
+    const value = request.headers[name];
+    return typeof value === 'string' ? value : undefined;
+  };
+  /** The peer that signed this request for this node and this path, or null. */
+  const peerOf = (request: FastifyRequest, path: string): ReturnType<typeof federation.authenticate> =>
     federation.authenticate(
-      request.headers['x-sicht-node'] as string | undefined,
-      request.headers['x-sicht-timestamp'] as string | undefined,
-      request.headers['x-sicht-signature'] as string | undefined,
+      {
+        node: header(request, 'x-sicht-node'),
+        timestamp: header(request, 'x-sicht-timestamp'),
+        nonce: header(request, 'x-sicht-nonce'),
+        signature: header(request, 'x-sicht-signature'),
+      },
+      path,
       (request as FastifyRequest & { rawBody?: string }).rawBody ?? '',
     );
+  /** Text from another node: a string of bounded length, or nothing. */
+  const peerText = (value: unknown, max: number): string => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
   app.post('/api/federation/hello', async (request, reply) => {
-    const peer = peerOf(request);
+    const peer = peerOf(request, '/api/federation/hello');
     if (!peer) return sendError(reply, 401, 'Unbekannter Knoten oder ungültige Signatur.');
     federation.noteContact(peer);
     const head = new Body(request.body).text('head', 64);
@@ -1194,22 +1278,54 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   });
 
   app.post('/api/federation/search', async (request, reply) => {
-    const peer = peerOf(request);
+    const peer = peerOf(request, '/api/federation/search');
     if (!peer) return sendError(reply, 401, 'Unbekannter Knoten oder ungültige Signatur.');
     federation.noteContact(peer);
-    const incoming = request.body as Partial<FederationRequest> | null;
-    const query = typeof incoming?.query === 'string' ? incoming.query.trim().slice(0, 300) : '';
-    const mandate = incoming?.mandate;
-    const requester = incoming?.requester;
-    if (query === '' || !mandate || typeof mandate.title !== 'string' || typeof mandate.legalBasis !== 'string' || !requester?.user) {
-      return sendError(reply, 400, 'Anfrage unvollständig: Frage, Mandat und anfragende Person sind erforderlich.');
+    const actor = `node:${peer.id}`;
+
+    // A peer may ask often, not without limit: every answer hands out previews of shared sources.
+    const budget = federation.spend(peer.id);
+    if (!budget.allowed) {
+      if (budget.first) {
+        await ledger.append({
+          actor,
+          role: 'peer',
+          mandateId: null,
+          action: 'federation.throttled',
+          summary: `Fremdanfragen von ${peer.name} ausgesetzt: mehr als ${PEER_BUDGET} in ${PEER_BUDGET_WINDOW_MS / 60000} Minuten`,
+          data: { limit: PEER_BUDGET, windowMinutes: PEER_BUDGET_WINDOW_MS / 60000 },
+        });
+      }
+      void reply.header('Retry-After', String(Math.ceil(PEER_BUDGET_WINDOW_MS / 1000)));
+      return sendError(reply, 429, 'Zu viele Fremdanfragen in kurzer Zeit.', { code: 'throttled' });
     }
-    if (typeof incoming.head === 'string' && /^[0-9a-f]{64}$/.test(incoming.head)) federation.witness(peer, incoming.head);
+
+    // Everything a peer states is taken as text of bounded length; nothing is stored as sent.
+    const incoming = request.body as { query?: unknown; limit?: unknown; head?: unknown; mandate?: Record<string, unknown> | null; requester?: { node?: Record<string, unknown> | null; user?: Record<string, unknown> | null } | null } | null;
+    const query = peerText(incoming?.query, 300);
+    const mandate = {
+      title: peerText(incoming?.mandate?.['title'], 140),
+      legalBasis: peerText(incoming?.mandate?.['legalBasis'], 200),
+      exercise: incoming?.mandate?.['exercise'] === true,
+    };
+    const requester = {
+      node: peerText(incoming?.requester?.node?.['id'], 64),
+      id: peerText(incoming?.requester?.user?.['id'], 64),
+      name: peerText(incoming?.requester?.user?.['name'], 80),
+      unit: peerText(incoming?.requester?.user?.['unit'], 120),
+    };
+    if (query === '' || mandate.title === '' || mandate.legalBasis === '' || requester.id === '') {
+      return sendError(reply, 400, 'Anfrage unvollständig: Frage, Mandat mit Rechtsgrundlage und anfragende Person sind erforderlich.');
+    }
+    if (requester.node !== peer.id) {
+      return sendError(reply, 400, 'Der genannte Knoten ist nicht der, der die Anfrage unterschrieben hat.');
+    }
+    if (typeof incoming?.head === 'string' && /^[0-9a-f]{64}$/.test(incoming.head)) federation.witness(peer, incoming.head);
 
     // The answering node applies its own rules, whatever the asking node allowed. Descriptions of
-    // persons are answered only if the mandate of the asking node permits them explicitly.
-    const verdict = screenPrompt(query, { personDescriptions: mandate.personDescriptions === true });
-    const actor = `node:${peer.id}`;
+    // persons are not answered for a peer at all: whether its mandate permits them is a statement
+    // this node cannot check.
+    const verdict = screenPrompt(query, { personDescriptions: false });
     if (!verdict.allowed) {
       await ledger.append({
         actor,
@@ -1217,13 +1333,13 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
         mandateId: null,
         action: 'federation.refused',
         summary: `Fremdanfrage von ${peer.name} abgelehnt (${verdict.rule})`,
-        data: { query, rule: verdict.rule, user: requester.user.id, mandate: mandate.title },
+        data: { query, rule: verdict.rule, user: requester.id, mandate: mandate.title },
       });
       return sendError(reply, 422, verdict.reason ?? 'Anfrage nicht zulässig.', { code: 'refused', rule: verdict.rule });
     }
     if (!model.ready) return sendError(reply, 503, 'Das Modell wird noch geladen.');
 
-    const limit = Math.min(12, Math.max(1, Math.floor(typeof incoming.limit === 'number' ? incoming.limit : 12)));
+    const limit = Math.min(12, Math.max(1, Math.floor(typeof incoming?.limit === 'number' && Number.isFinite(incoming.limit) ? incoming.limit : 12)));
     const result = await search.search({ query, limit: 60, videoId: null, sharedOnly: true });
     const matches = result.results.filter((r) => r.confidence >= 0.5).slice(0, limit);
     const hits: FederatedHit[] = [];
@@ -1259,8 +1375,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       data: {
         query,
         released: hits.length,
-        requester: { user: requester.user.id, name: requester.user.name, unit: requester.user.unit },
-        mandate: { title: mandate.title, legalBasis: mandate.legalBasis, exercise: mandate.exercise === true },
+        requester: { user: requester.id, name: requester.name, unit: requester.unit },
+        mandate: { title: mandate.title, legalBasis: mandate.legalBasis, exercise: mandate.exercise },
       },
     });
     const body: FederationResponse = {
@@ -1286,22 +1402,35 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (reason.length < 12) {
       return sendError(reply, 400, say(ctx, 'Bitte den Grund ausführen (mindestens 12 Zeichen).', 'Please state the reason (at least 12 characters).'));
     }
-    const approver = auth.verify(body.text('approver', 64), body.text('password', 200));
+    // The approver's password is guarded like a sign-in: a wrong one counts against that account,
+    // and after five in a row it is locked for a minute here as well.
+    const approverId = body.text('approver', 64).toLowerCase();
+    const approverKey = `user:${approverId}`;
+    const wait = lockedFor(approverKey);
+    if (wait > 0) {
+      void reply.header('Retry-After', String(wait));
+      return sendError(reply, 429, say(ctx, `Zu viele Fehlversuche für diese Freigabe. Neuer Versuch in ${wait} s.`, `Too many failed attempts for this approval. Try again in ${wait} s.`));
+    }
+    const approver = auth.verify(approverId, body.text('password', 200));
     if (!approver || !['supervisor'].includes(approver.role)) {
-      await node.record(ctx, 'privacy.unmask-denied', 'Aufhebung der Maskierung abgelehnt: Freigabe ungültig', { videoId });
+      if (!approver) noteFailure(approverKey);
+      await node.record(ctx, 'privacy.unmask-denied', 'Aufhebung der Maskierung abgelehnt: Freigabe ungültig', { videoId, approver: approverId });
       return sendError(reply, 403, say(ctx, 'Freigabe ungültig: Kennung oder Passwort der freigebenden Person stimmt nicht, oder ihr fehlt die Berechtigung.', 'Approval invalid: wrong credentials, or the approver lacks the permission.'));
     }
+    failures.delete(approverKey);
     if (approver.id === ctx.user.id) {
+      await node.record(ctx, 'privacy.unmask-denied', 'Aufhebung der Maskierung abgelehnt: Freigabe durch die anfragende Person selbst', { videoId, approver: approver.id });
       return sendError(reply, 403, say(ctx, 'Vier-Augen-Prinzip: Die Freigabe muss von einer zweiten Person kommen.', 'Four-eyes principle: approval must come from a second person.'));
     }
+    // The entry first, the grant after it: no original is shown under a grant that is not on record.
     const grant = { id: newId('gr'), videoId, userId: ctx.user.id, approver: approver.id, expires: Date.now() + UNMASK_TTL_MS };
-    node.grants.set(grant.id, grant);
     await node.record(ctx, 'privacy.unmask', `Maskierung für „${entry.info.name}“ aufgehoben (Freigabe: ${approver.name})`, {
       videoId,
       reason,
       approver: approver.id,
       minutes: UNMASK_TTL_MS / 60000,
     });
+    node.grants.set(grant.id, grant);
     return { grantId: grant.id, videoId, expires: grant.expires };
   });
 
@@ -1314,7 +1443,9 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!isValidVideoId(id) || !/^\d{7}\.jpg$/.test(file) || !store.get(id)) {
       return sendError(reply, 404, 'Frame nicht gefunden.');
     }
-    return reply.header('Cache-Control', 'private, max-age=3600').sendFile(`${id}/frames/${file}`);
+    // Revalidated on every use: the next person at the same browser must not get pictures from its
+    // cache without this check.
+    return reply.header('Cache-Control', 'private, no-cache').header('Vary', 'Cookie').sendFile(`${id}/frames/${file}`);
   });
 
   /** Unmasked frame; only with a current grant for the recording. Falls back to the served frame when nothing was masked. */
@@ -1334,15 +1465,32 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     }
   });
 
-  /** The recording itself is unmasked footage and therefore needs a grant, unless it contains no masked face. */
+  /**
+   * The recording itself is unmasked footage. It is handed out without approval only once it has
+   * been analysed in full with the face detector running and no face was found. Until then, and
+   * whenever something was masked, it needs a grant: a count of zero says nothing while the
+   * analysis is still running, has failed or ran without the detector.
+   */
   app.get<{ Params: { id: string } }>('/media/:id/source', async (request, reply) => {
     const ctx = need(request, reply, 'media');
     if (!ctx) return reply;
     const { id } = request.params;
     const entry = isValidVideoId(id) ? store.get(id) : undefined;
     if (!entry) return sendError(reply, 404, 'Video nicht gefunden.');
-    if (entry.info.facesMasked > 0 && !node.hasGrant(ctx, id)) {
-      return sendError(reply, 403, say(ctx, 'Die Aufzeichnung enthält maskierte Gesichter; das Original erfordert eine Freigabe.', 'The recording contains masked faces; the original requires approval.'));
+    const checked = entry.info.status === 'ready' && !entry.info.coarse && node.shared.faces.ready;
+    if (!(checked && entry.info.facesMasked === 0) && !node.hasGrant(ctx, id)) {
+      return sendError(
+        reply,
+        403,
+        checked
+          ? say(ctx, 'Die Aufzeichnung enthält maskierte Gesichter; das Original erfordert eine Freigabe.', 'The recording contains masked faces; the original requires approval.')
+          : say(
+              ctx,
+              'Die Aufzeichnung ist noch nicht vollständig auf Gesichter geprüft; bis dahin erfordert sie eine Freigabe.',
+              'The recording has not been checked for faces in full yet; until then it requires approval.',
+            ),
+        { code: checked ? 'masked' : 'unchecked' },
+      );
     }
     const ext = path.extname(entry.sourceFile).toLowerCase();
     return reply

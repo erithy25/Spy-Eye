@@ -161,7 +161,13 @@ function Login({ node }: { node: NodeConnection }) {
               </tbody>
             </table>
             <p className="hint">
-              {t('Passwort für alle Vorführzugänge')}: <span className="strong">{info.demo.passwordHint}</span>.{' '}
+              {info.demo.passwordHint !== '' ? (
+                <>
+                  {t('Passwort für alle Vorführzugänge')}: <span className="strong">{info.demo.passwordHint}</span>.{' '}
+                </>
+              ) : (
+                <>{t('Das Passwort der Vorführzugänge hat der Betreiber gesetzt.')} </>
+              )}
               {t('Dieser Knoten läuft mit Übungsdaten; im Betrieb werden die Zugänge durch die der Behörde ersetzt.')}
             </p>
           </div>

@@ -124,7 +124,7 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
                   <a className="btn" href={`api/cases/${current.id}/report`} target="_blank" rel="noreferrer">
                     {t('Bericht')}
                   </a>
-                  {may && current.sealedAt === null && (
+                  {node.can('case.seal') && current.sealedAt === null && (
                     <button
                       type="button"
                       className="btn btn-solid"
@@ -137,6 +137,7 @@ export function Vorgaenge({ node, openFrame }: ViewProps) {
                       {t('Versiegeln')}
                     </button>
                   )}
+                  {may && !node.can('case.seal') && current.sealedAt === null && <span className="low">{t('Versiegeln ist der Leitung vorbehalten.')}</span>}
                 </span>
               </header>
 
