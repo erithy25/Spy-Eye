@@ -333,7 +333,7 @@ export function drawPitchLadder(ctx: CanvasRenderingContext2D, cx: number, cy: n
 }
 
 /** A sun symbol: ring with four short rays; dashed when the sun is below the horizon. */
-export function drawSun(ctx: CanvasRenderingContext2D, x: number, y: number, below: boolean, caption: string, sub?: string): void {
+export function drawSun(ctx: CanvasRenderingContext2D, x: number, y: number, below: boolean, caption: string, sub?: string, flip = false): void {
   ring(ctx, x, y, 7, 1, below);
   hair(ctx, () => {
     for (let i = 0; i < 8; i++) {
@@ -342,8 +342,10 @@ export function drawSun(ctx: CanvasRenderingContext2D, x: number, y: number, bel
       ctx.lineTo(x + Math.cos(a) * (i % 2 ? 12 : 14), y + Math.sin(a) * (i % 2 ? 12 : 14));
     }
   }, FG, below ? 0.4 : 0.85);
-  label(ctx, caption, x + 20, y - 4, { size: 9.5, weight: 700, track: 0.14 });
-  if (sub) label(ctx, sub, x + 20, y + 8, { size: 8.5, color: MID, track: 0.1 });
+  const lx = flip ? x - 20 : x + 20;
+  const align: CanvasTextAlign = flip ? 'right' : 'left';
+  label(ctx, caption, lx, y - 4, { align, size: 9.5, weight: 700, track: 0.14 });
+  if (sub) label(ctx, sub, lx, y + 8, { align, size: 8.5, color: MID, track: 0.1 });
 }
 
 /** Points to a target outside the viewport from the nearest edge. */

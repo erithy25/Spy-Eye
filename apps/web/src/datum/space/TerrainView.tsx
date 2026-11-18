@@ -832,7 +832,7 @@ class TerrainEngine {
     gl.uniform2f(t.u['uContour'] ?? null, ...contourStep(m));
     gl.uniform1f(t.u['uReveal'] ?? null, reveal);
     gl.uniform1f(t.u['uRevealWidth'] ?? null, E * 0.04);
-    if (walking) gl.uniform3f(t.u['uGrid'] ?? null, 10, 100, 1);
+    if (walking) gl.uniform3f(t.u['uGrid'] ?? null, 1, 10, 1.7);
     else gl.uniform3f(t.u['uGrid'] ?? null, 100, 1000, 0.8);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.shadowTex);
@@ -991,17 +991,19 @@ class TerrainEngine {
       const d = new Date(t);
       return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
     };
+    const sunAt = a.sun && live.sun ? P(a.sun) : null;
+    // Sunrise and sunset labels give way to the sun's own label.
+    const clear = (s: { x: number; y: number }): boolean => !sunAt || Math.hypot(s.x - sunAt.x, s.y - sunAt.y) > 110;
     if (a.rise) {
       const s = P(a.rise.p);
-      if (s) drawAnchor(ctx, s.x, s.y + 10, 'AUFGANG', fmtUtc(a.rise.t), 'center');
+      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, 'AUFGANG', fmtUtc(a.rise.t), 'center');
     }
     if (a.set) {
       const s = P(a.set.p);
-      if (s) drawAnchor(ctx, s.x, s.y + 10, 'UNTERGANG', fmtUtc(a.set.t), 'center');
+      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, 'UNTERGANG', fmtUtc(a.set.t), 'center');
     }
-    if (a.sun && live.sun) {
-      const s = P(a.sun);
-      if (s) drawSun(ctx, s.x, s.y, live.sun.elevationDeg <= 0, 'SONNE', `${fmtAz(live.sun.azimuthDeg)} · ${fmtSigned(live.sun.elevationDeg, 1)}°`);
+    if (sunAt && live.sun) {
+      drawSun(ctx, sunAt.x, sunAt.y, live.sun.elevationDeg <= 0, 'SONNE', `${fmtAz(live.sun.azimuthDeg)} · ${fmtSigned(live.sun.elevationDeg, 1)}°`, sunAt.x > W - 330);
     }
     if (walking) {
       const c = this.cursor;

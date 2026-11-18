@@ -18,7 +18,10 @@
     "map:extract": "tsx src/scripts/map/extractTiles.ts",
     "datum:fetch": "tsx src/scripts/datum/fetchDataset.ts && tsx src/scripts/datum/fetchTerrain.ts && tsx src/scripts/datum/writeSeed.ts",
     "datum:evaluate": "tsx src/scripts/datum/evaluate.ts",
-    "datum:seed": "tsx src/scripts/datum/writeSeed.ts"
+    "datum:seed": "tsx src/scripts/datum/writeSeed.ts",
+    "datum:terrain": "tsx src/scripts/datum/fetchTerrain.ts",
+    "datum:regions": "tsx src/scripts/datum/fetchTerrain.ts --regions-only",
+    "datum:countries": "tsx src/scripts/map/extractTiles.ts --only=countries"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.9",

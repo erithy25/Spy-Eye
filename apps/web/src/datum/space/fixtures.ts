@@ -91,9 +91,11 @@ export function makeTerrain(lat: number, lon: number, size = 181, cell = 30): Te
       h += 260 * gauss(x - 700, z - 2100, 480);
       h += 240 * gauss(x + 2100, z + 1900, 650);
       h += 150 * Math.exp(-(((x * 0.8 + z * 0.6 - 1900) / 480) ** 2));
-      h -= 60 * Math.exp(-((x / 420) ** 2)) * (1 - gauss(x, z + 2400, 900));
+      h -= 60 * Math.exp(-(((x - 750) / 420) ** 2)) * (1 - gauss(x, z + 2400, 900));
       h += 55 * fbm(x / 900 + 3.1, z / 900 - 1.7, 5);
-      h += 14 * fbm(x / 180, z / 180, 3);
+      h += 6 * fbm(x / 240, z / 240, 2);
+      // The camera stands on a low, flat rise above the valley.
+      h += 45 * Math.exp(-(((x * x + z * z) / (2 * 260 * 260)) ** 2));
       heights.push(Math.round(h * 10) / 10);
       minHeight = Math.min(minHeight, h);
       maxHeight = Math.max(maxHeight, h);

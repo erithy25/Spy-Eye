@@ -4,6 +4,7 @@
  *   tsx src/scripts/datum/fetchTerrain.ts                  regions from the test manifest, then elevation
  *   tsx src/scripts/datum/fetchTerrain.ts --regions-only   only (re)write datasets/datum/regions.json
  *   tsx src/scripts/datum/fetchTerrain.ts --fallback       regions for 20 reference cities instead of the manifest
+ *   tsx src/scripts/datum/fetchTerrain.ts --keep           keep elevation tiles no region needs any more
  *
  * 1. Regions. Every test location of datasets/datum/manifest.json gets a box of ±6 km; boxes that
  *    overlap are merged. The result is written to datasets/datum/regions.json:
@@ -17,8 +18,9 @@
  *      zoom 11 and 12 for ±15 km around each test location (enough to compute horizons),
  *      zoom 13 for the ±4 km core, zoom 4 for the whole world (coarse relief).
  *    Tiles already cached by the map extraction (.cache/map/terrain) are copied, not downloaded;
- *    the cached Koblenz tiles of zooms 11-13 are copied in any case. Existing tiles are kept, so the
- *    script can be re-run at any time.
+ *    the cached Koblenz tiles of zooms 11-13 are copied in any case. Existing tiles are kept and
+ *    tiles no region needs any more are removed (--keep keeps them), so the script can be re-run
+ *    at any time.
  *
  * Elevation: Mapzen terrain tiles on AWS Open Data (SRTM, GMTED, ETOPO1, EU-DEM and others).
  */
@@ -39,6 +41,8 @@ const REGION_KM = 6;
 const HORIZON_KM = 15;
 /** Elevation at zoom 13 (km either side). */
 const CORE_KM = 4;
+/** Koblenz operations area of the map extraction (west, south, east, north). */
+const KOBLENZ_BBOX: BBox = [6.3, 49.6, 8.6, 50.8];
 const WORLD_ZOOM = 4;
 const CONCURRENCY = 6;
 const ATTEMPTS = 5;
@@ -322,7 +326,7 @@ async function download(key: string): Promise<Buffer | null> {
   throw new Error(`${url}: ${last}`);
 }
 
-async function terrain(file: RegionsFile): Promise<void> {
+async function terrain(file: RegionsFile, prune: boolean): Promise<void> {
   const wanted = new Set<string>();
   for (const region of file.regions) {
     for (const p of region.points) {
@@ -331,11 +335,15 @@ async function terrain(file: RegionsFile): Promise<void> {
     }
   }
   for (const k of tilesOf([-180, -85.0511, 180, 85.0511], WORLD_ZOOM)) wanted.add(k);
-  // Koblenz: whatever the map extraction already cached at the zooms DATUM reads.
+  // Koblenz: whatever the map extraction already cached there at the zooms DATUM reads.
   for (const z of [11, 12, 13]) {
+    const area = new Set(tilesOf(KOBLENZ_BBOX, z));
     const dir = path.join(MAP_CACHE, String(z));
     for (const x of await fs.readdir(dir).catch(() => [] as string[])) {
-      for (const f of await fs.readdir(path.join(dir, x)).catch(() => [] as string[])) if (f.endsWith('.png')) wanted.add(`${z}/${x}/${f.slice(0, -4)}`);
+      for (const f of await fs.readdir(path.join(dir, x)).catch(() => [] as string[])) {
+        const key = `${z}/${x}/${f.slice(0, -4)}`;
+        if (f.endsWith('.png') && area.has(key)) wanted.add(key);
+      }
     }
   }
 
@@ -372,6 +380,20 @@ async function terrain(file: RegionsFile): Promise<void> {
   };
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
+  // Tiles no region needs any more (an earlier manifest) are removed, unless --keep.
+  let removed = 0;
+  if (prune) {
+    for (const z of await fs.readdir(TERRAIN_DIR).catch(() => [] as string[])) {
+      for (const x of await fs.readdir(path.join(TERRAIN_DIR, z)).catch(() => [] as string[])) {
+        for (const f of await fs.readdir(path.join(TERRAIN_DIR, z, x)).catch(() => [] as string[])) {
+          if (f.endsWith('.png') && wanted.has(`${z}/${x}/${f.slice(0, -4)}`)) continue;
+          await fs.rm(path.join(TERRAIN_DIR, z, x, f), { force: true });
+          removed++;
+        }
+      }
+    }
+  }
+
   // Summary per zoom from what is on disk.
   const perZoom = new Map<number, { tiles: number; bytes: number }>();
   for (const key of keys) {
@@ -385,7 +407,7 @@ async function terrain(file: RegionsFile): Promise<void> {
   }
   process.stdout.write(
     `${path.relative(repoRoot, TERRAIN_DIR)}: ${keys.length} tiles wanted; ${counts.present} already there, ${counts.copied} copied from .cache/map, ` +
-      `${counts.downloaded} downloaded, ${counts.missing} not available, ${counts.failed} failed\n`,
+      `${counts.downloaded} downloaded, ${counts.missing} not available, ${counts.failed} failed; ${removed} no longer needed removed\n`,
   );
   let total = 0;
   for (const [z, s] of [...perZoom.entries()].sort((a, b) => a[0] - b[0])) {
@@ -403,7 +425,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const file = await regions(args.includes('--fallback'));
   if (args.includes('--regions-only')) return;
-  await terrain(file);
+  await terrain(file, !args.includes('--keep'));
 }
 
 await main();

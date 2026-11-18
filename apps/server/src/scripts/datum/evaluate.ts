@@ -309,6 +309,7 @@ let videos = manifest.videos.filter(
 );
 // The split is fixed by the manifest order (sorted by id for stability), not by results.
 videos.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+const splitOf = new Map(videos.map((v, i) => [v.id, i % 2 === 0 ? ('train' as const) : ('test' as const)]));
 const present: ManifestVideo[] = [];
 for (const v of videos) {
   try {
@@ -372,7 +373,7 @@ for (let i = 0; i < videos.length; i++) {
     const p: Prepared = {
       video,
       index: i,
-      split: i % 2 === 0 ? 'train' : 'test',
+      split: splitOf.get(video.id) ?? 'test',
       truthIso: world.countryNear(video.lat, video.lon)?.iso ?? (typeof video.country === 'string' && /^[A-Z]{2}$/.test(video.country) ? video.country : null),
       frameNumbers: frames.frameNumbers,
       neighbours: { open, unknown },
@@ -452,7 +453,7 @@ const report = {
     },
     scored: 'visual estimate (GPS in the file is reported separately and not scored)',
     thresholdsKm: THRESHOLDS_KM,
-    split: 'videos sorted by id; even index = train (all tuning), odd index = test (report only)',
+    split: 'manifest videos sorted by id; even index = train (all tuning), odd index = test (report only)',
     trainIds: train.map((p) => p.video.id),
     testIds: test.map((p) => p.video.id),
     tuningObjective: 'mean of the five Im2GPS accuracies, averaged over both modes, train half only',

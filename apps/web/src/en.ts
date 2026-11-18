@@ -590,4 +590,7 @@ export const EN: Record<string, string> = {
   unbekannt: 'unknown',
   '{az}, Länge {ratio} × Objekthöhe': '{az}, length {ratio} × object height',
   'Übrige ({n})': 'Others ({n})',
+  'Aufnahmen verortet': 'Recordings located',
+  'Eine Aufnahme wählen: Ort, Uhrzeit, Sonne, Raum.': 'Choose a recording: place, time, sun, space.',
+  von: 'of',
 };

@@ -144,6 +144,8 @@ function drawTile(ctx: CanvasRenderingContext2D, tile: Tile, zoom: number, k: nu
   for (const level of ['6', '4', '2']) {
     const path = tile.boundaries[level];
     if (!path) continue;
+    // On the world map only national borders are drawn; states and districts would fill it.
+    if (level !== '2' && zoom < (level === '4' ? 5.5 : 9)) continue;
     ctx.strokeStyle = level === '2' ? '#7a7a7a' : level === '4' ? '#454545' : '#2c2c2c';
     ctx.lineWidth = w(level === '2' ? 1.1 : 0.8);
     ctx.setLineDash(level === '2' ? [w(8), w(3), w(1.5), w(3)] : level === '4' ? [w(5), w(3)] : [w(1.5), w(3)]);
@@ -174,7 +176,8 @@ function drawTile(ctx: CanvasRenderingContext2D, tile: Tile, zoom: number, k: nu
 }
 
 function placeVisible(cls: string, zoom: number): boolean {
-  if (cls === 'city') return true;
+  if (cls === 'country') return zoom >= 1.4 && zoom < 6.2;
+  if (cls === 'city') return zoom >= 2.6;
   if (cls === 'town') return zoom >= 8;
   if (cls === 'village') return zoom >= 10.5;
   if (cls === 'suburb') return zoom >= 12;
@@ -182,6 +185,7 @@ function placeVisible(cls: string, zoom: number): boolean {
 }
 
 function placeFont(cls: string, zoom: number): { size: number; weight: number; color: string } {
+  if (cls === 'country') return { size: zoom >= 4 ? 10 : 9, weight: 500, color: '#7c7c7c' };
   if (cls === 'city') return { size: zoom >= 10 ? 13 : 11, weight: 700, color: '#d8d8d8' };
   if (cls === 'town') return { size: 10.5, weight: 500, color: '#a8a8a8' };
   if (cls === 'village') return { size: 9.5, weight: 500, color: '#808080' };
@@ -610,8 +614,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     for (const { p, x, y } of places) {
       const font = placeFont(p.cls, zoom);
       ctx.font = `${font.weight} ${font.size}px ${FONT}`;
-      setSpacing(ctx, p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
-      const text = p.cls === 'city' || p.cls === 'town' ? p.name.toUpperCase() : p.name;
+      setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
+      const text = p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? p.name.toUpperCase() : p.name;
       const w = ctx.measureText(text).width + 8;
       const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
       if (!free(box)) continue;
@@ -1033,8 +1037,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
 
 function ScaleBar({ lat, zoom }: { lat: number; zoom: number }) {
   const mpp = metresPerPixel(lat, zoom);
-  const steps = [50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000, 200_000];
-  const metres = steps.find((s) => s / mpp >= 70) ?? 200_000;
+  const steps = [50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000, 5_000_000];
+  const metres = steps.find((s) => s / mpp >= 70) ?? 5_000_000;
   return (
     <span className="geo-scale">
       <i style={{ width: `${Math.round(metres / mpp)}px` }} />

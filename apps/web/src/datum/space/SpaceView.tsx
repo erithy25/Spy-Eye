@@ -152,6 +152,7 @@ uniform int uMode;
 uniform vec2 uCells;
 uniform float uDim;
 uniform float uReveal;
+uniform float uAlpha;
 out vec4 outColor;
 const vec3 BG = vec3(${BG});
 void main() {
@@ -175,7 +176,7 @@ void main() {
   c = mix(c, BG, fog);
   float front = 1.0 - smoothstep(0.0, max(0.5, uReveal * 0.05), uReveal - vRange);
   c = mix(c, vec3(0.96), front * 0.9);
-  outColor = vec4(c, 1.0);
+  outColor = vec4(c, uAlpha);
 }`;
 
 const GROUND_VS = `#version 300 es
@@ -239,6 +240,8 @@ interface SpaceScene {
   /** 0 sky, 1 measured surface, 2 beyond the far distance / unknown. */
   kind: Uint8Array;
   triangles: Uint32Array;
+  /** Triangles across depth jumps: shown only from the start pose, where they close the seams. */
+  seams: Uint32Array;
   backdrop: Uint32Array;
   points: Uint32Array;
   edges: LineSet;
@@ -293,6 +296,7 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
   }
 
   const tris: number[] = [];
+  const seams: number[] = [];
   const back: number[] = [];
   const hCount = new Uint8Array((w - 1) * h);
   const vCount = new Uint8Array(w * (h - 1));
@@ -317,12 +321,17 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
     else dCount[Math.min(ja, jb) * (w - 1) + Math.min(ia, ib)]!++;
   };
   const add = (a: number, b: number, c: number): void => {
+    const ka = kind[a]!;
+    const kb = kind[b]!;
+    const kc = kind[c]!;
     if (near(a, b, c)) {
       tris.push(a, b, c);
       count(a, b);
       count(b, c);
       count(c, a);
-    } else if (kind[a] === 2 && kind[b] === 2 && kind[c] === 2) back.push(a, b, c);
+    } else if (ka === 1 && kb === 1 && kc === 1) seams.push(a, b, c);
+    // Far scenery, and the cells between it and measured surfaces, go to the backdrop.
+    else if (ka !== 0 && kb !== 0 && kc !== 0) back.push(a, b, c);
   };
   for (let j = 0; j < h - 1; j++) {
     for (let i = 0; i < w - 1; i++) {
@@ -392,6 +401,7 @@ export function buildSpaceScene(grid: SpaceGrid, imageAspect: number, fallbackFo
     uvs,
     kind,
     triangles: new Uint32Array(tris),
+    seams: new Uint32Array(seams),
     backdrop: new Uint32Array(back),
     points: new Uint32Array(pointList),
     edges: toSet(edges),
@@ -485,6 +495,7 @@ class SpaceEngine {
   private readonly texture: WebGLTexture;
   private readonly surface: Mesh;
   private readonly backdrop: Mesh;
+  private readonly seams: Mesh;
   private readonly cloud: Mesh;
   private readonly plane: Mesh;
   private readonly edgeLines: Mesh;
@@ -539,6 +550,7 @@ class SpaceEngine {
       { location: 1, size: 2, buffer: this.surface.buffers[1]! },
     ];
     this.backdrop = this.res.mesh(shared, scene.backdrop);
+    this.seams = this.res.mesh(shared, scene.seams);
     this.cloud = this.res.mesh(shared, scene.points);
     this.plane = this.res.mesh([{ location: 0, size: 2, data: new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]) }]);
     const lineMesh = (set: LineSet): Mesh =>
@@ -711,6 +723,7 @@ class SpaceEngine {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.uniform1i(m.u['uTex'] ?? null, 0);
+    gl.uniform1f(m.u['uAlpha'] ?? null, 1);
     const modeIndex = settings.mode === 'points' ? 1 : settings.mode === 'wire' ? 2 : 0;
     const cellAngle = (2 * this.scene.tx) / (this.scene.grid.width - 1);
     gl.uniform1f(m.u['uPointScale'] ?? null, cellAngle * focal * this.dpr * 0.92);
@@ -734,6 +747,19 @@ class SpaceEngine {
     gl.uniform1i(m.u['uMode'] ?? null, modeIndex);
     if (modeIndex === 1) this.drawIndexed(this.cloud, gl.POINTS);
     else this.drawIndexed(this.surface, gl.TRIANGLES);
+    // Seams across depth jumps: they complete the picture from the start pose and fade out as
+    // soon as the viewer steps away, uncovering what the camera could not see.
+    const seamAlpha = 1 - smoothstep(0.03, 0.45, vec3.length(eye));
+    if (modeIndex === 0 && seamAlpha > 0.01 && this.seams.count > 0) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.uniform1f(m.u['uAlpha'] ?? null, seamAlpha);
+      this.drawIndexed(this.seams, gl.TRIANGLES);
+      gl.uniform1f(m.u['uAlpha'] ?? null, 1);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
 
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -866,7 +892,7 @@ class SpaceEngine {
       const p = projectToScreen(this.viewProj, vec3.add(c.position, vec3.scale(dir, 1000)), W, H);
       const caption = 'SONNE';
       const sub = `${fmtAz(sun.azimuthDeg)} · ${fmtSigned(sun.elevationDeg, 1)}°`;
-      if (p && p.x > 30 && p.x < W - 30 && p.y > 80 && p.y < H - 50) drawSun(ctx, p.x, p.y, sun.elevationDeg < 0, caption, sub);
+      if (p && p.x > 30 && p.x < W - 30 && p.y > 80 && p.y < H - 50) drawSun(ctx, p.x, p.y, sun.elevationDeg < 0, caption, sub, p.x > W - 330);
       else {
         const v = transformDir(this.view, dir);
         drawEdgePointer(ctx, W, H, v[0], -v[1], `SONNE ${fmtAz(sun.azimuthDeg)}`);
@@ -900,6 +926,11 @@ class SpaceEngine {
     this.res.dispose();
     loseContext(this.gl);
   }
+}
+
+function smoothstep(a: number, b: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
 }
 
 /** Direction into view space (no translation). */

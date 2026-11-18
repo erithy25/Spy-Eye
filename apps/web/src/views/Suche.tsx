@@ -9,7 +9,7 @@ import { useLang } from '../i18n';
 import { MapCanvas, type MapMarker } from '../map/MapCanvas';
 import { Frame, Glyph } from '../ui';
 
-const EXAMPLES = ['überflutete Wiese', 'umgestürzter Baum auf einer Straße', 'Rauch über Gebäuden', 'umgekippter Lastwagen', 'Löschfahrzeug', 'Trümmer'];
+const EXAMPLES = ['Brücke über einen Fluss', 'Kathedrale mit zwei Türmen', 'Bahnhof mit Zügen', 'Strand mit Palmen', 'Platz mit Menschen', 'Leuchtturm am Meer'];
 const RESULT_LIMIT = 120;
 
 const RULE_LABEL: Record<string, string> = {

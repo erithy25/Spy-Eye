@@ -53,6 +53,12 @@ export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[],
   return shapes;
 }
 
+function medianOf(values: number[]): number {
+  const s = [...values].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
 function caseLabel(name: string): string {
   return name.replace(/\.mp4$/i, '').toUpperCase();
 }
@@ -132,6 +138,8 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
               const isSel = fix.videoId === selected;
               return (
                 <li key={fix.videoId} className={isSel ? 'dt-row on' : 'dt-row'} {...pressable(() => select(isSel ? null : fix.videoId), isSel)}>
+                  {fix.keyframes[0] ? <img className="dt-row-img" src={rel(fix.keyframes[Math.floor((fix.keyframes.length - 1) / 2)]!.imageUrl)} alt="" loading="lazy" /> : <span className="dt-row-img" />}
+                  <div className="dt-row-text">
                   <div className="dt-row-top">
                     <b>{caseLabel(video!.name)}</b>
                     <span className="dt-clock">{win ?? (fix.status === 'ready' ? '––:––' : '')}</span>
@@ -161,6 +169,7 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
                       {t('Abweichung')} {kmText(fix.truth.errorKm, locale)} · {fix.truth.label}
                     </div>
                   )}
+                  </div>
                 </li>
               );
             })}
@@ -182,6 +191,27 @@ export function Ortung({ node, fixes, byId, selected, select, go }: DatumViewPro
           }}
           label={t('Ortung')}
         />
+        {!current && rows.length > 0 && (
+          <div className="dt-hud">
+            <div className="dt-hud-clock">
+              {located}
+              <span className="dt-hud-of">/{rows.length}</span>
+            </div>
+            <div className="dt-hud-sub">{t('Aufnahmen verortet')}</div>
+            {withTruth.length > 0 && (
+              <>
+                <div className="dt-hud-coord">
+                  {t('Abweichung im Median')} {kmText(medianOf(withTruth.map((r) => r.fix.truth!.errorKm!)), locale)}
+                </div>
+                <div className="dt-hud-sun">
+                  ≤ 25 km {withTruth.filter((r) => r.fix.truth!.errorKm! <= 25).length} · ≤ 200 km {withTruth.filter((r) => r.fix.truth!.errorKm! <= 200).length} · ≤ 750 km{' '}
+                  {withTruth.filter((r) => r.fix.truth!.errorKm! <= 750).length} {t('von')} {withTruth.length}
+                </div>
+              </>
+            )}
+            <div className="dt-hud-truth">{t('Eine Aufnahme wählen: Ort, Uhrzeit, Sonne, Raum.')}</div>
+          </div>
+        )}
         {current && current.status === 'ready' && (
           <div className="dt-hud">
             <div className="dt-hud-clock">{bestWindowText(current) ?? '––:––'}</div>
