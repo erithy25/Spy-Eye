@@ -217,6 +217,8 @@ export interface VoteMode {
 }
 
 const FRAME_WIDTH = 640;
+/** Pictures per call of the image model when frames are sampled (see sampleAndEmbedFrames). */
+const EMBED_CHUNK = 8;
 
 function kernel(dKm: number, params: Pick<LocateParams, 'kernelsKm' | 'kernelMix'>): number {
   let k = 0;
@@ -995,10 +997,19 @@ export async function sampleAndEmbedFrames(
       }
     }
     if (kept.length === 0) throw new Error('Aus dem Video konnten keine Bilder gelesen werden.');
-    const all = new Float32Array(rects.length * plane);
-    rects.forEach((r, j) => all.set(r.pixels, j * plane));
-    const tileVectors = await model.embedPixels(all, rects.length);
+    // The image model runs on the node's only thread (onnxruntime-node executes a run
+    // synchronously): one call with all 48 crops would hold every request of the console for
+    // seconds. Calls of EMBED_CHUNK pictures, the analysis pipeline's batch, with a turn of the
+    // event loop between them, keep the node answering; the vectors agree up to rounding.
     const dim = model.dim;
+    const tileVectors = new Float32Array(rects.length * dim);
+    for (let start = 0; start < rects.length; start += EMBED_CHUNK) {
+      const chunk = rects.slice(start, start + EMBED_CHUNK);
+      const pixels = new Float32Array(chunk.length * plane);
+      chunk.forEach((r, j) => pixels.set(r.pixels, j * plane));
+      tileVectors.set(await model.embedPixels(pixels, chunk.length), start * dim);
+      await breathe();
+    }
     const vectors = new Float32Array(kept.length * dim);
     rects.forEach((r, j) => {
       if (r.tile === 0) vectors.set(tileVectors.subarray(j * dim, (j + 1) * dim), r.frameRow * dim);

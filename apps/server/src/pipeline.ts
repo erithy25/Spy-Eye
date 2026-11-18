@@ -120,7 +120,16 @@ export interface PipelineHooks {
    * analysis is still waiting or running.
    */
   onRecordingQueued?: (entry: VideoEntry) => void;
+  /**
+   * While this returns true the pipeline pauses between batches: DATUM is locating a person's
+   * recording from its file (a few seconds of work), and that answer is worth more than a few
+   * seconds more of analysis.
+   */
+  holdAnalysis?: () => boolean;
 }
+
+/** How often a held pipeline looks again whether it may go on. */
+const HOLD_POLL_MS = 100;
 
 export interface EnqueueOptions {
   /**
@@ -185,6 +194,8 @@ export class Pipeline {
   private lastArrival = 0;
   /** Queued ids that are background work (see EnqueueOptions). */
   private readonly background = new Set<string>();
+  /** Whether the recording in the dense pass is background work. */
+  private currentBackground = false;
 
   constructor(
     private readonly store: Store,
@@ -263,10 +274,18 @@ export class Pipeline {
    */
   private async yieldToIngest(isCancelled: () => boolean): Promise<void> {
     for (;;) {
+      await this.waitWhileHeld(isCancelled);
       if (this.previewQueue.length > 0) await this.runPreviews();
       const settling = this.uploadsInFlight > 0 || Date.now() - this.lastArrival < INGEST_SETTLE_MS;
       if (!settling || isCancelled()) return;
       await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  /** Waits while `hooks.holdAnalysis` asks for the machine (see PipelineHooks). */
+  private async waitWhileHeld(isCancelled: () => boolean = () => false): Promise<void> {
+    while (this.hooks.holdAnalysis?.() === true && !isCancelled()) {
+      await new Promise((resolve) => setTimeout(resolve, HOLD_POLL_MS));
     }
   }
 
@@ -297,6 +316,19 @@ export class Pipeline {
   /** The order in which the dense pass will take the waiting recordings (for tests and diagnostics). */
   get waiting(): readonly string[] {
     return [...this.fullQueue];
+  }
+
+  /**
+   * Whether a person is uploading, or the pipeline is working on (or about to work on) a recording
+   * a person queued. Other background work on the same machine (DATUM's reference fixes) waits
+   * meanwhile, so that the person's recording has every core.
+   */
+  get foregroundActive(): boolean {
+    // A file is arriving: whoever sends it will want it analysed and located next.
+    if (this.uploadsInFlight > 0) return true;
+    if (!this.running) return false;
+    if (this.current && !this.currentBackground) return true;
+    return this.fullQueue.some((id) => !this.background.has(id));
   }
 
   /** Stops work on a video that is being deleted. */
@@ -349,7 +381,7 @@ export class Pipeline {
         if (this.previewQueue.length > 0) continue;
         const id = this.fullQueue.shift();
         if (id === undefined) break;
-        this.background.delete(id);
+        this.currentBackground = this.background.delete(id);
         const entry = this.store.get(id);
         if (!entry || entry.cancelled) continue;
         this.current = { id, extraction: null };
@@ -403,6 +435,7 @@ export class Pipeline {
       const flat = prepared.flatMap((p) => p.frames);
       const embeddings = new Float32Array(flat.length * dim);
       for (let start = 0; start < flat.length; start += config.batchSize) {
+        await this.waitWhileHeld();
         const batch = flat.slice(start, start + config.batchSize);
         const pixels = new Float32Array(batch.length * plane);
         batch.forEach((frame, i) => pixels.set(frame.pixels, i * plane));

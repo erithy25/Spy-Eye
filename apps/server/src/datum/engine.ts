@@ -81,7 +81,15 @@ export interface DatumEngineOptions {
   truths?: TruthBook;
   /** Whether a recording is background work (seeded reference footage) rather than a person's. */
   background?: (videoId: string) => boolean;
+  /**
+   * Whether other work on this machine for a person's recording is running (the analysis
+   * pipeline). Background jobs wait while it is, so the person's recording has every core.
+   */
+  foregroundElsewhere?: () => boolean;
 }
+
+/** How often a waiting background job looks again whether it may run. */
+const BACKGROUND_POLL_MS = 500;
 
 function emptyTime(): TimeEstimate {
   return {
@@ -219,6 +227,10 @@ export class DatumEngine {
   private readonly queue: Job[] = [];
   private seq = 0;
   private running = false;
+  /** Ends the wait of a held-back background job early when a new job arrives. */
+  private wake: (() => void) | null = null;
+  /** The job being computed, if any. */
+  private active: Job | null = null;
   private stopped = false;
   /** Shown fixes of an older engine version whose new fix is still being computed. */
   private readonly stale = new Set<string>();
@@ -285,6 +297,15 @@ export class DatumEngine {
 
   get queueLength(): number {
     return this.queue.length + (this.running ? 1 : 0);
+  }
+
+  /**
+   * Whether the engine is locating a person's recording from its file right now (the quick
+   * stage). The analysis pipeline pauses between batches meanwhile: these few seconds decide how
+   * soon the place of an upload is known.
+   */
+  get locatingForeground(): boolean {
+    return this.active !== null && this.active.kind === 'quick' && !this.active.background;
   }
 
   /** The waiting jobs in the order they will run (for tests and diagnostics). */
@@ -357,17 +378,19 @@ export class DatumEngine {
 
   private push(videoId: string, kind: JobKind): void {
     this.queue.push({ id: videoId, kind, background: this.opts.background?.(videoId) ?? false, seq: this.seq++ });
+    this.wake?.();
     void this.drain();
   }
 
-  private takeNext(): Job | null {
+  /** Index of the job that runs next (see jobRank), or -1 when the queue is empty. */
+  private nextIndex(): number {
     let best = -1;
     for (let i = 0; i < this.queue.length; i++) {
       const job = this.queue[i] as Job;
       const lead = best >= 0 ? (this.queue[best] as Job) : null;
       if (!lead || jobRank(job) < jobRank(lead) || (jobRank(job) === jobRank(lead) && job.seq < lead.seq)) best = i;
     }
-    return best >= 0 ? (this.queue.splice(best, 1)[0] as Job) : null;
+    return best;
   }
 
   /** Drops the fix of a deleted recording; a computation still running for it is discarded. */
@@ -412,6 +435,7 @@ export class DatumEngine {
   stop(): void {
     this.stopped = true;
     this.queue.length = 0;
+    this.wake?.();
   }
 
   private async drain(): Promise<void> {
@@ -419,12 +443,31 @@ export class DatumEngine {
     this.running = true;
     try {
       while (!this.stopped) {
-        const job = this.takeNext();
-        if (!job) break;
+        const index = this.nextIndex();
+        if (index < 0) break;
+        // Only background work is left, and a person's recording is being analysed: it waits,
+        // and a job of the person's that comes meanwhile goes first.
+        if ((this.queue[index] as Job).background && this.opts.foregroundElsewhere?.()) {
+          await new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, BACKGROUND_POLL_MS);
+            this.wake = () => {
+              clearTimeout(timer);
+              resolve();
+            };
+          });
+          this.wake = null;
+          continue;
+        }
+        const job = this.queue.splice(index, 1)[0] as Job;
         const entry = this.opts.store.get(job.id);
         if (!entry) continue;
-        if (job.kind === 'quick') await this.runQuick(entry);
-        else if (entry.info.status === 'ready') await this.runFull(entry);
+        this.active = job;
+        try {
+          if (job.kind === 'quick') await this.runQuick(entry);
+          else if (entry.info.status === 'ready') await this.runFull(entry);
+        } finally {
+          this.active = null;
+        }
       }
     } finally {
       this.running = false;
@@ -475,7 +518,7 @@ export class DatumEngine {
     // A quick (or outdated) fix stays on the map while the full one is computed; the console
     // learns of the full one when it is there. Without one, the run is shown as it goes.
     const quiet = this.provisional(id);
-    if (!quiet) this.publish({ ...(this.fixes.get(id) ?? pending(id)), status: 'running' });
+    if (!quiet) this.publish({ ...(this.fixes.get(id) ?? pending(id)), status: 'running', stage: 'full' });
     try {
       const fix = await this.compute(entry, { announce: !quiet });
       // Deleted while it was being located: nothing is written, nothing announced.

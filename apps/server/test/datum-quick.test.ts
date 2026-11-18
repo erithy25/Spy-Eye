@@ -290,6 +290,56 @@ test('the engine takes quick jobs first and an upload before the waiting referen
   }
 });
 
+test('background jobs wait while a person\'s recording is being analysed; the person\'s own jobs do not', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-quick-defer-'));
+  try {
+    const store = new MemoryStore(root);
+    let analysing = true;
+    const engine = new DatumEngine({
+      store: store as unknown as Store,
+      model: model as unknown as EmbeddingModel,
+      hub: { broadcast: () => undefined } as unknown as EventHub,
+      gallery: async () => gallery,
+      log: () => undefined,
+      holdout: false,
+      background: (id) => id.startsWith('ref'),
+      foregroundElsewhere: () => analysing,
+    });
+    const order: string[] = [];
+    replace(engine, async (entry) => {
+      order.push(entry.info.id);
+      return readyFix(entry.info.id, 'q', 'quick');
+    }, null);
+    for (const id of ['ref1', 'own']) await add(store, recording(id, 'queued'));
+    engine.quick('ref1');
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.deepEqual(order, [], 'the reference video waits while the pipeline analyses an upload');
+    engine.quick('own');
+    await until(() => order.length === 1);
+    assert.deepEqual(order, ['own'], 'the upload\'s own quick fix does not wait');
+    analysing = false;
+    await until(() => order.length === 2);
+    assert.deepEqual(order, ['own', 'ref1']);
+
+    // While a person's recording is located from its file, the engine asks the pipeline to pause;
+    // not for reference videos.
+    const seen: Array<[string, boolean]> = [];
+    replace(engine, async (entry) => {
+      seen.push([entry.info.id, engine.locatingForeground]);
+      return readyFix(entry.info.id, 'q', 'quick');
+    }, null);
+    for (const id of ['ref2', 'own2']) await add(store, recording(id, 'queued'));
+    engine.quick('own2');
+    engine.quick('ref2');
+    await until(() => seen.length === 2);
+    assert.deepEqual(seen, [['own2', true], ['ref2', false]]);
+    assert.equal(engine.locatingForeground, false, 'nothing held once the quick fix is there');
+    engine.stop();
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test('quick stage: located from the file alone, before the analysis, every text in both languages', async () => {
   const { store, engine, events, dispose } = await setup();
   try {

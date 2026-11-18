@@ -376,6 +376,9 @@ export async function refinePosition(
   let best: { point: GeoPoint; match: SkylineMatch } | null = null;
   for (let r = 0; r < steps; r++) {
     for (let c = 0; c < steps; c++) {
+      // Each profile is some 80 ms of arithmetic; the 25 of a search would hold the node's only
+      // thread for two seconds, and the console's requests with it.
+      await new Promise((resolve) => setImmediate(resolve));
       const north = steps === 1 ? 0 : radiusKm * 1000 * (1 - (2 * r) / (steps - 1));
       const east = steps === 1 ? 0 : radiusKm * 1000 * (-1 + (2 * c) / (steps - 1));
       const point = offsetPoint(center, north, east);

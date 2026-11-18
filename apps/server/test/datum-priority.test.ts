@@ -52,5 +52,13 @@ test('pipeline: uploads are analysed before the waiting reference videos, in the
   pipeline.cancel('r1');
   pipeline.enqueue('own3');
   assert.deepEqual(pipeline.waiting, ['own1', 'own2', 'own3', 'r2', 'r3']);
+  // While a person's recording waits for (or is in) the dense pass, other background work holds back.
+  assert.equal(pipeline.foregroundActive, true);
+  for (const id of ['own1', 'own2', 'own3']) pipeline.cancel(id);
+  assert.equal(pipeline.foregroundActive, false, 'only reference videos left');
+  pipeline.uploadStarted();
+  assert.equal(pipeline.foregroundActive, true, 'a file is arriving');
+  pipeline.uploadFinished();
+  assert.equal(pipeline.foregroundActive, false);
   pipeline.shutdown();
 });

@@ -231,6 +231,7 @@ export class PlatformNode {
     this.pipeline = new Pipeline(this.store, shared.model, shared.faces, this.hub, log, {
       onRecordingReady: (entry) => this.onRecordingReady(entry),
       onRecordingQueued: (entry) => this.onRecordingQueued(entry),
+      holdAnalysis: () => this.datum.locatingForeground,
     });
 
     this.watches = new WatchEngine({
@@ -276,6 +277,7 @@ export class PlatformNode {
       holdout: process.env['DATUM_HOLDOUT'] === '1',
       truths: new TruthBook(path.join(cfg.dataDir, 'datum', 'truth.json')),
       background: (videoId) => this.isBackgroundRecording(videoId),
+      foregroundElsewhere: () => this.pipeline.foregroundActive,
     });
 
     this.live = new LiveIngest({

@@ -18,11 +18,13 @@
     "map:extract": "tsx src/scripts/map/extractTiles.ts",
     "datum:fetch": "tsx src/scripts/datum/fetchDataset.ts && tsx src/scripts/datum/fetchTerrain.ts && tsx src/scripts/datum/writeSeed.ts",
     "datum:evaluate": "tsx src/scripts/datum/evaluate.ts",
+    "datum:geoclip": "tsx src/scripts/datum/evaluateGeoclip.ts",
     "datum:seed": "tsx src/scripts/datum/writeSeed.ts",
     "datum:terrain": "tsx src/scripts/datum/fetchTerrain.ts",
     "datum:regions": "tsx src/scripts/datum/fetchTerrain.ts --regions-only",
     "datum:countries": "tsx src/scripts/map/extractTiles.ts --only=countries",
-    "datum:ship-gallery": "tsx src/scripts/datum/shipGallery.ts"
+    "datum:ship-gallery": "tsx src/scripts/datum/shipGallery.ts",
+    "datum:streetlevel": "tsx src/scripts/datum/evaluateStreetlevel.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.9",
