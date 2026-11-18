@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { formatCoordinate, fromUtm, metresPerPixel, project, toMgrs, toUtm, unproject, worldSize } from './geo';
 import { useLang } from '../i18n';
 import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile } from './tiles';
+import { fetchCountries } from '../datum/api';
 
 export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident' | 'fix' | 'truth';
 
@@ -41,6 +42,20 @@ export type MapShape =
 export type ShapeStyle = 'solid' | 'dashed' | 'dotted' | 'faint' | 'strong' | 'contour' | 'contour-index';
 
 const R_EARTH_KM = 6371.0088;
+
+/** Country labels of the map tiles whose German name differs from the one in the country outlines. */
+const TILE_COUNTRY_EN: Record<string, string> = {
+  Botsuana: 'Botswana',
+  'Die Bahamas': 'The Bahamas',
+  Moldau: 'Moldova',
+  'Palästinensische Autonomiegebiete': 'Palestinian Territories',
+  Pitcairn: 'Pitcairn Islands',
+  'Staat Vatikanstadt': 'Vatican City',
+  Surinam: 'Suriname',
+  'Vereinigte Staaten von Amerika': 'United States',
+  Weißrussland: 'Belarus',
+  Zypern: 'Cyprus',
+};
 
 /** Point reached from (lat, lon) after `km` along the great circle with initial bearing `azimuthDeg`. */
 export function destination(lat: number, lon: number, azimuthDeg: number, km: number): [number, number] {
@@ -534,6 +549,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const state = useRef<ViewState>({ ...project(view.lat, view.lon), zoom: view.zoom });
   const size = useRef({ width: 0, height: 0, dpr: 1 });
   const markersRef = useRef(markers);
+  /** German country name -> name in the console language; null while the console is German. */
+  const countryNamesRef = useRef<Map<string, string> | null>(null);
   const linksRef = useRef(links ?? []);
   const shapesRef = useRef(shapes ?? []);
   const dirty = useRef({ base: true, overlay: true, cursor: true });
@@ -644,7 +661,10 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const font = placeFont(p.cls, zoom);
       ctx.font = `${font.weight} ${font.size}px ${FONT}`;
       setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
-      const text = p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? p.name.toUpperCase() : p.name;
+      // The tiles carry German names; countries are named in the console language (cities keep
+      // the names the tiles have).
+      const name = p.cls === 'country' ? (countryNamesRef.current?.get(p.name) ?? p.name) : p.name;
+      const text = p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? name.toUpperCase() : name;
       const w = ctx.measureText(text).width + 8;
       const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
       if (!free(box)) continue;
@@ -916,6 +936,27 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     };
   }, [schedule]);
 
+  // Country labels follow the language switch; the names come with the country outlines.
+  const { lang } = useLang();
+  useEffect(() => {
+    if (lang !== 'en') {
+      if (countryNamesRef.current !== null) {
+        countryNamesRef.current = null;
+        schedule('base');
+      }
+      return;
+    }
+    let live = true;
+    void fetchCountries().then((list) => {
+      if (!live) return;
+      countryNamesRef.current = new Map([...list.map((c): [string, string] => [c.name_de, c.name_en]), ...Object.entries(TILE_COUNTRY_EN)]);
+      schedule('base');
+    });
+    return () => {
+      live = false;
+    };
+  }, [lang, schedule]);
+
   // Jump (or fly) to a new view when asked.
   const flight = useRef<number | null>(null);
   const firstView = useRef(true);
@@ -1109,7 +1150,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
             <ScaleBar lat={unproject(state.current.x, state.current.y).lat} zoom={zoomShown} />
             <span className="geo-dim">Z {zoomShown.toFixed(1)}</span>
           </div>
-          {attribution !== '' && <div className="geo-attribution">{attribution}</div>}
+          {attribution !== '' && <div className="geo-attribution">{t(attribution)}</div>}
         </>
       )}
       {children}

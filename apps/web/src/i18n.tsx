@@ -93,7 +93,9 @@ export function LangProvider({ children }: { children: ReactNode }) {
       lang,
       setLang,
       t: (de, vars) => fill(lang === 'en' ? (EN[de] ?? de) : de, vars),
-      pick: (de, en) => (lang === 'en' && en !== undefined && en !== null && en !== '' ? en : de),
+      // Without an English version from the server, the console's own dictionary may still know
+      // the text (names of seeded sources, accounts and mandates).
+      pick: (de, en) => (lang === 'en' ? (en !== undefined && en !== null && en !== '' ? en : (EN[de] ?? de)) : de),
       pickList: (de, en) => (lang === 'en' && en && en.length === de.length ? en : de),
       n: (count, noun) => `${formatCount(count)} ${COUNT_NOUNS[noun][lang][count === 1 ? 0 : 1]}`,
       region: (iso, fallback) => (iso ? (regionName(lang === 'en' ? 'en-GB' : 'de-DE', iso) ?? fallback ?? iso) : (fallback ?? '')),

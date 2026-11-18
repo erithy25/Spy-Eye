@@ -1,11 +1,12 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { formatDecimal, formatScore } from '../../format';
+import { formatDecimal, formatDuration, formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker } from '../../map/MapCanvas';
 import { useAction } from '../../ui';
 import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, stageOf } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
+import { KIND_METHOD } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps } from './Ortung';
 
@@ -71,7 +72,16 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
         <div className="dt-result-case">
           <span className="label">{t('Aufnahme')}</span>
           <b>{caseLabel(video.name)}</b>
-          <span className="low">{video.durationSec ? `${formatDecimal(video.durationSec, 0)} s` : ''}</span>
+          <span className="dt-result-stage">
+            {fix.status === 'running' ? (
+              <span className="dt-tag dt-tag-live">{t('wird geortet …')}</span>
+            ) : quick ? (
+              <span className="dt-tag dt-tag-live">{t('schnell geortet · Räume folgen')}</span>
+            ) : (
+              <span className="dt-tag">{t('vollständig')}</span>
+            )}
+            {video.durationSec ? <span className="low"> {formatDuration(video.durationSec)}</span> : null}
+          </span>
         </div>
         <div className="dt-result-place">
           <span className="label">{t('Ort')}</span>
@@ -89,9 +99,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
         <div className="dt-result-conf">
           <span className="label">{t('Konfidenz')}</span>
           <b>{loc ? formatScore(loc.confidence) : '–'}</b>
-          <span className="low">
-            {fix.status === 'running' ? t('wird geortet …') : quick ? t('schnell geortet · Räume folgen') : t('vollständig')}
-          </span>
+          <span className="low">{loc ? t(KIND_METHOD[loc.method]) : ''}</span>
         </div>
         {fix.truth?.errorKm != null && (
           <div className="dt-result-truth">

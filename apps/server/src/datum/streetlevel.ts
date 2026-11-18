@@ -229,9 +229,13 @@ export interface StreetLevelOptions {
   /** Radius of a refined place: max(minRadiusKm, radiusFactor × weighted spread of the pictures). */
   minRadiusKm: number;
   radiusFactor: number;
-  /** Confidence: logistic in (gap − minGap) / confidenceScale, at most confidenceMax. */
-  confidenceScale: number;
+  /**
+   * Confidence of a match (probability that the truth lies within the radius): confidenceMin at
+   * the gap threshold, rising linearly to confidenceMax at minGap + confidenceRampGap.
+   */
+  confidenceMin: number;
   confidenceMax: number;
+  confidenceRampGap: number;
   userAgent: string;
   panoramaxApi: string;
   mapillaryApi: string;
@@ -252,7 +256,13 @@ export const STREETLEVEL_USER_AGENT = 'DATUM-Erprobung/0.5 (Ortung von Videos; o
 /**
  * Defaults. The decision thresholds were chosen on the tuning half of the reference videos with
  * Panoramax coverage (scripts/datum/evaluateStreetlevel.ts, docs/measurements/datum-streetlevel.json):
- * the true place with a 3 km radius against a wrong place 50 km away.
+ * the true place with a 3 km radius against two wrong places 50 km away. Among the rules with no
+ * false match and no wrong pin on that half, gap >= 0.10, z >= 3 and best >= 0.70 found the most
+ * true places. z matters: a landmark visible from everywhere (a television tower, an arch at the
+ * end of an avenue) gives a large gap but a wide spread, and its best picture lies kilometres from
+ * the camera. Matches lay 0.35 to 0.9 km from the filmed object (the reference truth is the
+ * object, not the camera), hence the minimum radius of 1 km. The confidence follows the share of
+ * matches within 1 km of the truth (5 of 7 over both halves, false matches included).
  */
 export const DEFAULT_STREETLEVEL_OPTIONS: StreetLevelOptions = {
   providers: ['panoramax', 'mapillary'],
@@ -275,7 +285,7 @@ export const DEFAULT_STREETLEVEL_OPTIONS: StreetLevelOptions = {
   ],
   refineMinMs: 3_000,
   minPictures: 8,
-  minSimilarity: 0.6,
+  minSimilarity: 0.7,
   minGap: 0.1,
   minZ: 3,
   agreementTop: 3,
@@ -284,10 +294,11 @@ export const DEFAULT_STREETLEVEL_OPTIONS: StreetLevelOptions = {
   pointKm: 0.5,
   pointSimilarityWindow: 0.03,
   pointTemperature: 0.01,
-  minRadiusKm: 0.3,
+  minRadiusKm: 1,
   radiusFactor: 2,
-  confidenceScale: 0.03,
-  confidenceMax: 0.85,
+  confidenceMin: 0.6,
+  confidenceMax: 0.8,
+  confidenceRampGap: 0.1,
   userAgent: STREETLEVEL_USER_AGENT,
   panoramaxApi: 'https://api.panoramax.xyz/api',
   mapillaryApi: 'https://graph.mapillary.com',
@@ -1038,8 +1049,8 @@ export function refinedPoint(
 }
 
 function confidenceOf(stats: StreetLevelStats, opts: StreetLevelOptions): number {
-  const z = (stats.gap - opts.minGap) / Math.max(1e-3, opts.confidenceScale);
-  return Math.max(0.05, Math.min(opts.confidenceMax, opts.confidenceMax / (1 + Math.exp(-z))));
+  const t = Math.max(0, Math.min(1, (stats.gap - opts.minGap) / Math.max(1e-3, opts.confidenceRampGap)));
+  return opts.confidenceMin + t * (opts.confidenceMax - opts.confidenceMin);
 }
 
 // ------------------------------------------------------------------ texts

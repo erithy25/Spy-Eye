@@ -118,7 +118,7 @@ const FixRow = memo(function FixRow({ video, fix, selected, select }: RowProps) 
       <div className="dt-row-text">
         <div className="dt-row-top">
           <b className="dt-row-name">{caseLabel(video.name)}</b>
-          {quick && <span className="dt-tag">{t('schnell')}</span>}
+          {quick && <span className="dt-tag">{t('schnell geortet')}</span>}
           <span className="dt-clock">{win ?? (loc ? '––:––' : '')}</span>
         </div>
         {loc ? (
@@ -376,7 +376,7 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
             {t('Aufnahmen')} <span className="count">{total}</span>
             {total > 0 && (
               <span className="count-of">
-                {located} {t('geortet')}
+                · {located} {t('geortet')}
               </span>
             )}
           </h2>
@@ -384,9 +384,6 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
             <div className="dt-upload-btns">
               <button type="button" className="btn btn-solid" onClick={() => fileInput.current?.click()}>
                 {t('Videos hochladen')}
-              </button>
-              <button type="button" className="text-btn" onClick={() => folderInput.current?.click()} title={t('Einen ganzen Ordner hochladen')}>
-                {t('Ordner')}
               </button>
               <input
                 ref={fileInput}
@@ -417,7 +414,11 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
         </div>
         {mayUpload && (
           <div className="dt-intake">
-            <p className="dt-hint">{t('Videos oder ganze Ordner auf Liste oder Karte ziehen. Die Ortung beginnt sofort, auch bei langen Videos.')}</p>
+            {/* A hint for the first own upload; once there is own footage it is known. */}
+            {groups.own.length === 0 && <p className="dt-hint">{t('Videos oder ganze Ordner auf Liste oder Karte ziehen. Die Ortung beginnt sofort, auch bei langen Videos.')}</p>}
+            <button type="button" className="text-btn dt-intake-btn" onClick={() => folderInput.current?.click()}>
+              + {t('Einen ganzen Ordner hochladen')}
+            </button>
             <TruthControl truth={truth} compact />
             {notice && <p className="note">{notice}</p>}
           </div>

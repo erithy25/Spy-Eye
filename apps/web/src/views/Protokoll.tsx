@@ -3,6 +3,7 @@ import { fetchLedger, sampleLedger, verifyLedger, type LedgerEntryInfo, type Led
 import type { ViewProps } from '../App';
 import { formatDecimal, shortHash } from '../format';
 import { useLang } from '../i18n';
+import { ledgerSummaryEn } from '../ledgerText';
 import { pressable, useAction } from '../ui';
 
 const FILTERS: { action: string; label: string }[] = [
@@ -16,7 +17,9 @@ const FILTERS: { action: string; label: string }[] = [
 ];
 
 function EntryRows({ entries, open, onToggle }: { entries: LedgerEntryInfo[]; open: number | null; onToggle: (seq: number) => void }) {
-  const { locale } = useLang();
+  const { locale, lang, t } = useLang();
+  // The recorded text stays in the tooltip; the row shows it in the console language.
+  const summary = (e: LedgerEntryInfo): string => (lang === 'en' ? ledgerSummaryEn(e.summary, t) : e.summary);
   return (
     <>
       {entries.map((e) => (
@@ -26,7 +29,7 @@ function EntryRows({ entries, open, onToggle }: { entries: LedgerEntryInfo[]; op
             <td className="dim">{new Date(e.ts).toLocaleString(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</td>
             <td>{e.actor}</td>
             <td className="dim">{e.action}</td>
-            <td title={e.summary}>{e.summary}</td>
+            <td title={lang === 'en' ? `${t('Wortlaut im Protokoll')}: ${e.summary}` : e.summary}>{summary(e)}</td>
             <td className="hash">{shortHash(e.hash, 12)}</td>
           </tr>
           {open === e.seq && (

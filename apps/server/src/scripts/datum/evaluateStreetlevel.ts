@@ -377,6 +377,17 @@ function summarise(subset: CallRecord[]): Record<string, unknown> {
     secondsMedian: quantile(subset.map((r) => r.timing.totalMs / 1000), 0.5),
     secondsP90: quantile(subset.map((r) => r.timing.totalMs / 1000), 0.9),
     secondsMedianWithPictures: quantile([...tc, ...wc].map((r) => r.timing.totalMs / 1000), 0.5),
+    /** Calls with pictures whose vectors were not in the cache yet (the cost of a first query). */
+    firstCalls: [...tc, ...wc].filter((r) => r.timing.fromCache === 0).length,
+    secondsFirstCallMedian: quantile([...tc, ...wc].filter((r) => r.timing.fromCache === 0).map((r) => r.timing.totalMs / 1000), 0.5),
+    secondsFirstCallP90: quantile([...tc, ...wc].filter((r) => r.timing.fromCache === 0).map((r) => r.timing.totalMs / 1000), 0.9),
+    secondsFirstCallMax: quantile([...tc, ...wc].filter((r) => r.timing.fromCache === 0).map((r) => r.timing.totalMs / 1000), 1),
+    secondsNoCoverageMedian: quantile(subset.filter((r) => r.reasonCode === 'no-coverage').map((r) => r.timing.totalMs / 1000), 0.5),
+    picturesComparedMedian: quantile([...tc, ...wc].map((r) => (r.stats as StreetLevelStats).pictures), 0.5),
+    embedMsPerPictureMedian: quantile(
+      [...tc, ...wc].filter((r) => r.timing.downloaded > 0).map((r) => Math.round(r.timing.embedMs / r.timing.downloaded)),
+      0.5,
+    ),
     budgetExhausted: subset.filter((r) => r.timing.budgetExhausted).length,
   };
 }

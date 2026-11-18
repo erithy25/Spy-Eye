@@ -12,7 +12,7 @@ export interface TruthUpload {
 
 /** Reads a ground-truth file and gives it to the node; used by the picker and by a drop. */
 export function useTruthUpload(): TruthUpload {
-  const { t } = useLang();
+  const { t, n } = useLang();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<TruthUpload['result']>(null);
   const send = useCallback(
@@ -30,8 +30,8 @@ export function useTruthUpload(): TruthUpload {
           const answer = await postTruth(parsed.entries);
           setResult({
             ok: true,
-            text: t('{stored} Grundwahrheiten gespeichert, {matched} davon gehören zu Aufnahmen auf dem Knoten.', {
-              stored: answer.stored,
+            text: t('Grundwahrheit gespeichert: {entries}, davon {matched} zu Aufnahmen auf dem Knoten.', {
+              entries: n(answer.stored, 'entry'),
               matched: answer.matched,
             }),
           });
@@ -39,7 +39,7 @@ export function useTruthUpload(): TruthUpload {
         .catch((err: unknown) => setResult({ ok: false, text: err instanceof Error ? t(err.message) : String(err) }))
         .finally(() => setBusy(false));
     },
-    [t],
+    [t, n],
   );
   return { busy, result, send };
 }
@@ -53,7 +53,7 @@ export function TruthControl({ truth, compact = false }: { truth: TruthUpload; c
       <button type="button" className="text-btn" disabled={truth.busy} onClick={() => input.current?.click()}>
         {truth.busy ? t('Grundwahrheit wird gelesen …') : `+ ${t('Grundwahrheit hinzufügen')}`}
       </button>
-      <span className="low">{t('CSV mit Kopfzeile name,lat,lon[,label] oder JSON; name ist der Dateiname des Videos.')}</span>
+      <span className="low">{t('CSV name,lat,lon[,label] oder JSON; name = Videodatei')}</span>
       <input
         ref={input}
         type="file"

@@ -12,7 +12,7 @@ interface ResultsProps {
 }
 
 function Hit({ result, weak, onOpen }: { result: SearchResult; weak: boolean; onOpen: (r: SearchResult) => void }) {
-  const { locale } = useLang();
+  const { locale, t } = useLang();
   return (
     <button type="button" className={weak ? 'hit hit-weak' : 'hit'} onClick={() => onOpen(result)}>
       <span className="hit-frame">
@@ -31,8 +31,8 @@ function Hit({ result, weak, onOpen }: { result: SearchResult; weak: boolean; on
       </span>
       <span className="hit-line">
         <span className="hit-score">{formatScore(result.confidence)}</span>
-        <span className="hit-name" title={result.sourceName}>
-          <Glyph kind={result.sourceKind} /> {result.sourceName}
+        <span className="hit-name" title={t(result.sourceName)}>
+          <Glyph kind={result.sourceKind} /> {t(result.sourceName)}
         </span>
         <span className="hit-time">{formatClock(result.at, locale)}</span>
       </span>

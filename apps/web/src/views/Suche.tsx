@@ -73,7 +73,7 @@ function Federated({ results }: { results: FederatedResult[] }) {
                 <div key={i}>
                   <Frame src={hit.thumbnail} />
                   <div className="thumb-line">
-                    <span title={hit.sourceName}>{hit.sourceName}</span>
+                    <span title={t(hit.sourceName)}>{t(hit.sourceName)}</span>
                     <span>{formatScore(hit.confidence)}</span>
                   </div>
                   <div className="thumb-line low">
@@ -217,8 +217,8 @@ export function Suche({ node, openFrame }: ViewProps) {
         <div className="query-foot">
           <span className="examples">
             {(node.info?.product === 'sicht' ? EXAMPLES_SICHT : EXAMPLES_DATUM).map((example) => (
-              <button key={example} type="button" className="text-btn" disabled={!modelReady || !hasMandate} onClick={() => submit(example)}>
-                {example}
+              <button key={example} type="button" className="text-btn" disabled={!modelReady || !hasMandate} onClick={() => submit(t(example))}>
+                {t(example)}
               </button>
             ))}
           </span>

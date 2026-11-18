@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '../../i18n';
 import { pressable } from '../../ui';
 import { fetchDataset, fetchSummary, type DatasetRow, type DatumSummary } from '../api';
@@ -72,18 +72,28 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
     [fixes],
   );
 
+  const firstRead = useRef(true);
   useEffect(() => {
     const ctrl = new AbortController();
-    Promise.all([fetchSummary(ctrl.signal), fetchDataset(ctrl.signal)])
-      .then(([s, d]) => {
-        setSummary(s);
-        setRows(d);
-        setError(null);
-      })
-      .catch((err: unknown) => {
-        if (!ctrl.signal.aborted) setError(err instanceof Error ? err.message : String(err));
-      });
-    return () => ctrl.abort();
+    // While a folder of recordings is located, fixes finish one after another; the figures are
+    // read once the changes pause, not for every fix (the first read happens at once).
+    const delay = firstRead.current ? 0 : 1500;
+    firstRead.current = false;
+    const timer = window.setTimeout(() => {
+      Promise.all([fetchSummary(ctrl.signal), fetchDataset(ctrl.signal)])
+        .then(([s, d]) => {
+          setSummary(s);
+          setRows(d);
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          if (!ctrl.signal.aborted) setError(err instanceof Error ? err.message : String(err));
+        });
+    }, delay);
+    return () => {
+      window.clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [version]);
 
   const modes = evalRows(summary?.evaluation, t);
@@ -112,7 +122,8 @@ export function Messung({ videos, can, fixes, select, go }: DatumViewProps) {
                 <b>{summary.medianErrorKm == null ? '–' : kmText(summary.medianErrorKm, locale)}</b>
                 <span>{t('Abweichung im Median')}</span>
               </div>
-              {summary.within.map((w) => (
+              {/* Two thresholds here; all five are in the stored evaluation below. */}
+              {summary.within.filter((w) => w.km === 25 || w.km === 750).map((w) => (
                 <div className="dt-figure" key={w.km}>
                   <b>{summary.withTruth ? pct(w.share) : '–'}</b>
                   <span>
