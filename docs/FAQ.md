@@ -108,7 +108,9 @@ Jede Suche, jede abgelehnte Anfrage, jede Freigabe und jede Ausgabe steht mit Pe
 Zeit im Protokoll. Die Einträge sind über Prüfsummen verkettet; wer einen ändert oder entfernt,
 bricht die Kette an dieser Stelle. Die Rolle Aufsicht prüft die Kette und zieht
 Zufallsstichproben, sieht aber keine Bilder. Im Verbund halten die Partner den Protokollstand der
-anderen fest, sodass niemand sein Protokoll unbemerkt neu schreiben kann. Zwei Lücken: Der Abruf
+anderen fest, sodass niemand sein Protokoll unbemerkt neu schreiben kann. Nachrechnen lässt sich
+die Kette auch ohne Sicht: Dem Export liegen zwei kurze Prüfprogramme bei, eines in Node und eines
+in Python, die eine Aufsicht selbst lesen und auf einem eigenen Rechner einsetzen kann. Zwei Lücken: Der Abruf
 einzelner Bilder wird nicht protokolliert, und wer Zugriff auf den Rechner hat, kann die
 Protokolldatei löschen.
 

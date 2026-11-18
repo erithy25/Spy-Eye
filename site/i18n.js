@@ -136,7 +136,7 @@ window.SICHT_EN = {
   'mod6.gloss': 'oversight',
   'mod6.tab': 'PROTOKOLL tab · ledger',
   'mod6.text':
-    'Every sign-in, search, refusal, approval and export is written to a ledger whose entries are chained with SHA-256. Oversight verifies the chain in one step, draws random samples of the queries and exports the ledger in full.',
+    'Every sign-in, search, refusal, approval and export is written to a ledger whose entries are chained with SHA-256. Oversight verifies the chain in one step, draws random samples of the queries and exports the ledger in full. Two verifiers that come with it recompute the export without needing Sicht.',
   'mod6.alt': 'Console, PROTOKOLL tab: chain verified and intact, below it the chained entries',
   'mod6.cap':
     '<b>Console · PROTOKOLL</b> Chain verified and intact; below it refusals, a seal and the retraining of a watch.',

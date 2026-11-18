@@ -102,6 +102,14 @@ Die Freigabe vollständig zeigen: Niemand kann sich selbst freigeben. In einem z
 Browserprofil als `lage` anmelden, dort ORIGINAL ANFORDERN, als freigebende Person `leitung` mit
 deren Passwort eintragen. Das Bild erscheint unmaskiert, der Eintrag steht im Protokoll.
 
+Die Prüfung ohne Sicht zeigen, wenn jemand fragt, wer die Kontrolle kontrolliert (eine Minute):
+in einem zweiten Terminal `pnpm ledger:verify data-koblenz/ledger.jsonl`. Das Programm steht in
+`tools/pruefen/`, braucht nichts außer Node und teilt mit dem Knoten keine Zeile. Es nennt die
+Zahl der Einträge und den letzten Stand; derselbe Stand steht in der Konsole im Reiter PROTOKOLL
+unter LETZTER STAND. Dazu der Satz: „Ihre Aufsicht muss uns nicht glauben. Sie rechnet nach, mit
+hundert Zeilen, die sie selbst lesen kann.“ Mit der Datei aus EXPORT geht es ebenso; daneben
+liegt dasselbe Programm in Python.
+
 ## Was man nicht behaupten darf
 
 - Es gibt keine Behördenkunden, keine Pilotierung, keine Zertifizierung.

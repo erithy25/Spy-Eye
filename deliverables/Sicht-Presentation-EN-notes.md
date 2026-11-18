@@ -41,7 +41,7 @@ Every authority runs its own node. In the federation only the question travels; 
 
 ## 10 · Aufsicht – ledger: a log that can be verified
 
-Every sign-in, query, refusal and approval is in a chained ledger. Whoever changes an entry breaks the chain, and the verification shows where. Oversight has a role of its own: it sees the ledger and the measurements, but no footage. One limitation belongs here: sign-in and rights are built for the demonstration, with three fixed accounts. The module is called Aufsicht, German for oversight.
+Every sign-in, query, refusal and approval is in a chained ledger. Whoever changes an entry breaks the chain, and the verification shows where. That can be recomputed without our software: two short verifiers come with the export. Oversight has a role of its own: it sees the ledger and the measurements, but no footage. One limitation belongs here: sign-in and rights are built for the demonstration, with three fixed accounts. The module is called Aufsicht, German for oversight.
 
 ## 11 · Rücksicht – protection: masking and four eyes
 

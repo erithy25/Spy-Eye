@@ -256,7 +256,7 @@ product(
         ("Witnessed", "Peer nodes record the latest state of each other’s ledgers."),
     ],
     "Oversight’s view (shown in German): chain verified, sample drawn.",
-    "Every sign-in, query, refusal and approval is in a chained ledger. Whoever changes an entry breaks the chain, and the verification shows where. Oversight has a role of its own: it sees the ledger and the measurements, but no footage. One limitation belongs here: sign-in and rights are built for the demonstration, with three fixed accounts. The module is called Aufsicht, German for oversight.",
+    "Every sign-in, query, refusal and approval is in a chained ledger. Whoever changes an entry breaks the chain, and the verification shows where. That can be recomputed without our software: two short verifiers come with the export. Oversight has a role of its own: it sees the ledger and the measurements, but no footage. One limitation belongs here: sign-in and rights are built for the demonstration, with three fixed accounts. The module is called Aufsicht, German for oversight.",
 )
 
 product(

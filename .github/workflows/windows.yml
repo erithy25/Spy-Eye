@@ -45,3 +45,6 @@ jobs:
       - run: pnpm demo:check
       # The same events and the same single false alert as on the development machine.
       - run: pnpm exercise:evaluate --speed 8 --require 13 --max-false 1
+      # The ledger a node wrote here is checked by the two stand-alone verifiers.
+      - run: pnpm ledger:verify data-koblenz/ledger.jsonl
+      - run: python tools/pruefen/ledger_verify.py data-koblenz/ledger.jsonl

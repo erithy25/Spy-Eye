@@ -41,7 +41,7 @@ Jede Behörde betreibt ihren eigenen Knoten. Im Verbund reist nur die Frage; der
 
 ## 10 · Aufsicht: ein Protokoll, das sich prüfen lässt
 
-Jede Anmeldung, Abfrage, Ablehnung und Freigabe steht in einem verketteten Protokoll. Wer einen Eintrag ändert, bricht die Kette, und die Prüfung zeigt, wo. Die Aufsicht hat eine eigene Rolle: Sie sieht Protokoll und Messwerte, aber kein Bildmaterial. Eine Einschränkung gehört dazu: Anmeldung und Rechte sind für die Vorführung gebaut, mit drei festen Zugängen.
+Jede Anmeldung, Abfrage, Ablehnung und Freigabe steht in einem verketteten Protokoll. Wer einen Eintrag ändert, bricht die Kette, und die Prüfung zeigt, wo. Nachrechnen lässt sich das auch ohne unsere Software: Dem Export liegen zwei kurze Prüfprogramme bei. Die Aufsicht hat eine eigene Rolle: Sie sieht Protokoll und Messwerte, aber kein Bildmaterial. Eine Einschränkung gehört dazu: Anmeldung und Rechte sind für die Vorführung gebaut, mit drei festen Zugängen.
 
 ## 11 · Rücksicht: Maskierung und vier Augen
 

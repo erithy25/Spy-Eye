@@ -213,6 +213,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `pnpm search:evaluate --dir <Ordner>` | Suche auf einem Ordner mit Aufnahmen und beschrifteten Anfragen messen |
 | `pnpm models:download` | Modelle vorab laden |
 | `pnpm selftest` | Rechner, Modell und ffmpeg prüfen, Geschwindigkeit messen |
+| `pnpm ledger:verify <Datei>` | ein exportiertes Protokoll unabhängig vom Knoten nachrechnen (`tools/pruefen/`, auch in Python) |
 | `pnpm test` / `pnpm typecheck` | Prüfungen |
 
 ## Einstellungen
@@ -253,5 +254,9 @@ media/brand/    Markenfilm: Drehbuch und Schnittwerkzeug
 - [`docs/EVALUATION.md`](docs/EVALUATION.md) – Messbericht
 - [`docs/DEMO.md`](docs/DEMO.md) – Ablauf der Vorführung; zum Ausdrucken
   [`deliverables/Sicht-Vorfuehrung-Ablauf.pdf`](deliverables/Sicht-Vorfuehrung-Ablauf.pdf)
-- [`deliverables/`](deliverables) – Präsentation, Einseiter, Finanzmodell
+- [`deliverables/`](deliverables) – Präsentation und Einseiter (deutsch und englisch), Finanzmodell,
+  Unterlagenmappe als PDF
+- [`docs/vertrieb/`](docs/vertrieb) – Kurzvorstellung in drei Längen, Anschreiben, Angebot zur Erprobung
+- [`tools/pruefen/`](tools/pruefen) – zwei Programme, mit denen eine Aufsicht das Protokoll ohne Sicht nachrechnet
+- [`brand/`](brand) – die Wortmarke als Datei
 - [`docs/research/`](docs/research) – Recherche mit Quellen

@@ -9,7 +9,8 @@ gestaltet, hält sich an dieses Blatt.
 erfasst. Der Name beschreibt das Ergebnis, nicht die Technik.
 
 - Schreibweise im Fließtext: Sicht. Als Wortmarke in Versalien, gesperrt: `SICHT`.
-- Kein Bildzeichen, kein Symbol. Die Wortmarke steht allein.
+- Kein Bildzeichen, kein Symbol. Die Wortmarke steht allein. Als Datei liegt sie im Ordner
+  `brand/` vor, hell und dunkel, dazu ein Vorschaubild und ein Profilbild.
 - Namensprüfung: **nicht abgeschlossen.** Markenregister (DPMA, EUIPO) und Firmennamen wurden
   nicht recherchiert. Vor jeder öffentlichen Verwendung prüfen. Ausweichnamen: „Sichtung“,
   „Erda“ (letzterer liegt nahe an Hexagons Bildauswertungssoftware ERDAS).
