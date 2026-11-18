@@ -220,12 +220,14 @@ dort ebenfalls, einschließlich der beiden Prüfprogramme für das Protokoll.
 
 Seither läuft derselbe Weg über den einen Befehl, den auch die Vorführung benutzt:
 `vorfuehrung.cmd -NurPruefen` auf einem frischen und auf einem vorbereiteten Rechner, danach
-`vorfuehrung.cmd` ohne Schalter, bis die Konsole antwortet. Der letzte Lauf (18. November 2026,
-09:08 UTC, auf dem Stand mit den Korrekturen zur Barrierefreiheit und zur Lageansicht) bestand
-alle Schritte: frischer Rechner in 7 min 18 s vorbereitet und geprüft, vorbereiteter Rechner
-in 24 s bereit, Start in 36 s (am Ende räumte der Rechner Prozesse des Browsers Edge ab, den
-das Skript geöffnet hatte); Übung 13 von 13 bei höchstens einer Fehlmeldung; beide
-Prüfprogramme melden „Kette unversehrt: 17 Einträge“ mit demselben letzten Stand.
+`vorfuehrung.cmd` ohne Schalter, bis die Konsole antwortet. Ein weiterer Schritt belegt den
+Anschluss 8787 mit einem fremden Programm und prüft, dass der Befehl das benennt, statt zu
+starten. Der letzte Lauf (18. November 2026, 11:09 UTC, auf dem Endstand des Programms) bestand
+alle Schritte: frischer Rechner in 7 min 26 s vorbereitet und geprüft, vorbereiteter Rechner
+in 22 s bereit, Start in 30 s; Übung 13 von 13 Ereignissen, 15 Meldungen, eine Fehlmeldung,
+Verzug im Median 3,1 s bei achtfacher Uhr; beide Prüfprogramme melden „Kette unversehrt: 17
+Einträge“ mit demselben letzten Stand. In einem früheren Lauf desselben Tages räumte der Rechner
+am Ende Prozesse des Browsers Edge ab: Das Skript hatte ihn geöffnet.
 
 **Was die Gegenprobe gezeigt hat.** Die ersten beiden Läufe fielen anders aus: Eine Suche auf dem
 Knoten Mainz lag genau auf der Schwelle (Sicherheit 0,50 statt 0,53), und die Übung brachte drei

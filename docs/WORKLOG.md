@@ -214,3 +214,25 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
 - An interrupted model download heals at the next start (the library writes under a temporary
   name and renames when complete); the operations paper says so.
 
+## 11:12 UTC · T+660 min
+
+- Last Windows run on the final state of the program (commit 7fed00c, run 44289584709): every
+  step passed. Fresh machine prepared and checked in 7 min 26 s, prepared machine ready in 22 s,
+  start in 30 s, a port held by another program is named; exercise 13 of 13, 15 alerts, one
+  false alert, median 3.1 s at 8x; both ledger verifiers report an intact chain of 17 entries
+  with the same head. After that commit only papers and the print tool changed.
+- Fresh clone of the pushed branch on Linux: install, build, types, 88 tests, bill of materials.
+- Guide for the first ten conversations with authorities
+  (`docs/vertrieb/GESPRAECHSLEITFADEN.md`, printable as
+  `deliverables/Sicht-Gespraechsleitfaden.pdf`): questions per assumption, a ladder of
+  commitments, an evaluation against the stop criteria of the strategy paper. The thresholds are
+  a proposal.
+- Hand-over sheet: fresh clone into a new folder as the second way in, a proposed running order
+  for the appointment in 35 and in 20 minutes, browser and screen notes.
+- Console read for functions only Chromium knows: none found; it has still never been run in
+  Firefox or Safari.
+- Narrow windows (1097, 1152, 1280 and 1366 px wide, as a laptop with display scaling gives
+  them): no overflow and no page error on any tab; below 1280 px mandate and role in the header
+  are no longer readable.
+- The three artifacts are private and at their final versions.
+
