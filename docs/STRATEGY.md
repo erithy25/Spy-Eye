@@ -266,6 +266,38 @@ Drei Befunde:
 3. Im vorsichtigen Fall trägt sich das Geschäft bis 2031 nicht, auch bei halbiertem
    Stellenaufbau. Abschnitt 8 nennt deshalb Abbruchkriterien für das erste Halbjahr 2027.
 
+**Was wahr sein müsste, damit daraus ein großes Unternehmen wird.** Die folgende Rechnung ist
+keine Prognose und nicht recherchiert. Sie setzt die Zahlen dieses Abschnitts fort und nennt
+die Bedingungen. Als Rechengröße dient, dass die Europäische Union rund 5,3-mal so viele
+Einwohner hat wie Deutschland (aus dem Gedächtnis, nicht nachgeschlagen).
+
+| Stufe | Rechnung | Jahreswert bei vollständiger Abdeckung |
+| --- | --- | --- |
+| Deutschland, Bevölkerungsschutz | wie oben | 25,5 Mio. € |
+| Deutschland, dazu Betreiber kritischer Anlagen | 25,5 Mio. € + (1 300 bis 2 000 Betreiber × 48 000 €) | 88 bis 122 Mio. € |
+| Europäische Union, Bevölkerungsschutz | 25,5 Mio. € × 5,3 | rund 135 Mio. € |
+| Europäische Union, dazu Betreiber kritischer Anlagen | (88 bis 122 Mio. €) × 5,3 | rund 470 bis 650 Mio. € |
+
+Ein Unternehmen, das mit einer Milliarde Euro bewertet wird, braucht beim Zehn- bis
+Fünfzehnfachen des Jahreswerts seiner Lizenzen (Annahme) einen Jahreswert von 67 bis 100 Mio. €.
+Das ist das 35- bis 52-Fache des Basisfalls für Ende 2031 (1,94 Mio. €), zwischen gut der Hälfte
+und dem ganzen deutschen Markt einschließlich der kritischen Anlagen oder 10 bis 21 Prozent des
+gerechneten europäischen Marktes. Dafür müsste zugleich gelten:
+
+1. Die Nachfragethese bestätigt sich 2027 (Abschnitt 8).
+2. Betreiber kritischer Anlagen kaufen dasselbe Produkt zu einem ähnlichen Preis. Ungeprüft:
+   anderes Recht, andere Käufer, kein einziges Gespräch.
+3. Ein zweites Land lässt sich ohne Neubau bedienen. Ungeprüft: Zuständigkeiten, Recht und
+   Sprache unterscheiden sich, und die Rechnung benutzt deutsche Listenpreise, die für viele
+   Mitgliedstaaten zu hoch sind.
+4. Sicht wird von einer Funktion zur Schicht für alle Bildquellen einer Behörde, also zu etwas,
+   das ein Bestandsanbieter nicht nebenbei ergänzt (Abschnitt 4).
+5. Die Mittel reichen weit über den Bedarf des Basisfalls von 3,2 Mio. € hinaus.
+
+Belegt ist davon nichts. Die Rechnung zeigt nur, wo die Größe läge, wenn es sie gibt: in Europa
+und bei den kritischen Anlagen, nicht im deutschen Bevölkerungsschutz allein. Wer Sicht als
+Wagnisfall vorstellt, stellt diese fünf Bedingungen vor und keine Bewertung.
+
 ## 8. Markteintritt in zwölf Monaten
 
 | Zeitraum | Schritt | Ergebnis, an dem sich der Schritt messen lässt |

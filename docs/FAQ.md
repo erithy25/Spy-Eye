@@ -280,6 +280,18 @@ nichts aus. Technik hilft nur dort, wo jemand zuständig ist und handelt.
 
 ## Von Investoren
 
+### Gibt es das schon?
+
+Die Teile ja, die Verbindung nach unserer Recherche nicht. Freitextsuche über Video liefern mehr
+als zehn Anbieter; ein landesweites Lagebild für den Bevölkerungsschutz läuft in
+Baden-Württemberg; die Stadt Kaohsiung beobachtet ihre Kameras mit Bild-Sprach-Modellen auf
+Überflutung, Feuer und Straßenschäden. Kein gefundener Anbieter verbindet Freitextsuche, den
+Zuschnitt auf den Bevölkerungsschutz und einen Verbund ohne Identifizierung und ist damit bei
+einem Staat oder Land im Einsatz. Bei keinem fand sich der Grundsatz, dass im Verbund nur die
+Frage reist und das Bild bleibt, wo es aufgenommen wurde. Das ist das Ergebnis einer zeitlich
+begrenzten Suche in öffentlichen Quellen und kein Beweis; die Anbieter und Quellen stehen in
+`docs/STRATEGY.md`, Abschnitt 4.
+
 ### Warum nicht Fraunhofer?
 
 Das Fraunhofer IOSB hat das Lagesystem des Landes Baden-Württemberg gebaut, wertet Drohnenbilder
@@ -295,7 +307,11 @@ Klein. 400 Kreise, 16 Länder und zehn Bundesstellen ergeben zu den angenommenen
 rund 25 Mio. € im Jahr bei vollständiger Abdeckung; erreichbar in fünf Jahren sind nach den
 Annahmen knapp 10 Mio. €. Im Basisfall des Finanzmodells stehen 2031 rund 2,3 Mio. € Umsatz und
 bis dahin ein Mittelbedarf von 3,2 Mio. €. Größer wird es nur mit Betreibern kritischer Anlagen
-oder im Ausland; beides ist ungeprüft.
+oder im Ausland; beides ist ungeprüft. Rechnet man die kritischen Anlagen hinzu und die
+Europäische Union nach Einwohnern hoch, ergeben sich rechnerisch 470 bis 650 Mio. € im Jahr.
+Eine Bewertung von einer Milliarde verlangte davon 10 bis 21 Prozent und das 35- bis 52-Fache
+des Basisfalls. Das ist eine Rechnung mit fünf unbelegten Bedingungen (`docs/STRATEGY.md`,
+Abschnitt 7), keine Prognose.
 
 ### Was schützt Sie vor Nachahmern?
 

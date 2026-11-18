@@ -162,6 +162,17 @@ there is no service with automatic restart yet.
 
 ## From investors
 
+### Does this exist already?
+
+The parts do; the combination, as far as our research goes, does not. More than ten makers offer
+free-text search over video; a state-wide situation picture for civil protection runs in
+Baden-Württemberg; the city of Kaohsiung watches its cameras for flooding, fire and road damage
+with vision-language models. No vendor we found combines free-text search, the cut for civil
+protection and a federation without identification and has that in use with a state. With none
+of them did we find the principle that in a federation only the question travels and the picture
+stays where it was taken. That is the result of a time-limited search in public sources, not
+proof; vendors and sources are listed in `docs/STRATEGY.md`, section 4 (German).
+
 ### Why not Fraunhofer?
 
 Fraunhofer IOSB built the situation system of the state of Baden-Württemberg, analyses drone
@@ -177,7 +188,11 @@ Small. 400 districts, 16 states and ten federal bodies come to about 25 million 
 assumed list prices with full coverage; reachable in five years are, on the assumptions, just
 under 10 million €. In the base case of the financial model, 2031 shows about 2.3 million € in
 revenue and a funding need of 3.2 million € up to then. It only gets bigger with operators of
-critical infrastructure or abroad; both are unexamined.
+critical infrastructure or abroad; both are unexamined. Adding critical infrastructure and
+scaling to the European Union by population gives 470 to 650 million € a year on paper. A
+valuation of one billion would need 10 to 21 per cent of that and 35 to 52 times the base case.
+That is a calculation with five unproven conditions (`docs/STRATEGY.md`, section 7), not a
+forecast.
 
 ### What protects you against imitators?
 

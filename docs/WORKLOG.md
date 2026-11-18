@@ -272,3 +272,19 @@ Elapsed time is computed from `.goal-start` (epoch seconds, not committed).
 - This commit asks for one more Windows run, so that the last commit of the branch is itself one
   that ran there. Its result is in the final report of the session, not in this file.
 
+## 12:25 UTC · after the twelve hours
+
+- The Windows run asked for by the closing entry passed on commit 146875f (run 44294986874):
+  fresh machine in 7 min 19 s, prepared machine in 24 s, start in 32 s, exercise 13 of 13 with at
+  most one false alert, both ledger verifiers with the same head. On the same commit: exercise in
+  real time once more (13 of 13, median 1.1 s, one false alert among 15), keyboard walk 24 of
+  24, rule check without a violation in 18 states, fresh clone with 88 tests.
+- The goal check at the end named two points that papers can still answer: whether anyone does
+  this already, and how the business could become large. Added: the question "Gibt es das
+  schon?" in both question papers with the bounded result of the research (strategy paper,
+  section 4), and in the strategy paper a calculation of what would have to be true for a large
+  company: critical infrastructure and the European Union, five conditions, none of them
+  proven. It is not a forecast; base case, workbook and decks are unchanged.
+- Demand, a legal opinion and the visibility of the repository cannot be settled in a session
+  and stay with the founder.
+
