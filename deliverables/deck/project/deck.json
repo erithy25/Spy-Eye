@@ -1,0 +1,67 @@
+{
+ "v": 5,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-18T02:40:00Z"
+ },
+ "lists": "css",
+ "format": {
+  "v": 1,
+  "shared": [
+   "project/deck.css"
+  ]
+ },
+ "title": "Sicht – Präsentation",
+ "cover": "titel",
+ "order": [
+  "titel",
+  "ahrtal",
+  "muster",
+  "jetzt",
+  "sicht",
+  "lage",
+  "wachen",
+  "suche",
+  "verbund",
+  "aufsicht",
+  "ruecksicht",
+  "gemessen",
+  "grenzen",
+  "wettbewerb",
+  "kaeufer",
+  "modell",
+  "plan",
+  "risiken",
+  "stand",
+  "schluss"
+ ],
+ "sections": {
+  "s1": {
+   "description": "Das Problem an einem belegten Fall, das Muster dahinter und warum der Zeitpunkt zählt.",
+   "start": "titel"
+  },
+  "s2": {
+   "description": "Was Sicht ist und wie es arbeitet, gezeigt an der laufenden Konsole.",
+   "start": "sicht"
+  },
+  "s3": {
+   "description": "Was gemessen ist, mit seinen Einschränkungen, und was Sicht bewusst nicht kann.",
+   "start": "gemessen"
+  },
+  "s4": {
+   "description": "Wettbewerb, Käufer, Geschäftsmodell, Fünfjahresfall und Risiken.",
+   "start": "wettbewerb"
+  },
+  "s5": {
+   "description": "Stand, Bitte um eine Erprobung und Schluss.",
+   "start": "stand"
+  }
+ },
+ "faces": {
+  "jetbrains-mono": {
+   "family": "JetBrains Mono",
+   "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+  }
+ },
+ "designSystems": []
+}

@@ -337,7 +337,7 @@ export function Lage({ node, openFrame }: ViewProps) {
         shape: s.kind,
         label: pick(s.name, s.nameEn),
         ...(alert ? { sub: pick(alert.name, alert.nameEn), alert: alert.severity } : {}),
-        dim: s.mode === 'exercise' && feed?.online !== true,
+        dim: s.mode !== 'archive' && feed?.online !== true,
         selected: s.id === selectedSource,
       });
     }

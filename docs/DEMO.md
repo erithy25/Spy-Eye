@@ -94,8 +94,9 @@ deren Passwort eintragen. Das Bild erscheint unmaskiert, der Eintrag steht im Pr
 - Die Messwerte stammen aus einer Übung mit Archivmaterial. Die Wachen der Übung wurden an diesem
   Material formuliert. Die Zahlen beschreiben das Betriebsverhalten, nicht die Güte auf fremdem
   Material.
-- Direktbilder (laufende Kamerastreams) werden nicht eingespielt; die Übung spielt ausgewertete
-  Aufzeichnungen auf einer Uhr ab. Das Einspielen von Aufzeichnungen ist vollständig.
+- Die Übung spielt vorab ausgewertete Aufzeichnungen auf einer Uhr ab. Direktbilder lassen sich
+  anschließen (QUELLEN, „Quelle anlegen“, Adresse des Stroms) und werden mit etwa einer halben
+  Minute Nachlauf ausgewertet; geprüft ist das nur gegen eine simulierte Kamera, nicht im Feld.
 - Das trainierte Gefahrenmodell erreicht 99,1 % auf seinem Benchmark und irrt auf dem
   Übungsmaterial. Deshalb löst es keine Meldungen aus, sondern steht als Zweitmeinung daneben.
 - „Kein Personen-Tracking“ ist eine Regel mit Protokoll, keine technische Unmöglichkeit.
@@ -126,5 +127,7 @@ Antworten stehen in `docs/FAQ.md`. Die drei häufigsten:
    einem Mandat möglich, das sie ausdrücklich zulässt, etwa bei einer Vermisstensuche, und stehen
    gekennzeichnet im Protokoll.
 3. **„Was ist fertig?“** Einspielen, Maskieren, Suchen, Wachen, Lagen, Vorgänge, Verbund,
-   Protokoll und Messung laufen. Nicht fertig: Direktbilder, Anbindung an ein vorhandenes
-   Führungssystem, Betrieb mit mehr als einigen zehn Stunden Material, Zulassung.
+   Protokoll und Messung laufen; Direktbilder laufen mit Nachlauf und sind nur im Labor geprüft.
+   Nicht fertig: Erprobung mit echten Kameras, Anbindung an ein vorhandenes Führungssystem,
+   Anmeldung über den Verzeichnisdienst einer Behörde, Betrieb mit mehr als einigen zehn Stunden
+   Material, Zulassung.

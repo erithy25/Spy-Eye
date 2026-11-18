@@ -11,6 +11,7 @@ import type { Permission } from './core/auth.js';
 import { newId } from './core/json.js';
 import type { FederationHello, FederationRequest, FederationResponse } from './intel/federation.js';
 import { screenPrompt } from './intel/guard.js';
+import { parseStreamAddress, redactStreamAddress } from './intel/live.js';
 import { collectMetrics } from './intel/metrics.js';
 import { caseReport, situationReport } from './intel/report.js';
 import type { PlatformNode, RequestContext } from './node.js';
@@ -189,6 +190,35 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   });
   await app.register(fastifyStatic, { root: store.videosDir, serve: false });
 
+  // Headers for every answer: the console needs nothing from other origins.
+  app.addHook('onSend', async (_request, reply) => {
+    void reply.header('X-Content-Type-Options', 'nosniff');
+    void reply.header('X-Frame-Options', 'DENY');
+    void reply.header('Referrer-Policy', 'no-referrer');
+    void reply.header('Cross-Origin-Opener-Policy', 'same-origin');
+    void reply.header(
+      'Content-Security-Policy',
+      "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+    );
+  });
+
+  /** Failed sign-ins per user id and per address; five in a row lock that key for a minute. */
+  const failures = new Map<string, { count: number; until: number }>();
+  const lockedFor = (key: string): number => {
+    const entry = failures.get(key);
+    return entry && entry.until > Date.now() ? Math.ceil((entry.until - Date.now()) / 1000) : 0;
+  };
+  const noteFailure = (key: string): void => {
+    const entry = failures.get(key) ?? { count: 0, until: 0 };
+    entry.count++;
+    if (entry.count >= 5) {
+      entry.until = Date.now() + 60_000;
+      entry.count = 0;
+    }
+    failures.set(key, entry);
+    if (failures.size > 5000) failures.clear();
+  };
+
   // ================================================================ session
 
   app.get('/api/public/info', async () => {
@@ -201,9 +231,22 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
 
   app.post('/api/login', async (request, reply) => {
     const body = new Body(request.body);
-    const result = auth.login(body.text('user', 64), body.text('password', 200));
     const lang = node.langOf(request);
+    const userKey = `user:${body.text('user', 64).toLowerCase()}`;
+    const addressKey = `addr:${request.ip}`;
+    const wait = Math.max(lockedFor(userKey), lockedFor(addressKey));
+    if (wait > 0) {
+      void reply.header('Retry-After', String(wait));
+      return sendError(
+        reply,
+        429,
+        lang === 'en' ? `Too many failed attempts. Try again in ${wait} s.` : `Zu viele Fehlversuche. Neuer Versuch in ${wait} s.`,
+      );
+    }
+    const result = auth.login(body.text('user', 64), body.text('password', 200));
     if (!result) {
+      noteFailure(userKey);
+      noteFailure(addressKey);
       await ledger.append({
         actor: body.text('user', 64) || 'unbekannt',
         role: 'none',
@@ -214,6 +257,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       });
       return sendError(reply, 401, lang === 'en' ? 'Unknown user or wrong password.' : 'Unbekannter Benutzer oder falsches Passwort.');
     }
+    failures.delete(userKey);
+    failures.delete(addressKey);
     // An open mandate is preselected only if there is exactly one; otherwise the user must choose.
     const usable = mandates.list().filter((m) => mandates.isUsable(m));
     if (usable.length === 1) result.session.mandateId = (usable[0] as { id: string }).id;
@@ -508,8 +553,8 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
   // ================================================================ sources, exercise, watches, alerts
 
   const snapshot = (): IntelSnapshot => ({
-    sources: sources.list(),
-    feeds: scenario.feeds(),
+    sources: node.sourceList(),
+    feeds: node.feeds(),
     scenario: scenario.info(),
     watches: watches.listWatches(),
     alerts: watches.listAlerts().slice(0, 400),
@@ -528,6 +573,20 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     const name = body.text('name', 80);
     const kind = body.text('kind', 20) as SourceKind;
     if (name.length < 2 || !SOURCE_KINDS.includes(kind)) return sendError(reply, 400, say(ctx, 'Name und Art der Quelle sind erforderlich.', 'Name and kind of the source are required.'));
+    // A stream address makes the node open a connection of its own; that is reserved to supervisors.
+    const streamUrl = body.text('streamUrl', 500);
+    if (streamUrl !== '') {
+      if (!node.allowed(ctx, 'source.live')) {
+        return sendError(reply, 403, say(ctx, 'Direktbilder darf nur die Leitung anschließen.', 'Only a supervisor may connect live streams.'));
+      }
+      if (!parseStreamAddress(streamUrl)) {
+        return sendError(
+          reply,
+          400,
+          say(ctx, 'Die Adresse ist kein unterstützter Strom (rtsp, rtsps, http, https, rtmp, srt, udp, tcp).', 'The address is not a supported stream (rtsp, rtsps, http, https, rtmp, srt, udp, tcp).'),
+        );
+      }
+    }
     const source = sources.create({
       name,
       kind,
@@ -535,11 +594,17 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       description: body.text('description', 300),
       lat: body.nullableNumber('lat', -90, 90),
       lon: body.nullableNumber('lon', -180, 180),
-      mode: 'archive',
+      mode: streamUrl !== '' ? 'live' : 'archive',
       shared: body.flag('shared', false),
     });
-    await node.record(ctx, 'source.create', `Quelle „${name}“ angelegt`, { sourceId: source.id, kind, shared: source.shared });
-    return reply.code(201).send(source);
+    if (streamUrl !== '') await node.connectStream(source.id, streamUrl);
+    await node.record(ctx, 'source.create', `Quelle „${name}“ angelegt`, {
+      sourceId: source.id,
+      kind,
+      shared: source.shared,
+      ...(streamUrl !== '' ? { stream: redactStreamAddress(streamUrl) } : {}),
+    });
+    return reply.code(201).send(node.sourceList().find((s) => s.id === source.id) ?? source);
   });
 
   app.patch<{ Params: { id: string } }>('/api/sources/:id', async (request, reply) => {
@@ -564,7 +629,21 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
     if (!source || source.mode === 'exercise' || source.id === DEFAULT_SOURCE_ID) {
       return sendError(reply, 404, say(ctx, 'Quelle nicht gefunden oder nicht löschbar.', 'Source not found or cannot be removed.'));
     }
-    if (store.all().some((e) => e.info.sourceId === source.id)) {
+    const hasRecordings = store.all().some((e) => e.info.sourceId === source.id);
+    if (source.mode === 'live') {
+      if (!node.allowed(ctx, 'source.live')) {
+        return sendError(reply, 403, say(ctx, 'Direktbilder darf nur die Leitung trennen.', 'Only a supervisor may disconnect live streams.'));
+      }
+      await node.disconnectStream(source.id);
+      if (hasRecordings) {
+        // What the stream delivered stays as the archive of this source.
+        source.mode = 'archive';
+        sources.update(source.id, {});
+        await node.record(ctx, 'source.disconnect', `Direktbild „${source.name}“ getrennt`, { sourceId: source.id });
+        node.broadcastFeeds();
+        return reply.code(200).send(source);
+      }
+    } else if (hasRecordings) {
       return sendError(reply, 409, say(ctx, 'Der Quelle sind noch Aufzeichnungen zugeordnet.', 'The source still has recordings.'));
     }
     sources.remove(source.id);
@@ -880,7 +959,7 @@ export async function registerRoutes(app: FastifyInstance, node: PlatformNode, s
       incidents: incidents.list(),
       alerts: watches.listAlerts(),
       sources: sources.list().filter((s) => s.mode !== 'archive' || s.id !== DEFAULT_SOURCE_ID),
-      onlineSources: scenario.feeds().filter((f) => f.online).length,
+      onlineSources: node.feeds().filter((f) => f.online).length,
       framesAnalysed: store.stats().frames,
       ledgerHead: ledger.headHash,
       ledgerLength: ledger.length,

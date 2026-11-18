@@ -20,7 +20,9 @@ function NewSource({ node, onClose }: { node: NodeConnection; onClose: () => voi
   const [lat, setLat] = useState(String(node.info?.node.lat ?? ''));
   const [lon, setLon] = useState(String(node.info?.node.lon ?? ''));
   const [shared, setShared] = useState(false);
+  const [streamUrl, setStreamUrl] = useState('');
   const action = useAction();
+  const mayLive = node.can('source.live');
   const number = (text: string): number | null => {
     const value = Number(text.replace(',', '.'));
     return text.trim() !== '' && Number.isFinite(value) ? value : null;
@@ -56,6 +58,14 @@ function NewSource({ node, onClose }: { node: NodeConnection; onClose: () => voi
             <input value={lon} onChange={(e) => setLon(e.target.value)} inputMode="decimal" />
           </Field>
         </div>
+        {mayLive && (
+          <Field
+            label={t('Direktbild: Adresse des Stroms (leer = Archivquelle)')}
+            hint={t('RTSP, HLS, RTMP, SRT oder MPEG-TS. Der Strom wird in kurze Abschnitte geschnitten und wie eine Aufzeichnung ausgewertet; Meldungen folgen mit einem Nachlauf von etwa einer halben Minute. Zugangsdaten in der Adresse bleiben auf dem Knoten.')}
+          >
+            <input value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="rtsp://kamera.example/stream1" spellCheck={false} autoComplete="off" />
+          </Field>
+        )}
         <label className="check">
           <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
           {t('Nachbarknoten dürfen diese Quelle im Verbund befragen')}
@@ -68,7 +78,16 @@ function NewSource({ node, onClose }: { node: NodeConnection; onClose: () => voi
             disabled={action.busy || name.trim().length < 2}
             onClick={() =>
               void action.run(async () => {
-                await createSource({ name: name.trim(), kind, owner: owner.trim(), description: description.trim(), lat: number(lat), lon: number(lon), shared });
+                await createSource({
+                  name: name.trim(),
+                  kind,
+                  owner: owner.trim(),
+                  description: description.trim(),
+                  lat: number(lat),
+                  lon: number(lon),
+                  shared,
+                  ...(streamUrl.trim() !== '' ? { streamUrl: streamUrl.trim() } : {}),
+                });
                 node.refreshIntel();
                 onClose();
               })
@@ -173,9 +192,12 @@ export function Quellen({ node, openFrame }: ViewProps) {
                   <td className="dim">{t(KIND_LABEL[s.kind])}</td>
                   <td className="dim">{s.owner}</td>
                   <td className="dim">{s.lat !== null && s.lon !== null ? toMgrs(s.lat, s.lon) : '–'}</td>
-                  <td className="dim">
+                  <td className="dim" title={s.mode === 'live' ? `${s.stream ?? ''}${s.streamState?.detail ? ` · ${s.streamState.detail}` : ''}` : ''}>
                     {t(MODE_LABEL[s.mode])}
                     {s.mode === 'exercise' ? (feed?.online ? ` · ${t('sendet')}` : ` · ${t('still')}`) : ''}
+                    {s.mode === 'live'
+                      ? ` · ${s.streamState?.state === 'online' ? t('verbunden') : s.streamState?.state === 'connecting' ? t('verbindet') : t('getrennt')}`
+                      : ''}
                   </td>
                   <td className="num">{counts.get(s.id) ?? 0}</td>
                   <td>
@@ -199,11 +221,12 @@ export function Quellen({ node, openFrame }: ViewProps) {
                     )}
                   </td>
                   <td>
-                    {may && s.mode === 'archive' && s.id !== 'eingang' && (counts.get(s.id) ?? 0) === 0 && (
+                    {((may && s.mode === 'archive' && s.id !== 'eingang' && (counts.get(s.id) ?? 0) === 0) || (s.mode === 'live' && node.can('source.live'))) && (
                       <button
                         type="button"
                         className="text-btn"
-                        aria-label={t('löschen')}
+                        aria-label={s.mode === 'live' ? t('Direktbild trennen') : t('löschen')}
+                        title={s.mode === 'live' ? t('Direktbild trennen') : t('löschen')}
                         onClick={(e) => {
                           e.stopPropagation();
                           void action.run(async () => {

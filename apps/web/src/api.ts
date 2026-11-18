@@ -184,13 +184,16 @@ export const createSource = (input: {
   lat: number | null;
   lon: number | null;
   shared: boolean;
+  /** Stream address for a live source; only supervisors may set it. */
+  streamUrl?: string;
 }): Promise<SourceInfo> => post('api/sources', input);
 
 export const updateSource = (id: string, patch: { shared?: boolean; name?: string }): Promise<SourceInfo> =>
   request('PATCH', `api/sources/${id}`, patch);
 
+/** Removes a source; a live source with recordings is disconnected and kept as an archive. */
 export async function deleteSource(id: string): Promise<void> {
-  await request<void>('DELETE', `api/sources/${id}`);
+  await request<unknown>('DELETE', `api/sources/${id}`);
 }
 
 export type ExerciseAction = 'install' | 'start' | 'pause' | 'resume' | 'speed' | 'stop' | 'uninstall';

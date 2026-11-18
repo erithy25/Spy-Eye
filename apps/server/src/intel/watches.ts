@@ -44,6 +44,8 @@ export interface WatchInput {
 }
 
 const AERIAL_KINDS: readonly SourceKind[] = ['drone', 'helicopter', 'satellite'];
+/** A connected stream that has delivered nothing for this long no longer keeps alerts open. */
+const STREAM_SILENCE_MS = 90 * 1000;
 
 interface Vectors {
   positive: Float32Array;
@@ -98,6 +100,8 @@ function decodeVector(text: string): Float32Array {
 }
 
 export class WatchEngine {
+  /** Time of the latest analysed frame per connected stream, and when it arrived. */
+  private readonly streamClock = new Map<string, { at: number; wall: number }>();
   private readonly watches: Collection<Watch>;
   private readonly alerts: Collection<Alert>;
   private feedback: Record<string, FeedbackExample[]> = {};
@@ -349,7 +353,14 @@ export class WatchEngine {
    * Runs an archived recording past one watch (or all), frame by frame in recording order. Alerts
    * carry the time of the footage, not the time of the scan, and end with the recording.
    */
-  observeRecording(entry: VideoEntry, only?: Watch): void {
+  /**
+   * Runs a finished recording past the watches, frame by frame in recording order.
+   *
+   * `continuous` marks a segment of a connected stream: what a watch sees at the end of one
+   * segment carries over into the next, so one event yields one alert however many segments it
+   * spans. For a stand-alone recording the alert ends with the recording.
+   */
+  observeRecording(entry: VideoEntry, only?: Watch, continuous = false): void {
     const targets = only ? [only] : this.watches.all();
     for (let f = 0; f < entry.frames.length; f++) {
       const observation: Observation = {
@@ -360,6 +371,14 @@ export class WatchEngine {
         exerciseSec: null,
       };
       for (const watch of targets) this.observeWatch(watch, observation, false);
+    }
+    if (continuous) {
+      const last = entry.frames[entry.frames.length - 1];
+      this.streamClock.set(entry.info.sourceId, {
+        at: entry.info.capturedAt + Math.round((last?.t ?? 0) * 1000),
+        wall: Date.now(),
+      });
+      return;
     }
     for (const watch of targets) {
       const key = `${watch.id}|${entry.info.sourceId}`;
@@ -488,7 +507,13 @@ export class WatchEngine {
       if (!alert.active) continue;
       const watch = this.watches.get(alert.watchId);
       const cooldownMs = ((watch?.cooldownSec ?? 30) * 1000) / rate;
-      if (now - alert.lastSeen > cooldownMs) {
+      // Alerts of a connected stream are timed on the stream's own clock, which trails the wall
+      // clock by one segment and the analysis; a stream that has gone silent ends its alerts.
+      const clock = alert.exercise ? undefined : this.streamClock.get(alert.sourceId);
+      const ended = clock
+        ? clock.at - alert.lastSeen > (watch?.cooldownSec ?? 30) * 1000 || now - clock.wall > STREAM_SILENCE_MS
+        : now - alert.lastSeen > cooldownMs;
+      if (ended) {
         alert.active = false;
         this.alerts.touch();
         this.deps.hub.broadcast({ type: 'alert', alert });

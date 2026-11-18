@@ -372,6 +372,10 @@ export interface SourceInfo {
   /** Whether peer nodes may search this source. */
   shared: boolean;
   createdAt: number;
+  /** For live sources: the stream address without credentials. */
+  stream?: string;
+  /** For live sources: connecting · online · offline, with the reason while offline. */
+  streamState?: { state: 'connecting' | 'online' | 'offline'; detail: string };
 }
 
 /** Current picture of one source, for the live wall and the map. */

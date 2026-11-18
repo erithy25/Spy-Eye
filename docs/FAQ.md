@@ -1,8 +1,8 @@
 # Sicht — Harte Fragen, gerade Antworten
 
 Stand: 18. November 2026. Belege und Einschränkungen zu jeder Antwort stehen in
-`docs/STRATEGY.md` und `docs/COMPLIANCE.md`. Preise und Marktzahlen sind Annahmen. Keine Antwort
-ist Rechtsberatung.
+`docs/STRATEGY.md` und `docs/COMPLIANCE.md`, die Messwerte mit ihren Bedingungen in
+`docs/EVALUATION.md`. Preise und Marktzahlen sind Annahmen. Keine Antwort ist Rechtsberatung.
 
 ## Aus dem Ministerium
 
@@ -10,11 +10,12 @@ ist Rechtsberatung.
 
 Nein, und der Vergleich hilft niemandem. Palantir führt bei der Polizei Datenbestände über
 Personen zusammen. Sicht führt nichts zusammen und kennt keine Personen: Es durchsucht die Bilder
-einer Behörde nach Lagen und lässt sie dort, wo sie aufgenommen wurden. Richtig ist aber auch:
-Palantir wurde 2020 im hessischen Corona-Krisenstab als Lagebild getestet und bietet
-Zweckabfragen, Protokolle und einen Abgleich zwischen Instanzen. Eine Freitextsuche über Video
-ist bei Palantir als Produkt nicht dokumentiert. Sicht tritt nicht als Ersatz an, sondern als
-Bildschicht für Lagesysteme, die Behörden schon haben.
+einer Behörde nach Lagen und lässt sie dort, wo sie aufgenommen wurden. Fragt eine Behörde eine
+andere, reist nur die Frage; zurück kommen maskierte Vorschaubilder mit einer Belegnummer. Richtig
+ist aber auch: Palantir wurde 2020 im hessischen Corona-Krisenstab als Lagebild getestet und
+bietet Zweckabfragen, Protokolle und einen Abgleich zwischen Instanzen. Eine Freitextsuche über
+Video ist bei Palantir als Produkt nicht dokumentiert. Sicht tritt nicht als Ersatz an, sondern
+als Bildschicht für Lagesysteme, die Behörden schon haben.
 
 ### Bund und Länder bauen ein digitales Lagebild. Wozu braucht es Sicht?
 
@@ -36,14 +37,18 @@ Schulung. Betriebskosten beim Anbieter gibt es nicht, weil dort nichts läuft.
 
 ### Was ist heute fertig, was nicht?
 
-Fertig und von Hand geprüft sind das Einspielen und Auswerten von Videodateien, die
-Freitextsuche, Wachen mit Meldungen und Lagen, die Gesichtsmaskierung mit Freigabe durch eine
-zweite Person, Mandate, drei Rollen, das verkettete Protokoll, Vorgänge mit Prüfsummen, der
-Verbund zwischen Knoten, die Löschfrist und die Ausgabe als GeoJSON und CAP. Nicht fertig sind
-die Anbindung laufender Bildströme, eine erprobte Kopplung an ELD-BS oder CommandX, die
-Benutzerverwaltung, die Verschlüsselung und ein Löschkonzept für das Protokoll. Nicht gemessen
-ist alles, was echtes Einsatzmaterial betrifft. Das eingesetzte Bildmodell steht außerdem unter
-einer Forschungslizenz; für den Einsatz wird es ersetzt und neu vermessen.
+Fertig und im Browser in allen drei Rollen durchgespielt sind das Einspielen und Auswerten von
+Videodateien, die Freitextsuche auf Deutsch und Englisch, Wachen mit Meldungen, Lagen und
+ausdrücklichem Nachschärfen, die Gesichtsmaskierung mit Freigabe durch eine zweite Person,
+Mandate, drei Rollen, das verkettete Protokoll mit Prüfung und Stichprobe, Vorgänge mit
+Prüfsummen und Siegel, der Verbund zwischen drei Knoten auf einem Rechner, die Löschfrist, die
+Lagekarte mit UTM-Gitter und die Ausgabe als GeoJSON und CAP. Gemessen ist eine eigene Übung mit
+Archivmaterial: 13 von 13 Ereignissen gemeldet, Verzug 1,1 Sekunden im Median, eine Fehlmeldung
+unter 15 Meldungen. Nicht fertig sind die Anbindung laufender Bildströme, eine erprobte Kopplung
+an ELD-BS oder CommandX, Benutzerverwaltung und Anmeldung jenseits dreier Vorführkonten, die
+Verschlüsselung und ein Löschkonzept für das Protokoll. Nicht gemessen ist alles, was echtes
+Einsatzmaterial betrifft. Der Bildkodierer ist seit dem 18. November 2026 SigLIP 2 unter Apache
+2.0; die frühere Lizenzfrage ist damit für den Kodierer erledigt.
 
 ### Wie passt das zu unserer Stabssoftware?
 
@@ -68,20 +73,24 @@ Gutachten je Land.
 
 Sicht wertet Bilder aus, auf denen Menschen zu sehen sein können. Das ist ein Eingriff, und so
 ist das System gebaut. Es beobachtet keine Personen, sondern sucht nach Lagen: Wasser auf einer
-Straße, Rauch, eine eingestürzte Wand, Menschen auf einem Dach. Es erkennt kein Gesicht und kein
-Kennzeichen, führt keine Personendaten und verknüpft keine Datenbestände. Jede Auswertung braucht
-ein Mandat mit Zweck und Rechtsgrundlage und steht in einem Protokoll, das eine Aufsicht prüft,
-die selbst keine Bilder sieht. Ob das genügt, entscheidet nicht der Hersteller.
+Straße, Rauch, eine eingestürzte Wand, Menschen auf einem Dach. Es gleicht keine Gesichter ab und
+liest keine Kennzeichen, führt keine Personendaten und verknüpft keine Datenbestände. Jede
+Auswertung braucht ein Mandat mit Zweck und Rechtsgrundlage und steht in einem Protokoll, das
+eine Aufsicht prüft, die selbst keine Bilder sieht. Ob das genügt, entscheidet nicht der
+Hersteller.
 
 ### Kann man damit doch Personen suchen?
 
 Ja, in Grenzen, und das ist gewollt: „Person auf einem Dach“ und „Person im Wasser“ sind
-Rettungslagen. Abgelehnt werden Anfragen nach Namen, nach Herkunft, Religion und anderen
-geschützten Merkmalen sowie nach Körpermerkmalen wie Haarfarbe oder Tätowierung; Beschreibungen
-nach Geschlecht oder Alter lassen sich je Mandat sperren. Zulässig bleiben Kleidung, Ausrüstung
-und Situation. Damit ließe sich eine Person in auffälliger Jacke über mehrere Quellen
-wiederfinden. Das verhindert heute keine technische Schranke, sondern die Regel, das Protokoll
-und die Stichprobe der Aufsicht; die Begrenzung des Suchraums je Mandat steht aus.
+Rettungslagen. Abgelehnt werden Anfragen nach Namen, Gesichtern und Kennzeichen, nach Herkunft,
+Religion und anderen geschützten Merkmalen, nach Körpermerkmalen wie Haarfarbe oder Tätowierung
+und Anfragen, eine bestimmte Person wiederzufinden oder zu verfolgen. Beschreibungen nach
+Geschlecht, Alter oder Kleidung sind nur unter einem Mandat möglich, das sie ausdrücklich zulässt,
+etwa bei einer Vermisstensuche; solche Suchen stehen gekennzeichnet im Protokoll. Unter einem
+solchen Mandat ließe sich eine Person in auffälliger Jacke über mehrere Quellen wiederfinden. Das
+verhindert keine technische Schranke, sondern die Regel, das Protokoll und die Stichprobe der
+Aufsicht. Die Prüfung arbeitet mit Wortlisten und lässt sich mit Umschreibungen umgehen; die
+Begrenzung des Suchraums je Mandat steht aus.
 
 ### Reicht die Gesichtsmaskierung als Anonymisierung?
 
@@ -104,8 +113,8 @@ Protokolldatei löschen.
 ### Was verlässt im Verbund unser Haus?
 
 Wenn Sie fragen: Ihre Frage, Ihr Mandat und der Name der fragenden Person. Wenn Sie gefragt
-werden: höchstens zwölf verkleinerte, maskierte Vorschaubilder mit Ort und Zeit, und nur aus
-Quellen, die Sie einzeln freigegeben haben. Aufnahmen und Index bleiben bei Ihnen; Ihr Knoten
+werden: höchstens zwölf verkleinerte, maskierte Vorschaubilder mit Ort und Zeit und die Nummer
+Ihres Protokolleintrags als Beleg, und nur aus Quellen, die Sie einzeln freigegeben haben. Aufnahmen und Index bleiben bei Ihnen; Ihr Knoten
 prüft die fremde Frage nach Ihren eigenen Regeln und protokolliert sie. Auch ein Vorschaubild ist
 ein personenbezogenes Datum, die Übermittlung braucht also eine Grundlage. Die Verbindung
 zwischen Knoten ist bisher signiert, aber nicht verschlüsselt.
@@ -114,8 +123,9 @@ zwischen Knoten ist bisher signiert, aber nicht verschlüsselt.
 
 Nicht von selbst. Die Modellgewichte ändern sich im Betrieb nicht. Bestätigen oder verwerfen Ihre
 Leute Meldungen, wird das gesammelt; eine Wache ändert sich erst, wenn jemand sie ausdrücklich
-nachschärft. Das erzeugt eine neue Version, steht im Protokoll und lässt sich zurücknehmen. Ihre
-Bilder verlassen dabei den Knoten nicht.
+nachschärft. Das erzeugt eine neue Version, steht im Protokoll und lässt sich zurücknehmen. In der
+eigenen Übung genügten ein verworfenes und ein bestätigtes Urteil, damit eine Fehlmeldung nach
+dem Nachschärfen ausblieb. Ihre Bilder verlassen dabei den Knoten nicht.
 
 ### Ist das ein Hochrisiko-System nach der KI-Verordnung?
 
@@ -130,18 +140,25 @@ von Personen gibt.
 
 ### Was passiert bei Fehlalarmen?
 
-Eine Meldung ist ein Vorschlag mit Bild, Quelle, Ort und Zeit. Ihr Lagedienst bestätigt oder
-verwirft sie. Je Wache lassen sich Schwelle, Mindestdauer und Abklingzeit einstellen, und mehrere
-Meldungen am selben Ort werden zu einer Lage gebündelt, damit die Anzeige nicht vollläuft. Wie
-viele Fehlmeldungen im Einsatz je Stunde anfallen, wissen wir nicht; das zeigt erst eine
+Eine Meldung ist ein Vorschlag mit Bild, Quelle, Ort und Zeit. Ihre Auswertung bestätigt oder
+verwirft sie. Je Wache lassen sich Schwelle, Mindestdauer und Abklingzeit einstellen, und
+gleichartige Meldungen am selben Ort werden zu einer Lage gebündelt, damit die Anzeige nicht
+vollläuft. In der eigenen Übung mit Archivmaterial war eine von 15 Meldungen falsch: Eine
+abgerutschte Fahrbahn wurde als umgestürzter Lastkraftwagen gemeldet. Nach einem verworfenen und
+einem bestätigten Urteil und dem ausdrücklichen Nachschärfen der Wache blieb sie im nächsten Lauf
+aus. Wie viele Fehlmeldungen im Einsatz je Stunde anfallen, wissen wir nicht; das zeigt erst eine
 Erprobung.
 
 ### Was, wenn das System etwas übersieht?
 
-Das wird vorkommen. Das Gefahrenmodell erreicht an einem öffentlichen Datensatz 99,1 Prozent;
-der Wert gilt für ähnliche Luftbilder, nicht für Nacht, Regen oder eine verschmutzte Linse. Sicht
-ist ein zusätzliches Augenpaar und kein Ersatz für die Erkundung. Eine ausbleibende Meldung ist
-keine Entwarnung, und so sollte es in Ihrer Dienstanweisung stehen.
+Das wird vorkommen. In der eigenen Übung wurden alle 13 Ereignisse des Drehbuchs gemeldet, aber
+die Wachen waren an diesem Material formuliert; über fremdes Material, Nacht, Regen oder eine
+verschmutzte Linse sagt das nichts. Das trainierte Gefahrenmodell erreicht an seinem öffentlichen
+Datensatz 99,1 Prozent und irrt trotzdem schon auf dem Übungsmaterial: Es hält einen ruhigen
+Fluss für eine Überflutung. Es löst deshalb in der Voreinstellung keine Meldungen aus, sondern
+steht als Zweitmeinung neben Meldungen aus Luftbildquellen. Sicht ist ein zusätzliches Augenpaar und kein Ersatz für die
+Erkundung. Eine ausbleibende Meldung ist keine Entwarnung, und so sollte es in Ihrer
+Dienstanweisung stehen.
 
 ### Wer haftet?
 
@@ -153,31 +170,34 @@ Vertrag und vor Ihre Rechtsabteilung.
 
 ### Läuft das im Einsatz ohne Netz, und auf welcher Hardware?
 
-Ja. Nach dem einmaligen Laden der Modellgewichte arbeitet ein Knoten ohne Netzverbindung.
-Gemessen ist: Ein Rechner mit vier Prozessorkernen und ohne Grafikkarte wertet bei einem Bild je
-Sekunde rund dreimal so schnell aus, wie das Material entsteht; rechnerisch reicht das für drei
-Quellen zugleich. Der Wert stammt vom bisherigen Bildmodell und ist nach dem Modellwechsel neu zu
-messen. Für den Verbund braucht es eine Verbindung zwischen den Knoten.
+Ja. Nach dem einmaligen Laden der Modellgewichte (rund 950 MB) arbeitet ein Knoten ohne
+Netzverbindung. Gemessen ist: Ein Rechner mit vier Prozessorkernen und ohne Grafikkarte wertet
+Aufzeichnungen bei einem Bild je Sekunde 3,3-mal so schnell aus, wie das Material entsteht, die
+Maskierung eingeschlossen; rechnerisch reicht das für drei Quellen zugleich. Für elf Quellen
+gleichzeitig bräuchte es etwa das Dreieinhalbfache dieser Rechenleistung oder eine Grafikkarte.
+Für den Verbund braucht es eine Verbindung zwischen den Knoten.
 
 ### Wie kommen unsere Drohnenbilder hinein?
 
-Heute als Videodatei, einzeln oder als Ordner. Im Test waren 44 Aufnahmen nach knapp sechs
-Sekunden grob durchsuchbar; die genaue Auswertung lief im Hintergrund weiter. Die laufende
-Übertragung einer Drohne oder Kamera lässt sich noch nicht anbinden. Das ist der wichtigste
-fehlende Baustein und für Februar 2027 geplant.
+Heute als Videodatei, einzeln oder als Ordner. Im Test waren 44 Aufnahmen 14 Sekunden nach Beginn
+des Hochladens grob durchsuchbar; die genaue Auswertung lief im Hintergrund weiter und war nach
+gut zweieinhalb Minuten abgeschlossen. Die laufende Übertragung einer Drohne oder Kamera lässt
+sich noch nicht anbinden. Das ist der wichtigste fehlende Baustein und für Februar 2027 geplant.
 
 ## Aus der Presse
 
 ### Woher stammt das Modell, und läuft es wirklich ohne Internet?
 
-Das Bildmodell ist MobileCLIP-S2 von Apple, der Gesichtserkenner YuNet aus dem OpenCV-Projekt;
-das Gefahrenmodell wurde selbst auf dem öffentlichen Datensatz AIDERv2 trainiert. Die Gewichte
-werden einmal geladen und laufen danach auf dem Rechner der Behörde; der Quelltext enthält keine
-Rückmeldung an den Hersteller oder an Dritte. Ein Problem gehört dazu gesagt: Apple gibt
-MobileCLIP nur für Forschungszwecke frei
-([Lizenz](https://huggingface.co/apple/MobileCLIP-S2/blob/main/LICENSE)). Für den Einsatz wird
-auf ein frei lizenziertes Modell umgestellt; SigLIP unter Apache 2.0 und CLIP unter MIT sind
-bereits wählbar. Danach werden alle Werte neu gemessen.
+Der Bildkodierer ist SigLIP 2 (base, patch32-256) von Google unter der Lizenz Apache 2.0
+([Modellseite](https://huggingface.co/google/siglip2-base-patch32-256)), der Gesichtserkenner
+YuNet aus dem OpenCV-Projekt (MIT); das Gefahrenmodell wurde selbst auf dem öffentlichen Datensatz
+AIDERv2 trainiert. Die Gewichte werden einmal geladen und laufen danach auf dem Rechner der
+Behörde; der Quelltext enthält keine Rückmeldung an den Hersteller oder an Dritte. Der Kodierer
+versteht deutsche und englische Anfragen. Dazu gehört gesagt: Bis zum 18. November 2026 war
+MobileCLIP von Apple voreingestellt, das nur für Forschungszwecke freigegeben ist
+([Lizenz](https://huggingface.co/apple/MobileCLIP-S2/blob/main/LICENSE)). Deshalb wurde
+umgestellt und alles neu gemessen. Offen ist die schriftliche Prüfung der Lizenzkette, etwa der
+ONNX-Fassung, in der der Kodierer geladen wird.
 
 ### Warum sollte man glauben, dass Sie Gesichtserkennung nicht später nachrüsten?
 
@@ -189,9 +209,10 @@ Polizei als Kunde. Über die Offenlegung des Quelltexts ist noch nicht entschied
 
 ### Wurde das je im Ernstfall erprobt?
 
-Nein. Es gibt keinen Behördenkunden, keine Erprobung in einer Übung und keinen Einsatz. Alle
-Messwerte stammen von Archivaufnahmen und einem öffentlichen Datensatz. Die erste Erprobung in
-einer Übung ist für das zweite Quartal 2027 vorgesehen, wenn eine Behörde zusagt.
+Nein. Es gibt keinen Behördenkunden, keine Erprobung mit einer Behörde und keinen Einsatz.
+Gemessen sind eine eigene Übung mit Archivaufnahmen aus dem Netz und ein öffentlicher Datensatz;
+der Messbericht nennt, was die Werte bedeuten und was nicht. Die erste Erprobung in einer Übung
+mit einer Behörde ist für das zweite Quartal 2027 vorgesehen, wenn eine Behörde zusagt.
 
 ### Sie verweisen auf das Ahrtal. Ist das redlich?
 

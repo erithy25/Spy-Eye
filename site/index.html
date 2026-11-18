@@ -11,7 +11,7 @@
 <meta name="format-detection" content="telephone=no">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050505'/%3E%3Cpath d='M5 12V5h7M20 5h7v7M27 20v7h-7M12 27H5v-7' fill='none' stroke='%23ededed' stroke-width='2'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
-<noscript><style>.shot img{opacity:1}.shot-empty{display:none}</style></noscript>
+<noscript><style>.shot img{opacity:1}.shot-empty{display:none}.reveal{opacity:1!important;transform:none!important}</style></noscript>
 <script src="assets/map/hero.js" defer></script>
 <script src="i18n.js" defer></script>
 <script src="main.js" defer></script>
@@ -87,6 +87,28 @@
   </dl>
 </section>
 
+<!-- ================================================================ film -->
+<section class="section section-film" id="film" aria-labelledby="h-film">
+  <div class="wrap split">
+    <div class="rail" aria-hidden="true">
+      <p class="rail-in"><span class="head-no">—</span><span class="label head-name" data-i18n="film.rail">Film · 40 s</span></p>
+    </div>
+    <div class="main">
+      <h2 class="sr-only" id="h-film" data-i18n="film.h2">Markenfilm</h2>
+      <figure class="shot film reveal">
+        <div class="shot-frame film-frame">
+          <video controls playsinline preload="metadata" poster="assets/film/poster.webp" width="1280" height="720" aria-label="Markenfilm, 40 Sekunden, mit Ton, ohne Sprache" data-i18n-aria-label="film.aria">
+            <source src="assets/film/sicht-markenfilm.mp4" type="video/mp4">
+            <a href="assets/film/sicht-markenfilm.mp4" data-i18n="film.fallback">Film als Datei öffnen (MP4, 2,8 MB)</a>
+          </video>
+        </div>
+        <figcaption data-i18n="film.caption">Markenfilm · Symbolbilder, KI-generiert</figcaption>
+      </figure>
+      <p class="film-note reveal" data-i18n="film.note">40 Sekunden, mit Ton, ohne Sprache. Was der Film über die Flutnacht im Ahrtal sagt, steht mit Quellen im folgenden Abschnitt.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ================================================================ 01 problem -->
 <section class="section" id="problem" aria-labelledby="h-problem">
   <div class="wrap split">
@@ -127,9 +149,9 @@
       </div>
       <p class="purpose-text" data-i18n="purpose.text">Sicht misst genau diese Strecke: die Sekunden zwischen dem ersten Bild eines Ereignisses und der Meldung auf der Lagekarte – in jeder Übung, je Ereignis, nachprüfbar.</p>
       <dl class="rows">
-        <div><dt data-i18n="kpi1.k">Erkennungsverzug</dt><dd data-i18n="kpi1.v">Sekunden vom Auftreten eines Ereignisses im Bild bis zur Meldung.</dd></div>
-        <div><dt data-i18n="kpi2.k">Sichtungsquote</dt><dd data-i18n="kpi2.v">Anteil des eingegangenen Materials, der ausgewertet wurde.</dd></div>
-        <div><dt data-i18n="kpi3.k">Protokollabdeckung</dt><dd data-i18n="kpi3.v">Anteil der Abfragen mit Zweck, Person und Protokolleintrag. Ziel: 100&nbsp;%.</dd></div>
+        <div><dt data-i18n="kpi1.k">Erkennungsverzug</dt><dd data-i18n="kpi1.v">Sekunden vom Auftreten eines Ereignisses im Bild bis zur Meldung; gemessen je Ereignis in jeder Übung.</dd></div>
+        <div><dt data-i18n="kpi2.k">Sichtungsquote</dt><dd data-i18n="kpi2.v">Anteil der eingegangenen Aufzeichnungen, die vollständig ausgewertet sind.</dd></div>
+        <div><dt data-i18n="kpi3.k">Protokollierte Abfragen</dt><dd data-i18n="kpi3.v">Zahl der Abfragen und der abgelehnten Abfragen. Eine Antwort wird erst ausgeliefert, nachdem der Protokolleintrag geschrieben ist; Abfragen ohne Eintrag gibt es bauartbedingt nicht.</dd></div>
       </dl>
     </div>
 
@@ -169,15 +191,24 @@
         <div class="module-text">
           <h3>Übersicht <span class="gloss" data-i18n="mod1.gloss"></span></h3>
           <p class="label" data-i18n="mod1.tab">Reiter LAGE</p>
-          <p data-i18n="mod1.text">Die Lagekarte zeigt Quellen, Meldungen und Lagen dort, wo sie aufgenommen wurden, mit ihrer Koordinate im UTM-Referenzsystem. Sie ist aus OpenStreetMap-Vektordaten und Höhenlinien selbst gezeichnet und braucht keinen Kacheldienst.</p>
+          <p data-i18n="mod1.text">Die Lagekarte zeigt Quellen, Meldungen und Lagen dort, wo sie aufgenommen wurden, mit UTMREF-Gitter und der Koordinate unter dem Zeiger. Sie ist aus OpenStreetMap-Vektordaten und Höhenlinien selbst gezeichnet und braucht keinen Kacheldienst. Meldungen gleicher Art am selben Ort werden zu einer Lage.</p>
         </div>
-        <figure class="shot">
-          <div class="shot-frame">
-            <img src="assets/screens/lage.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Lage: Lagekarte mit Quellen, Meldungen und Lagen" data-i18n-alt="mod1.alt">
-            <div class="shot-empty" aria-hidden="true"><span>LAGE</span><span>16 : 10</span></div>
-          </div>
-          <figcaption><span data-i18n="shot.console">Konsole</span> · LAGE · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
-        </figure>
+        <div class="shots">
+          <figure class="shot">
+            <a class="shot-frame" href="assets/screens/lage.webp" data-zoom>
+              <img src="assets/screens/lage-1440.webp" srcset="assets/screens/lage-1440.webp 1440w, assets/screens/lage.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 62vw, 880px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Lage: Lagekarte mit elf Quellen, laufenden Meldungen, Lagen und den Bildern der Quellen" data-i18n-alt="mod1.alt">
+              <span class="shot-empty" aria-hidden="true"><span>LAGE</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod1.cap">Konsole · LAGE · Übung RHEIN-MOSEL bei T+07:10: elf Quellen, sechs laufende von 13 Meldungen, zehn Lagen</figcaption>
+          </figure>
+          <figure class="shot shot-detail">
+            <a class="shot-frame" href="assets/screens/meldung.webp" data-zoom>
+              <img src="assets/screens/meldung-960.webp" srcset="assets/screens/meldung-960.webp 960w, assets/screens/meldung.webp 2880w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 31vw, 430px" width="960" height="600" loading="lazy" decoding="async" alt="Konsole: eine Meldung der Wache Brand mit Bild, Quelle, Koordinate und den Schaltflächen zum Bestätigen und Verwerfen" data-i18n-alt="mod1.dalt">
+              <span class="shot-empty" aria-hidden="true"><span>DETAIL</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod1.dcap">Eine Meldung im Einzelnen: die Wache „Brand“ an Erkunder 3, mit Koordinate, Sicherheit und dem Urteil der Auswertenden.</figcaption>
+          </figure>
+        </div>
       </article>
 
       <article class="module reveal">
@@ -185,15 +216,24 @@
         <div class="module-text">
           <h3>Einsicht <span class="gloss" data-i18n="mod2.gloss"></span></h3>
           <p class="label" data-i18n="mod2.tab">Reiter SUCHE</p>
-          <p data-i18n="mod2.text">Eine Beschreibung in freien Worten durchsucht alles eingegangene Bildmaterial und liefert je Szene ein Bild mit markiertem Ausschnitt. Jede Suche braucht ein Mandat; Anfragen nach identifizierenden oder geschützten Merkmalen von Personen lehnt das System ab und protokolliert die Ablehnung.</p>
+          <p data-i18n="mod2.text">Eine Beschreibung in freien Worten, auf Deutsch oder Englisch, durchsucht alles eingegangene Bildmaterial und liefert je Szene ein Bild mit markiertem Ausschnitt. Jede Suche braucht ein Mandat. Anfragen nach Namen, Gesichtern, Kennzeichen oder nach geschützten und körperlichen Merkmalen von Personen lehnt das System ab und protokolliert die Ablehnung.</p>
         </div>
-        <figure class="shot">
-          <div class="shot-frame">
-            <img src="assets/screens/suche.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Suche: Treffer einer Freitextsuche, je Szene ein Bild" data-i18n-alt="mod2.alt">
-            <div class="shot-empty" aria-hidden="true"><span>SUCHE</span><span>16 : 10</span></div>
-          </div>
-          <figcaption><span data-i18n="shot.console">Konsole</span> · SUCHE · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
-        </figure>
+        <div class="shots">
+          <figure class="shot">
+            <a class="shot-frame" href="assets/screens/suche.webp" data-zoom>
+              <img src="assets/screens/suche-1440.webp" srcset="assets/screens/suche-1440.webp 1440w, assets/screens/suche.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 62vw, 880px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Suche: sechs Treffer zur Anfrage überflutete Wiese, Karte der Fundorte und die Antwort eines Nachbarknotens" data-i18n-alt="mod2.alt">
+              <span class="shot-empty" aria-hidden="true"><span>SUCHE</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod2.cap">Konsole · SUCHE · Anfrage „überflutete Wiese“: sechs Treffer aus drei Quellen, rechts die Antwort des Nachbarknotens Trier mit Beleg</figcaption>
+          </figure>
+          <figure class="shot shot-detail">
+            <a class="shot-frame" href="assets/screens/treffer.webp" data-zoom>
+              <img src="assets/screens/treffer-960.webp" srcset="assets/screens/treffer-960.webp 960w, assets/screens/treffer.webp 2880w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 31vw, 430px" width="960" height="600" loading="lazy" decoding="async" alt="Konsole: ein Treffer im Einzelnen, das Bild ist bis auf die Fundstelle abgedunkelt" data-i18n-alt="mod2.dalt">
+              <span class="shot-empty" aria-hidden="true"><span>DETAIL</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod2.dcap">Ein Treffer im Einzelnen: Abgedunkelt ist, worauf die Anfrage nicht anspricht.</figcaption>
+          </figure>
+        </div>
       </article>
 
       <article class="module reveal">
@@ -201,15 +241,24 @@
         <div class="module-text">
           <h3>Vorsicht <span class="gloss" data-i18n="mod3.gloss"></span></h3>
           <p class="label" data-i18n="mod3.tab">Reiter WACHEN</p>
-          <p data-i18n="mod3.text">Eine Wache ist ein stehender Suchauftrag: Sie prüft neues Material selbständig und meldet, sobald eine Beschreibung über mehrere Bilder hinweg zutrifft. Rückmeldungen der Auswertenden wirken erst, wenn jemand die Wache ausdrücklich nachschärft; jede Fassung ist nummeriert.</p>
+          <p data-i18n="mod3.text">Eine Wache ist ein stehender Suchauftrag in Worten: Sie prüft neues Material selbständig und meldet, sobald eine Beschreibung über mehrere Bilder hinweg zutrifft. Urteile der Auswertenden wirken erst, wenn jemand die Wache ausdrücklich nachschärft; jede Fassung ist nummeriert.</p>
         </div>
-        <figure class="shot">
-          <div class="shot-frame">
-            <img src="assets/screens/wachen.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Wachen: stehende Suchaufträge mit ihren Meldungen" data-i18n-alt="mod3.alt">
-            <div class="shot-empty" aria-hidden="true"><span>WACHEN</span><span>16 : 10</span></div>
-          </div>
-          <figcaption><span data-i18n="shot.console">Konsole</span> · WACHEN · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
-        </figure>
+        <div class="shots">
+          <figure class="shot">
+            <a class="shot-frame" href="assets/screens/wachen.webp" data-zoom>
+              <img src="assets/screens/wachen-1440.webp" srcset="assets/screens/wachen-1440.webp 1440w, assets/screens/wachen.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 62vw, 880px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Wachen: neun Wachen, gewählt ist Umgestürzter Lastkraftwagen in Version 2" data-i18n-alt="mod3.alt">
+              <span class="shot-empty" aria-hidden="true"><span>WACHEN</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod3.cap">Konsole · WACHEN · die Wache „Umgestürzter Lastkraftwagen“ in Version 2, nachgeschärft aus einem bestätigten und einem verworfenen Urteil</figcaption>
+          </figure>
+          <figure class="shot shot-detail">
+            <a class="shot-frame" href="assets/screens/wache-neu.webp" data-zoom>
+              <img src="assets/screens/wache-neu-960.webp" srcset="assets/screens/wache-neu-960.webp 960w, assets/screens/wache-neu.webp 2880w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 31vw, 430px" width="960" height="600" loading="lazy" decoding="async" alt="Konsole: Eingabe einer neuen Wache mit Vorschau der Bilder, die gemeldet hätten" data-i18n-alt="mod3.dalt">
+              <span class="shot-empty" aria-hidden="true"><span>DETAIL</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod3.dcap">Eine neue Wache, vor dem Aufstellen am Bestand geprüft: 57 von 567 Bildern hätten gemeldet.</figcaption>
+          </figure>
+        </div>
       </article>
 
       <article class="module reveal">
@@ -217,15 +266,17 @@
         <div class="module-text">
           <h3>Durchsicht <span class="gloss" data-i18n="mod4.gloss"></span></h3>
           <p class="label" data-i18n="mod4.tab">Reiter VORGÄNGE</p>
-          <p data-i18n="mod4.text">Bilder werden mit ihrer SHA-256-Prüfsumme in einem Vorgang gesichert und sind von der Löschfrist ausgenommen, solange er besteht. Ein versiegelter Vorgang lässt sich als druckbarer Bericht ausgeben, dessen Inhalt gegen das Protokoll prüfbar ist.</p>
+          <p data-i18n="mod4.text">Bilder werden mit der SHA-256-Prüfsumme des unmaskierten Originals in einem Vorgang gesichert und sind von der Löschfrist ausgenommen, solange er besteht. Ein versiegelter Vorgang ist unveränderlich und lässt sich als druckbarer Bericht ausgeben, dessen Siegel im Protokoll steht.</p>
         </div>
-        <figure class="shot">
-          <div class="shot-frame">
-            <img src="assets/screens/vorgaenge.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Vorgänge: Akte mit gesicherten Bildern und Prüfsummen" data-i18n-alt="mod4.alt">
-            <div class="shot-empty" aria-hidden="true"><span>VORGÄNGE</span><span>16 : 10</span></div>
-          </div>
-          <figcaption><span data-i18n="shot.console">Konsole</span> · VORGÄNGE · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
-        </figure>
+        <div class="shots">
+          <figure class="shot">
+            <a class="shot-frame" href="assets/screens/vorgaenge.webp" data-zoom>
+              <img src="assets/screens/vorgaenge-1440.webp" srcset="assets/screens/vorgaenge-1440.webp 1440w, assets/screens/vorgaenge.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 62vw, 880px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Vorgänge: versiegelter Vorgang mit einem gesicherten Bild, Prüfsumme und Siegel" data-i18n-alt="mod4.alt">
+              <span class="shot-empty" aria-hidden="true"><span>VORGÄNGE</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod4.cap">Konsole · VORGÄNGE · versiegelter Vorgang mit einem Beweisstück, seiner Prüfsumme und dem Siegel</figcaption>
+          </figure>
+        </div>
       </article>
 
       <article class="module reveal">
@@ -233,15 +284,17 @@
         <div class="module-text">
           <h3>Weitsicht <span class="gloss" data-i18n="mod5.gloss"></span></h3>
           <p class="label" data-i18n="mod5.tab">Reiter VERBUND</p>
-          <p data-i18n="mod5.text">Knoten verschiedener Behörden beantworten einander Suchanfragen, ohne Aufzeichnungen herauszugeben: Es reist die signierte Frage mit Mandat und anfragender Person. Zurück kommen maskierte Vorschaubilder und die Nummer des Protokolleintrags, unter dem der antwortende Knoten die Anfrage verbucht hat.</p>
+          <p data-i18n="mod5.text">Knoten verschiedener Behörden beantworten einander Suchanfragen, ohne Aufzeichnungen herauszugeben: Es reist die signierte Frage mit Mandat und anfragender Person. Zurück kommen höchstens zwölf maskierte Vorschaubilder und die Nummer des Protokolleintrags, unter dem der antwortende Knoten die Anfrage verbucht hat.</p>
         </div>
-        <figure class="shot">
-          <div class="shot-frame">
-            <img src="assets/screens/verbund.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Verbund: Nachbarknoten und die Antworten auf eine Verbundabfrage" data-i18n-alt="mod5.alt">
-            <div class="shot-empty" aria-hidden="true"><span>VERBUND</span><span>16 : 10</span></div>
-          </div>
-          <figcaption><span data-i18n="shot.console">Konsole</span> · VERBUND · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
-        </figure>
+        <div class="shots">
+          <figure class="shot">
+            <a class="shot-frame" href="assets/screens/verbund.webp" data-zoom>
+              <img src="assets/screens/verbund-1440.webp" srcset="assets/screens/verbund-1440.webp 1440w, assets/screens/verbund.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 62vw, 880px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Verbund: Karte mit den Knoten Koblenz, Trier und Mainz und die Liste der Nachbarknoten" data-i18n-alt="mod5.alt">
+              <span class="shot-empty" aria-hidden="true"><span>VERBUND</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod5.cap">Konsole · VERBUND · drei Knoten: Koblenz mit den Nachbarn Trier und Mainz, beide erreichbar</figcaption>
+          </figure>
+        </div>
       </article>
 
       <article class="module reveal">
@@ -251,13 +304,22 @@
           <p class="label" data-i18n="mod6.tab">Reiter PROTOKOLL</p>
           <p data-i18n="mod6.text">Jede Anmeldung, Suche, Ablehnung, Freigabe und Ausgabe steht in einem Protokoll, dessen Einträge über SHA-256 verkettet sind. Die Aufsicht prüft die Kette in einem Schritt, zieht Stichproben aus den Abfragen und exportiert das Protokoll vollständig.</p>
         </div>
-        <figure class="shot">
-          <div class="shot-frame">
-            <img src="assets/screens/protokoll.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Protokoll: verkettete Einträge und das Ergebnis der Prüfung" data-i18n-alt="mod6.alt">
-            <div class="shot-empty" aria-hidden="true"><span>PROTOKOLL</span><span>16 : 10</span></div>
-          </div>
-          <figcaption><span data-i18n="shot.console">Konsole</span> · PROTOKOLL · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
-        </figure>
+        <div class="shots">
+          <figure class="shot">
+            <a class="shot-frame" href="assets/screens/protokoll.webp" data-zoom>
+              <img src="assets/screens/protokoll-1440.webp" srcset="assets/screens/protokoll-1440.webp 1440w, assets/screens/protokoll.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 62vw, 880px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Protokoll: Kette geprüft und unversehrt, darunter die verketteten Einträge" data-i18n-alt="mod6.alt">
+              <span class="shot-empty" aria-hidden="true"><span>PROTOKOLL</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod6.cap">Konsole · PROTOKOLL · Kette geprüft und unversehrt; darunter Ablehnungen, ein Siegel und das Nachschärfen einer Wache</figcaption>
+          </figure>
+          <figure class="shot shot-detail">
+            <a class="shot-frame" href="assets/screens/stichprobe.webp" data-zoom>
+              <img src="assets/screens/stichprobe-960.webp" srcset="assets/screens/stichprobe-960.webp 960w, assets/screens/stichprobe.webp 2880w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 31vw, 430px" width="960" height="600" loading="lazy" decoding="async" alt="Konsole: Stichprobe aus den protokollierten Abfragen" data-i18n-alt="mod6.dalt">
+              <span class="shot-empty" aria-hidden="true"><span>DETAIL</span><span>16 : 10</span></span>
+            </a>
+            <figcaption data-i18n="mod6.dcap">Stichprobe der Aufsicht: vier gezogene Abfragen, drei davon Ablehnungen.</figcaption>
+          </figure>
+        </div>
       </article>
 
       <article class="module reveal">
@@ -265,114 +327,31 @@
         <div class="module-text">
           <h3>Rücksicht <span class="gloss" data-i18n="mod7.gloss"></span></h3>
           <p class="label" data-i18n="mod7.tab">Durchgehend, in jedem Reiter</p>
-          <p data-i18n="mod7.text">Gesichter werden beim Einspielen unkenntlich gemacht; das unmaskierte Bild gibt es nur mit Begründung und der Freigabe einer zweiten Person, befristet auf 15 Minuten. Ohne Mandat mit Zweck und Rechtsgrundlage ist keine Auswertung möglich.</p>
+          <p data-i18n="mod7.text">Gesichter werden beim Einspielen unkenntlich gemacht; das unmaskierte Bild gibt es nur mit Begründung und der Freigabe einer zweiten Person, befristet auf 15 Minuten. Ohne Mandat mit Zweck und Rechtsgrundlage ist keine Auswertung möglich. Die drei Bilder zeigen denselben Vorgang in der Konsole.</p>
         </div>
-        <figure class="shot shot-diagram">
-          <div class="shot-frame">
-            <svg class="mask mask-wide" viewBox="0 0 640 400" role="img" aria-labelledby="mask-title">
-              <title id="mask-title" data-i18n="mask.title">Schema: Ein Gesicht im Bild wird beim Einspielen durch ein grobes Raster ersetzt; das Original liegt unter Verschluss.</title>
-              <g class="mask-frame">
-                <rect x="60" y="56" width="300" height="288"/>
-                <path d="M96 344 C96 282 140 246 210 246 C280 246 324 282 324 344"/>
-                <path d="M194 202 V248 M226 202 V248"/>
-              </g>
-              <g class="mask-cells">
-                <rect x="170" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
-                <rect x="186" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
-                <rect x="202" y="110.0" width="16" height="15.5" fill="#333"/>
-                <rect x="218" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
-                <rect x="234" y="110.0" width="16" height="15.5" fill="#1f1f1f"/>
-                <rect x="170" y="125.3" width="16" height="15.5" fill="#333"/>
-                <rect x="186" y="125.3" width="16" height="15.5" fill="#555"/>
-                <rect x="202" y="125.3" width="16" height="15.5" fill="#555"/>
-                <rect x="218" y="125.3" width="16" height="15.5" fill="#555"/>
-                <rect x="234" y="125.3" width="16" height="15.5" fill="#333"/>
-                <rect x="170" y="140.7" width="16" height="15.5" fill="#555"/>
-                <rect x="186" y="140.7" width="16" height="15.5" fill="#333"/>
-                <rect x="202" y="140.7" width="16" height="15.5" fill="#8a8a8a"/>
-                <rect x="218" y="140.7" width="16" height="15.5" fill="#333"/>
-                <rect x="234" y="140.7" width="16" height="15.5" fill="#555"/>
-                <rect x="170" y="156.0" width="16" height="15.5" fill="#555"/>
-                <rect x="186" y="156.0" width="16" height="15.5" fill="#8a8a8a"/>
-                <rect x="202" y="156.0" width="16" height="15.5" fill="#8a8a8a"/>
-                <rect x="218" y="156.0" width="16" height="15.5" fill="#8a8a8a"/>
-                <rect x="234" y="156.0" width="16" height="15.5" fill="#555"/>
-                <rect x="170" y="171.3" width="16" height="15.5" fill="#333"/>
-                <rect x="186" y="171.3" width="16" height="15.5" fill="#8a8a8a"/>
-                <rect x="202" y="171.3" width="16" height="15.5" fill="#333"/>
-                <rect x="218" y="171.3" width="16" height="15.5" fill="#8a8a8a"/>
-                <rect x="234" y="171.3" width="16" height="15.5" fill="#333"/>
-                <rect x="170" y="186.7" width="16" height="15.5" fill="#1f1f1f"/>
-                <rect x="186" y="186.7" width="16" height="15.5" fill="#555"/>
-                <rect x="202" y="186.7" width="16" height="15.5" fill="#555"/>
-                <rect x="218" y="186.7" width="16" height="15.5" fill="#555"/>
-                <rect x="234" y="186.7" width="16" height="15.5" fill="#1f1f1f"/>
-              </g>
-              <path class="mask-reticle" d="M162 114v-12h12M246 102h12v12M258 198v12h-12M174 210h-12v-12"/>
-              <path class="mask-leader" d="M258 156 H420"/>
-              <g class="mask-notes">
-                <text x="432" y="150" class="t-strong" data-i18n="mask.a">MASKIERT BEIM EINSPIELEN</text>
-                <text x="432" y="172" data-i18n="mask.b">Original unter Verschluss</text>
-                <text x="432" y="230" class="t-strong" data-i18n="mask.c">FREIGABE</text>
-                <text x="432" y="252" data-i18n="mask.d">Begründung · zweite Person</text>
-                <text x="432" y="272" data-i18n="mask.e">befristet auf 15 Minuten</text>
-                <text x="432" y="294" data-i18n="mask.f">Eintrag im Protokoll</text>
-              </g>
-              <path class="mask-rule" d="M432 196 H596"/>
-            </svg>
-            <svg class="mask mask-narrow" viewBox="0 0 340 322" role="img" aria-labelledby="mask-title-n">
-              <title id="mask-title-n" data-i18n="mask.title">Schema: Ein Gesicht im Bild wird beim Einspielen durch ein grobes Raster ersetzt; das Original liegt unter Verschluss.</title>
-              <g class="mask-frame">
-                <rect x="95" y="16" width="150" height="150"/>
-                <path d="M113 166 C113 134 136 116 170 116 C204 116 227 134 227 166"/>
-                <path d="M162 92 V117 M178 92 V117"/>
-              </g>
-              <g class="mask-cells">
-                <rect x="150" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
-                <rect x="158" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
-                <rect x="166" y="46.0" width="8" height="7.9" fill="#333"/>
-                <rect x="174" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
-                <rect x="182" y="46.0" width="8" height="7.9" fill="#1f1f1f"/>
-                <rect x="150" y="53.7" width="8" height="7.9" fill="#333"/>
-                <rect x="158" y="53.7" width="8" height="7.9" fill="#555"/>
-                <rect x="166" y="53.7" width="8" height="7.9" fill="#555"/>
-                <rect x="174" y="53.7" width="8" height="7.9" fill="#555"/>
-                <rect x="182" y="53.7" width="8" height="7.9" fill="#333"/>
-                <rect x="150" y="61.3" width="8" height="7.9" fill="#555"/>
-                <rect x="158" y="61.3" width="8" height="7.9" fill="#333"/>
-                <rect x="166" y="61.3" width="8" height="7.9" fill="#8a8a8a"/>
-                <rect x="174" y="61.3" width="8" height="7.9" fill="#333"/>
-                <rect x="182" y="61.3" width="8" height="7.9" fill="#555"/>
-                <rect x="150" y="69.0" width="8" height="7.9" fill="#555"/>
-                <rect x="158" y="69.0" width="8" height="7.9" fill="#8a8a8a"/>
-                <rect x="166" y="69.0" width="8" height="7.9" fill="#8a8a8a"/>
-                <rect x="174" y="69.0" width="8" height="7.9" fill="#8a8a8a"/>
-                <rect x="182" y="69.0" width="8" height="7.9" fill="#555"/>
-                <rect x="150" y="76.7" width="8" height="7.9" fill="#333"/>
-                <rect x="158" y="76.7" width="8" height="7.9" fill="#8a8a8a"/>
-                <rect x="166" y="76.7" width="8" height="7.9" fill="#333"/>
-                <rect x="174" y="76.7" width="8" height="7.9" fill="#8a8a8a"/>
-                <rect x="182" y="76.7" width="8" height="7.9" fill="#333"/>
-                <rect x="150" y="84.3" width="8" height="7.9" fill="#1f1f1f"/>
-                <rect x="158" y="84.3" width="8" height="7.9" fill="#555"/>
-                <rect x="166" y="84.3" width="8" height="7.9" fill="#555"/>
-                <rect x="174" y="84.3" width="8" height="7.9" fill="#555"/>
-                <rect x="182" y="84.3" width="8" height="7.9" fill="#1f1f1f"/>
-              </g>
-              <path class="mask-reticle" d="M145 48v-7h7M188 41h7v7M195 90v7h-7M152 97h-7v-7"/>
-              <g class="mask-notes">
-                <text x="20" y="204" class="t-strong" data-i18n="mask.a">MASKIERT BEIM EINSPIELEN</text>
-                <text x="20" y="223" data-i18n="mask.b">Original unter Verschluss</text>
-                <text x="20" y="262" class="t-strong" data-i18n="mask.c">FREIGABE</text>
-                <text x="20" y="281" data-i18n="mask.d">Begründung · zweite Person</text>
-                <text x="20" y="298" data-i18n="mask.e">befristet auf 15 Minuten</text>
-                <text x="20" y="315" data-i18n="mask.f">Eintrag im Protokoll</text>
-              </g>
-              <path class="mask-rule" d="M20 240 H320"/>
-            </svg>
-          </div>
-          <figcaption data-i18n="mask.caption">Schema · Maskierung und Freigabe</figcaption>
-        </figure>
+        <div class="shots shots-trio">
+          <figure class="shot shot-step">
+            <a class="shot-frame" href="assets/screens/maskiert.webp" data-zoom>
+              <img src="assets/screens/maskiert-ausschnitt-half.webp" srcset="assets/screens/maskiert-ausschnitt-half.webp 600w, assets/screens/maskiert-ausschnitt.webp 1200w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 21vw, 290px" width="600" height="450" loading="lazy" decoding="async" alt="Ausschnitt der Konsole: eine Person an einer abgerutschten Fahrbahn, ihr Gesicht ist verpixelt" data-i18n-alt="mod7.alt1">
+              <span class="shot-empty" aria-hidden="true"><span>RÜCKSICHT</span><span>4 : 3</span></span>
+            </a>
+            <figcaption data-i18n="mod7.cap1"><b>1</b> Maskiert beim Einspielen</figcaption>
+          </figure>
+          <figure class="shot shot-step">
+            <a class="shot-frame" href="assets/screens/freigabe.webp" data-zoom>
+              <img src="assets/screens/freigabe-ausschnitt-half.webp" srcset="assets/screens/freigabe-ausschnitt-half.webp 600w, assets/screens/freigabe-ausschnitt.webp 1200w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 21vw, 290px" width="600" height="450" loading="lazy" decoding="async" alt="Ausschnitt der Konsole: Dialog zur Aufhebung der Maskierung mit Grund und freigebender Person" data-i18n-alt="mod7.alt2">
+              <span class="shot-empty" aria-hidden="true"><span>RÜCKSICHT</span><span>4 : 3</span></span>
+            </a>
+            <figcaption data-i18n="mod7.cap2"><b>2</b> Begründung, Freigabe durch eine zweite Person</figcaption>
+          </figure>
+          <figure class="shot shot-step">
+            <a class="shot-frame" href="assets/screens/original.webp" data-zoom>
+              <img src="assets/screens/original-ausschnitt-half.webp" srcset="assets/screens/original-ausschnitt-half.webp 600w, assets/screens/original-ausschnitt.webp 1200w" sizes="(max-width: 639px) 94vw, (max-width: 1440px) 21vw, 290px" width="600" height="450" loading="lazy" decoding="async" alt="Ausschnitt der Konsole: dasselbe Bild unmaskiert, gekennzeichnet als Original mit aktiver Freigabe" data-i18n-alt="mod7.alt3">
+              <span class="shot-empty" aria-hidden="true"><span>RÜCKSICHT</span><span>4 : 3</span></span>
+            </a>
+            <figcaption data-i18n="mod7.cap3"><b>3</b> Original, befristet auf 15 Minuten</figcaption>
+          </figure>
+        </div>
       </article>
 
     </div>
@@ -398,9 +377,9 @@
       <ol class="flow-steps">
         <li><span class="flow-no">1</span><b data-i18n="flow1.k">Quelle</b><span data-i18n="flow1.v">Drohne, Hubschrauber, Pegelkamera, Fahrzeug</span></li>
         <li><span class="flow-no">2</span><b data-i18n="flow2.k">Maskierung</b><span data-i18n="flow2.v">Gesichter unkenntlich, Original unter Verschluss</span></li>
-        <li><span class="flow-no">3</span><b data-i18n="flow3.k">Einbettung</b><span data-i18n="flow3.v">Bild und Ausschnitte als Vektoren mit 512 Dimensionen</span></li>
+        <li><span class="flow-no">3</span><b data-i18n="flow3.k">Einbettung</b><span data-i18n="flow3.v">Bild und Ausschnitte als Vektoren mit 768 Dimensionen (SigLIP 2)</span></li>
         <li><span class="flow-no">4</span><b data-i18n="flow4.k">Verzeichnis</b><span data-i18n="flow4.v">Vektoren je Aufnahme, auf dem eigenen Rechner</span></li>
-        <li><span class="flow-no">5</span><b data-i18n="flow5.k">Suche · Wachen</b><span data-i18n="flow5.v">freie Beschreibung oder stehender Auftrag</span></li>
+        <li><span class="flow-no">5</span><b data-i18n="flow5.k">Suche · Wachen</b><span data-i18n="flow5.v">freie Beschreibung, deutsch oder englisch, oder stehender Auftrag</span></li>
         <li><span class="flow-no">6</span><b data-i18n="flow6.k">Meldung</b><span data-i18n="flow6.v">Treffer über mehrere Bilder hinweg</span></li>
         <li><span class="flow-no">7</span><b data-i18n="flow7.k">Lage</b><span data-i18n="flow7.v">Meldungen an einem Ort, aus mehreren Quellen</span></li>
         <li><span class="flow-no">8</span><b data-i18n="flow8.k">Vorgang</b><span data-i18n="flow8.v">gesicherte Bilder mit Prüfsumme</span></li>
@@ -521,25 +500,25 @@
     <div class="main">
     <header class="head reveal">
       <h2 id="h-grenzen" data-i18n="limits.h2">Was Sicht nicht kann –<br>und nicht können soll.</h2>
-      <p class="head-intro" data-i18n="limits.intro">Diese Grenzen sind keine Einstellung, sondern Bauart. Was sich nicht beaufsichtigen lässt, baut Sicht nicht.</p>
+      <p class="head-intro" data-i18n="limits.intro">Vier dieser Grenzen sind Bauart: Es gibt kein Modell, das Gesichter wiedererkennt, keinen Kennzeichenleser, keinen zentralen Datenbestand und kein selbsttätiges Weiterlernen. Die übrigen sind Regeln, die das System durchsetzt und protokolliert. Was sich nicht beaufsichtigen lässt, baut Sicht nicht.</p>
     </header>
 
     <ol class="limits">
       <li class="reveal">
         <p class="limit" data-i18n="limit1.k">Keine Gesichtserkennung, kein Abgleich mit Personenbildern.</p>
-        <p class="limit-how" data-i18n="limit1.v">Dafür gibt es im System kein Modell. Gesichter werden beim Einspielen maskiert.</p>
+        <p class="limit-how" data-i18n="limit1.v">Dafür gibt es im System kein Modell; der Gesichtsdetektor dient allein dem Maskieren. Gesichter sind in allen Bildern maskiert.</p>
       </li>
       <li class="reveal">
-        <p class="limit" data-i18n="limit2.k">Keine Kennzeichenerkennung.</p>
-        <p class="limit-how" data-i18n="limit2.v">Keine Zeichenerkennung an Fahrzeugen, kein Abgleich mit Registern.</p>
+        <p class="limit" data-i18n="limit2.k">Keine Kennzeichen: Sie werden weder gelesen noch gesucht.</p>
+        <p class="limit-how" data-i18n="limit2.v">Es gibt keinen Kennzeichenleser und keinen Abgleich mit Registern. Anfragen, die ein Kennzeichen nennen, lehnt das System ab.</p>
       </li>
       <li class="reveal">
-        <p class="limit" data-i18n="limit3.k">Keine Verfolgung einzelner Personen über Kameras hinweg.</p>
-        <p class="limit-how" data-i18n="limit3.v">Sicht kennt Szenen, keine Identitäten: keine Wiedererkennung, keine Suche nach identifizierenden Merkmalen.</p>
+        <p class="limit" data-i18n="limit3.k">Kein Wiederfinden und kein Verfolgen bestimmter Personen.</p>
+        <p class="limit-how" data-i18n="limit3.v">Anfragen danach werden abgelehnt. Beschreibungen nach Geschlecht, Altersgruppe oder Kleidung sind nur unter einem Mandat möglich, das sie ausdrücklich zulässt, etwa bei einer Vermisstensuche, und stehen gekennzeichnet im Protokoll. Das ist eine Regel mit Protokoll, keine technische Unmöglichkeit.</p>
       </li>
       <li class="reveal">
         <p class="limit" data-i18n="limit4.k">Keine Suche nach Herkunft, Religion, Gesundheit oder anderen geschützten Merkmalen.</p>
-        <p class="limit-how" data-i18n="limit4.v">Solche Anfragen lehnt das System ab. Die Ablehnung steht im Protokoll.</p>
+        <p class="limit-how" data-i18n="limit4.v">Ebenso wenig nach Haarfarbe, Tätowierungen oder anderen körperlichen Merkmalen. Solche Anfragen lehnt das System ab; die Ablehnung steht mit der auslösenden Regel im Protokoll.</p>
       </li>
       <li class="reveal">
         <p class="limit" data-i18n="limit5.k">Kein zentraler Datenbestand: Bilder bleiben bei der Behörde, die sie aufgenommen hat.</p>
@@ -556,10 +535,19 @@
       <div class="term">
         <p class="term-q"><span class="term-p" aria-hidden="true">&gt;</span> <span data-i18n="refusal.q1">wasser auf fahrbahn</span></p>
         <p class="term-a"><b data-i18n="refusal.ok">Zulässig.</b> <span data-i18n="refusal.a1">Die Suche läuft unter dem gewählten Mandat und steht im Protokoll.</span></p>
-        <p class="term-q"><span class="term-p" aria-hidden="true">&gt;</span> <span data-i18n="refusal.q2">mann mit tattoo am hals</span></p>
-        <p class="term-a"><b data-i18n="refusal.no">Abgelehnt.</b> <span data-i18n="refusal.a2">Die Anfrage beschreibt eine Person über ein körperliches Merkmal („tattoo“). Solche Merkmale gelten als biometrische Kategorien (KI-Verordnung, Erwägungsgrund 16) und sind hier ausgeschlossen. Kleidung, Ausrüstung, Haltung und Situation sind zulässig.</span></p>
+        <p class="term-q"><span class="term-p" aria-hidden="true">&gt;</span> <span data-i18n="refusal.q2">gesicht von herrn müller</span></p>
+        <p class="term-a"><b data-i18n="refusal.no">Abgelehnt.</b> <span data-i18n="refusal.a2">Die Anfrage zielt darauf, eine bestimmte Person zu erkennen, wiederzufinden oder zu verfolgen. Dieses System beschreibt Lagen, es identifiziert niemanden.</span></p>
+        <p class="term-q"><span class="term-p" aria-hidden="true">&gt;</span> <span data-i18n="refusal.q3">person in roter jacke</span></p>
+        <p class="term-a"><b data-i18n="refusal.dep">Je nach Mandat.</b> <span data-i18n="refusal.a3">Lässt das Mandat Personenbeschreibungen zu, läuft die Suche und steht gekennzeichnet im Protokoll. Sonst: „Dieses Mandat lässt keine Beschreibung von Personen nach Geschlecht, Alter oder Kleidung zu („jacke“). Bitte neutral formulieren, zum Beispiel „person“.“</span></p>
       </div>
-      <p class="refusal-note" data-i18n="refusal.note">Wortlaut der Konsole. Maßstab für diese Grenzen: <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj" rel="noopener noreferrer" target="_blank">Verordnung (EU) 2024/1689, Art.&nbsp;5</a> · <a href="https://www.bundesverfassungsgericht.de/e/rs20230216_1bvr154719.html" rel="noopener noreferrer" target="_blank">BVerfG, Urteil vom 16. Februar 2023 – 1 BvR 1547/19, 1 BvR 2634/20</a>.</p>
+      <figure class="shot shot-strip">
+        <a class="shot-frame" href="assets/screens/ablehnung.webp" data-zoom>
+          <img src="assets/screens/ablehnung-ausschnitt-half.webp" srcset="assets/screens/ablehnung-ausschnitt-half.webp 1440w, assets/screens/ablehnung-ausschnitt.webp 2880w" sizes="(max-width: 959px) 94vw, 880px" width="1440" height="400" loading="lazy" decoding="async" alt="Konsole, Reiter Suche: Die Anfrage Kennzeichen KO AB 123 wird abgelehnt; die Meldung nennt die Regel Kennzeichen" data-i18n-alt="refusal.alt">
+          <span class="shot-empty" aria-hidden="true"><span>SUCHE</span><span>ABLEHNUNG</span></span>
+        </a>
+        <figcaption data-i18n="refusal.cap">Konsole · SUCHE · die Anfrage nach einem Kennzeichen wird abgelehnt und protokolliert</figcaption>
+      </figure>
+      <p class="refusal-note" data-i18n="refusal.note">Die Ablehnungen sind Wortlaut der Konsole. Maßstab für diese Grenzen: <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj" rel="noopener noreferrer" target="_blank">Verordnung (EU) 2024/1689, Art.&nbsp;5</a> · <a href="https://www.bundesverfassungsgericht.de/e/rs20230216_1bvr154719.html" rel="noopener noreferrer" target="_blank">BVerfG, Urteil vom 16. Februar 2023 – 1 BvR 1547/19, 1 BvR 2634/20</a>.</p>
     </div>
     </div>
   </div>
@@ -574,7 +562,7 @@
     <div class="main">
     <header class="head reveal">
       <h2 id="h-gemessen" data-i18n="measured.h2">Gemessen, nicht versprochen.</h2>
-      <p class="head-intro" data-i18n="measured.intro">Fünf Werte aus dem Erprobungsstand, jeder mit seiner Grundlage. Was hier nicht steht, ist nicht gemessen.</p>
+      <p class="head-intro" data-i18n="measured.intro">Sieben Werte aus dem Erprobungsstand, gemessen am 18. November 2026 auf vier Prozessorkernen ohne Grafikkarte. Was hier nicht steht, ist nicht gemessen.</p>
     </header>
 
     <table class="measures reveal">
@@ -583,41 +571,52 @@
       </thead>
       <tbody>
         <tr>
-          <td class="m-fig" data-i18n="m1.fig">99,1&nbsp;%</td>
-          <th scope="row" data-i18n="m1.k">Trefferquote des Gefahrenmodells</th>
-          <td data-i18n="m1.v">Makro-F1 0,990 auf der AIDERv2-Testmenge mit 1&#8239;654 Bildern (Einsturz, Feuer, Überflutung, Normalzustand). Dasselbe Bildmodell ohne Training: 92,2&nbsp;%.</td>
+          <td class="m-fig" data-i18n="m1.fig">13 / 13</td>
+          <th scope="row" data-i18n="m1.k">Ereignisse der Übung erkannt</th>
+          <td data-i18n="m1.v">Übung RHEIN-MOSEL: Drehbuch mit 13 Ereignissen, elf Quellen, 31 Aufnahmen, Uhr in Echtzeit. Ein Ereignis gilt als erkannt, wenn die dafür vorgesehene Wache an der betroffenen Quelle meldet.</td>
         </tr>
         <tr>
-          <td class="m-fig" data-i18n="m2.fig">≈ 3×</td>
-          <th scope="row" data-i18n="m2.k">Auswertung gegenüber Echtzeit</th>
-          <td data-i18n="m2.v">Bei einem Bild je Sekunde, auf vier Prozessorkernen, ohne Grafikkarte.</td>
+          <td class="m-fig" data-i18n="m2.fig">1,1&nbsp;s</td>
+          <th scope="row" data-i18n="m2.k">Erkennungsverzug im Median</th>
+          <td data-i18n="m2.v">Ab dem Eintreffen des ausgewerteten Bildes; ein Bild je Sekunde, zwei Treffer bis zur Meldung. Spanne 1,0 bis 1,2&nbsp;s. Die Rechenzeit der Auswertung, rund 0,3&nbsp;s je Bild, ist nicht enthalten.</td>
         </tr>
         <tr>
-          <td class="m-fig" data-i18n="m3.fig">5,9&nbsp;s</td>
-          <th scope="row" data-i18n="m3.k">bis 44 Aufnahmen durchsuchbar sind</th>
-          <td data-i18n="m3.v">Vorschaudurchgang auf demselben Rechner; die dichte Auswertung läuft danach weiter.</td>
+          <td class="m-fig" data-i18n="m3.fig">1 / 15</td>
+          <th scope="row" data-i18n="m3.k">Fehlmeldungen</th>
+          <td data-i18n="m3.v">Eine abgerutschte Fahrbahn wurde als umgestürzter Lastkraftwagen gemeldet. Nach dem Verwerfen und dem ausdrücklichen Nachschärfen der Wache im folgenden Lauf keine.</td>
         </tr>
         <tr>
-          <td class="m-fig" data-i18n="m4.fig">20–40&nbsp;ms</td>
-          <th scope="row" data-i18n="m4.k">Gesichtsmaskierung je Bild</th>
-          <td data-i18n="m4.v">Gesichtsdetektor YuNet auf dem Prozessor.</td>
+          <td class="m-fig" data-i18n="m4.fig">3,3&nbsp;×</td>
+          <th scope="row" data-i18n="m4.k">Auswertung gegenüber Echtzeit</th>
+          <td data-i18n="m4.v">577&nbsp;s Material in 176&nbsp;s, bei einem Bild je Sekunde, vier Ausschnitten je Bild und mit Gesichtsmaskierung.</td>
         </tr>
         <tr>
-          <td class="m-fig" data-i18n="m5.fig">ms</td>
-          <th scope="row" data-i18n="m5.k">Protokollprüfung</th>
-          <td data-i18n="m5.v">Millisekunden je tausend Einträge; SHA-256-Kette.</td>
+          <td class="m-fig" data-i18n="m5.fig">14&nbsp;s</td>
+          <th scope="row" data-i18n="m5.k">bis 44 Aufnahmen durchsuchbar sind</th>
+          <td data-i18n="m5.v">Ab Beginn des Hochladens, auf demselben Rechner; vollständig ausgewertet nach 156&nbsp;s.</td>
+        </tr>
+        <tr>
+          <td class="m-fig" data-i18n="m6.fig">6&nbsp;ms</td>
+          <th scope="row" data-i18n="m6.k">Suche im Knoten, Median</th>
+          <td data-i18n="m6.v">Über 2&#8239;268 Vektoren, nach der Übung. Eine Verbundfrage an zwei Nachbarn auf demselben Rechner: 20 bis 400&nbsp;ms.</td>
+        </tr>
+        <tr>
+          <td class="m-fig" data-i18n="m7.fig">99,1&nbsp;%</td>
+          <th scope="row" data-i18n="m7.k">Gefahrenmodell auf seinem Benchmark</th>
+          <td data-i18n="m7.v">Makro-F1 0,991 auf der AIDERv2-Testmenge mit 1&#8239;654 Luftbildern; ohne Training 85,1&nbsp;%. Auf dem Übungsmaterial irrt das Modell und löst deshalb keine Meldungen aus.</td>
         </tr>
       </tbody>
     </table>
 
-    <p class="caveat reveal" data-i18n="measured.caveat"><b>Einschränkung.</b> AIDERv2 enthält ähnliche Bilder in Trainings- und Testmenge. Der Wert gilt für diese Datenlage, nicht für beliebiges Einsatzmaterial.</p>
+    <p class="caveat reveal" data-i18n="measured.caveat"><b>Zwei Einschränkungen.</b> Die Wachen der Übung wurden am Übungsmaterial formuliert; die Werte zeigen das Betriebsverhalten, nicht die Güte auf fremdem Einsatzmaterial. Und das Gefahrenmodell irrt auf dem Übungsmaterial trotz seines Benchmarkwerts: Es hält einen ruhigen Fluss für eine Überflutung. Es löst deshalb keine Meldungen aus, sondern steht als Zweitmeinung neben Meldungen aus Luftbildquellen.</p>
+    <p class="caveat caveat-plain reveal" data-i18n="measured.encoder">Bildkodierer in allen Messungen: SigLIP 2 (Google, Apache-2.0), 34&nbsp;ms je Bild auf diesem Rechner. Er läuft ohne Netz und versteht deutsche und englische Anfragen.</p>
 
     <figure class="shot shot-wide reveal">
-      <div class="shot-frame">
-        <img src="assets/screens/wirkung.png" width="2880" height="1800" loading="lazy" decoding="async" alt="Konsole, Reiter Wirkung: Messwerte einer Übung je Ereignis" data-i18n-alt="measured.alt">
-        <div class="shot-empty" aria-hidden="true"><span>WIRKUNG</span><span>16 : 10</span></div>
-      </div>
-      <figcaption><span data-i18n="shot.console">Konsole</span> · WIRKUNG · <span data-i18n="shot.exercise">Übungsmaterial</span></figcaption>
+      <a class="shot-frame" href="assets/screens/wirkung.webp" data-zoom>
+        <img src="assets/screens/wirkung-1440.webp" srcset="assets/screens/wirkung-1440.webp 1440w, assets/screens/wirkung.webp 2880w" sizes="(max-width: 899px) 94vw, (max-width: 1440px) 70vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Konsole, Reiter Wirkung: Erkennungsverzug, Sichtungsquote, protokollierte Abfragen und die Ereignisse der Übung mit ihrem Verzug" data-i18n-alt="measured.alt">
+        <span class="shot-empty" aria-hidden="true"><span>WIRKUNG</span><span>16 : 10</span></span>
+      </a>
+      <figcaption data-i18n="measured.cap">Konsole · WIRKUNG · derselbe Ablauf mit achtfacher Übungsuhr: 13 von 13 Ereignissen, Verzug hier 2,3&nbsp;s statt 1,1&nbsp;s in Echtzeit. Die Suchdauer im Bild stammt von einer einzelnen Verbundfrage.</figcaption>
     </figure>
     </div>
   </div>
@@ -635,11 +634,11 @@
     </header>
 
     <dl class="ops reveal">
-      <div><dt data-i18n="ops1.k">Eigene Hardware</dt><dd data-i18n="ops1.v">Sicht läuft auf einem Rechner der Behörde. Für die Auswertung genügt ein Prozessor; eine Grafikkarte beschleunigt, ist aber keine Voraussetzung.</dd></div>
-      <div><dt data-i18n="ops2.k">Ohne Netz</dt><dd data-i18n="ops2.v">Nach einmaligem Laden der Modellgewichte arbeitet der Knoten ohne Internetverbindung. Karte, Schrift und Oberfläche liegen lokal.</dd></div>
-      <div><dt data-i18n="ops3.k">Offene Gewichte</dt><dd data-i18n="ops3.v">Die Bildmodelle sind öffentlich verfügbare Gewichte und austauschbar. Es gibt keinen entfernten Dienst, der abgeschaltet werden könnte.</dd></div>
+      <div><dt data-i18n="ops1.k">Eigene Hardware</dt><dd data-i18n="ops1.v">Sicht läuft auf einem Rechner der Behörde. Für das Auswerten von Aufzeichnungen genügt ein Prozessor. Viele gleichzeitige Quellen brauchen mehr Rechenleistung oder eine Grafikkarte.</dd></div>
+      <div><dt data-i18n="ops2.k">Ohne Netz</dt><dd data-i18n="ops2.v">Nach einmaligem Laden der Modelle (rund 950&nbsp;MB) arbeitet der Knoten ohne Internetverbindung. Karte, Schrift und Oberfläche liegen lokal.</dd></div>
+      <div><dt data-i18n="ops3.k">Frei lizenziertes Bildmodell</dt><dd data-i18n="ops3.v">Der Bildkodierer ist SigLIP 2 von Google unter der Lizenz Apache 2.0. Er versteht deutsche und englische Anfragen und ist austauschbar. Es gibt keinen entfernten Dienst, der abgeschaltet werden könnte.</dd></div>
       <div><dt data-i18n="ops4.k">Keine Cloud</dt><dd data-i18n="ops4.v">Aufzeichnungen und Verzeichnis verlassen den Knoten nicht. Im Verbund geht nur die Frage hinaus; zurück kommen maskierte Vorschaubilder.</dd></div>
-      <div><dt data-i18n="ops5.k">Schnittstellen</dt><dd data-i18n="ops5.v">Lagen als GeoJSON und als CAP-1.2-Meldung, Berichte als druckbares Dokument. Sicht speist bestehende Lagebild- und Warnsysteme, statt sie zu ersetzen.</dd></div>
+      <div><dt data-i18n="ops5.k">Schnittstellen</dt><dd data-i18n="ops5.v">Lagen als GeoJSON und als CAP-1.2-Meldung, Berichte als druckbares Dokument. Sicht soll bestehende Lagebild- und Warnsysteme speisen, nicht ersetzen; eine erprobte Kopplung gibt es noch nicht.</dd></div>
       <div><dt data-i18n="ops6.k">Rollen</dt><dd data-i18n="ops6.v">Auswertung, Leitung und Aufsicht haben getrennte Rechte. Die Aufsicht sieht das Protokoll, aber kein Bildmaterial.</dd></div>
       <div><dt data-i18n="ops8.k">Selbstprüfung</dt><dd data-i18n="ops8.v">Beim Start vergleicht der Knoten die Ergebnisse einer Grafikkarte mit denen des Prozessors. Weichen sie ab, rechnet er auf dem Prozessor weiter.</dd></div>
       <div><dt data-i18n="ops7.k">Löschfrist</dt><dd data-i18n="ops7.v">Aufzeichnungen werden nach einer einstellbaren Frist gelöscht, voreingestellt nach 60 Tagen. Ausgenommen ist, was in einem Vorgang als Beweis gesichert wurde.</dd></div>
@@ -657,15 +656,42 @@
     <div class="main">
     <header class="head reveal">
       <h2 id="h-stand" data-i18n="status.h2">Erprobungsstand.</h2>
-      <p class="head-intro head-intro-strong" data-i18n="status.intro">Sicht ist Software im Erprobungsstand. Alles, was diese Seite zeigt, läuft mit Übungsmaterial. Es gibt keine Behördenkunden, keine Zertifizierung und keinen Echtbetrieb.</p>
+      <p class="head-intro head-intro-strong" data-i18n="status.intro">Sicht ist Software im Erprobungsstand. Alles, was diese Seite zeigt, läuft mit Übungsmaterial. Es gibt keine Behördenkunden, keine Zertifizierung und keinen Echtbetrieb. Der Name ist markenrechtlich nicht geprüft.</p>
     </header>
+
+    <div class="open reveal">
+      <p class="label" data-i18n="open.label">Was dieser Stand nicht leistet</p>
+      <dl class="rows">
+        <div><dt data-i18n="open1.k">Keine Direktbilder</dt><dd data-i18n="open1.v">Eingespielt werden Aufzeichnungen; die Übung spielt ausgewertetes Material auf einer Uhr ab. Für elf gleichzeitige Quellen in Echtzeit reicht ein Rechner mit vier Kernen nicht.</dd></div>
+        <div><dt data-i18n="open2.k">Keine Anbindung an ein Führungssystem</dt><dd data-i18n="open2.v">Es gibt Ausgaben als GeoJSON und CAP 1.2, aber keine erprobte Kopplung an ein vorhandenes System.</dd></div>
+        <div><dt data-i18n="open3.k">Anmeldung für die Vorführung</dt><dd data-i18n="open3.v">Drei feste Zugänge für Auswertung, Leitung und Aufsicht. Kein Anschluss an einen Verzeichnisdienst, keine Zwei-Faktor-Anmeldung.</dd></div>
+        <div><dt data-i18n="open4.k">Regeln, keine Unmöglichkeiten</dt><dd data-i18n="open4.v">Die Anfrageprüfung ist eine nachvollziehbare Wortprüfung. Sie lässt sich mit Umschreibungen umgehen; dafür gibt es das Protokoll und die Stichprobe.</dd></div>
+        <div><dt data-i18n="open5.k">Kein Rechtsgutachten</dt><dd data-i18n="open5.v">Ob eine Behörde Bildmaterial so auswerten darf, entscheidet ihre Rechtsgrundlage. Sicht ordnet die Anforderungen den gebauten Vorkehrungen zu und nennt, was fehlt.</dd></div>
+        <div><dt data-i18n="open6.k">Größe</dt><dd data-i18n="open6.v">Die Suche vergleicht jede Anfrage mit jedem Vektor. Sie ist für einige Millionen Vektoren je Knoten ausgelegt, nicht für mehr.</dd></div>
+      </dl>
+    </div>
+
+    <div class="demo reveal" id="vorfuehrung">
+      <p class="label" data-i18n="demo.label">Eine Vorführung in 15 Minuten</p>
+      <p class="demo-intro" data-i18n="demo.intro">Alles Gezeigte läuft auf einem einzigen Laptop, ohne Netzverbindung. Drei Knoten – Koblenz, Trier und Mainz – sprechen dabei nur über das Verbundprotokoll miteinander, so wie Knoten auf drei Rechnern es täten.</p>
+      <ol class="demo-steps">
+        <li><h3 data-i18n="demo1.k">Mandat</h3><span data-i18n="demo1.v">Anmelden und das Mandat der Übung wählen. Ohne Zweck und Rechtsgrundlage keine Auswertung.</span></li>
+        <li><h3 data-i18n="demo2.k">Lage</h3><span data-i18n="demo2.v">Die Übung starten: elf Quellen auf der Karte. Sekunden nach dem ersten Bild einer Überflutung steht die Meldung an ihrem Ort.</span></li>
+        <li><h3 data-i18n="demo3.k">Sichten</h3><span data-i18n="demo3.v">Eine Meldung öffnen, sehen, worauf die Wache anspricht, und bestätigen. Meldungen gleicher Art am selben Ort werden zu einer Lage.</span></li>
+        <li><h3 data-i18n="demo4.k">Nachschärfen</h3><span data-i18n="demo4.v">Eine Fehlmeldung wird gezeigt, nicht versteckt: verwerfen, die Wache ausdrücklich nachschärfen, Version 2.</span></li>
+        <li><h3 data-i18n="demo5.k">Verbund</h3><span data-i18n="demo5.v">„überflutete Wiese“, im Verbund gefragt: Treffer aus dem eigenen Bestand, von den Nachbarn maskierte Vorschaubilder mit Beleg.</span></li>
+        <li><h3 data-i18n="demo6.k">Ablehnung</h3><span data-i18n="demo6.v">„Gesicht von Herrn Müller“, „Kennzeichen KO AB 123“: abgelehnt, mit Regel, im Protokoll.</span></li>
+        <li><h3 data-i18n="demo7.k">Vorgang</h3><span data-i18n="demo7.v">Ein Bild mit der Prüfsumme des Originals sichern, den Vorgang versiegeln, den Bericht ausgeben.</span></li>
+        <li><h3 data-i18n="demo8.k">Aufsicht</h3><span data-i18n="demo8.v">Die Protokollkette prüfen, eine Stichprobe ziehen, die Messwerte der Übung ablesen.</span></li>
+      </ol>
+    </div>
 
     <div class="trial reveal">
       <p class="label" data-i18n="trial.label">Eine Erprobung in drei Schritten</p>
       <ol class="trial-steps">
         <li><h3 data-i18n="trial1.k">Einrichten</h3><span data-i18n="trial1.v">Ein Knoten wird auf einem Rechner der Behörde aufgesetzt, ohne Anbindung an bestehende Systeme.</span></li>
         <li><h3 data-i18n="trial2.k">Üben</h3><span data-i18n="trial2.v">Eigenes Material aus einer vergangenen Übung oder einem abgeschlossenen Einsatz wird eingespielt. Die Wachen formulieren die Auswertenden selbst.</span></li>
-        <li><h3 data-i18n="trial3.k">Messen</h3><span data-i18n="trial3.v">Erkennungsverzug, Sichtungsquote und Protokollabdeckung werden je Ereignis ausgewiesen. Die Behörde entscheidet anhand ihrer eigenen Zahlen.</span></li>
+        <li><h3 data-i18n="trial3.k">Messen</h3><span data-i18n="trial3.v">Der Erkennungsverzug wird je Ereignis ausgewiesen, dazu Sichtungsquote, Fehlmeldungen und protokollierte Abfragen. Die Behörde entscheidet anhand ihrer eigenen Zahlen.</span></li>
       </ol>
       <p class="trial-note" data-i18n="trial.note">Vor einer Erprobung mit echtem Material steht eine Datenschutz-Folgenabschätzung. Sicht liefert dafür die technische Beschreibung.</p>
       <p class="trial-cta"><a class="go go-contact" data-contact-link hidden data-i18n="cta">Vorführung anfragen</a></p>
@@ -687,9 +713,26 @@
       <div><dt data-i18n="foot.k1">Stand</dt><dd data-i18n="foot.v1">Erprobungsstand · Übungsmaterial · keine Echtdaten</dd></div>
       <div><dt data-i18n="foot.k2">Karte</dt><dd data-i18n="map.attrib">© OpenStreetMap-Mitwirkende (ODbL) · OpenMapTiles · Höhendaten: Mapzen</dd></div>
       <div><dt data-i18n="foot.k3">Schrift</dt><dd data-i18n="foot.v3">JetBrains Mono, lokal eingebunden · <a href="assets/fonts/OFL.txt">SIL Open Font License 1.1</a></dd></div>
+      <div><dt data-i18n="foot.k4">Bildmodell</dt><dd data-i18n="foot.v4">SigLIP 2 (Google) · Apache 2.0 · läuft ohne Netz</dd></div>
+      <div><dt data-i18n="foot.k5">Aufnahmen</dt><dd data-i18n="foot.v5">Die Bildschirmaufnahmen zeigen frei lizenziertes Archivmaterial (Mixkit) aus einer Übung, nicht die genannten Orte. Der Film zeigt KI-generierte Symbolbilder.</dd></div>
     </dl>
   </div>
 </footer>
+
+<dialog class="zoom" aria-labelledby="zoom-cap">
+  <div class="zoom-bar">
+    <p class="label zoom-count" data-zoom-count aria-live="polite"></p>
+    <p class="zoom-nav">
+      <button type="button" data-zoom-prev aria-label="Vorheriges Bild" data-i18n-aria-label="zoom.prev">←</button>
+      <button type="button" data-zoom-next aria-label="Nächstes Bild" data-i18n-aria-label="zoom.next">→</button>
+      <button type="button" class="zoom-close" data-zoom-close data-i18n="zoom.close">Schließen</button>
+    </p>
+  </div>
+  <div class="zoom-stage">
+    <div class="zoom-frame"><img alt="" data-zoom-img></div>
+  </div>
+  <p class="zoom-cap" id="zoom-cap" data-zoom-cap></p>
+</dialog>
 
 </body>
 </html>

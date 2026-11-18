@@ -1,9 +1,10 @@
 # Sicht — Strategie
 
 Stand: 18. November 2026. Grundlagen: `docs/research/landscape.md`, `docs/research/evidence.md`,
-`docs/research/legal.md`, `docs/BRAND.md`, der Quelltext unter `apps/server/src` und das
-Finanzmodell `deliverables/Sicht-Finanzmodell.xlsx`. Jede Zahl trägt ihre Quelle oder das Wort
-Annahme. Wo eine Regel oder ein Wert nicht geprüft werden konnte, steht „zu prüfen“.
+`docs/research/legal.md`, `docs/BRAND.md`, der Messbericht `docs/EVALUATION.md`, der Quelltext
+unter `apps/server/src` und `apps/web/src` und das Finanzmodell
+`deliverables/Sicht-Finanzmodell.xlsx`. Jede Zahl trägt ihre Quelle oder das Wort Annahme. Wo
+eine Regel oder ein Wert nicht geprüft werden konnte, steht „zu prüfen“.
 
 ## 1. These in einem Satz
 
@@ -26,8 +27,8 @@ nächsten vier Monaten entscheidet.
 | Los Angeles, Januar 2025 | „First responders and incident commanders were unable to consistently share real-time information due to unreliable cellular connectivity, inconsistent field reporting methods, and the use of various unconnected platforms.“ | [County of Los Angeles, McChrystal-Bericht, Kernaussagen, 25.09.2025](https://file.lacounty.gov/SDSInter/lac/1192778_AAR_HighlightsandRecommendations.pdf) | Amtliche Auswertung; betrifft Informationsaustausch allgemein. |
 | Maui, 8. August 2023 | Mindestens 102 Tote; „siloed command structure“. Nachträglich wurden rund 850 Gigabyte Video-, Ton-, Bild- und Schriftmaterial veröffentlicht, darunter Aufnahmen von Körperkameras der Polizei. | [Generalstaatsanwaltschaft Hawaii, Mitteilung 2024-40, 13.09.2024](https://ag.hawaii.gov/wp-content/uploads/2024/09/News-Release-2024-40.pdf) | Zeigt die Menge vorhandenen Materials, nicht dessen Nutzbarkeit im Einsatz. |
 
-Was diese Belege tragen: Bildmaterial entsteht im Einsatz, und es erreicht die Stelle, die
-entscheidet, oft nicht oder zu spät. Was sie nicht tragen:
+Was diese Belege tragen: Bildmaterial entsteht im Einsatz, und der Stelle, die entscheidet,
+fehlt oft ein aktuelles Bild der Lage. Was sie nicht tragen:
 
 - Keine Quelle zeigt, dass durchsuchbares Video einen dieser Verläufe geändert hätte. Im Ahrtal
   erreichten Standbilder des Hubschraubers die Hausspitze des Innenministeriums um 23:34 Uhr und
@@ -46,52 +47,60 @@ entscheidet, oft nicht oder zu spät. Was sie nicht tragen:
 
 ## 3. Was Sicht heute real kann
 
-Maßgeblich ist der Server unter `apps/server/src`. Die Web-Konsole (`apps/web`) wird gegen dessen
-Schnittstelle gebaut; ihr Stand steht im README.
+Maßgeblich sind der Server unter `apps/server/src` und die Konsole unter `apps/web/src`. Die
+Messwerte und ihre Bedingungen stehen in `docs/EVALUATION.md`, die Grenzen dieses Stands im
+README. Pfade ohne Präfix liegen unter `apps/server/src`.
 
 ### 3.1 Gebaut
 
 | Fähigkeit | Nachweis | Messwert | Quelltext |
 | --- | --- | --- | --- |
-| Videodateien aufnehmen und auswerten: schneller Vorschaudurchgang, danach dichte Auswertung mit Szenenschnitt und Bildkacheln | Lauf mit 44 Aufnahmen | Durchsuchbar nach 5,9 s; dichte Auswertung 132 s; rund 3-fache Echtzeit bei 1 Bild/s auf vier Prozessorkernen ohne Grafikkarte | `pipeline.ts`, `ml/model.ts` |
-| Freitextsuche über alle Aufnahmen mit Trefferausschnitt und Erklärbild | Manueller Durchlauf | Bei einigen hundert Vektoren unter einer Millisekunde; größere Bestände nicht gemessen | `search.ts`, `intel/scoring.ts` |
-| Prüfregeln für Anfragen: Identifizierung, geschützte Merkmale, Personennamen und Körpermerkmale werden abgelehnt, die Ablehnung wird protokolliert | 4 automatische Tests | — | `intel/guard.ts`, `test/guard.test.ts` |
-| Wachen: stehende Suchaufträge als Text oder als Klasse des Gefahrenmodells; Meldungen mit Bestätigen und Verwerfen; Bündelung zu Lagen (1,2 km, 20 Minuten, Zahl unabhängiger Quellen) | Manueller Durchlauf | Erkennungsverzug wird je Übungslauf gemessen; ein veröffentlichter Referenzlauf liegt zum Stand dieses Dokuments nicht vor | `intel/watches.ts`, `intel/incidents.ts`, `intel/metrics.ts` |
-| Gefahrenmodell mit vier Klassen (Einsturz, Feuer, Überflutung, unauffällig) | Testmenge AIDERv2, 1 654 Bilder | 99,1 % richtig, Makro-F1 0,990; ohne Training 92,2 % | `ml/head.ts`, `assets/hazard-head.json` |
-| Gesichtsmaskierung der angezeigten Bilder; Aufhebung nur mit Begründung und Freigabe einer zweiten Person für 15 Minuten | Manueller Durchlauf (83 Gesichter in 6 Aufnahmen maskiert) | 20–40 ms je Bild; Anteil übersehener Gesichter nicht gemessen | `ml/faces.ts`, `pipeline.ts`, `routes.ts` |
-| Mandat: Suche, Wachen und Vorgänge nur mit gültigem Zweck und Rechtsgrundlage | Manueller Durchlauf | — | `core/mandates.ts`, `routes.ts` |
-| Drei Rollen: Lagedienst, Leitung, Aufsicht; die Aufsicht sieht Protokolle, aber keine Bilder | Manueller Durchlauf | — | `core/auth.ts` |
-| Protokoll: mit SHA-256 verkettet, prüfbar, exportierbar, Zufallsstichprobe für die Aufsicht | 4 automatische Tests | Prüfung von 25 Einträgen in 4 ms | `core/ledger.ts`, `test/ledger.test.ts` |
-| Vorgänge: gesicherte Bilder mit Prüfsumme des Originals, Versiegelung, druckbarer Bericht | Manueller Durchlauf | — | `intel/cases.ts`, `intel/report.ts` |
-| Verbund: Es reist nur die Frage mit Mandat und anfragender Person; die Antwort sind maskierte Vorschaubilder; beide Seiten protokollieren und bezeugen gegenseitig ihren Protokollstand | Mehrere Knoten in einem Prozess | Antwortzeiten nicht gemessen | `intel/federation.ts`, `routes.ts` |
+| Videodateien aufnehmen und auswerten: schneller Vorschaudurchgang, danach dichte Auswertung mit Szenenschnitt und Bildausschnitten | Lauf mit 44 Aufnahmen (540 s); Übungsmaterial mit 31 Aufnahmen (577 s) | 44 Aufnahmen durchsuchbar 14 s nach Beginn des Hochladens, vollständig ausgewertet nach 156 s; Übungsmaterial in 176 s, 3,3-fache Echtzeit bei 1 Bild/s auf vier Prozessorkernen ohne Grafikkarte, mit Maskierung | `pipeline.ts`, `ml/model.ts` |
+| Freitextsuche über alle Aufnahmen, deutsch oder englisch, mit Trefferausschnitt und Erklärbild | Durchlauf im Browser; „überflutete Wiese“ findet die überflutete Wiese an erster Stelle | 6 ms im Median über 2 268 Vektoren; größere Bestände nicht gemessen | `search.ts`, `intel/scoring.ts` |
+| Prüfregeln für Anfragen: Namen, Gesichter, Kennzeichen, geschützte und körperliche Merkmale, Wiederfinden und Verfolgen werden abgelehnt und protokolliert; Beschreibungen nach Geschlecht, Alter oder Kleidung nur unter einem Mandat, das sie zulässt | 8 automatische Tests | — | `intel/guard.ts`, `test/guard.test.ts` |
+| Wachen: stehende Suchaufträge in Worten mit Ausschlüssen; Meldungen mit Bestätigen und Verwerfen; Bündelung gleichartiger Meldungen zu Lagen (1,2 km, 20 Minuten, Zahl unabhängiger Quellen) | Übung RHEIN-MOSEL auf der Echtzeituhr: 31 Aufnahmen, elf Quellen, 13 Ereignisse im Drehbuch | 13 von 13 Ereignissen gemeldet; Verzug 1,1 s im Median ab Eintreffen des ausgewerteten Bildes; 1 Fehlmeldung unter 15 Meldungen | `intel/watches.ts`, `intel/incidents.ts`, `intel/scenario.ts`, `intel/metrics.ts` |
+| Ausdrückliches Nachschärfen einer Wache aus gesammelten Urteilen: neue Version, protokolliert, rücknehmbar | Folgelauf der Übung | Nach einem verworfenen und einem bestätigten Urteil bleibt die Fehlmeldung aus; der echte Treffer wird weiter gemeldet (Sicherheit 0,98) | `intel/watches.ts`, `ml/head.ts` |
+| Gefahrenmodell mit vier Klassen (Einsturz, Brand, Überflutung, unauffällig), angezeigt als Zweitmeinung neben Meldungen aus Luftbildquellen | Testmenge AIDERv2, 1 654 Bilder; Übungsmaterial | 99,1 % richtig, Makro-F1 0,991; ohne Training 85,1 %. Auf dem Übungsmaterial irrt es und löst deshalb in der Voreinstellung keine Meldungen aus | `ml/head.ts`, `intel/watches.ts` (`secondOpinion`), `apps/server/assets/hazard-head.*.json` |
+| Gesichtsmaskierung der angezeigten Bilder; Aufhebung nur mit Begründung und Freigabe einer zweiten Person für 15 Minuten | Durchlauf im Browser als Auswertung mit Freigabe durch die Leitung | 37 Gesichter in den 31 Übungsaufnahmen maskiert; Anteil übersehener Gesichter nicht gemessen | `ml/faces.ts`, `pipeline.ts`, `routes.ts` |
+| Mandat: Suche, Wachen und Vorgänge nur mit gültigem Zweck und Rechtsgrundlage | Durchlauf im Browser | — | `core/mandates.ts`, `routes.ts` |
+| Drei Rollen: Auswertung, Leitung, Aufsicht; die Aufsicht sieht Protokolle, aber keine Bilder | Durchlauf im Browser in allen drei Rollen | — | `core/auth.ts` |
+| Protokoll: mit SHA-256 verkettet, prüfbar, exportierbar, Zufallsstichprobe für die Aufsicht | 4 automatische Tests; Prüfung der Kette und Stichprobe im Browser | — | `core/ledger.ts`, `test/ledger.test.ts` |
+| Vorgänge: gesicherte Bilder mit Prüfsumme des Originals, Versiegelung, druckbarer Bericht | Durchlauf im Browser | — | `intel/cases.ts`, `intel/report.ts` |
+| Verbund: Es reist nur die Frage mit Mandat und anfragender Person; die Antwort sind maskierte Vorschaubilder mit Belegnummer; beide Seiten protokollieren und bezeugen gegenseitig ihren Protokollstand | Vorführung mit drei Knoten in einem Prozess (`pnpm demo`) | Verbundfrage an zwei Nachbarn 20 bis 400 ms, alle Knoten auf einem Rechner | `intel/federation.ts`, `routes.ts` |
 | Löschfrist: Standard 60 Tage; Aufnahmen in einem Vorgang bleiben erhalten | Quelltext | — | `node.ts`, `config.ts` |
-| Ausgabe der Lagen als GeoJSON und als CAP-1.2-Meldung; Ortsangabe im UTM-Meldegitter | 3 automatische Tests (Geodäsie) | — | `routes.ts`, `core/geo.ts` |
-| Übungsbetrieb: voranalysierte Aufnahmen laufen auf einer Übungsuhr ab; Auswertung gegen hinterlegte Ereignisse | Quelltext | — | `intel/scenario.ts`, `intel/metrics.ts` |
-| Betrieb ohne Netzverbindung nach einmaligem Laden der Modellgewichte | Schalter `SICHT_OFFLINE` | — | `config.ts` |
+| Lagekarte aus eigenen Vektordaten mit UTM-Gitter, ohne Kartendienst; Ausgabe der Lagen als GeoJSON und als CAP-1.2-Meldung; Ortsangabe im UTM-Meldegitter | 3 automatische Tests (Geodäsie); Durchlauf im Browser | — | `apps/web/src/map`, `routes.ts`, `core/geo.ts` |
+| Übungsbetrieb: voranalysierte Aufnahmen laufen auf einer Übungsuhr ab; Auswertung gegen die Ereignisse des Drehbuchs, auch ohne Konsole | `pnpm exercise:evaluate`; Ergebnis in `docs/measurements/exercise.json` | siehe Zeile Wachen | `intel/scenario.ts`, `intel/metrics.ts`, `scripts/runExercise.ts` |
+| Konsole mit acht Bereichen, deutsch und englisch | Durchläufe im Browser als Leitung, Auswertung und Aufsicht | — | `apps/web/src` |
+| Betrieb ohne Netzverbindung nach einmaligem Laden der Modellgewichte; ein Vorbereitungslauf wertet alles Vorführmaterial vorab aus | Schalter `SICHT_OFFLINE`; `pnpm demo:prepare` | — | `config.ts`, `index.ts` |
 
 Drei Einschränkungen gelten für alle Messwerte:
 
-1. Sie wurden mit dem Bildmodell MobileCLIP-S2 erhoben. Dessen Gewichte stehen unter einer
-   Forschungslizenz, die Produktentwicklung und gewerbliche Nutzung ausschließt (Abschnitt 9,
-   Risiko 2). Mit einem frei lizenzierten Modell sind alle Werte neu zu erheben.
-2. Die Bilddaten sind Archivaufnahmen und ein öffentlicher Datensatz. AIDERv2 enthält ähnliche
-   Bilder in Trainings- und Testmenge; der Wert sagt wenig über fremdes Einsatzmaterial.
-3. „Manueller Durchlauf“ heißt: einmal von Hand geprüft, nicht durch einen automatischen Test
-   abgesichert. Automatisch geprüft sind elf Fälle (Prüfregeln, Protokoll, Geodäsie).
+1. Bildkodierer ist SigLIP 2 (base, patch32-256) unter Apache 2.0. MobileCLIP, mit dem frühere
+   Werte erhoben wurden, ist nur für Forschungszwecke freigegeben und nicht mehr voreingestellt;
+   alle Werte dieses Dokuments stammen vom neuen Kodierer (Abschnitt 9, Risiko 2).
+2. Die Bilddaten sind Archivaufnahmen und ein öffentlicher Datensatz. Die Wachen der Übung wurden
+   an ihrem Material formuliert; die Werte zeigen das Betriebsverhalten, nicht die Güte auf
+   fremdem Einsatzmaterial. Der Verzug zählt ab dem Eintreffen des ausgewerteten Bildes; die
+   Rechenzeit der Auswertung, rund 0,3 s je Bild, kommt im Betrieb hinzu. AIDERv2 enthält
+   ähnliche Bilder in Trainings- und Testmenge.
+3. „Durchlauf im Browser“ heißt: in den drei Rollen von Hand durchgespielt, nicht durch einen
+   automatischen Test abgesichert. Automatisch geprüft sind 15 Fälle (Prüfregeln, Protokoll,
+   Geodäsie).
 
 ### 3.2 Geplant, nicht gebaut
 
 | Lücke | Bedeutung |
 | --- | --- |
-| Anbindung laufender Bildströme (Kamerastrom, Drohnenübertragung) | Heute verarbeitet Sicht Dateien und spielt Übungsmaterial ab. Die Aussage „beobachtet selbständig“ gilt bis dahin nur für eingespieltes Material. |
+| Anbindung laufender Bildströme (Kamerastrom, Drohnenübertragung) | Heute verarbeitet Sicht Dateien und spielt Übungsmaterial ab. Die Aussage „beobachtet selbständig“ gilt bis dahin nur für eingespieltes Material. Für elf gleichzeitige Quellen mit einem Bild je Sekunde reicht ein Rechner mit vier Kernen nicht; nötig wäre etwa das Dreieinhalbfache seiner Rechenleistung oder eine Grafikkarte. |
 | Getestete Kopplung an ELD-BS, CommandX oder ArcGIS | Vorhanden sind Ausgabeformate, keine erprobte Schnittstelle. Die Rolle als Bildschicht ist damit behauptet, nicht gezeigt. |
-| Frei lizenziertes Standardmodell samt neu trainiertem Gefahrenmodell | Voraussetzung für jede gewerbliche Nutzung. SigLIP und CLIP ViT-B/32 sind im Quelltext wählbar, aber nicht vermessen. |
-| Benutzerverwaltung, Anbindung an Verzeichnisdienste, zweiter Anmeldefaktor | Heute gibt es drei Vorführkonten. |
-| Verschlüsselung der Verbindung zwischen Knoten und der gespeicherten Daten | Die Signatur sichert Herkunft und Unversehrtheit einer Verbundanfrage, nicht ihre Vertraulichkeit. |
+| Gefahrenmodell, das auf fremdem Material trägt | Das trainierte Modell hält auf dem Übungsmaterial einen ruhigen Fluss für eine Überflutung. Bis es mit Einsatzmaterial trainiert und geprüft ist, bleibt es Zweitmeinung; frei formulierte Wachen sind der Regelfall. |
+| Benutzerverwaltung, Anbindung an Verzeichnisdienste, zweiter Anmeldefaktor | Heute gibt es drei Vorführkonten mit gemeinsamem Kennwort. |
+| Technische Grenze des Suchraums je Mandat (Quellen, Gebiet, Zeitraum) | Die Anfrageprüfung ist eine Wortprüfung und lässt sich mit Umschreibungen umgehen. Unter einem Mandat, das Personenbeschreibungen zulässt, wirkt die Suche über alle Quellen. |
+| Verschlüsselung der Verbindung zwischen Knoten und der gespeicherten Daten | Die Signatur sichert Herkunft und Unversehrtheit einer Verbundanfrage, nicht ihre Vertraulichkeit. Der Verbund ist bisher nur mit drei Knoten auf einem Rechner gezeigt. |
 | Löschkonzept für das Protokoll, qualifizierte Zeitstempel, Anbindung an ein Archiv nach BSI TR-03125 | Das Protokoll wächst unbegrenzt; seine Beweiskraft beruht auf der Kette und den bezeugten Ständen. |
 | Ende einer Wache mit dem Mandat | Eine Wache läuft weiter, wenn ihr Mandat geschlossen wird. |
-| Messung an Einsatzmaterial und im Dauerbetrieb | Fehlmeldungen je Stunde und übersehene Ereignisse sind unbekannt. |
-| Suche über große Bestände | Die Suche durchläuft alle Vektoren im Arbeitsspeicher. Für wenige Quellen über 60 Tage ist das ungeprüft. |
+| Messung an Einsatzmaterial und im Dauerbetrieb | Fehlmeldungen je Stunde und übersehene Ereignisse im Einsatz sind unbekannt; gemessen ist eine Übung mit Archivmaterial. |
+| Suche über große Bestände | Die Suche vergleicht jede Anfrage mit jedem Vektor im Arbeitsspeicher. Ausgelegt ist das für einige Millionen Vektoren je Knoten; gemessen sind 2 268. |
 
 ## 4. Abgrenzung und Wettbewerb
 
@@ -120,8 +129,10 @@ Urteil:
 - Die Erfahrung mit Flock in den USA zeigt, dass Filter und Protokoll allein nicht genügen: In
   dessen Protokollen fanden sich trotz Sperre Suchen nach Herkunft und Abfragen über bis zu 274
   Kameras ([Zusammenfassung der Recherche von 404 Media](https://stateofsurveillance.org/news/flock-freeform-ai-people-search-2026/)).
-  Was Sicht verspricht, muss in der Bauweise liegen. Bei der Personensuche über Kleidung tut es
-  das bisher nicht (Abschnitt 11, Punkt 4).
+  Was Sicht verspricht, muss in der Bauweise liegen. Bei der Personensuche liegt es bisher in
+  einer Regel: Beschreibungen nach Geschlecht, Alter oder Kleidung verlangen ein Mandat, das sie
+  zulässt, und Anfragen nach Wiederfinden oder Verfolgen werden abgelehnt. Eine technische Grenze
+  des Suchraums fehlt (Abschnitt 11, Punkt 4).
 - Sicht ist heute eine Funktion, kein Markt. Jeder der ersten drei Anbieter der Tabelle kann sie
   von seiner Seite aus ergänzen.
 
@@ -224,7 +235,7 @@ Drei Befunde:
 
 | Zeitraum | Schritt | Ergebnis, an dem sich der Schritt messen lässt |
 | --- | --- | --- |
-| Dezember 2026 | Bildmodell auf frei lizenzierte Gewichte umstellen, Gefahrenmodell neu trainieren, alle Messwerte neu erheben. Markenrecherche für „Sicht“ beim DPMA und beim EUIPO beauftragen. Gesellschaft mit Sitz in Deutschland gründen. | Messblatt mit lizenzfähigem Modell; Rechercheergebnis; Handelsregistereintrag beantragt |
+| Dezember 2026 | Erledigt am 18. November 2026: Bildkodierer auf SigLIP 2 unter Apache 2.0 umgestellt, Gefahrenmodell neu trainiert, alle Messwerte neu erhoben (`docs/EVALUATION.md`). Offen: Lizenzkette schriftlich bestätigen lassen (ONNX-Fassung des Kodierers, YuNet, AIDERv2). Markenrecherche für „Sicht“ beim DPMA und beim EUIPO beauftragen. Gesellschaft mit Sitz in Deutschland gründen. | Schriftliche Bestätigung der Lizenzkette; Rechercheergebnis; Handelsregistereintrag beantragt |
 | Dezember 2026 bis Januar 2027 | Fünf Klärungen aus der Recherche: Wer hat die Pilotanwendung des Bundes gebaut? Was enthält ELD-BS 4.0? Will eine Behörde Bildsuche im Lagebild? Gespräche mit zehn unteren Katastrophenschutzbehörden und zwei Landesämtern, zuerst in Rheinland-Pfalz, wo § 60 LBKG Drohnenaufzeichnungen ausdrücklich regelt. | Zwei schriftliche Zusagen für eine Erprobung in einer Übung |
 | Februar 2027 | Laufende Bildströme anbinden. Meldungen in ein Bestandssystem auf ArcGIS-Grundlage übergeben. Verbindung zwischen Knoten verschlüsseln. | Vorführung mit einer echten Drohnenübertragung und einer fremden Lagekarte |
 | März 2027 | Unterlagen für die Datenschutz-Folgenabschätzung fertigstellen. Vorgespräch mit einer Landesdatenschutzaufsicht. Rechtsgutachten zur Rechtsgrundlage in Rheinland-Pfalz, Nordrhein-Westfalen und Baden-Württemberg. | Schriftliche Einschätzung der Aufsicht oder des Gutachtens |
@@ -247,26 +258,27 @@ Abbruchkriterien:
 | Nr. | Risiko | Eintritt | Wirkung | Gegenmaßnahme |
 | --- | --- | --- | --- | --- |
 | 1 | Keine ausdrückliche Rechtsgrundlage für die KI-Auswertung von Video im Bevölkerungsschutz. § 60 LBKG Rheinland-Pfalz regelt Aufzeichnung und Löschung, nicht die Auswertung. Die Bundesdatenschutzbeauftragte hält zu Polizeigesetzen fest: „Massenhafte Abgleiche und Analysen von Videodateien mit einem KI-System stellen keinen einfachen Abgleich dar“ ([Stellungnahme vom 02.06.2026, S. 21](https://www.bundestag.de/resource/blob/1210152/21-4-179-Stellungnahme-BfDI-Bonn-digitale-Ermittlungsbefugnisse-21-6131-21-6132-o-U.pdf)). | hoch | hoch | Gutachten je Land; früh mit einer Aufsicht sprechen; in Übungen beginnen; Bauweise so, dass die Eingriffstiefe gering bleibt (`docs/COMPLIANCE.md`) |
-| 2 | Lizenz der Modellgewichte. MobileCLIP ist nach der mitgelieferten Lizenz nur für Forschungszwecke freigegeben; „commercial exploitation, product development or use in any commercial product or service“ sind ausgeschlossen ([Lizenz bei den Gewichten](https://huggingface.co/apple/MobileCLIP-S2/blob/main/LICENSE); [Quelltextarchiv, Abschnitt License](https://github.com/apple/ml-mobileclip)). Standardmodell und Gefahrenmodell beruhen darauf. | sicher, solange nichts geändert wird | hoch | Vor jeder gewerblichen Nutzung rechtlich prüfen. Umstellung auf SigLIP ([Apache 2.0](https://huggingface.co/google/siglip-base-patch16-224)) oder CLIP ViT-B/32 ([MIT](https://huggingface.co/Xenova/clip-vit-base-patch32)), beide im Quelltext wählbar; Gewichte aus dem OpenCLIP-Umfeld als weitere Möglichkeit prüfen. Gefahrenmodell neu trainieren, Geschwindigkeit und Güte neu messen |
+| 2 | Lizenz der Modellgewichte. Für den Bildkodierer gelöst: Voreingestellt ist SigLIP 2 (base, patch32-256) unter Apache 2.0 ([Modellseite von Google](https://huggingface.co/google/siglip2-base-patch32-256)); das Gefahrenmodell wurde darauf neu trainiert, alle Werte neu gemessen. MobileCLIP bleibt im Quelltext wählbar, ist aber nur für Forschungszwecke freigegeben ([Lizenz bei den Gewichten](https://huggingface.co/apple/MobileCLIP-S2/blob/main/LICENSE)). Rest: Die geladene ONNX-Fassung ([onnx-community](https://huggingface.co/onnx-community/siglip2-base-patch32-256-ONNX)) trägt keine eigene Lizenzangabe und verweist auf das Ursprungsmodell; YuNet steht unter MIT, AIDERv2 unter CC BY 4.0 mit Pflicht zur Namensnennung. | niedrig | mittel | Lizenzkette vor dem ersten Angebot schriftlich prüfen lassen; Vermerke für YuNet und Namensnennung für AIDERv2 in Produkt und Unterlagen führen; MobileCLIP in keiner Auslieferung und keiner Vorführung gegenüber Dritten einsetzen |
 | 3 | Bestandsanbieter ergänzen die Funktion: Fraunhofer IOSB in ELD-BS, Esri in CommandX, Milestone ohne Netzverbindung ab Ende 2026. | hoch | hoch | Zulieferrolle anbieten statt verdrängen; Verbund und Aufsicht als Bauweise ausbauen; schneller messen und veröffentlichen als andere |
 | 4 | Vertriebszyklen von 9 bis 18 Monaten, Haushaltsjahre, Vergaberecht. | hoch | hoch | Erprobung als kleiner Festpreis; Rahmenvertrag erst nach Messberichten; Mittel für 24 Monate ohne Lizenzumsatz einplanen |
 | 5 | Keine belegte Nachfrage: Keine Ausschreibung, kein Strategiepapier und keine Behörde verlangt bisher Bildsuche im Lagebild. | hoch | hoch | Zehn Gespräche bis Januar 2027; Abbruchkriterium Ende März 2027 |
-| 6 | Bewertung nur an Archivmaterial und an einem Datensatz, dessen Test- und Trainingsbilder sich ähneln. | sicher | hoch | Erprobung in Übungen mit eigenem Material der Behörde; Messbericht mit Fehlmeldungen und übersehenen Ereignissen |
-| 7 | Fehlmeldungen oder übersehene Lagen im Einsatz; ein Stab verlässt sich auf das System oder verliert das Vertrauen. | mittel | hoch | Jede Meldung braucht eine Bestätigung; Ausgabe trägt den Hinweis auf nötige Bewertung; Schwellen je Wache; veröffentlichte Fehlerraten |
-| 8 | Zweckentfremdung: Suche nach Personen über Kleidung quer durch alle Quellen; Wunsch der Polizei nach Fahndungsnutzung. | mittel | hoch | Polizeiliche Nutzung vertraglich ausschließen; Personenbeschreibungen je Mandat sperrbar (vorhanden); Suchraum je Mandat begrenzen (fehlt); Stichproben der Aufsicht |
+| 6 | Bewertung nur an Archivmaterial und an einem Datensatz, dessen Test- und Trainingsbilder sich ähneln. Die Wachen der Übung wurden am Übungsmaterial formuliert. Das Gefahrenmodell irrt bereits auf diesem Material, trotz 99,1 % auf seinem Benchmark. | sicher | hoch | Erprobung in Übungen mit eigenem Material der Behörde; Messbericht mit Fehlmeldungen und übersehenen Ereignissen; Gefahrenmodell bleibt bis dahin Zweitmeinung |
+| 7 | Fehlmeldungen oder übersehene Lagen im Einsatz; ein Stab verlässt sich auf das System oder verliert das Vertrauen. In der eigenen Übung war eine von 15 Meldungen falsch. | mittel | hoch | Jede Meldung braucht eine Bestätigung; Ausgabe trägt den Hinweis auf nötige Bewertung; Schwellen je Wache; ausdrückliches Nachschärfen aus Urteilen (in der Übung gezeigt); veröffentlichte Fehlerraten |
+| 8 | Zweckentfremdung: Suche nach Personen über Kleidung quer durch alle Quellen; Wunsch der Polizei nach Fahndungsnutzung. | mittel | hoch | Polizeiliche Nutzung vertraglich ausschließen; Beschreibungen nach Geschlecht, Alter oder Kleidung nur unter einem Mandat, das sie zulässt, und im Protokoll gekennzeichnet; Wiederfinden und Verfolgen werden abgelehnt (alles vorhanden). Die Prüfung ist eine Wortprüfung und umgehbar; Suchraum je Mandat begrenzen (fehlt); Stichproben der Aufsicht |
 | 9 | Name nicht geprüft. Weder Markenregister noch Firmennamen wurden recherchiert. | mittel | mittel | Recherche vor jeder öffentlichen Verwendung; Ausweichnamen in `docs/BRAND.md` |
 | 10 | Ein Gründer: Schlüsselperson, keine Fachherkunft aus dem Bevölkerungsschutz, keine Referenz. | hoch | hoch | Mitgründerin oder Mitgründer aus Stabsarbeit oder Leitstelle; Beirat aus zwei Praktikern; Quelltext hinterlegen |
 | 11 | KI-Verordnung: Einstufung als Hochrisiko-System, wenn die Ausgabe Einsätze priorisiert (Anhang III Nr. 5 Buchst. d) oder als Sicherheitsbauteil kritischer Infrastruktur dient (Nr. 2). | mittel | mittel | Zweckbestimmung, die beides ausschließt; technische Unterlagen dennoch vorbereiten; Fristen vor Zitat prüfen (`docs/COMPLIANCE.md`) |
 | 12 | Kleiner Kernmarkt (Abschnitt 7). | sicher | hoch für eine Wagnisfinanzierung | Finanzierung an der Marktgröße ausrichten; Nachbarmärkte erst nach der ersten Referenz prüfen |
 | 13 | Sicherheitsnachweise fehlen: kein Grundschutz-Profil, keine Verschlüsselung, keine Benutzerverwaltung. | sicher | mittel | Abschnitt 3.2 abarbeiten, bevor echte Einsatzdaten verarbeitet werden |
-| 14 | Herkunft der Modellgewichte aus den USA (Apple, Google, OpenAI). Kein Datenabfluss, weil die Gewichte lokal laufen, aber eine Angriffsfläche in der Debatte um digitale Souveränität. | niedrig | mittel | Herkunft offenlegen; Austauschbarkeit des Modells zeigen |
+| 14 | Herkunft des Bildkodierers aus den USA (Google). Kein Datenabfluss, weil die Gewichte lokal laufen, aber eine Angriffsfläche in der Debatte um digitale Souveränität. | niedrig | mittel | Herkunft offenlegen; Austauschbarkeit des Modells zeigen (mehrere Kodierer sind im Quelltext wählbar; der Wechsel am 18. November 2026 ist vollzogen) |
 
 ## 10. Was wir bewusst nicht bauen
 
 | Nicht gebaut | Grund |
 | --- | --- |
 | Gesichtserkennung und jeder Abgleich von Personen mit einer Referenzdatenbank | Verbote in Art. 5 Abs. 1 Buchst. e und h der KI-Verordnung; der Ausschluss biometrischer Daten mindert das Gewicht des Eingriffs (BVerfG, 16.02.2023, Rn. 87) |
-| Kennzeichenerkennung | Dient der Identifizierung, nicht der Lagebeurteilung |
+| Kennzeichenerkennung | Dient der Identifizierung, nicht der Lagebeurteilung. Kennzeichen werden weder gelesen noch gesucht; Anfragen danach lehnt eine eigene Regel ab |
+| Wiederfinden und Verfolgen bestimmter Personen | Anfragen danach werden abgelehnt und protokolliert. Das ist eine Regel mit Protokoll, keine technische Unmöglichkeit, und wird so benannt (`docs/BRAND.md`) |
 | Suche nach Herkunft, Religion, Gesundheit und anderen geschützten Merkmalen; Beschreibung von Personen über Körpermerkmale | Art. 5 Abs. 1 Buchst. g und Erwägungsgrund 16 der KI-Verordnung, Art. 9 DSGVO |
 | Personenbezogene Risikowerte und selbsttätige Maßnahmen | Art. 5 Abs. 1 Buchst. d der KI-Verordnung; BVerfG Rn. 98 |
 | Zentraler Datenbestand | Die Bundesdatenschutzbeauftragte hält eine dauerhafte „Super-Datenbank“ für verfassungsrechtlich nicht tragfähig (Stellungnahme vom 02.06.2026, S. 14–16) |
@@ -277,18 +289,23 @@ Abbruchkriterien:
 
 ## 11. Offene Punkte für den Gründer
 
-1. **Modellwechsel vor der ersten Vorführung gegenüber Dritten.** Nach dem Wortlaut der Lizenz
-   deckt die Forschungsfreigabe weder Produktentwicklung noch Vorführungen mit Verkaufsabsicht.
-   Empfehlung: sofort umstellen, Messwerte neu erheben, bis dahin jede Zahl mit dem Hinweis auf
-   das Modell versehen.
+1. **Lizenzkette bestätigen lassen.** Der Modellwechsel ist vollzogen: SigLIP 2 unter Apache
+   2.0, Gefahrenmodell neu trainiert, Messwerte neu erhoben. Offen ist die schriftliche
+   Bestätigung für die ONNX-Fassung des Kodierers, für YuNet und für AIDERv2 (Namensnennung).
+   Empfehlung: vor dem ersten Angebot erledigen und MobileCLIP in keiner Vorführung gegenüber
+   Dritten verwenden.
 2. **Name.** Markenrecherche beauftragen, bevor Geld in die Marke fließt.
 3. **Rolle.** Eigenes Produkt beim Kreis oder Zulieferer für Fraunhofer IOSB und Eurocommand?
    Empfehlung: beides offenhalten, bis die Gespräche im Januar geführt sind; technisch zuerst
    die Kopplung bauen, weil sie beiden Wegen dient.
-4. **Personensuche über Kleidung.** Die Prüfregeln lassen Kleidung, Ausrüstung und Situation zu;
-   damit lässt sich eine Person über mehrere Quellen verfolgen. `docs/BRAND.md` sagt, Sicht könne
-   das nicht. Entweder die Aussage ändern („ist untersagt, wird protokolliert und geprüft“) oder
-   den Suchraum je Mandat technisch begrenzen. Empfehlung: beides.
+4. **Personenbeschreibungen.** Umgesetzt: Beschreibungen nach Geschlecht, Alter oder Kleidung
+   verlangen ein Mandat, das sie zulässt, und stehen als Suche gekennzeichnet im Protokoll;
+   Anfragen nach Gesichtern, Kennzeichen, Wiederfinden oder Verfolgen werden abgelehnt;
+   `docs/BRAND.md` nennt das eine Regel mit Protokoll, keine technische Unmöglichkeit. Offen:
+   Die beiden mitgelieferten Mandate (Erprobung, Übung) lassen Personenbeschreibungen zu; im
+   Verbund prüft der antwortende Knoten ohne Kenntnis dieser Einstellung; der Suchraum eines
+   Mandats ist nicht begrenzt. Empfehlung: die mitgelieferten Mandate sperren und den Suchraum je
+   Mandat begrenzen.
 5. **Polizei als Kunde.** Empfehlung: für mindestens 24 Monate vertraglich ausschließen und das
    öffentlich sagen.
 6. **Erstes Land.** Rheinland-Pfalz bietet den Anlass, eine ausdrückliche Regel für
@@ -302,9 +319,10 @@ Abbruchkriterien:
    zwischen Offenlegung, Einsicht für Behörden und Hinterlegung.
 9. **Mitgründung.** Ohne eine Person aus der Stabsarbeit fehlt die Glaubwürdigkeit im Vertrieb
    und das Urteil in der Produktentwicklung.
-10. **Aussagen enger fassen.** Vier Stellen in `docs/BRAND.md` gehen über die Belege hinaus: (a)
-    „Die Aufnahmen erreichten die Einsatzleitung nicht“ — belegt ist, dass die Videos bei der
-    Polizei blieben und nicht verbucht wurden; (b) Sichtungsquote und Protokollabdeckung weist
-    die Schnittstelle noch nicht als Kennzahl aus (`Metrics` in `types.ts`); (c) „Keine
-    Verfolgung einzelner Personen“ ist eine Regel, keine technische Schranke; (d) die Messwerte
-    stehen ohne den Hinweis auf das Modell und dessen Lizenz.
+10. **Aussagen enger fassen.** Die vier Stellen, an denen `docs/BRAND.md` über die Belege
+    hinausging, sind dort berichtigt: das Ahrtal nur mit dem belegten Wortlaut, die Kennzahlen
+    wie die Konsole sie ausweist, die Personenverfolgung als Regel mit Protokoll, die Messwerte
+    mit Kodierer und Lizenz. Zwei Formulierungen sind noch enger, als der Stand trägt:
+    „beobachtet es selbständig“ gilt nur für eingespieltes Material, solange keine Bildströme
+    angebunden sind; „Gesichter sind in allen Bildern maskiert“ setzt voraus, dass der Erkenner
+    jedes Gesicht findet, und das ist nicht gemessen.

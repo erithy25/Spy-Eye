@@ -113,7 +113,9 @@ async function main(): Promise<void> {
       const job = queue.shift();
       if (!job) return;
       try {
-        bytes += await download(job);
+        // Not `bytes += await …`: the left side would be read before the download finishes.
+        const size = await download(job);
+        bytes += size;
       } catch (err: unknown) {
         failed.push(err instanceof Error ? err.message : String(err));
       }

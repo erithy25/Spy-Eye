@@ -431,4 +431,9 @@ export const EN: Record<string, string> = {
   'Material einer laufenden Übung zählt ab dem Augenblick, in dem es eingeht.': 'Footage of a running exercise counts from the moment it arrives.',
   'Im Verbund reist die Frage zu den Nachbarknoten; deren Aufnahmen bleiben dort.': 'In the federation the question travels to the peer nodes; their footage stays there.',
   Kennzeichen: 'Licence plates',
+  'Direktbild: Adresse des Stroms (leer = Archivquelle)': 'Live stream: address (empty = archive source)',
+  'RTSP, HLS, RTMP, SRT oder MPEG-TS. Der Strom wird in kurze Abschnitte geschnitten und wie eine Aufzeichnung ausgewertet; Meldungen folgen mit einem Nachlauf von etwa einer halben Minute. Zugangsdaten in der Adresse bleiben auf dem Knoten.':
+    'RTSP, HLS, RTMP, SRT or MPEG-TS. The stream is cut into short segments and analysed like a recording; alerts follow with a delay of about half a minute. Credentials in the address stay on the node.',
+  verbindet: 'connecting',
+  'Direktbild trennen': 'Disconnect live stream',
 };

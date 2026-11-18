@@ -32,7 +32,7 @@ export const PERMISSIONS = {
   supervisor: [
     'search', 'media', 'watch.read', 'watch.write', 'alert.triage', 'case.read', 'case.write', 'case.seal',
     'source.read', 'source.write', 'mandate.read', 'mandate.write', 'metrics.read', 'scenario.read',
-    'scenario.control', 'federation.read', 'federation.write', 'privacy.unmask', 'ledger.read',
+    'scenario.control', 'federation.read', 'federation.write', 'privacy.unmask', 'ledger.read', 'source.live',
   ],
   auditor: ['ledger.read', 'ledger.verify', 'mandate.read', 'metrics.read', 'case.read', 'watch.read', 'federation.read'],
 } as const satisfies Record<Role, readonly string[]>;

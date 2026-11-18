@@ -57,8 +57,8 @@ die Schnittstelle des laufenden Knotens.
 - Die Rechenzeit der Auswertung ist nicht enthalten, weil die Übung vorab ausgewertetes Material
   abspielt. Sie beträgt auf diesem Rechner rund 0,3 s je Bild (Abschnitt 2). Für elf Quellen
   gleichzeitig mit einem Bild je Sekunde reicht dieser Rechner nicht; nötig wäre etwa das
-  Dreieinhalbfache seiner Rechenleistung oder eine Grafikkarte. Direktbilder spielt dieser Stand
-  nicht ein.
+  Dreieinhalbfache seiner Rechenleistung oder eine Grafikkarte. Bei einem angeschlossenen
+  Direktbild kommt der Nachlauf eines Abschnitts hinzu (siehe „Direktbild“ in Abschnitt 2).
 - Die Wachen der Übung wurden an diesem Material formuliert, so wie eine Auswerterin es mit der
   Vorschau „Am Bestand prüfen“ täte. Die Werte beschreiben das Betriebsverhalten auf bekanntem
   Material. Über die Güte auf fremdem Einsatzmaterial sagen sie nichts.
@@ -77,6 +77,23 @@ die Schnittstelle des laufenden Knotens.
 
 Zum Vergleich auf demselben Rechner: MobileCLIP-S2 62 ms je Bild, CLIP ViT-B/32 26 ms je Bild.
 MobileCLIP ist nur für Forschungszwecke lizenziert und deshalb nicht mehr voreingestellt.
+
+### Direktbild
+
+Geprüft gegen eine simulierte Kamera: eine Aufnahme eines Gebäudebrands, in Endlosschleife als
+MPEG-TS über TCP gesendet; Abschnitte von 10 s (`SICHT_LIVE_SEGMENT_SEC=10`), eine Wache „Brand“.
+
+| Größe | Wert |
+| --- | --- |
+| Verbunden nach dem Anschließen | innerhalb von 6 s |
+| Erstes ausgewertetes Bild | nach 22 bis 29 s |
+| Erste Meldung | 29 s nach dem Anschließen |
+| Meldungen für das durchgehende Ereignis | 1, fortgeschrieben über sieben Abschnitte |
+| Nach Abbruch des Stroms | Quelle „getrennt“ mit Grund, neue Verbindungsversuche in wachsenden Abständen |
+
+Mit der Voreinstellung von 20 s je Abschnitt liegt der Nachlauf entsprechend höher, bei etwa
+einer halben bis dreiviertel Minute. Nicht geprüft: echte Kameras, RTSP mit Anmeldung, schlechte
+Verbindungen, mehrere Ströme gleichzeitig.
 
 ## 3. Suche
 
@@ -125,5 +142,5 @@ Maskierung, Vier-Augen-Freigabe, Beweissicherung mit Siegel, Verbundfrage mit Be
 - Betrieb mit mehr als einigen zehn Stunden Material in einem Knoten. Die Suche vergleicht jede
   Anfrage mit jedem Vektor; das ist bis in die Größenordnung einiger Millionen Vektoren schnell
   genug und darüber nicht ausgelegt.
-- Direktbilder und die Last vieler gleichzeitiger Quellen.
+- Direktbilder von echten Kameras und die Last vieler gleichzeitiger Ströme.
 - Verbund über ein echtes Netz mit mehr als drei Knoten.

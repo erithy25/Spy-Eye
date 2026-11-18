@@ -27,7 +27,7 @@ der Modelle wird kein Netz gebraucht.
 | Weitsicht | VERBUND | Abfrage über Behördengrenzen: nur die Frage reist, zurück kommen maskierte Vorschaubilder und ein Beleg |
 | Aufsicht | PROTOKOLL | Verkettetes Protokoll, Prüfung der Kette, Stichprobe für die Kontrolle, Export |
 | Rücksicht | durchgehend | Gesichtsmaskierung, Mandat mit Zweckbindung, Vier-Augen-Freigabe, Löschfrist, Anfrageprüfung |
-| — | QUELLEN, WIRKUNG | Sensoren und Einspielen; Messwerte des Knotens, Auswertung jeder Übung |
+| — | QUELLEN, WIRKUNG | Sensoren, Einspielen von Aufzeichnungen, Anschließen von Direktbildern; Messwerte des Knotens, Auswertung jeder Übung |
 
 ## Vorführung mit drei Knoten
 
@@ -106,6 +106,10 @@ Quelle ─► Bilder (ffmpeg) ─► Gesichter maskieren ─► Bildmerkmale (Si
   Regeln, protokolliert, und gibt höchstens zwölf maskierte Vorschaubilder mit einer Belegnummer
   zurück. Aufnahmen, Verzeichnis und Protokoll verlassen ihn nicht. Beide Seiten bezeugen den
   Protokollstand des anderen.
+- **Direktbild.** Eine Quelle kann eine Stromadresse tragen. ffmpeg schneidet den Strom in kurze
+  Abschnitte; jeder fertige Abschnitt geht denselben Weg wie eine hochgeladene Aufzeichnung. Eine
+  laufende Meldung wird über Abschnitte hinweg fortgeschrieben. Anschließen darf nur die Leitung;
+  Zugangsdaten in der Adresse bleiben auf dem Knoten.
 - **Übung.** Ein Drehbuch verteilt Aufzeichnungen auf Quellen und setzt Ereignisse mit Zeitpunkt.
   Das System spielt sie auf einer Uhr ab und misst je Ereignis die Zeit bis zur Meldung.
 
@@ -129,9 +133,12 @@ nicht die Güte auf fremdem Einsatzmaterial.
 
 ## Grenzen dieses Stands
 
-- **Keine Direktbilder.** Eingespielt werden Aufzeichnungen. Die Übung spielt ausgewertetes
-  Material auf einer Uhr ab. Für elf gleichzeitige Quellen in Echtzeit reicht ein Rechner mit vier
-  Kernen nicht.
+- **Direktbilder nur mit Nachlauf und nur im Labor geprüft.** Ein angeschlossener Strom (RTSP,
+  HLS, RTMP, SRT, MPEG-TS) wird in Abschnitte von 20 Sekunden geschnitten und wie eine Aufzeichnung
+  ausgewertet; Meldungen folgen etwa eine halbe Minute nach dem Ereignis. Geprüft ist das gegen
+  eine simulierte Kamera (MPEG-TS über TCP), nicht gegen Geräte im Feld. Rechnerisch wertet ein
+  Rechner mit vier Kernen etwa drei Ströme gleichzeitig aus; die Übung mit elf Quellen spielt
+  deshalb vorab ausgewertetes Material ab.
 - **Keine Anbindung an ein vorhandenes Führungssystem.** Es gibt Ausgaben als GeoJSON und CAP 1.2,
   aber keine erprobte Kopplung.
 - **Anmeldung und Rechte sind für die Vorführung gebaut.** Drei feste Zugänge mit einem
@@ -185,6 +192,7 @@ Bestand neu aus; die Wachen der Übung sind auf den voreingestellten Kodierer ab
 | `SICHT_DEMO_PASSWORD` | `lagebild` | Passwort der Vorführzugänge |
 | `SICHT_RETENTION_DAYS` | `60` | Löschfrist für Aufzeichnungen außerhalb von Vorgängen; `0` schaltet sie ab |
 | `SICHT_OFFLINE` | — | `1` unterbindet jeden Netzzugriff |
+| `SICHT_LIVE_SEGMENT_SEC` | `20` | Länge der Abschnitte, in die ein Direktbild geschnitten wird (5 bis 120) |
 | `MODEL_ID`, `MODEL_DTYPE`, `MODEL_TEXT_DTYPE` | SigLIP 2, `fp32`, `fp16` | Kodierer und Genauigkeit |
 | `ML_DEVICE` | `cpu` | `auto`, `dml` oder `cuda` versuchen eine Grafikkarte; sie wird nur verwendet, wenn sie das Ergebnis des Prozessors reproduziert |
 

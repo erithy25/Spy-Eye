@@ -10,6 +10,7 @@ import { EventHub } from './events.js';
 import { Cases } from './intel/cases.js';
 import { Federation, type PeerRecord } from './intel/federation.js';
 import { Incidents } from './intel/incidents.js';
+import { LiveIngest, redactStreamAddress } from './intel/live.js';
 import { scenarioWatchId } from './intel/metrics.js';
 import type { Lang } from './intel/report.js';
 import { ScenarioEngine, type Observation, type ScenarioDefinition } from './intel/scenario.js';
@@ -24,7 +25,7 @@ import { Pipeline } from './pipeline.js';
 import { registerRoutes } from './routes.js';
 import { SearchEngine } from './search.js';
 import { Store, type VideoEntry } from './store.js';
-import type { AppState, Mandate, NodeInfo, SessionInfo, SourceKind, UserInfo } from './types.js';
+import type { AppState, FeedState, Mandate, NodeInfo, SessionInfo, SourceInfo, SourceKind, UserInfo } from './types.js';
 
 export const VERSION = '0.5.0';
 
@@ -105,6 +106,9 @@ export class PlatformNode {
   readonly scenario: ScenarioEngine;
   readonly pipeline: Pipeline;
   readonly search: SearchEngine;
+  readonly live: LiveIngest;
+  /** Stream addresses of live sources; they may carry credentials and never leave the node. */
+  private streamAddresses: Record<string, string> = {};
   readonly grants = new Map<string, UnmaskGrant>();
   private readonly witnessRecorded = new Map<string, number>();
   /**
@@ -202,6 +206,52 @@ export class PlatformNode {
     });
 
     this.search = new SearchEngine(this.store, shared.model, this.sources, () => this.scopes());
+
+    this.live = new LiveIngest({
+      store: this.store,
+      sources: this.sources,
+      pipeline: this.pipeline,
+      spoolDir: d('streams'),
+      addressOf: (sourceId) => this.streamAddresses[sourceId] ?? null,
+      activeAlerts: (sourceId) => this.watches.activeAlertsOf(sourceId),
+      onChange: () => this.broadcastFeeds(),
+      log: (msg) => this.log(msg),
+    });
+  }
+
+  /** Current picture of every source that delivers one: exercise sources and connected streams. */
+  feeds(): FeedState[] {
+    return this.scenario.feeds().concat(this.live.feeds());
+  }
+
+  broadcastFeeds(): void {
+    this.hub.broadcast({ type: 'feeds', feeds: this.feeds(), scenario: this.scenario.info() });
+  }
+
+  /** Sources as the console sees them: live sources carry their stream state, never their credentials. */
+  sourceList(): SourceInfo[] {
+    return this.sources.list().map((source) => {
+      if (source.mode !== 'live') return source;
+      const state = this.live.stateOf(source.id);
+      return {
+        ...source,
+        stream: redactStreamAddress(this.streamAddresses[source.id] ?? ''),
+        streamState: { state: state?.state ?? 'offline', detail: state?.lastError ?? '' },
+      };
+    });
+  }
+
+  /** Connects a stream to a source and remembers its address. */
+  async connectStream(sourceId: string, address: string): Promise<void> {
+    this.streamAddresses[sourceId] = address;
+    await writeFileAtomic(path.join(this.cfg.dataDir, 'streams.json'), JSON.stringify(this.streamAddresses));
+    this.live.start(sourceId);
+  }
+
+  async disconnectStream(sourceId: string): Promise<void> {
+    await this.live.stop(sourceId);
+    delete this.streamAddresses[sourceId];
+    await writeFileAtomic(path.join(this.cfg.dataDir, 'streams.json'), JSON.stringify(this.streamAddresses));
   }
 
   log(message: string, error = false): void {
@@ -242,10 +292,12 @@ export class PlatformNode {
     void this.enforceRetention();
     this.watches.recalibrateAll();
     if (entry.info.scenario !== null) {
-      this.hub.broadcast({ type: 'feeds', feeds: this.scenario.feeds(), scenario: this.scenario.info() });
+      this.broadcastFeeds();
       return;
     }
-    this.watches.observeRecording(entry);
+    const live = this.sources.get(entry.info.sourceId)?.mode === 'live';
+    this.watches.observeRecording(entry, undefined, live);
+    if (live) this.broadcastFeeds();
   }
 
   /** Creates the exercise mandate and the scenario's standard watches (once). */
@@ -541,6 +593,7 @@ export class PlatformNode {
       });
     }
     await this.sources.open();
+    this.streamAddresses = await readJson<Record<string, string>>(path.join(this.cfg.dataDir, 'streams.json'), {});
     await this.incidents.open();
     await this.cases.open();
     await this.federation.open();
@@ -585,6 +638,7 @@ export class PlatformNode {
         this.watches.recalibrateAll();
         for (const id of pending) this.pipeline.enqueue(id);
         await this.seedArchive();
+        await this.live.open();
       })
       .catch((err: unknown) => this.log(`Model initialisation failed: ${err instanceof Error ? err.message : String(err)}`, true));
 
@@ -606,6 +660,7 @@ export class PlatformNode {
   async stop(): Promise<void> {
     if (this.retentionTimer) clearInterval(this.retentionTimer);
     this.pipeline.shutdown();
+    this.live.shutdown();
     this.scenario.shutdown();
     this.watches.shutdown();
     this.federation.shutdown();

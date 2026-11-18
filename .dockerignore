@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+**/dist
+data
+data-*
+.models
+.cache
+dataset
+media
+site
+docs
+deliverables
+scenarios/*/clips
+seeds/*/clips
+*.zip
+.git

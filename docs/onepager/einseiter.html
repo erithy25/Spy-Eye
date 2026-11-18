@@ -88,13 +88,13 @@
       <h2 class="label">Das Problem</h2>
       <p><b>Ahrtal, 14. Juli 2021, 22:14 bis 22:43 Uhr.</b> Ein Polizeihubschrauber filmt überflutete Orte und Menschen, die mit Lampen auf sich aufmerksam machen. Die Videos werden „nicht ordnungsgemäß verbucht“. Untersuchungsausschuss und Staatsanwaltschaft erfahren erst im September 2022 von ihnen.<sup>1</sup></p>
       <p class="quote">„So wusste die Technische Einsatzleitung nicht, was im Laufe des Abends noch auf sie zukommen würde.“<sup>2</sup></p>
-      <p class="fine">Ob durchsuchbares Bildmaterial den Verlauf jener Nacht geändert hätte, belegt keine Quelle. Belegt ist: Das Material war da und kam nicht an.</p>
+      <p class="fine">Ob durchsuchbares Bildmaterial den Verlauf jener Nacht geändert hätte, belegt keine Quelle. Belegt ist: Das Material war da, wurde nicht ordnungsgemäß erfasst und blieb über ein Jahr unbekannt.</p>
     </div>
     <div>
       <div class="rule"></div>
       <h2 class="label">Was Sicht tut</h2>
       <dl class="mod">
-        <dt>Einsicht</dt><dd>Freitextsuche über alles Bildmaterial einer Behörde: „Person auf Dach“, „Fahrzeug im Wasser“, „Rauch über Gebäude“.</dd>
+        <dt>Einsicht</dt><dd>Freitextsuche über alles Bildmaterial einer Behörde, deutsch oder englisch: „überflutete Wiese“, „Rauch über Gebäuden“.</dd>
         <dt>Vorsicht</dt><dd>Stehende Suchaufträge melden Gefahrenlagen mit Bild, Ort und Zeit an den Stab. Ein Mensch bestätigt oder verwirft.</dd>
         <dt>Weitsicht</dt><dd>Zwischen Behörden reist nur die Frage. Das Bild bleibt, wo es aufgenommen wurde.</dd>
         <dt>Aufsicht</dt><dd>Jede Abfrage hat einen Zweck, eine verantwortliche Person und einen Eintrag in einem verketteten, prüfbaren Protokoll.</dd>
@@ -107,8 +107,8 @@
     <h2 class="label">Der messbare Zweck: Zeit von der Aufnahme bis zur Lagekenntnis</h2>
     <div class="cols3">
       <div class="kpi"><b>Erkennungsverzug</b>Sekunden vom Auftreten eines Ereignisses im Bild bis zur Meldung auf der Lagekarte. Gemessen in jeder Übung, je Ereignis.</div>
-      <div class="kpi"><b>Sichtungsquote</b>Anteil des eingegangenen Materials, der ausgewertet wurde.</div>
-      <div class="kpi"><b>Protokollabdeckung</b>Anteil der Abfragen mit Zweck, Person und Protokolleintrag. Ziel: 100&nbsp;Prozent.</div>
+      <div class="kpi"><b>Sichtungsquote</b>Anteil der eingegangenen Aufzeichnungen, die vollständig ausgewertet sind.</div>
+      <div class="kpi"><b>Protokollierte Abfragen</b>Zahl der Abfragen und der Ablehnungen. Eine Antwort wird erst nach dem Protokolleintrag ausgeliefert.</div>
     </div>
   </section>
 
@@ -117,24 +117,25 @@
       <div class="rule"></div>
       <h2 class="label">Was Sicht bewusst nicht kann</h2>
       <ul>
-        <li>Keine Gesichtserkennung, kein Abgleich mit Personenbildern.</li>
-        <li>Keine Kennzeichenerkennung.</li>
-        <li>Keine Bewertung von Personen, keine selbsttätigen Maßnahmen.</li>
+        <li>Keine Gesichtserkennung, kein Abgleich mit Personenbildern. Erkannte Gesichter werden maskiert.</li>
+        <li>Keine Kennzeichen: weder gelesen noch gesucht.</li>
+        <li>Kein Wiederfinden, kein Verfolgen bestimmter Personen. Beschreibungen nach Geschlecht, Alter oder Kleidung nur unter einem Mandat, das sie zulässt: eine Regel mit Protokoll, keine technische Unmöglichkeit.</li>
+        <li>Keine Suche nach Namen, Herkunft, Religion, Gesundheit oder körperlichen Merkmalen; keine Bewertung von Personen.</li>
         <li>Kein zentraler Datenbestand: Bilder bleiben bei der Behörde, die sie aufgenommen hat.</li>
-        <li>Kein stilles Weiterlernen im Betrieb: Nachschärfen ist ein eigener, protokollierter Schritt.</li>
-        <li>Anfragen nach Namen, Herkunft, Religion, Gesundheit oder Körpermerkmalen lehnt das System ab und protokolliert die Ablehnung.</li>
+        <li>Kein stilles Weiterlernen: Nachschärfen ist ein eigener, protokollierter Schritt.</li>
       </ul>
     </div>
     <div>
       <div class="rule"></div>
       <h2 class="label">Gemessen</h2>
       <table>
-        <tr><td>Gefahrenmodell, richtig erkannt<span class="c">Makro-F1 0,990. Testmenge AIDERv2, 1&#8239;654 Luftbilder; ohne Training 92,2&nbsp;%.</span></td><td class="v">99,1&nbsp;%</td></tr>
-        <tr><td>Auswertegeschwindigkeit<span class="c">Ein Bild je Sekunde, vier Prozessorkerne, keine Grafikkarte.</span></td><td class="v">rund 3-fache Echtzeit</td></tr>
-        <tr><td>Erste Durchsuchbarkeit<span class="c">44 Aufnahmen im Vorschaudurchgang, gleicher Rechner.</span></td><td class="v">5,9&nbsp;s</td></tr>
-        <tr><td>Gesichtsmaskierung<span class="c">Erkennung und Verpixelung, Prozessor.</span></td><td class="v">20–40&nbsp;ms je Bild</td></tr>
+        <tr><td>Übung: Ereignisse erkannt<span class="c">13 Ereignisse, elf Quellen, Echtzeituhr.</span></td><td class="v">13 von 13</td></tr>
+        <tr><td>Erkennungsverzug<span class="c">Ab Eintreffen des ausgewerteten Bildes.</span></td><td class="v">1,1&nbsp;s im Median</td></tr>
+        <tr><td>Fehlmeldungen<span class="c">Nach Nachschärfen im Folgelauf keine.</span></td><td class="v">1 von 15</td></tr>
+        <tr><td>Auswertegeschwindigkeit<span class="c">Vier Kerne, ohne Grafikkarte.</span></td><td class="v">3,3-fache Echtzeit</td></tr>
+        <tr><td>Gefahrenmodell, Benchmark AIDERv2<span class="c">Irrt auf Übungsmaterial: nur Zweitmeinung.</span></td><td class="v">99,1&nbsp;%</td></tr>
       </table>
-      <p class="fine" style="margin-top:2.2mm">Gemessen an Archivaufnahmen und einem öffentlichen Datensatz, dessen Test- und Trainingsbilder sich ähneln, nicht an Einsatzmaterial. Bildmodell der Messung: MobileCLIP-S2 (Forschungslizenz). Für den Einsatz wird ein frei lizenziertes Modell verwendet; die Werte werden damit neu erhoben.</p>
+      <p class="fine" style="margin-top:2.2mm">Eigene Übung mit Archivaufnahmen; die Wachen wurden an diesem Material formuliert. Die Werte zeigen das Betriebsverhalten, nicht die Güte auf fremdem Einsatzmaterial. Bildkodierer: SigLIP&nbsp;2 (Google, Apache&nbsp;2.0).</p>
     </div>
   </section>
 
@@ -145,12 +146,12 @@
     <div>
       <div class="label" style="padding-bottom:1.6mm">Stand</div>
       <div class="status">Erprobungsstand. Übungsdaten. Keine Behördenkunden.</div>
-      <p style="margin-top:1.6mm">Heute: Videodateien und Übungsbetrieb. In Arbeit: laufende Bildströme und die Kopplung an bestehende Lagesysteme. Betrieb auf Rechnern der Behörde, ohne Netzverbindung.</p>
+      <p style="margin-top:1.6mm">Heute: Videodateien und Übungsbetrieb, Verbund aus drei Knoten in der Vorführung. Noch nicht gebaut: laufende Bildströme und die Kopplung an bestehende Lagesysteme. Betrieb auf Rechnern der Behörde, ohne Netzverbindung.</p>
     </div>
     <div class="label" style="text-align:right">Vorführung mit<br>Übungsszenario<br>auf Anfrage</div>
   </footer>
   <div class="hair" style="margin-top:3mm"></div>
-  <p class="fine" style="padding-top:2mm"><sup>1</sup> dpa über Volksstimme, 05.10.2022; epd über evangelisch.de, 04.10.2022. <sup>2</sup> Staatsanwaltschaft Koblenz, wiedergegeben von beck-aktuell, 18.04.2024. Messwerte: eigene Messung, November 2026. Stand des Blatts: November 2026.</p>
+  <p class="fine" style="padding-top:2mm"><sup>1</sup> dpa über Volksstimme, 05.10.2022; epd über evangelisch.de, 04.10.2022. <sup>2</sup> Staatsanwaltschaft Koblenz, wiedergegeben von beck-aktuell, 18.04.2024. Messwerte: eigene Messung vom 18.&nbsp;November 2026; Bedingungen im Messbericht. Stand des Blatts: November 2026.</p>
 
 </div>
 </body>
