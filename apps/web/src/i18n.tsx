@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { EN } from './en';
 import { formatCount, setNumberLocale } from './format';
 
@@ -87,6 +87,10 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
   // Numbers follow the language as well: decimal comma in German, decimal point in English.
   setNumberLocale(lang === 'en' ? 'en-GB' : 'de-DE');
+  // Screen readers and the browser's hyphenation read the page in the chosen language from the start.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   const value = useMemo<LangValue>(
     () => ({

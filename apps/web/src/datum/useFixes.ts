@@ -152,6 +152,8 @@ export function useFullFix(videoId: string | null, summary: Fix | undefined): { 
   useEffect(() => {
     if (!videoId) return;
     if (fullCache.get(videoId)?.key === key) return;
+    // A failure to read another recording (or an earlier result) does not hold for this one.
+    setError(null);
     let live = true;
     readFull(videoId, key)
       .then((f) => {

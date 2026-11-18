@@ -74,6 +74,10 @@ function Root() {
   const node = useNode();
   const { t } = useLang();
   MARK = isSicht(node) ? 'SICHT' : 'DATUM';
+  const title = node.info ? (isSicht(node) ? 'Sicht' : 'DATUM') : null;
+  useEffect(() => {
+    if (title) document.title = title;
+  }, [title]);
   const [skipMandate, setSkipMandate] = useState(false);
 
   if (node.phase === 'loading' || node.phase === 'unreachable') {
