@@ -192,6 +192,13 @@ am System zeigt; wer vorführt, überspringt sie und hat sie als Rückfallebene.
    die Website ist deshalb nicht öffentlich.
 4. **Wer spricht mit wem.** Die Strategie nennt als ersten Schritt eine bezahlte Erprobung bei
    einem Kreis mit eigener Drohneneinheit und ein Abbruchkriterium Ende März 2027.
+5. **Sichtbarkeit des Repositorys.** Am 18. November 2026 war es bei GitHub öffentlich. Damit
+   sind nicht nur der Quelltext, sondern auch Strategie, Finanzannahmen, Vertriebsvorlagen und
+   die Sicherheitsdurchsicht mit ihren offenen Punkten für jeden lesbar, ebenso der Name. Vor
+   dem Termin entscheiden: privat stellen (GitHub: Settings, General, Danger Zone, Change
+   repository visibility) oder bewusst offen lassen und die Geschäftsunterlagen in ein privates
+   Repository auslagern. Für einen offenen Quelltext spricht, dass Aufsichtsbehörden
+   überprüfbare Systeme bevorzugen; für offene Geschäftsunterlagen spricht nichts.
 
 ## 5. Was belegt ist und was nicht
 

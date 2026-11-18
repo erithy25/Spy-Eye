@@ -356,7 +356,10 @@ Abbruchkriterien:
    ersten Messbericht aus eigenen Mitteln und Forschungsförderung arbeiten; danach entscheiden,
    ob Nachbarmärkte eine größere Runde rechtfertigen.
 8. **Quelltext.** Die Datenschutzkonferenz bevorzugt offene, überprüfbare Systeme. Entscheidung
-   zwischen Offenlegung, Einsicht für Behörden und Hinterlegung.
+   zwischen Offenlegung, Einsicht für Behörden und Hinterlegung. Am 18. November 2026 war das
+   Repository bei GitHub öffentlich: Quelltext, diese Strategie, die Finanzannahmen und die
+   Sicherheitsdurchsicht waren für jeden einsehbar. Das ist zu bestätigen oder zu ändern, bevor
+   die Unterlagen Dritten als Entwurf vorgestellt werden.
 9. **Mitgründung.** Ohne eine Person aus der Stabsarbeit fehlt die Glaubwürdigkeit im Vertrieb
    und das Urteil in der Produktentwicklung.
 10. **Aussagen enger fassen.** Die vier Stellen, an denen `docs/BRAND.md` über die Belege
