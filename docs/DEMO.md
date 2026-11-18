@@ -156,6 +156,10 @@ liegt dasselbe Programm in Python.
 | „Anschluss … ist bereits belegt“ | Die Knoten laufen schon in einem anderen Fenster: dort weiterarbeiten oder es mit Strg+C beenden und neu starten. Nennt die Meldung eine frühere Fassung (Spy-Eye) oder ein anderes Programm, dessen Fenster mit Strg+C beenden und neu starten. |
 | Keine Fehlmeldung beim Lastkraftwagen | Die Wache ist von einer Probe schon nachgeschärft: Knoten beenden, `pnpm demo:reset`, `pnpm demo`. |
 | Eine weitere Fehlmeldung | Kommt je nach Rechner vor, weil Videodekoder Bilder geringfügig verschieden liefern: öffnen, VERWERFEN, weiter. Der Messbericht weist sie aus. |
+| Seite versehentlich neu geladen oder Reiter geschlossen | Die Adresse wieder öffnen: Die Anmeldung bleibt, die Übung läuft weiter (nachgestellt). |
+| Der Rechner hing einige Sekunden | Nichts tun: Die Uhr der Übung holt auf, die Meldungen kommen nach (nachgestellt mit 20 Sekunden). |
+| Das Fenster der Knoten wurde geschlossen | `.\vorfuehrung.cmd` wiederholen; der Befehl stellt den Ausgangsstand her (nachgestellt mit einem harten Ende mitten in der Übung). Neu anmelden. |
+| Kein Netz am Ort | Auf einem vorbereiteten Rechner ohne Belang: Start, Übung und Suche laufen ohne Verbindung (nachgestellt unter Linux). |
 | Unsicher, ob alles bereit ist | `pnpm demo:check` in einem zweiten Terminal; jede Zeile endet mit OK oder FEHLT. |
 | Rechner zu langsam für 4× | 2× wählen; die Uhr bestimmt nur das Tempo, nicht das Ergebnis. |
 | Alles steht | Der Film `sicht-produktfilm.mp4` zeigt denselben Ablauf in zwei Minuten. |
