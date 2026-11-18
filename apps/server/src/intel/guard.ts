@@ -269,8 +269,8 @@ export function screenPrompt(raw: string, options: GuardOptions = { personDescri
   if (aboutPerson && feature !== undefined) {
     return refuse(
       'identifying-feature',
-      `Die Anfrage beschreibt eine Person über ein körperliches Merkmal („${feature}“). Solche Merkmale gelten als biometrische Kategorien (KI-Verordnung, Erwägungsgrund 16) und sind hier ausgeschlossen. Kleidung, Ausrüstung, Haltung und Situation sind zulässig.`,
-      `The request describes a person by a bodily feature ("${feature}"). Such features count as biometric categories (AI Act, recital 16) and are excluded here. Clothing, equipment, posture and situation are permitted.`,
+      `Die Anfrage beschreibt eine Person über ein körperliches Merkmal („${feature}“). Solche Merkmale gelten als biometrische Kategorien (KI-Verordnung, Erwägungsgrund 16) und sind hier ausgeschlossen. Ausrüstung, Haltung und Situation sind zulässig; Kleidung nur unter einem Mandat, das Personenbeschreibungen erlaubt.`,
+      `The request describes a person by a bodily feature ("${feature}"). Such features count as biometric categories (AI Act, recital 16) and are excluded here. Equipment, posture and situation are permitted; clothing only under a mandate that allows descriptions of persons.`,
     );
   }
 
