@@ -37,7 +37,9 @@ Windows, im Ordner des Repositorys. Der erste Lauf lädt Modelle (darunter das W
 GeoCLIP), Vorschaubilder und Höhendaten (Referenzclips und Galerie-Vektoren liegen bei) und
 startet dann sofort; die 60 Videos werden im
 Hintergrund ausgewertet und geortet, die Karte füllt sich in 15 bis 30 Minuten. Für eine
-Vorführung vorher `.\datum.cmd -NurPruefen` (wertet alles aus und prüft, ohne zu starten):
+Vorführung vorher `.\datum.cmd -NurPruefen` (wertet alles aus und prüft, ohne zu starten).
+Voraussetzungen: Node ab 20.11, pnpm, `ffmpeg` im Suchpfad, 8 GB Arbeitsspeicher (der Knoten
+belegt beim Auswerten rund 3 GB, Spitze 3,5 GB; gemessen auf vier Kernen):
 
 ```bash
 .\datum.cmd
