@@ -3,7 +3,7 @@ import type { Fix, FixSegment } from '../../../../server/src/datum/contract';
 import { formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { rel } from '../api';
-import { countryText, placeText, radiusHint, radiusText } from '../labels';
+import { countryText, placeText, radiusHint, radiusText, zoneDoubt } from '../labels';
 import { barLayout, coarseText, numberFits, spanText, stretchClock, timedStretches } from '../segments';
 import { kmText, windowText } from '../useFixes';
 import { kindMethod, referenceInstant, utcOffset } from './common';
@@ -57,6 +57,8 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
   const timed = timedStretches(fix);
   const clock = chosen && loc && timed ? stretchClock(fix, selected) : null;
   const more = (chosen?.coarse?.length ?? 0) - 3;
+  // A place of ± 7 500 km fixes no time zone: said next to the stretch's time.
+  const doubt = zoneDoubt(lang, loc);
   const name = (s: FixSegment, i: number): string =>
     `${t('Abschnitt {n} von {total}', { n: i + 1, total: segments.length })} · ${spanText(s)} · ${s.location ? placeText(lang, s.location, fix) : t('unbestimmt')}`;
 
@@ -149,10 +151,11 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
                   {t('Konfidenz')} {formatScore(loc.confidence)} · {t(kindMethod(loc.method))}
                 </span>
                 {clock ? (
-                  <span className="dt-seg-sub" title={clock.time.timezone ?? ''}>
+                  <span className="dt-seg-sub" title={[clock.time.timezone ?? '', doubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>
                     {t('Uhrzeit')} {windowText(clock.time) ?? '––:––'}
                     {clock.time.windows[0] ? ` · ${t(clock.time.windows[0].label)}` : ` · ${t('nicht bestimmbar')}`}
                     {clock.time.timezone ? ` · ${utcOffset(clock.time.timezone, referenceInstant(clock.time, clock.sun))}` : ''}
+                    {clock.time.timezone && doubt ? ` · ${doubt.text}` : ''}
                   </span>
                 ) : (
                   // A stretch with a place whose estimate failed (a frame unreadable): it has a place, no time.

@@ -581,6 +581,8 @@ export const EN: Record<string, string> = {
     'The gallery and the world model point to the same area for these pictures. This is not a place: it does not count among the places and never becomes the result.',
   'und {n} weitere grobe Regionen': 'and {n} more coarse regions',
   'und eine weitere grobe Region': 'and one more coarse region',
+  'Zeitzone unsicher': 'time zone uncertain',
+  'Der Ort ist nur auf {r} bestimmt: Ortszeit und Zeitzone gelten für den angenommenen Punkt.': 'The place is only known to {r}: local time and time zone are those of the assumed point.',
   'Räume der Abschnitte aufgebaut': 'Spaces of the segments built',
   'Richtung im Bild unbekannt': 'direction in the picture unknown',
   'Stand der Konsole': 'Console build',

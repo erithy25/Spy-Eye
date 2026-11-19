@@ -33,6 +33,7 @@
  * and broadcast to the console. Everything is computed on this machine; the street-level services
  * learn only which area is searched.
  */
+import { writeFileSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
@@ -465,6 +466,16 @@ export class DatumEngine {
     return path.join(this.dir(videoId), `space-${frame}.dsg`);
   }
 
+  /**
+   * The note that a final fix is being computed again (Neu orten, or an index rebuilt by the
+   * pipeline): the stored fix is current by its version, so without the note a stop before the
+   * new one is written would leave it as final at the next start. Removed once the new fix is
+   * written (runFull); read by init.
+   */
+  private redoPath(videoId: string): string {
+    return path.join(this.dir(videoId), 'redo');
+  }
+
   /** The node's own ground truths, if it keeps any. */
   get truths(): TruthBook | null {
     return this.opts.truths ?? null;
@@ -560,6 +571,12 @@ export class DatumEngine {
         this.fixes.set(info.id, withoutVersion(stored));
         // The node stopped between the quick and the full stage.
         if (stored.stage === 'quick') this.enqueue(info.id, true);
+        // The node stopped while the fix was computed again: it stays on show and is computed
+        // again now.
+        else if (await exists(this.redoPath(info.id))) {
+          this.stale.add(info.id);
+          this.enqueue(info.id, true);
+        }
         // Located while the world model's gallery was being computed: it stays on show and is
         // computed again with the world model.
         else if (stored.worldModel === 'building' && this.world) {
@@ -581,6 +598,16 @@ export class DatumEngine {
     if (this.stopped) return;
     if (this.queue.some((j) => j.id === videoId && j.kind === 'full')) return;
     if (!force && this.final(videoId)) return;
+    // A final fix computed again: noted on disk first (a few bytes, written at once, so that no
+    // later removal can overtake it), so that a stop before the new fix is written does not
+    // leave the old one as final (init).
+    if (this.final(videoId)) {
+      try {
+        writeFileSync(this.redoPath(videoId), String(Date.now()));
+      } catch (err: unknown) {
+        this.opts.log(`Ortung: Neuberechnung von ${videoId} nicht vermerkt (${err instanceof Error ? err.message : String(err)}); nach einem Neustart gilt die bisherige Ortung`);
+      }
+    }
     this.push(videoId, 'full');
     // A quick or outdated fix stays on show until the full one replaces it.
     if (this.provisional(videoId)) return;
@@ -830,6 +857,9 @@ export class DatumEngine {
         return;
       }
       this.stale.delete(id);
+      // The fix it replaces is gone: no note of a computation still to do, unless another one
+      // was asked for meanwhile (queued again).
+      if (!this.queue.some((j) => j.id === id && j.kind === 'full')) await fs.rm(this.redoPath(id), { force: true }).catch(() => undefined);
       // Located without the world model while its gallery is built: the frames stay for the
       // second run, which then only adds the world model's answer.
       if (worldBuilding) this.awaitWorld(id);
@@ -1788,6 +1818,16 @@ export class DatumEngine {
 function withoutVersion(stored: StoredFix): Fix {
   const { engineVersion: _version, worldModel: _world, ...fix } = stored;
   return fix;
+}
+
+/** Whether a file exists (any error reading it counts as no). */
+async function exists(file: string): Promise<boolean> {
+  try {
+    await fs.access(file);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

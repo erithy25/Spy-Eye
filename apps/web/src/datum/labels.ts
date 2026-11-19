@@ -72,6 +72,19 @@ export function radiusHint(lang: Lang, loc: Pick<FixLocation, 'radiusKm' | 'meth
 }
 
 /**
+ * A place of more than ± 1 500 km (the engine's widest radius, ± 7 500 km: one answer barely set
+ * apart from the others) does not fix a time zone: local time and UTC offset are those of the
+ * point assumed. The console says so next to the time; null where the place is close enough.
+ */
+export function zoneDoubt(lang: Lang, loc: Pick<FixLocation, 'radiusKm'> | null): { text: string; hint: string } | null {
+  if (!loc || loc.radiusKm <= 1500) return null;
+  return {
+    text: lang.t('Zeitzone unsicher'),
+    hint: lang.t('Der Ort ist nur auf {r} bestimmt: Ortszeit und Zeitzone gelten für den angenommenen Punkt.', { r: radiusText(lang, loc) }),
+  };
+}
+
+/**
  * Whether a place label is a bare coordinate pair ("39,4881° N, 13,5324° O"), as the engine
  * names a point without a place name nearby.
  */

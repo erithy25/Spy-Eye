@@ -216,6 +216,76 @@ test('init does not replace a fix that this run has already queued or computed',
   }
 });
 
+test('a final fix computed again and stopped before the new one is written is computed again at the next start', async () => {
+  const { store, engine, dispose } = await setup();
+  const later: DatumEngine[] = [];
+  /** A second start of the node on the same recordings. */
+  const restart = (): DatumEngine => {
+    const next = new DatumEngine({
+      store: store as unknown as Store,
+      model: { dim: 4, embedTexts: async () => new Float32Array(0) } as unknown as EmbeddingModel,
+      hub: { broadcast: () => undefined } as unknown as EventHub,
+      gallery: () => Promise.reject(new Error('no gallery in this test')),
+      log: () => undefined,
+      holdout: false,
+    });
+    later.push(next);
+    return next;
+  };
+  const redo = path.join(store.videoDir('a'), 'datum', 'redo');
+  try {
+    await add(store, recording('a', 'ready'), { ...readyFix('a', 'alt'), engineVersion: ENGINE_VERSION });
+    // The first run: Neu orten, and the node stops while the new fix is computed.
+    let release: (() => void) | null = null;
+    replaceCompute(engine, (entry) => new Promise<Fix>((resolve) => (release = () => resolve(readyFix(entry.info.id, 'abgebrochen')))));
+    await engine.init();
+    assert.equal(engine.get('a')?.location?.label, 'alt');
+    engine.enqueue('a', true);
+    await until(() => release !== null);
+    assert.ok(release, 'the computation started');
+    await fs.access(redo);
+    engine.stop();
+    (release as unknown as () => void)();
+    await settle();
+    const kept = JSON.parse(await fs.readFile(path.join(store.videoDir('a'), 'datum', 'fix.json'), 'utf8')) as Fix;
+    assert.equal(kept.location?.label, 'alt', 'nothing is written after the stop');
+
+    // The next start shows the old fix and computes it again; the note goes once the new one is written.
+    const second = restart();
+    const computed: string[] = [];
+    replaceCompute(second, async (entry) => {
+      computed.push(entry.info.id);
+      return readyFix(entry.info.id, 'neu');
+    });
+    await second.init();
+    assert.equal(second.get('a')?.location?.label, 'alt', 'the old fix stays on show meanwhile');
+    await until(() => second.get('a')?.location?.label === 'neu');
+    assert.deepEqual(computed, ['a']);
+    await assert.rejects(fs.access(redo), 'the note is removed with the new fix');
+
+    // A start after that has nothing left to do.
+    const third = restart();
+    const again: string[] = [];
+    replaceCompute(third, async (entry) => {
+      again.push(entry.info.id);
+      return readyFix(entry.info.id, 'noch einmal');
+    });
+    await third.init();
+    await settle();
+    assert.deepEqual(again, []);
+    assert.equal(third.get('a')?.location?.label, 'neu');
+
+    // A recording located for the first time needs no note: its missing fix says it all.
+    await add(store, recording('b', 'ready'));
+    third.enqueue('b', true);
+    await until(() => third.get('b')?.location?.label === 'noch einmal');
+    await assert.rejects(fs.access(path.join(store.videoDir('b'), 'datum', 'redo')));
+  } finally {
+    for (const e of later) e.stop();
+    await dispose();
+  }
+});
+
 test('a recording deleted while it is located gets no fix, no fix.json and no folder back', async () => {
   const { store, engine, events, dispose } = await setup();
   try {

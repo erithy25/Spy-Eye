@@ -4,7 +4,7 @@ import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker } from '../../map/MapCanvas';
 import { useAction } from '../../ui';
 import { recompute, rel, fetchCountries, type CountryShape } from '../api';
-import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
+import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
 import { chosenStretch, nextKey, placesLowerBound, reachKm, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchClock, stretchSpaces, timedStretches } from '../segments';
@@ -170,6 +170,8 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   const matchedFrame = fix.heading ? (fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null) : null;
   const headingHere = fix.heading && key !== null && (matchedFrame === null || matchedFrame === key.frame) ? fix.heading : null;
   const loc = fix.location;
+  // A place of ± 7 500 km fixes no time zone: said next to the time.
+  const headerZoneDoubt = zoneDoubt(lang, loc);
   const trace = fix.trace ?? [];
   const quick = stageOf(fix) === 'quick';
   const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
@@ -234,9 +236,10 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
         <div className="dt-result-time">
           <span className="label">{t('Uhrzeit')}</span>
           <b>{bestWindowText(fix) ?? '––:––'}</b>
-          <span className="low" title={fix.time.timezone ?? ''}>
+          <span className="low" title={[fix.time.timezone ?? '', headerZoneDoubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>
             {fix.time.windows[0] ? t(fix.time.windows[0].label) : t('nicht bestimmbar')}
             {fix.time.timezone ? ` · ${utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun))}` : ''}
+            {fix.time.timezone && headerZoneDoubt ? ` · ${headerZoneDoubt.text}` : ''}
           </span>
         </div>
         <div className="dt-result-conf">
