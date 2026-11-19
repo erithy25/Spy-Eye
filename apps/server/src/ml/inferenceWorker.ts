@@ -6,11 +6,14 @@
  */
 import { parentPort, workerData } from 'node:worker_threads';
 import {
-  THREAD_CLOSED,
-  serializeError,
+  FLAG_STATE,
   type HostMessage,
   type InferenceService,
+  markEndOfThread,
+  nativeRun,
+  serializeError,
   type ServiceName,
+  THREAD_CLOSED,
   type ThreadMessage,
   type WorkerBoot,
 } from './workerProtocol.js';
@@ -18,6 +21,7 @@ import {
 const port = parentPort;
 if (!port) throw new Error('inferenceWorker.ts runs only as a worker thread.');
 const boot = workerData as WorkerBoot;
+markEndOfThread(boot.closed);
 
 /** Each service is imported on its own, so that a thread loads only the libraries it uses. */
 async function loadService(name: ServiceName): Promise<InferenceService> {
@@ -80,9 +84,12 @@ async function close(): Promise<void> {
   closing = true;
   await initDone.catch(() => undefined);
   await chain;
-  await loaded?.dispose().catch(() => undefined);
-  Atomics.store(boot.closed, 0, THREAD_CLOSED);
-  Atomics.notify(boot.closed, 0);
+  // Releasing the sessions is onnxruntime work too; once the process exits it is skipped (the
+  // exit needs no release, only no call under way).
+  const held = loaded;
+  if (held) await nativeRun(boot.closed, () => held.dispose()).catch(() => undefined);
+  Atomics.store(boot.closed, FLAG_STATE, THREAD_CLOSED);
+  Atomics.notify(boot.closed, FLAG_STATE);
   // Without the port nothing keeps this thread's event loop alive: it ends by itself.
   port?.close();
 }
@@ -99,7 +106,9 @@ port.on('message', (message: HostMessage) => {
       return;
     }
     try {
-      const reply = await service.call(op, args);
+      // The whole call counts as a native run: the exiting process waits for it (see nativeRun).
+      const current = service;
+      const reply = await nativeRun(boot.closed, () => current.call(op, args));
       answer(id, reply.value, reply.transfer);
     } catch (err: unknown) {
       post({ type: 'error', id, error: serializeError(err) });
@@ -109,7 +118,9 @@ port.on('message', (message: HostMessage) => {
 
 try {
   loaded = await loadService(boot.service);
-  const init = loaded.init(boot.options, (event) => post({ type: 'event', event }));
+  const service0 = loaded;
+  // Loading creates the sessions, which is onnxruntime work as well.
+  const init = nativeRun(boot.closed, () => service0.init(boot.options, (event) => post({ type: 'event', event })));
   initDone = init;
   const info = await init;
   service = loaded;

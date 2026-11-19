@@ -238,3 +238,53 @@ test('a process that exits while the world model computes ends cleanly, without 
     await fs.rm(tmp, { recursive: true, force: true });
   }
 });
+
+test('the node\'s way out: the world model is closed and its thread has ended before the exit', { skip: skipReal }, async () => {
+  // What the node's shutdown does (src/index.ts): release the world model in the middle of a
+  // prediction, await worldModelsClosed(), then exit. The thread finishes its run, releases its
+  // sessions and ends on its own, so the exit has no onnxruntime thread left to stop.
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'geoclip-close-'));
+  try {
+    const frames: string[] = [];
+    for (const t of [1, 3, 5, 7, 9, 11]) {
+      const out = path.join(tmp, `f${t}.jpg`);
+      const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-ss', String(t), '-i', clip, '-frames:v', '1', '-vf', "scale=w='min(640,iw)':h=-2", '-q:v', '3', out]);
+      assert.equal(r.status, 0, String(r.stderr));
+      frames.push(out);
+    }
+    const service = new URL('../src/datum/geoclipService.ts', import.meta.url).href;
+    const script = path.join(tmp, 'close-mid-run.mts');
+    await fs.writeFile(
+      script,
+      [
+        "import fs from 'node:fs/promises';",
+        "import { writeSync } from 'node:fs';",
+        `const { acquireWorldModel, releaseWorldModel, worldModelsClosed } = await import(${JSON.stringify(service)});`,
+        `const frames = await Promise.all(${JSON.stringify(frames)}.map((f) => fs.readFile(f)));`,
+        'const wm = acquireWorldModel();',
+        'await wm.ensureGallery();',
+        'const asked = wm.predict(frames, { wait: true }).then(() => "answered", () => "refused");',
+        'setTimeout(async () => {',
+        '  const started = Date.now();',
+        // As the node's shutdown does: nothing else keeps the process alive meanwhile.
+        '  const keepAlive = setInterval(() => undefined, 1000);',
+        '  releaseWorldModel(wm);',
+        '  await worldModelsClosed();',
+        '  clearInterval(keepAlive);',
+        // Written synchronously: output to a pipe would be lost to the exit right after.
+        '  writeSync(1, `closed in ${Date.now() - started} ms, prediction ${await asked}\\n`);',
+        '  process.exit(0);',
+        '}, Number(process.argv[2]));',
+      ].join('\n'),
+    );
+    for (const delay of [300, 800]) {
+      const r = spawnSync(process.execPath, ['--import', 'tsx', script, String(delay)], { cwd: path.join(import.meta.dirname, '..'), encoding: 'utf8', timeout: 120_000 });
+      assert.equal(r.signal, null, `close after ${delay} ms: signal ${r.signal}\n${r.stderr}`);
+      assert.equal(r.status, 0, `close after ${delay} ms: status ${r.status}\n${r.stdout}\n${r.stderr}`);
+      assert.match(r.stdout, /closed in \d+ ms, prediction (answered|refused)/, `close after ${delay} ms: stdout ${JSON.stringify(r.stdout)} stderr ${r.stderr}`);
+      assert.doesNotMatch(r.stderr, /Napi::Error|terminate called/);
+    }
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});

@@ -111,6 +111,12 @@ export interface GeoclipOptions {
    * take cores from it between the runs.
    */
   spin?: boolean;
+  /**
+   * Wraps every call into onnxruntime (session creation and runs). The world model's thread
+   * passes nativeRun (ml/workerProtocol.ts), so that an exiting process waits for a run under way
+   * and no run starts once it exits. Default: the call itself.
+   */
+  runGuard?: <T>(job: () => Promise<T>) => Promise<T>;
 }
 
 export interface PredictOptions {
@@ -757,6 +763,7 @@ export class GeoClip {
   readonly threads: number;
   readonly batchSize: number;
   readonly spin: boolean;
+  private readonly guard: <T>(job: () => Promise<T>) => Promise<T>;
   private vision: Promise<Ort.InferenceSession> | null = null;
   private location: Promise<Ort.InferenceSession> | null = null;
   private galleryLoad: Promise<GeoclipGallery> | null = null;
@@ -770,6 +777,7 @@ export class GeoClip {
     this.threads = options.threads ?? config.threads;
     this.batchSize = options.batchSize ?? 4;
     this.spin = options.spin ?? true;
+    this.guard = options.runGuard ?? ((job) => job());
   }
 
   files(): { vision: string; location: string; gallery: string } {
@@ -807,7 +815,7 @@ export class GeoClip {
     const ort = await onnx();
     // Checked after the import: stop() may have come while onnxruntime was loading.
     if (this.stopped) throw this.stoppedError();
-    return ort.InferenceSession.create(file, {
+    return this.guard(() => ort.InferenceSession.create(file, {
       intraOpNumThreads: this.threads,
       interOpNumThreads: 1,
       executionMode: 'sequential',
@@ -815,7 +823,7 @@ export class GeoClip {
       // Flattened by the Node binding into the session config entry
       // "session.intra_op.allow_spinning".
       ...(this.spin ? {} : { extra: { session: { intra_op: { allow_spinning: '0' } } } }),
-    });
+    }));
   }
 
   private serial<T>(job: () => Promise<T>): Promise<T> {
@@ -823,7 +831,7 @@ export class GeoClip {
     // stop() but not started yet is refused as well.
     const run = this.queue.then(() => {
       if (this.stopped) throw this.stoppedError();
-      return job();
+      return this.guard(job);
     });
     this.queue = run.catch(() => undefined);
     return run;

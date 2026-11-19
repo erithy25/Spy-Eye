@@ -28,7 +28,7 @@ import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { config, repoRoot } from '../config.js';
 import { drainAtExitOf } from '../ml/workerHost.js';
-import { THREAD_CLOSED } from '../ml/workerProtocol.js';
+import { FLAG_STATE, newThreadFlags, THREAD_RUNNING } from '../ml/workerProtocol.js';
 import { GEOCLIP_FILES, NamedError, defaultGeoclipDir, geoclipFilesPresent, type GeoclipPrecision, type GeoclipPrediction } from './geoclip.js';
 import { reportWorldModel } from './settings.js';
 
@@ -547,7 +547,7 @@ export class WorldModelService implements WorldModel {
   private spawn(): Promise<Worker> {
     return new Promise((resolve, reject) => {
       // A flag of its own per thread: a restarted thread must not inherit the state of the old one.
-      const closed = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+      const closed = newThreadFlags();
       const boot: WorldModelBoot = { ...this.boot, closed };
       let worker: Worker;
       try {
@@ -681,7 +681,7 @@ async function stopThread(worker: Worker, handle: ThreadHandle): Promise<void> {
     const outcome = await Promise.race([handle.exited.then(() => 'exited' as const), timeout]);
     clearTimeout(timer);
     if (outcome === 'exited') return;
-    if (Atomics.load(handle.closed, 0) === THREAD_CLOSED) {
+    if (Atomics.load(handle.closed, FLAG_STATE) !== THREAD_RUNNING) {
       // Sessions released, yet the thread lingers (something else keeps its loop busy): safe to end.
       await worker.terminate();
       return;
@@ -760,11 +760,29 @@ export function acquireWorldModel(log?: (message: string) => void): WorldModelSe
 
 export function releaseWorldModel(model: WorldModelService): void {
   if (model !== shared) {
-    void model.close();
+    closeTracked(model);
     return;
   }
   users = Math.max(0, users - 1);
   if (users > 0) return;
   shared = null;
-  void model.close();
+  closeTracked(model);
+}
+
+/** World models being closed (their threads finishing a run and ending), see worldModelsClosed. */
+const closing = new Set<Promise<void>>();
+
+function closeTracked(model: WorldModelService): void {
+  const done = model.close().catch(() => undefined);
+  closing.add(done);
+  void done.finally(() => closing.delete(done));
+}
+
+/**
+ * Settles once every world model released so far has ended its thread (it finishes the run under
+ * way first). The node's shutdown awaits this before the process exits, so that no onnxruntime
+ * thread is left for the exit to stop (see drainAtExit in ml/workerHost.ts).
+ */
+export async function worldModelsClosed(): Promise<void> {
+  await Promise.allSettled([...closing]);
 }

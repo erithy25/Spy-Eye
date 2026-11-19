@@ -7,7 +7,7 @@
  * 'building' (unless the caller asked to wait): the quick fix of an upload must not wait for it.
  */
 import { parentPort, workerData } from 'node:worker_threads';
-import { THREAD_CLOSED } from '../ml/workerProtocol.js';
+import { FLAG_STATE, markEndOfThread, nativeRun, THREAD_CLOSED } from '../ml/workerProtocol.js';
 import { GeoClip, NamedError, compactPrediction, type GeoclipPrediction } from './geoclip.js';
 import { World } from './world.js';
 import {
@@ -24,8 +24,18 @@ import {
 const port = parentPort;
 if (!port) throw new Error('geoclipWorker.ts runs only as a worker thread.');
 const boot = workerData as WorldModelBoot;
+markEndOfThread(boot.closed);
 
-const model = new GeoClip({ precision: boot.precision, modelDir: boot.modelDir, cacheDir: boot.cacheDir, threads: boot.threads, spin: false });
+// Every onnxruntime call of the model goes through nativeRun: an exiting process waits for a run
+// under way, and none starts once it exits (see drainAtExit in ml/workerHost.ts).
+const model = new GeoClip({
+  precision: boot.precision,
+  modelDir: boot.modelDir,
+  cacheDir: boot.cacheDir,
+  threads: boot.threads,
+  spin: false,
+  runGuard: (job) => nativeRun(boot.closed, job),
+});
 let world: World | null = null;
 let galleryState: 'loading' | 'building' | 'ready' | 'failed' = 'loading';
 /** The gallery's state as it is now (other calls change it while this one awaits). */
@@ -161,9 +171,10 @@ async function close(): Promise<void> {
   await chain;
   // Never rejects; with the model stopped it ends at the next run of the build.
   await galleryLoad;
-  await model.release().catch(() => undefined);
-  Atomics.store(boot.closed, 0, THREAD_CLOSED);
-  Atomics.notify(boot.closed, 0);
+  // Releasing the sessions is onnxruntime work too; once the process exits it is skipped.
+  await nativeRun(boot.closed, () => model.release()).catch(() => undefined);
+  Atomics.store(boot.closed, FLAG_STATE, THREAD_CLOSED);
+  Atomics.notify(boot.closed, FLAG_STATE);
   // Without the port nothing keeps this thread's event loop alive: it ends by itself.
   port?.close();
 }

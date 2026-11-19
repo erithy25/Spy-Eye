@@ -8,6 +8,7 @@ import sharp from 'sharp';
 import { config, repoRoot } from '../src/config.js';
 import type { CheckInfo, CheckOps, CheckOptions } from '../src/ml/checkService.js';
 import { InferenceThread, closeInferenceThreads } from '../src/ml/workerHost.js';
+import { FLAG_EXITING, FLAG_IN_RUN, nativeRun, newThreadFlags, ProcessExitingError } from '../src/ml/workerProtocol.js';
 
 /**
  * Inference runs in worker threads (src/ml/workerHost.ts). The first tests check the machinery
@@ -269,3 +270,32 @@ test(
     }
   },
 );
+
+test('nativeRun: the run is flagged while it lasts, and none starts once the process exits', async () => {
+  const flags = newThreadFlags();
+  let seen = -1;
+  const value = await nativeRun(flags, async () => {
+    seen = Atomics.load(flags, FLAG_IN_RUN);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    return 42;
+  });
+  assert.equal(value, 42);
+  assert.equal(seen, 1, 'flagged during the run');
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 0, 'cleared after it');
+
+  // A failing run clears the flag as well.
+  await assert.rejects(nativeRun(flags, () => Promise.reject(new Error('kaputt'))), /kaputt/);
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 0);
+
+  // Once the process exits, no run starts: the job is not called and the flag stays clear.
+  Atomics.store(flags, FLAG_EXITING, 1);
+  let called = false;
+  await assert.rejects(
+    nativeRun(flags, async () => {
+      called = true;
+    }),
+    (err: unknown) => err instanceof ProcessExitingError,
+  );
+  assert.equal(called, false);
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 0);
+});

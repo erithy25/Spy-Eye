@@ -15,15 +15,79 @@ export interface WorkerBoot {
   service: ServiceName;
   options: unknown;
   /**
-   * One Int32 in shared memory: THREAD_RUNNING until the thread has finished its last call and
-   * released its sessions, then THREAD_CLOSED. The main thread waits on it while the process
+   * The thread's flags in shared memory (see newThreadFlags): its state, whether it is inside a
+   * native run, and whether the process is exiting. The main thread reads them while the process
    * exits (see drainAtExit in workerHost.ts), when no message can be received any more.
    */
   closed: Int32Array;
 }
 
+/**
+ * Slot FLAG_STATE: THREAD_RUNNING until the thread has finished its last call and released its
+ * sessions, then THREAD_CLOSED, and THREAD_ENDED once its event loop has run out (markEndOfThread).
+ */
+export const FLAG_STATE = 0;
+/** Slot FLAG_IN_RUN: 1 while the thread is inside an onnxruntime call (see nativeRun), else 0. */
+export const FLAG_IN_RUN = 1;
+/** Slot FLAG_EXITING: set to 1 by the exiting process; from then on no native run starts. */
+export const FLAG_EXITING = 2;
+
 export const THREAD_RUNNING = 0;
 export const THREAD_CLOSED = 1;
+export const THREAD_ENDED = 2;
+
+/** The shared flags of one onnxruntime thread, all zero (running, no run, not exiting). */
+export function newThreadFlags(): Int32Array {
+  return new Int32Array(new SharedArrayBuffer(3 * Int32Array.BYTES_PER_ELEMENT));
+}
+
+/** Thrown by nativeRun once the process is exiting. */
+export class ProcessExitingError extends Error {
+  constructor() {
+    super('Der Prozess wird beendet.');
+    this.name = 'ProcessExitingError';
+  }
+}
+
+/**
+ * Runs `job`, which calls into onnxruntime (a session run, a session's creation, a model's
+ * load), with FLAG_IN_RUN set for its whole length. A thread that the exiting process stops while
+ * it is inside such a call aborts the process (SIGABRT on Linux, 0xC0000409 on Windows); outside
+ * of one, stopping it is safe, also in the middle of plain JavaScript.
+ *
+ * The handshake with the exiting process (drainAtExit) cannot miss: the job marks the run first
+ * and then looks at FLAG_EXITING, the process sets FLAG_EXITING first and then looks at
+ * FLAG_IN_RUN, both with sequentially consistent atomics. So either the job sees the exit and does
+ * not start, or the process sees the run and waits for its end.
+ */
+export async function nativeRun<T>(flags: Int32Array, job: () => Promise<T>): Promise<T> {
+  Atomics.store(flags, FLAG_IN_RUN, 1);
+  if (Atomics.load(flags, FLAG_EXITING) === 1) {
+    Atomics.store(flags, FLAG_IN_RUN, 0);
+    Atomics.notify(flags, FLAG_IN_RUN);
+    throw new ProcessExitingError();
+  }
+  try {
+    return await job();
+  } finally {
+    Atomics.store(flags, FLAG_IN_RUN, 0);
+    Atomics.notify(flags, FLAG_IN_RUN);
+  }
+}
+
+/**
+ * Called once in an onnxruntime thread: when its event loop has run out (the 'exit' event of the
+ * thread, after its sessions were released), the shared flag becomes THREAD_ENDED. A process
+ * that exits waits for this, not only for THREAD_CLOSED: on Windows a thread that the exiting
+ * process has to stop while it is still winding down (its port closed, its loop not yet empty)
+ * can take the process down with a fail-fast abort (0xC0000409) in onnxruntime's binding.
+ */
+export function markEndOfThread(flags: Int32Array): void {
+  process.once('exit', () => {
+    Atomics.store(flags, FLAG_STATE, THREAD_ENDED);
+    Atomics.notify(flags, FLAG_STATE);
+  });
+}
 
 /** An error as it crosses the thread boundary; structured clone would drop its class and stack. */
 export interface SerializedError {

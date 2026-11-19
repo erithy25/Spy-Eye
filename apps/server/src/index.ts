@@ -1,9 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config, repoRoot } from './config.js';
+import { worldModelsClosed } from './datum/geoclipService.js';
 import type { PeerRecord } from './intel/federation.js';
 import { externalPeer, pairSecret, type ExternalPeer } from './intel/peerConfig.js';
 import { checkFfmpeg } from './media/ffmpeg.js';
+import { closeInferenceThreads } from './ml/workerHost.js';
 import { PlatformNode, VERSION, nodeScheme, type NodeConfig } from './node.js';
 import { createSharedRuntime } from './runtime.js';
 import { restorePreparedState, snapshotPreparedState } from './scripts/prepared.js';
@@ -155,6 +157,8 @@ async function prepare(nodes: PlatformNode[], ready: Promise<unknown>, say: (lin
     failed = await waitForAnalysis(nodes);
   }
   await Promise.allSettled(nodes.map((n) => n.stop()));
+  // The model threads end before the exit (see the shutdown in main).
+  await Promise.allSettled([worldModelsClosed(), closeInferenceThreads()]);
   // The state reached here is kept, so that a rehearsal can be undone with "pnpm demo:reset"
   // without analysing the footage again.
   if (failed === 0) for (const node of nodes) await snapshotPreparedState(node.cfg.dataDir);
@@ -195,21 +199,32 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     say('Beende …');
-    // The worker threads are deliberately not closed here. Closing an inference thread fails the
-    // calls in it while the event loop still runs, and the pipeline then stores a recording that
-    // is mid-analysis as failed ("Rechenthread wurde beendet"), which the next start never
-    // analyses again. Ending the process right after the nodes leaves that work unfinished, so it
-    // is redone at the next start. The inference threads and the world model's thread finish
-    // their runs and release their sessions during the exit itself (drainAtExit in
-    // ml/workerHost.ts, synchronous, so nothing else runs meanwhile); a fix that finishes after
-    // the engine stopped is not stored (DatumEngine.persist); the gallery search thread holds no
-    // native resources.
-    Promise.allSettled(nodes.map((n) => n.stop())).then(
-      () => process.exit(0),
-      () => process.exit(1),
-    );
-    // Whatever has not ended after 4 s does not hold the process any longer.
-    setTimeout(() => process.exit(0), 4000).unref();
+    // First the nodes: from here on nothing is stored as failed because a thread was closed (the
+    // pipeline's shutdown flag, DatumEngine.persist after stop), so the work under way is redone
+    // at the next start. Then the onnxruntime threads (models and world model) are closed and
+    // awaited until they have ended: each finishes its run and releases its sessions first. An
+    // exit that has to stop such a thread itself can abort the process (on Windows with
+    // 0xC0000409); drainAtExit in ml/workerHost.ts remains the fallback for any other exit.
+    // The gallery search thread holds no native resources.
+    const threadsEnded = async (): Promise<void> => {
+      // Nothing else may keep the process alive meanwhile (the HTTP server is closed); without
+      // this it would end on its own before the threads have, and leave them to the exit drain.
+      const keepAlive = setInterval(() => undefined, 1000);
+      try {
+        await Promise.allSettled([worldModelsClosed(), closeInferenceThreads()]);
+      } finally {
+        clearInterval(keepAlive);
+      }
+    };
+    Promise.allSettled(nodes.map((n) => n.stop()))
+      .then(threadsEnded)
+      .then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
+    // A run of a model takes seconds at most; whatever has not ended after 12 s does not hold the
+    // process any longer (the exit drain still waits up to 5 s for runs under way).
+    setTimeout(() => process.exit(0), 12_000).unref();
   };
   // Work that runs beside a request (delayed writes, retention, stream scans) reports its failure
   // here instead of ending the process: a full disk must not take three nodes down mid-operation.

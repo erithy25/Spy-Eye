@@ -1,10 +1,15 @@
 import { Worker } from 'node:worker_threads';
 import {
-  THREAD_RUNNING,
   deserializeError,
+  FLAG_EXITING,
+  FLAG_IN_RUN,
+  FLAG_STATE,
   type HostMessage,
+  newThreadFlags,
   type OpMap,
   type ServiceName,
+  THREAD_ENDED,
+  THREAD_RUNNING,
   type ThreadMessage,
   type WorkerBoot,
 } from './workerProtocol.js';
@@ -119,31 +124,56 @@ const open = new Set<InferenceThread<OpMap, unknown, unknown, unknown>>();
  */
 const liveWorkers = new Map<Worker, Int32Array>();
 
-/** How long the exiting process waits for its onnxruntime threads to finish their runs. */
-const EXIT_DRAIN_MS = 5000;
+/**
+ * How long the exiting process waits for an onnxruntime run under way to end. A run takes
+ * seconds at most; the limit only matters for a run that hangs in native code.
+ */
+const EXIT_DRAIN_MS = 30_000;
+/** How long a thread without a run is given to end by itself before the exit stops it. */
+const EXIT_SETTLE_MS = 300;
 
 /**
- * Runs when the process exits (process.exit in the node's shutdown, or the end of a script).
- * Node then terminates the worker threads; one that is inside a session run at that moment takes
- * the process down with an abort in onnxruntime's binding. So every thread is asked to finish its
- * run and release its sessions first, and the exit waits for that, at most EXIT_DRAIN_MS. Only
- * synchronous code can run here: the wait is Atomics.wait on each thread's shared flag.
+ * Runs when the process exits (process.exit in the node's shutdown, the end of a script, an exit
+ * nobody planned). Node then stops the worker threads; one that is inside an onnxruntime call at
+ * that moment takes the process down with an abort in the binding (SIGABRT on Linux, 0xC0000409
+ * on Windows). Only synchronous code can run here, so the threads are coordinated through their
+ * shared flags (see nativeRun in workerProtocol.ts):
+ *   1. FLAG_EXITING is set for every thread: from now on none of them starts a native run.
+ *   2. A thread that is inside a run is waited for until the run has ended (at most
+ *      EXIT_DRAIN_MS). Plain JavaScript in a thread (the world model scoring its gallery, say)
+ *      is not waited for: stopping a thread there is safe, and it can take seconds under load.
+ *   3. Every thread is asked to close and given EXIT_SETTLE_MS to end by itself.
+ * Before this, the exit waited for each thread to release its sessions within 5 s; under load
+ * the world model's thread spent longer than that in its gallery scoring, the exit went ahead
+ * while a run of the next step had begun, and the process aborted.
  */
 function drainAtExit(): void {
-  const deadline = Date.now() + EXIT_DRAIN_MS;
+  const all = [...liveWorkers.entries()];
+  for (const [, flags] of all) Atomics.store(flags, FLAG_EXITING, 1);
   const close: HostMessage = { type: 'close' };
-  for (const worker of liveWorkers.keys()) {
+  for (const [worker] of all) {
     try {
       worker.postMessage(close);
     } catch {
       // Already gone.
     }
   }
-  for (const flag of liveWorkers.values()) {
+  const deadline = Date.now() + EXIT_DRAIN_MS;
+  for (const [, flags] of all) {
     for (;;) {
+      if (Atomics.load(flags, FLAG_STATE) === THREAD_ENDED || Atomics.load(flags, FLAG_IN_RUN) === 0) break;
       const left = deadline - Date.now();
-      if (left <= 0 || Atomics.load(flag, 0) !== THREAD_RUNNING) break;
-      Atomics.wait(flag, 0, THREAD_RUNNING, left);
+      if (left <= 0) break;
+      Atomics.wait(flags, FLAG_IN_RUN, 1, left);
+    }
+  }
+  const settleBy = Date.now() + EXIT_SETTLE_MS;
+  for (const [, flags] of all) {
+    for (;;) {
+      const state = Atomics.load(flags, FLAG_STATE);
+      const left = settleBy - Date.now();
+      if (state === THREAD_ENDED || left <= 0) break;
+      Atomics.wait(flags, FLAG_STATE, state, left);
     }
   }
 }
@@ -324,7 +354,7 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
 
   private spawn(): Promise<{ worker: Worker; info: Info }> {
     return new Promise((resolve, reject) => {
-      const closed = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+      const closed = newThreadFlags();
       const boot: WorkerBoot = { service: this.spec.service, options: this.spec.options, closed };
       let worker: Worker;
       try {
@@ -442,6 +472,7 @@ export class InferenceThread<Ops extends OpMap, Options, Info, Event = never> {
 
 /** Asks the service to release its sessions, and stops the worker if it does not end by itself. */
 async function stopWorker(worker: Worker): Promise<void> {
+  const flag = liveWorkers.get(worker);
   const exited = new Promise<void>((resolve) => worker.once('exit', () => resolve()));
   // An idle worker is unreferenced; while it winds down it must keep a waiting caller alive.
   worker.ref();
@@ -451,9 +482,31 @@ async function stopWorker(worker: Worker): Promise<void> {
   } catch {
     // Already gone.
   }
-  const timer = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 3000).unref());
-  if ((await Promise.race([exited, timer])) === 'timeout') await worker.terminate();
+  // The thread ends by itself once its run has finished and its sessions are released. Stopping
+  // it by force while a run is still under way aborts the process in onnxruntime's binding, so
+  // a thread that is still computing is waited for (up to STOP_PATIENCE_MS); one that has
+  // released its sessions but lingers is safe to stop.
+  const giveUpAt = Date.now() + STOP_PATIENCE_MS;
+  for (;;) {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<'timeout'>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), STOP_GRACE_MS);
+      timer.unref();
+    });
+    const outcome = await Promise.race([exited.then(() => 'exited' as const), timeout]);
+    clearTimeout(timer);
+    if (outcome === 'exited') return;
+    if (!flag || Atomics.load(flag, FLAG_STATE) !== THREAD_RUNNING || Date.now() >= giveUpAt) {
+      await worker.terminate();
+      return;
+    }
+  }
 }
+
+/** How long stopWorker waits for a thread before it checks whether it may stop it by force. */
+const STOP_GRACE_MS = 3_000;
+/** How long stopWorker waits for a thread that is still computing before it stops it anyway. */
+const STOP_PATIENCE_MS = 60_000;
 
 /** Stops every inference thread of this process (node shutdown, end of a script). */
 export async function closeInferenceThreads(): Promise<void> {

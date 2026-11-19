@@ -1,0 +1,53 @@
+name: exit-windows
+
+# The DATUM node stopped again and again on a Windows machine while it works (models loading,
+# the reference set being analysed and located, the world model computing), and process.exit in
+# the middle of a world-model prediction. Every stop must end with exit code 0 and without an
+# abort in onnxruntime's binding (0xC0000409). Much shorter than datum-windows (no full
+# preparation), so it runs on its own: by hand, or by a commit whose message contains
+# [exit-windows] or [datum-windows].
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+
+jobs:
+  exit:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exit-windows]') || contains(github.event.head_commit.message, '[datum-windows]')
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: ffmpeg
+        run: choco install ffmpeg --no-progress -y
+      - uses: actions/cache@v4
+        with:
+          path: .models
+          key: models-siglip2-depth-v1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            datasets/datum/clips
+            datasets/datum/gallery
+            datasets/datum/terrain
+          key: datum-dataset-${{ hashFiles('datasets/datum/manifest.json', 'datasets/datum/gallery.json', 'datasets/datum/regions.json') }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm models:download
+      - run: pnpm datum:fetch
+      - name: Stop the node and the world model at many moments
+        working-directory: apps/server
+        run: |
+          npx tsx src/scripts/datum/exitStress.ts --node-runs 12 --raw-runs 12
+          if ($LASTEXITCODE -ne 0) { exit 1 }
