@@ -231,6 +231,19 @@ export async function readMetadata(videoPath: string): Promise<VideoMetadata> {
   return metadataFromProbe(probe, stat ? stat.mtimeMs : null);
 }
 
+/**
+ * The values of one tag. ffprobe 9 reports a key that occurs more than once in a file (the movie
+ * header's creation_time and the same key among the metadata items, say) as one value joined with
+ * ";": "2024-06-21T14:30:15.000000Z;2024-06-21T14:30:15Z". Each part is a value of its own.
+ */
+export function tagValues(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(';')
+    .map((v) => v.trim())
+    .filter((v) => v !== '');
+}
+
 /** The pure part of readMetadata (testable without a file). */
 export function metadataFromProbe(probe: ProbeJson, fileMtimeMs: number | null, now?: number): VideoMetadata {
   const raw: Record<string, string> = {};
@@ -246,45 +259,46 @@ export function metadataFromProbe(probe: ProbeJson, fileMtimeMs: number | null, 
 
   let location: GeoPoint | null = null;
   let altitude: number | null = null;
-  for (const key of LOCATION_KEYS) {
-    const v = raw[key];
-    if (!v) continue;
-    const p = parseIso6709(v);
-    if (p) {
-      location = { lat: p.lat, lon: p.lon };
-      altitude = p.altitude;
-      break;
+  search: for (const key of LOCATION_KEYS) {
+    for (const v of tagValues(raw[key])) {
+      const p = parseIso6709(v);
+      if (p) {
+        location = { lat: p.lat, lon: p.lon };
+        altitude = p.altitude;
+        break search;
+      }
     }
   }
 
-  const encoder = raw['encoder'] ?? raw['com.apple.quicktime.software'] ?? raw['software'] ?? null;
+  const first = (key: string): string | null => tagValues(raw[key])[0] ?? null;
+  const encoder = first('encoder') ?? first('com.apple.quicktime.software') ?? first('software');
   const nowMs = now ?? Date.now();
   let creationUtc: number | null = null;
   let creationDate: string | null = null;
   let creationRejected: RejectedTime | undefined;
-  for (const key of CREATION_KEYS) {
-    const v = raw[key];
-    if (!v) continue;
-    const t = parseTagDate(v);
-    if (t === null) {
-      // A date without a time of day still names the day (for the sun path), as a date in the
-      // file name does. Not one in the future, and not the day a transcoder rewrote the file.
-      const day = parseTagDay(v);
-      const rewriteDay = encoder && TRANSCODER.test(encoder) && fileMtimeMs !== null ? new Date(fileMtimeMs).toISOString().slice(0, 10) : null;
-      if (day !== null && Date.parse(`${day}T00:00:00Z`) <= nowMs + 24 * 3600_000 && day !== rewriteDay) creationDate ??= day;
-      continue;
+  creation: for (const key of CREATION_KEYS) {
+    for (const v of tagValues(raw[key])) {
+      const t = parseTagDate(v);
+      if (t === null) {
+        // A date without a time of day still names the day (for the sun path), as a date in the
+        // file name does. Not one in the future, and not the day a transcoder rewrote the file.
+        const day = parseTagDay(v);
+        const rewriteDay = encoder && TRANSCODER.test(encoder) && fileMtimeMs !== null ? new Date(fileMtimeMs).toISOString().slice(0, 10) : null;
+        if (day !== null && Date.parse(`${day}T00:00:00Z`) <= nowMs + 24 * 3600_000 && day !== rewriteDay) creationDate ??= day;
+        continue;
+      }
+      const reason = judgeCreationTime(t, { encoder, fileMtimeMs, ...(now !== undefined ? { now } : {}) });
+      if (reason) {
+        creationRejected ??= reason;
+        continue;
+      }
+      creationUtc = t;
+      break creation;
     }
-    const reason = judgeCreationTime(t, { encoder, fileMtimeMs, ...(now !== undefined ? { now } : {}) });
-    if (reason) {
-      creationRejected ??= reason;
-      continue;
-    }
-    creationUtc = t;
-    break;
   }
 
-  const make = raw['com.apple.quicktime.make'] ?? raw['com.android.manufacturer'] ?? raw['make'] ?? null;
-  const model = raw['com.apple.quicktime.model'] ?? raw['com.android.model'] ?? raw['model'] ?? null;
+  const make = first('com.apple.quicktime.make') ?? first('com.android.manufacturer') ?? first('make');
+  const model = first('com.apple.quicktime.model') ?? first('com.android.model') ?? first('model');
   let device: string | null = null;
   if (make || model) {
     device = make && model && !model.toLowerCase().startsWith(make.toLowerCase()) ? `${make} ${model}` : (model ?? make);
