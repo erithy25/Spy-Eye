@@ -383,6 +383,13 @@ Sekunde.
   längsten übrigen mit je einem). Unbestimmte Abschnitte haben keine Uhrzeit; eine grobe Region
   nennen sie nur, wo Galerie und Weltmodell übereinstimmen (42 % der unbestimmten Zeit der
   Zusammenschnitte), und sie ist mit 1 500 km eine Angabe über einen Teil der Welt, keine Ortung.
+- Die Zeitleiste erscheint erst ab zwei erkannten Orten. Eine Aufnahme mit einem erkannten Ort und
+  unbestimmten Abschnitten gilt als ein Ort, auch wenn die unbestimmten woanders spielen: Im
+  End-to-End-Lauf zeigte „Stadt-Land“ (24 s Cork, dann 24 s Dorfkirche Rieben und
+  Elstertalbrücke) nur „Frankfurt ± 1 500 km“, 253 km vom nächsten wahren Ort; dass die erste Hälfte
+  in Irland spielt, sagt nur die Zeile „2 Abschnitte, ein Ort (1 unbestimmt)“ im Ablauf. Ebenso
+  fassen unbestimmte Abschnitte weit entfernte Orte zusammen (Weltreise: Tschechien und Italien in
+  einem Abschnitt), weil benachbarte Fenster ohne Antwort zu einem Abschnitt werden.
 - Ohne Weltmodell (abgeschaltet oder seine Ortsgalerie wird noch berechnet) entscheiden die
   Fenster allein mit der Galerie; die Schwelle 0,8 ist für das Zusammenspiel mit dem Weltmodell
   gemessen. Eine lange Aufnahme (mehr als sechs Szenen) fragt das Weltmodell nicht weiter, sobald
