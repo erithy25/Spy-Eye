@@ -9,7 +9,7 @@ import { fetchCountries, fetchTerrain, type CountryShape, type DatasetDeleteResu
 import { terrainContours, type ContourSet } from '../contours';
 import { datasets, groupRecordings, useDatasets, type DatasetGroup } from '../datasets';
 import { DeleteDatasetDialog } from '../DeleteDatasetDialog';
-import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
+import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
 import { referenceInstant, utcOffset } from '../panel/common';
 import { DatumSettingsPanel } from '../Settings';
 import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
@@ -87,7 +87,8 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
       {t('Befund')}
     </button>
   );
-  if (!loc || (fix.status !== 'ready' && fix.status !== 'running')) {
+  // A fix being computed again ('pending', 'running') keeps its place on show.
+  if (!loc || (fix.status !== 'ready' && fix.status !== 'running' && fix.status !== 'pending')) {
     return (
       <div className="dt-hud">
         <div className="dt-hud-place">{video ? caseLabel(video.name) : ''}</div>
@@ -98,12 +99,14 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
   }
   const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
   const method = fix.time.method === 'metadata' ? t('Metadaten') : fix.time.method === 'sun' ? t('Sonnenstand') : t('Uhrzeit nicht bestimmbar');
-  const state = fix.status === 'running' ? t('wird geortet …') : stageOf(fix) === 'quick' ? t('vorläufig') : '';
+  const state = fix.status === 'running' ? t('wird geortet …') : fix.status === 'pending' ? t('Neuortung steht an') : stageOf(fix) === 'quick' ? t('vorläufig') : '';
   // A recording of several places: the card names the longest stretch's place and how many there
   // are, kept on one line ("mindestens 3 Orte" broke after "3").
   const places = placesText(fix, t).replace(/ /g, '\u00a0');
   // The zone as an offset; its name (Europe/Paris) is in the title.
   const zone = fix.time.timezone ? utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun)) : '';
+  // A place wider than ± 1 500 km fixes no time zone: said next to the offset, as in BEFUND.
+  const doubt = zone !== '' ? zoneDoubt(lang, loc) : null;
   return (
     <div className="dt-hud">
       <div className="dt-hud-place">{placeText(lang, loc, fix)}</div>
@@ -111,8 +114,8 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
         {[countryText(lang, loc), radiusText(lang, loc), places, state].filter((x) => x !== '').join(' · ')}
       </div>
       <div className="dt-hud-clock">{bestWindowText(fix) ?? '––:––'}</div>
-      <div className="dt-hud-note" title={fix.time.timezone ?? ''}>
-        {[method, zone].filter((x) => x !== '').join(' · ')}
+      <div className="dt-hud-note" title={[fix.time.timezone ?? '', doubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>
+        {[method, zone, doubt?.text ?? ''].filter((x) => x !== '').join(' · ')}
       </div>
       {/* Confidence and, with a ground truth, the deviation: one grid, so that both rows align. */}
       <div className="dt-hud-conf">

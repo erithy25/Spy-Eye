@@ -582,6 +582,7 @@ export const EN: Record<string, string> = {
   'und {n} weitere grobe Regionen': 'and {n} more coarse regions',
   'und eine weitere grobe Region': 'and one more coarse region',
   'Zeitzone unsicher': 'time zone uncertain',
+  'Neuortung steht an': 'queued to be located again',
   'Der Ort ist nur auf {r} bestimmt: Ortszeit und Zeitzone gelten für den angenommenen Punkt.': 'The place is only known to {r}: local time and time zone are those of the assumed point.',
   'Räume der Abschnitte aufgebaut': 'Spaces of the segments built',
   'Richtung im Bild unbekannt': 'direction in the picture unknown',

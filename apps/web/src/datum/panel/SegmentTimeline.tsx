@@ -57,8 +57,10 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
   const timed = timedStretches(fix);
   const clock = chosen && loc && timed ? stretchClock(fix, selected) : null;
   const more = (chosen?.coarse?.length ?? 0) - 3;
-  // A place of ± 7 500 km fixes no time zone: said next to the stretch's time.
-  const doubt = zoneDoubt(lang, loc);
+  // A place wider than ± 1 500 km fixes no time zone: said next to the stretch's time. The time
+  // of the stretch the fix shows is the fix's, computed at the fix's place (whose radius may
+  // differ from the stretch's own answer): its doubt is the fix's, as in BEFUND's header.
+  const doubt = zoneDoubt(lang, clock && !clock.own ? fix.location : loc);
   const name = (s: FixSegment, i: number): string =>
     `${t('Abschnitt {n} von {total}', { n: i + 1, total: segments.length })} · ${spanText(s)} · ${s.location ? placeText(lang, s.location, fix) : t('unbestimmt')}`;
 

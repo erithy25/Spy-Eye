@@ -64,9 +64,13 @@ Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
   nicht, Genauigkeit). Ändern darf nur die Leitung; die übrigen Rollen sehen die Einstellungen.
   Jede Änderung steht im Protokoll und gilt für die nächsten Ortungen.
 - **Neu orten** (BEFUND) rechnet eine Aufnahme mit der aktuellen Fassung neu; die bisherige
-  Ortung bleibt sichtbar, bis die neue fertig ist. Wird der Knoten vorher beendet, steht das auf
-  der Platte (`datum/redo` neben `fix.json`), und der nächste Start rechnet sie neu. Dasselbe gilt,
-  wenn die Auswertung einen Index neu aufgebaut hat.
+  Ortung bleibt in ORTUNG sichtbar („Neuortung steht an“, dann „wird neu geortet …“), bis die
+  neue fertig ist. Wird der Knoten vorher beendet, steht das auf der Platte (`datum/redo` neben
+  `fix.json`), und der nächste Start rechnet sie neu. Dasselbe gilt, wenn die Auswertung einen
+  Index neu aufbaut (anderes Modell, unlesbare Vektoren): Die Ortung aus dem alten Index wird
+  vermerkt, sobald der Knoten das beim Start feststellt. Scheitert die Neuberechnung (nicht durch
+  das Beenden), entfällt der Vermerk, und die gespeicherte Ortung gilt weiter, statt bei jedem
+  Start erneut zu scheitern.
 - **Prüfverweise auf Google**: „In Street View prüfen“ und „In Google Maps öffnen“ stehen im
   Kopf des BEFUNDS unter dem Ort, in der ORTUNG und an jedem Kandidaten (Abschnitt
   [Google Street View und Google Maps](#google-street-view-und-google-maps)).
@@ -236,8 +240,10 @@ Fehler eines Abschnitts ist der Abstand seines Orts zum Ort des Stücks, das ihn
   gezeigten Abschnitt und erscheint nur bei ihm.
 - **Zeitzone bei weitem Kreis.** Ein Ort mit mehr als ±1 500 km (die knappe Wiedererkennung mit
   ±7 500 km) legt keine Zeitzone fest: Ortszeit und UTC-Versatz gelten für den angenommenen Punkt.
-  Kopf und Zeitleiste schreiben dann „Zeitzone unsicher“ neben die Uhrzeit; der Hinweis beim
-  Darüberfahren nennt den Radius. Gemessen im End-to-End-Lauf: Kiew, als Moskau ±7 500 km
+  Kopf, Zeitleiste, die Ergebniskarte in ORTUNG und die Leiste in RAUM schreiben „Zeitzone unsicher“
+  neben die Uhrzeit; der Hinweis beim Darüberfahren nennt den Radius. Das gilt auch für eine
+  Antwort auf Landesebene über ±1 500 km (Deutschland ±1 790 km): Ihr Kreis reicht über mehrere
+  Zeitzonen. Beim gezeigten Abschnitt zählt der Radius der Ortung, deren Uhrzeit er trägt. Gemessen im End-to-End-Lauf: Kiew, als Moskau ±7 500 km
   erkannt, bekam Moskauer Zeit (im März eine Stunde neben der Kiewer).
 - **Gespeichert** wird die Uhrzeit eines Abschnitts ohne die Begründungszeilen (die trägt die
   Uhrzeit oben) und mit der Sonnenbahn in 30-Minuten-Schritten auf 0,1° (oben 10 Minuten).

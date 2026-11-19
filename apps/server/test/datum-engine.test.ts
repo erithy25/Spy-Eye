@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -243,6 +244,10 @@ test('a final fix computed again and stopped before the new one is written is co
     engine.enqueue('a', true);
     await until(() => release !== null);
     assert.ok(release, 'the computation started');
+    // While it runs, the list says so and keeps the old place (a 'pending' set after the job had
+    // started used to overwrite 'running').
+    assert.equal(engine.get('a')?.status, 'running');
+    assert.equal(engine.get('a')?.location?.label, 'alt');
     await fs.access(redo);
     engine.stop();
     (release as unknown as () => void)();
@@ -285,6 +290,81 @@ test('a final fix computed again and stopped before the new one is written is co
     await dispose();
   }
 });
+
+test('the note of a computation still to do: written for a rebuilt index, gone after a failure for good', async () => {
+  const { store, engine, events, dispose } = await setup();
+  const later: DatumEngine[] = [];
+  const restart = (): DatumEngine => {
+    const next = new DatumEngine({
+      store: store as unknown as Store,
+      model: { dim: 4, embedTexts: async () => new Float32Array(0) } as unknown as EmbeddingModel,
+      hub: { broadcast: () => undefined } as unknown as EventHub,
+      gallery: () => Promise.reject(new Error('no gallery in this test')),
+      log: () => undefined,
+      holdout: false,
+    });
+    later.push(next);
+    return next;
+  };
+  const redo = (id: string): string => path.join(store.videoDir(id), 'datum', 'redo');
+  const noted = async (id: string): Promise<boolean> =>
+    fs.access(redo(id)).then(
+      () => true,
+      () => false,
+    );
+  try {
+    // 'r': its index is rebuilt (other model); its full fix came from the old one.
+    await add(store, recording('r', 'queued'), { ...readyFix('r', 'alter Index'), engineVersion: ENGINE_VERSION });
+    // 'f': a final fix whose recomputation fails for good.
+    await add(store, recording('f', 'ready'), { ...readyFix('f', 'alt'), engineVersion: ENGINE_VERSION });
+    let release: (() => void) | null = null;
+    replaceCompute(engine, (entry) =>
+      entry.info.id === 'f' ? Promise.reject(new Error('Galerie unlesbar')) : new Promise<Fix>((resolve) => (release = () => resolve(readyFix(entry.info.id, 'abgebrochen')))),
+    );
+    await engine.init();
+    assert.ok(await noted('r'), 'the old index\'s fix is noted at init');
+    assert.equal(await noted('f'), false);
+
+    // The failure for good: shown, and no note is left to compute it again at every start.
+    engine.enqueue('f', true);
+    await until(() => events.some((e) => e.videoId === 'f' && e.status === 'error'));
+    assert.ok(events.some((e) => e.videoId === 'f' && e.status === 'error'));
+    await until(() => !existsNow(redo('f')));
+    assert.equal(await noted('f'), false, 'no note after a failure for good');
+
+    // The pipeline reports 'r' ready; the node stops while it is located.
+    store.entries.get('r')!.info.status = 'ready';
+    engine.enqueue('r', true);
+    await until(() => release !== null);
+    assert.ok(release, 'the computation of r started');
+    engine.stop();
+    (release as unknown as () => void)();
+    await settle();
+    assert.ok(await noted('r'), 'still noted after the stop');
+
+    // Next start: 'r' (ready now, its fix current by version) is computed again; 'f' is not.
+    const second = restart();
+    const computed: string[] = [];
+    replaceCompute(second, async (entry) => {
+      computed.push(entry.info.id);
+      return readyFix(entry.info.id, 'neu');
+    });
+    await second.init();
+    await until(() => second.get('r')?.location?.label === 'neu');
+    await settle();
+    assert.deepEqual(computed, ['r']);
+    assert.equal(second.get('f')?.location?.label, 'alt', 'the stored fix stands after the failure');
+    assert.equal(await noted('r'), false);
+  } finally {
+    for (const e of later) e.stop();
+    await dispose();
+  }
+});
+
+/** Whether a file exists right now (for until()). */
+function existsNow(file: string): boolean {
+  return existsSync(file);
+}
 
 test('a recording deleted while it is located gets no fix, no fix.json and no folder back', async () => {
   const { store, engine, events, dispose } = await setup();

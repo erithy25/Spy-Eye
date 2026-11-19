@@ -33,7 +33,7 @@
  * and broadcast to the console. Everything is computed on this machine; the street-level services
  * learn only which area is searched.
  */
-import { writeFileSync } from 'node:fs';
+import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
@@ -467,13 +467,39 @@ export class DatumEngine {
   }
 
   /**
-   * The note that a final fix is being computed again (Neu orten, or an index rebuilt by the
-   * pipeline): the stored fix is current by its version, so without the note a stop before the
-   * new one is written would leave it as final at the next start. Removed once the new fix is
-   * written (runFull); read by init.
+   * The note that a stored fix is being computed again (Neu orten, an index rebuilt by the
+   * pipeline, an outdated or provisional fix): the stored fix may be current by its version, so
+   * without the note a stop before the new one is written would leave it as final at the next
+   * start. Written when such a computation is queued (enqueue) and when init finds a full fix of
+   * a recording whose index is being rebuilt; removed once the new fix is written, or when the
+   * computation fails for good (runFull: the stored fix then stands, as it would have without
+   * the note); read by init.
    */
   private redoPath(videoId: string): string {
     return path.join(this.dir(videoId), 'redo');
+  }
+
+  /** Writes the note of redoPath (a few bytes, at once: no later removal can overtake it). */
+  private noteRedo(videoId: string): void {
+    try {
+      writeFileSync(this.redoPath(videoId), String(Date.now()));
+    } catch (err: unknown) {
+      this.opts.log(`Ortung: Neuberechnung von ${videoId} nicht vermerkt (${err instanceof Error ? err.message : String(err)}); nach einem Neustart gilt die bisherige Ortung`);
+    }
+  }
+
+  /**
+   * Removes the note of redoPath, unless another full computation of the recording is queued
+   * (it needs the note). Synchronous, so that no enqueue can come between the check and the
+   * removal.
+   */
+  private clearRedo(videoId: string): void {
+    if (this.queue.some((j) => j.id === videoId && j.kind === 'full')) return;
+    try {
+      rmSync(this.redoPath(videoId), { force: true });
+    } catch {
+      // A note that cannot be removed only costs one more computation at the next start.
+    }
   }
 
   /** The node's own ground truths, if it keeps any. */
@@ -563,8 +589,10 @@ export class DatumEngine {
       if (info.status !== 'ready') {
         // Index being (re)built (other model, unreadable or degenerate vectors): a stored full fix
         // came from the old index. The recording is located again once the pipeline reports it
-        // ready. A quick fix came from the file alone and stays valid.
+        // ready; noted now, so that a stop between that report and the new fix does not leave
+        // the old one as final. A quick fix came from the file alone and stays valid.
         if (stored && current && stored.stage === 'quick') this.fixes.set(info.id, withoutVersion(stored));
+        else if (stored && stored.stage !== 'quick') this.noteRedo(info.id);
         continue;
       }
       if (stored && current) {
@@ -598,21 +626,19 @@ export class DatumEngine {
     if (this.stopped) return;
     if (this.queue.some((j) => j.id === videoId && j.kind === 'full')) return;
     if (!force && this.final(videoId)) return;
-    // A final fix computed again: noted on disk first (a few bytes, written at once, so that no
-    // later removal can overtake it), so that a stop before the new fix is written does not
-    // leave the old one as final (init).
-    if (this.final(videoId)) {
-      try {
-        writeFileSync(this.redoPath(videoId), String(Date.now()));
-      } catch (err: unknown) {
-        this.opts.log(`Ortung: Neuberechnung von ${videoId} nicht vermerkt (${err instanceof Error ? err.message : String(err)}); nach einem Neustart gilt die bisherige Ortung`);
-      }
+    // A stored fix computed again (whether or not it is in memory: a recording whose index was
+    // rebuilt has its old fix only on disk): noted first, so that a stop before the new fix is
+    // written does not leave the old one as final (init).
+    if (force && existsSync(path.join(this.dir(videoId), 'fix.json'))) this.noteRedo(videoId);
+    // A quick or outdated fix stays on show until the full one replaces it; any other waits,
+    // with the place it had (the console keeps showing it, "Neuortung steht an"). Set before the
+    // job is queued: on an idle engine the job starts at once and announces 'running', which a
+    // later 'pending' would overwrite (GET /api/datum/fixes said "steht an" during the run).
+    if (!this.provisional(videoId)) {
+      const current = this.fixes.get(videoId) ?? pending(videoId);
+      this.fixes.set(videoId, { ...current, status: 'pending' });
     }
     this.push(videoId, 'full');
-    // A quick or outdated fix stays on show until the full one replaces it.
-    if (this.provisional(videoId)) return;
-    const current = this.fixes.get(videoId) ?? pending(videoId);
-    this.fixes.set(videoId, { ...current, status: 'pending' });
   }
 
   /**
@@ -859,7 +885,7 @@ export class DatumEngine {
       this.stale.delete(id);
       // The fix it replaces is gone: no note of a computation still to do, unless another one
       // was asked for meanwhile (queued again).
-      if (!this.queue.some((j) => j.id === id && j.kind === 'full')) await fs.rm(this.redoPath(id), { force: true }).catch(() => undefined);
+      this.clearRedo(id);
       // Located without the world model while its gallery is built: the frames stay for the
       // second run, which then only adds the world model's answer.
       if (worldBuilding) this.awaitWorld(id);
@@ -881,6 +907,9 @@ export class DatumEngine {
       }
       const message = err instanceof Error ? err.message : String(err);
       this.opts.log(`Ortung "${entry.info.name}" fehlgeschlagen: ${message}`);
+      // Failed for good, not cut short: the stored fix stands at the next start, as without the
+      // note; a note left behind would compute it again (and fail) at every start.
+      this.clearRedo(id);
       // A quick fix is a result of its own and stays; without one the failure is shown.
       if (quiet) return;
       this.publish({ ...pending(id), status: 'error', error: message.slice(0, 300), computedAt: Date.now(), elapsedMs: Date.now() - started });

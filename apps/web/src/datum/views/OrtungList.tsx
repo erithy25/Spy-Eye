@@ -54,7 +54,9 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const loc = fix?.status === 'ready' || fix?.status === 'running' ? (fix.location ?? null) : null;
+  // A fix being computed again keeps its place on show, waiting ('pending') or running; a
+  // recording that waits for its first fix has none.
+  const loc = fix?.status === 'ready' || fix?.status === 'running' || fix?.status === 'pending' ? (fix.location ?? null) : null;
   const win = fix && loc ? bestWindowText(fix) : null;
   const quick = fix !== null && loc !== null && stageOf(fix) === 'quick';
   const image = middleFrame(fix);
@@ -124,8 +126,9 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
         {radiusText(lang, loc)}
         {places !== '' && ` · ${places}`}
         {fix?.status === 'running' && ` · ${t('wird neu geortet …')}`}
+        {fix?.status === 'pending' && ` · ${t('Neuortung steht an')}`}
         {fix?.truth?.errorKm != null && ` · ${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}`}
-        {quick && fix?.status !== 'running' && ` · ${t('vorläufig')}`}
+        {quick && fix?.status === 'ready' && ` · ${t('vorläufig')}`}
       </div>
     );
   }
