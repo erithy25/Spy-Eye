@@ -142,6 +142,15 @@ async function add(store: MemoryStore, entry: VideoEntry, stored?: Fix & { engin
 /** Lets the engine's background work run to its next wait. */
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));
 
+/**
+ * Waits until `done` holds (polling every 10 ms, at most 5 s). For results of background work
+ * that a fixed pause would wait for too briefly on a slow machine (seen on the CI runner).
+ */
+async function until(done: () => boolean, ms = 5000): Promise<void> {
+  const by = Date.now() + ms;
+  while (!done() && Date.now() < by) await new Promise((resolve) => setTimeout(resolve, 10));
+}
+
 /** Replaces the computation (models, gallery, terrain) with a function of the test. */
 function replaceCompute(engine: DatumEngine, compute: (entry: VideoEntry) => Promise<Fix>): void {
   (engine as unknown as { compute: (entry: VideoEntry) => Promise<Fix> }).compute = compute;
@@ -162,7 +171,7 @@ test('stored fixes: used when current, ignored while the index is rebuilt, repla
     });
 
     await engine.init();
-    await settle();
+    await until(() => engine.get('c')?.location?.label === 'neu');
     assert.equal(engine.get('a')?.location?.label, 'alt');
     assert.equal(engine.get('b')?.status, 'pending');
     assert.equal(engine.get('b')?.location, null, 'the old fix of a re-indexed recording is not shown');
@@ -174,7 +183,7 @@ test('stored fixes: used when current, ignored while the index is rebuilt, repla
     await settle();
     assert.deepEqual(computed, ['c']);
     engine.enqueue('a', true);
-    await settle();
+    await until(() => engine.get('a')?.location?.label === 'neu');
     assert.deepEqual(computed, ['c', 'a']);
     assert.equal(engine.get('a')?.location?.label, 'neu');
     const written = JSON.parse(await fs.readFile(path.join(store.videoDir('a'), 'datum', 'fix.json'), 'utf8')) as Fix & { engineVersion: number };
@@ -184,7 +193,7 @@ test('stored fixes: used when current, ignored while the index is rebuilt, repla
     // b's index is ready again: located now, its stored fix is not taken over.
     store.entries.get('b')!.info.status = 'ready';
     engine.enqueue('b', true);
-    await settle();
+    await until(() => engine.get('b')?.location?.label === 'neu');
     assert.equal(engine.get('b')?.location?.label, 'neu');
     assert.ok(events.some((f) => f.videoId === 'b' && f.status === 'running'));
   } finally {
@@ -199,7 +208,7 @@ test('init does not replace a fix that this run has already queued or computed',
     replaceCompute(engine, async (entry) => readyFix(entry.info.id, 'neu'));
     // The pipeline finished re-indexing before init ran.
     engine.enqueue('a', true);
-    await settle();
+    await until(() => engine.get('a')?.location?.label === 'neu');
     await engine.init();
     assert.equal(engine.get('a')?.location?.label, 'neu');
   } finally {
