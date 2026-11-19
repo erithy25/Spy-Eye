@@ -4,6 +4,7 @@
  * the calling thread.
  */
 import { AutoModel, Tensor, env } from '@huggingface/transformers';
+import { withoutModelFileReads } from './modelFileReads.js';
 import type { InferenceService, Reply } from './workerProtocol.js';
 
 export type DepthDtype = 'fp32' | 'fp16' | 'q8';
@@ -108,7 +109,9 @@ export class DepthEngine {
 export function createDepthService(): InferenceService {
   const engine = new DepthEngine();
   return {
-    init: (options) => engine.load(options as DepthOptions),
+    // The thread does nothing but this model: the file reads transformers.js leaves running end
+    // with the load (see modelFileReads.ts).
+    init: (options) => withoutModelFileReads(() => engine.load(options as DepthOptions)),
     async call(op, args): Promise<Reply<unknown>> {
       if (op !== 'run') throw new Error(`depth: unknown operation ${op}`);
       const { rgb, width, height, finite } = args as DepthOps['run']['args'];

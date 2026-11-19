@@ -22,6 +22,8 @@ import {
   densityAt,
   float16ToFloat32,
   float32ToFloat16,
+  halfGalleryCosines,
+  halfRowScales,
   massWithin,
   meanEmbedding,
   meanEmbeddingNorm,
@@ -29,6 +31,7 @@ import {
   normaliseRows,
   preprocessImage,
   readEmbeddingCache,
+  readHalfCache,
   softmax,
   supportOf,
   writeEmbeddingCache,
@@ -127,6 +130,41 @@ test('gallery embedding cache: float16 round trip, wrong shapes are not read', a
     assert.ok(maxDiff < 2e-4, `max difference ${maxDiff}`);
     assert.equal(await readEmbeddingCache(file, rows + 1, GEOCLIP_DIM), null);
     assert.equal(await readEmbeddingCache(path.join(dir, 'missing.f16'), rows, GEOCLIP_DIM), null);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('float16 gallery: cosines bit for bit those of the normalised float32 copy', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'geoclip-half-'));
+  try {
+    const rows = 300;
+    const file = path.join(dir, 'g.f16');
+    await writeEmbeddingCache(file, randomRows(rows, GEOCLIP_DIM, 5), rows, GEOCLIP_DIM);
+    const half = await readHalfCache(file, rows, GEOCLIP_DIM);
+    assert.ok(half);
+    assert.equal(half.length, rows * GEOCLIP_DIM);
+    assert.equal(await readHalfCache(file, rows - 1, GEOCLIP_DIM), null);
+    // What the gallery held before: the decoded cache, normalised as float32.
+    const full = normaliseRows((await readEmbeddingCache(file, rows, GEOCLIP_DIM)) as Float32Array, GEOCLIP_DIM);
+    const gallery = { coords: new Float32Array(2 * rows), half, scale: halfRowScales(half, rows, GEOCLIP_DIM), size: rows };
+    // Every frame count takes another mix of the passes of twelve, eight, four, two and one frames;
+    // one frame alone decodes inside its sum.
+    for (const frames of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 20, 23, 25]) {
+      const images = randomRows(frames, GEOCLIP_DIM, 20 + frames);
+      const expected = cosines(images, frames, full, rows, GEOCLIP_DIM);
+      const got = halfGalleryCosines(images, frames, gallery, GEOCLIP_DIM);
+      assert.equal(got.length, expected.length);
+      for (let i = 0; i < got.length; i++) assert.ok(Object.is(got[i], expected[i]), `${frames} frames, value ${i}: ${got[i]} vs ${expected[i]}`);
+      // And cosines() itself is still the plain sum over d, one frame at a time.
+      for (let f = 0; f < frames; f++) {
+        for (let g = 0; g < rows; g += 37) {
+          let s = 0;
+          for (let d = 0; d < GEOCLIP_DIM; d++) s += (images[f * GEOCLIP_DIM + d] as number) * (full[g * GEOCLIP_DIM + d] as number);
+          assert.equal(expected[f * rows + g], Math.fround(s));
+        }
+      }
+    }
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

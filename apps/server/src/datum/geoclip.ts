@@ -15,6 +15,8 @@
  *
  * The 100 000 location embeddings are computed once with the location encoder and cached as
  * float16 under .cache/datum (102 MB); the country of every gallery point is cached next to them.
+ * The thread holds the gallery in that float16 form and decodes it row by row while it scores
+ * (see GeoclipGallery), which gives the same numbers as a float32 copy at half the memory.
  *
  * The model runs in a worker thread of its own (geoclipWorker.ts, started by geoclipService.ts).
  * onnxruntime is imported here only when a session is created, so that the main thread can use
@@ -168,10 +170,18 @@ export interface GeoclipPrediction {
   timing: { embedMs: number; scoreMs: number; refineMs: number };
 }
 
-/** Gallery of GPS points with their location embeddings (L2-normalised rows). */
+/**
+ * Gallery of GPS points with their location embeddings. The embeddings stay in the float16 form of
+ * the cache (102 MB instead of 205 MB as float32): row g is the decoded row times `scale[g]`, the
+ * factor that makes it unit length, i.e. exactly the float32 row that normaliseRows would make of
+ * it (see halfGalleryCosines); cosines are computed from those rows, so the numbers do not change.
+ */
 export interface GeoclipGallery {
   coords: Float32Array;
-  embeds: Float32Array;
+  /** IEEE half-precision bits, size x GEOCLIP_DIM, row-major. */
+  half: Uint16Array;
+  /** Per row: 1 / length of the decoded row (as normaliseRows computes it). */
+  scale: Float64Array;
   size: number;
 }
 
@@ -295,7 +305,11 @@ const CACHE_MAGIC = 'GCL1';
 /** Writes embeddings (rows x dim) as float16 with a small header: "GCL1", uint32 rows, uint32 dim. */
 export async function writeEmbeddingCache(file: string, embeds: Float32Array, rows: number, dim: number): Promise<void> {
   if (embeds.length !== rows * dim) throw new NamedError(`GeoCLIP-Cache: ${embeds.length} Werte statt ${rows * dim}.`, `GeoCLIP cache: ${embeds.length} values instead of ${rows * dim}.`);
-  const half = float32ToFloat16(embeds);
+  await writeHalfCache(file, float32ToFloat16(embeds), rows, dim);
+}
+
+/** Writes float16 rows (rows x dim) in the format of writeEmbeddingCache. */
+async function writeHalfCache(file: string, half: Uint16Array, rows: number, dim: number): Promise<void> {
   const header = Buffer.alloc(12);
   header.write(CACHE_MAGIC, 0, 'ascii');
   header.writeUInt32LE(rows, 4);
@@ -308,6 +322,15 @@ export async function writeEmbeddingCache(file: string, embeds: Float32Array, ro
 
 /** Reads a cache written by writeEmbeddingCache; null when missing or not of the expected shape. */
 export async function readEmbeddingCache(file: string, rows: number, dim: number): Promise<Float32Array | null> {
+  const half = await readHalfCache(file, rows, dim);
+  return half ? float16ToFloat32(half) : null;
+}
+
+/**
+ * The float16 values of a cache written by writeEmbeddingCache, as they are in the file (no
+ * copy when the file's buffer allows a view); null when missing or not of the expected shape.
+ */
+export async function readHalfCache(file: string, rows: number, dim: number): Promise<Uint16Array | null> {
   let buf: Buffer;
   try {
     buf = await fs.readFile(file);
@@ -316,9 +339,24 @@ export async function readEmbeddingCache(file: string, rows: number, dim: number
   }
   if (buf.length !== 12 + rows * dim * 2 || buf.toString('ascii', 0, 4) !== CACHE_MAGIC) return null;
   if (buf.readUInt32LE(4) !== rows || buf.readUInt32LE(8) !== dim) return null;
+  // A file this size has a buffer of its own: a view on it keeps the 12 header bytes, no copy.
+  if ((buf.byteOffset + 12) % Uint16Array.BYTES_PER_ELEMENT === 0) return new Uint16Array(buf.buffer, buf.byteOffset + 12, rows * dim);
   const half = new Uint16Array(rows * dim);
   Buffer.from(half.buffer).set(buf.subarray(12));
-  return float16ToFloat32(half);
+  return half;
+}
+
+/** Per row of float16 values: the factor normaliseRows would scale the decoded row by. */
+export function halfRowScales(half: Uint16Array, rows: number, dim: number): Float64Array {
+  const table = float16Table();
+  const scale = new Float64Array(rows);
+  for (let r = 0, o = 0; r < rows; r++, o += dim) {
+    // The sum of normaliseRows, over the same values in the same order.
+    let s = 0;
+    for (let d = 0; d < dim; d++) s += (table[half[o + d] as number] as number) ** 2;
+    scale[r] = 1 / Math.sqrt(s || 1);
+  }
+  return scale;
 }
 
 // ------------------------------------------------------------------ scoring (pure)
@@ -337,43 +375,179 @@ export function normaliseRows(v: Float32Array, dim: number): Float32Array {
 /** Cosines of every frame (rows of `images`) with every gallery row: frames x n, row-major. */
 export function cosines(images: Float32Array, frames: number, gallery: Float32Array, n: number, dim: number): Float32Array {
   const out = new Float32Array(frames * n);
-  // Gallery outside, frames inside: the frame block stays in cache while the gallery streams once.
-  // Four frames share each gallery value read (four independent sums instead of one chain); every
-  // sum still runs over d in order, so the result is bit for bit that of one frame at a time. On
-  // 100 000 points and 12 frames this halves the time (about 1.2 s to 0.6 s on the 4-core test
-  // machine).
+  for (let g = 0; g < n; g++) frameDots(images, frames, gallery, g * dim, dim, out, n, g);
+  return out;
+}
+
+/**
+ * cosines() of the frames with every row of the float16 gallery. Each row is decoded into a small
+ * buffer as normaliseRows would store it (decoded value times the row's scale, rounded to float32
+ * on the store) and goes through the same loops as in cosines(), so the result is bit for bit that
+ * of cosines() on the normalised float32 gallery, which therefore never has to exist.
+ *
+ * Decoding costs about 80 ms per call on 100 000 points (4-core test machine), whatever the number
+ * of frames. The wider passes of frameDots (twelve, eight and two frames besides the four and one
+ * of the float32 version before) win most of it back, and a single frame decodes inside its one
+ * sum, where the decoding runs alongside the chain of additions. Measured against that float32
+ * version: 2, 3 and 6 to 12 frames take -6 to +7 % (11 and 12 frames, the node's case: the same
+ * time), 1 frame +16 to +18 %, 4 and 5 frames +17 to +35 % (one four-frame pass in both versions,
+ * so nothing wins the decoding back).
+ */
+export function halfGalleryCosines(images: Float32Array, frames: number, gallery: GeoclipGallery, dim: number): Float32Array {
+  const { half, scale, size: n } = gallery;
+  const table = float16Table();
+  const out = new Float32Array(frames * n);
+  if (frames === 1) {
+    // Math.fround: the rounding of the float32 store in the buffer below, so the same numbers.
+    for (let g = 0; g < n; g++) {
+      const go = g * dim;
+      const k = scale[g] as number;
+      let s = 0;
+      for (let d = 0; d < dim; d++) s += (images[d] as number) * Math.fround((table[half[go + d] as number] as number) * k);
+      out[g] = s;
+    }
+    return out;
+  }
+  const row = new Float32Array(dim);
   for (let g = 0; g < n; g++) {
     const go = g * dim;
-    let f = 0;
-    for (; f + 3 < frames; f += 4) {
-      const o0 = f * dim;
-      const o1 = o0 + dim;
-      const o2 = o1 + dim;
-      const o3 = o2 + dim;
-      let s0 = 0;
-      let s1 = 0;
-      let s2 = 0;
-      let s3 = 0;
-      for (let d = 0; d < dim; d++) {
-        const x = gallery[go + d] as number;
-        s0 += (images[o0 + d] as number) * x;
-        s1 += (images[o1 + d] as number) * x;
-        s2 += (images[o2 + d] as number) * x;
-        s3 += (images[o3 + d] as number) * x;
-      }
-      out[f * n + g] = s0;
-      out[(f + 1) * n + g] = s1;
-      out[(f + 2) * n + g] = s2;
-      out[(f + 3) * n + g] = s3;
-    }
-    for (; f < frames; f++) {
-      const fo = f * dim;
-      let s = 0;
-      for (let d = 0; d < dim; d++) s += (images[fo + d] as number) * (gallery[go + d] as number);
-      out[f * n + g] = s;
-    }
+    const k = scale[g] as number;
+    for (let d = 0; d < dim; d++) row[d] = (table[half[go + d] as number] as number) * k;
+    frameDots(images, frames, row, 0, dim, out, n, g);
   }
   return out;
+}
+
+/**
+ * The dot products of every frame with one gallery row (gallery[ro] to gallery[ro + dim - 1]),
+ * stored at out[f * n + at]. Called row after row, gallery outside and frames inside: the frame
+ * block stays in cache while the gallery streams through once. Twelve frames (then what is left in
+ * passes of eight, four, two and one) share each gallery value read, as independent sums instead
+ * of one chain; every sum still runs over d in order, so the result is bit for bit that of one
+ * frame at a time. On 100 000 points and 12 frames four frames per pass halved the time of one
+ * (about 1.2 s to 0.6 s on the 4-core test machine); twelve take about 15 % less than four, eight
+ * about 10 % less than two passes of four.
+ */
+function frameDots(images: Float32Array, frames: number, gallery: Float32Array, ro: number, dim: number, out: Float32Array, n: number, at: number): void {
+  let f = 0;
+  for (; f + 11 < frames; f += 12) {
+    const o = f * dim;
+    let s0 = 0;
+    let s1 = 0;
+    let s2 = 0;
+    let s3 = 0;
+    let s4 = 0;
+    let s5 = 0;
+    let s6 = 0;
+    let s7 = 0;
+    let s8 = 0;
+    let s9 = 0;
+    let s10 = 0;
+    let s11 = 0;
+    for (let d = 0; d < dim; d++) {
+      const x = gallery[ro + d] as number;
+      const i = o + d;
+      s0 += (images[i] as number) * x;
+      s1 += (images[i + dim] as number) * x;
+      s2 += (images[i + 2 * dim] as number) * x;
+      s3 += (images[i + 3 * dim] as number) * x;
+      s4 += (images[i + 4 * dim] as number) * x;
+      s5 += (images[i + 5 * dim] as number) * x;
+      s6 += (images[i + 6 * dim] as number) * x;
+      s7 += (images[i + 7 * dim] as number) * x;
+      s8 += (images[i + 8 * dim] as number) * x;
+      s9 += (images[i + 9 * dim] as number) * x;
+      s10 += (images[i + 10 * dim] as number) * x;
+      s11 += (images[i + 11 * dim] as number) * x;
+    }
+    out[f * n + at] = s0;
+    out[(f + 1) * n + at] = s1;
+    out[(f + 2) * n + at] = s2;
+    out[(f + 3) * n + at] = s3;
+    out[(f + 4) * n + at] = s4;
+    out[(f + 5) * n + at] = s5;
+    out[(f + 6) * n + at] = s6;
+    out[(f + 7) * n + at] = s7;
+    out[(f + 8) * n + at] = s8;
+    out[(f + 9) * n + at] = s9;
+    out[(f + 10) * n + at] = s10;
+    out[(f + 11) * n + at] = s11;
+  }
+  // Fewer than twelve left: at most one pass of each width below.
+  if (f + 7 < frames) {
+    const o = f * dim;
+    let s0 = 0;
+    let s1 = 0;
+    let s2 = 0;
+    let s3 = 0;
+    let s4 = 0;
+    let s5 = 0;
+    let s6 = 0;
+    let s7 = 0;
+    for (let d = 0; d < dim; d++) {
+      const x = gallery[ro + d] as number;
+      const i = o + d;
+      s0 += (images[i] as number) * x;
+      s1 += (images[i + dim] as number) * x;
+      s2 += (images[i + 2 * dim] as number) * x;
+      s3 += (images[i + 3 * dim] as number) * x;
+      s4 += (images[i + 4 * dim] as number) * x;
+      s5 += (images[i + 5 * dim] as number) * x;
+      s6 += (images[i + 6 * dim] as number) * x;
+      s7 += (images[i + 7 * dim] as number) * x;
+    }
+    out[f * n + at] = s0;
+    out[(f + 1) * n + at] = s1;
+    out[(f + 2) * n + at] = s2;
+    out[(f + 3) * n + at] = s3;
+    out[(f + 4) * n + at] = s4;
+    out[(f + 5) * n + at] = s5;
+    out[(f + 6) * n + at] = s6;
+    out[(f + 7) * n + at] = s7;
+    f += 8;
+  }
+  if (f + 3 < frames) {
+    const o0 = f * dim;
+    const o1 = o0 + dim;
+    const o2 = o1 + dim;
+    const o3 = o2 + dim;
+    let s0 = 0;
+    let s1 = 0;
+    let s2 = 0;
+    let s3 = 0;
+    for (let d = 0; d < dim; d++) {
+      const x = gallery[ro + d] as number;
+      s0 += (images[o0 + d] as number) * x;
+      s1 += (images[o1 + d] as number) * x;
+      s2 += (images[o2 + d] as number) * x;
+      s3 += (images[o3 + d] as number) * x;
+    }
+    out[f * n + at] = s0;
+    out[(f + 1) * n + at] = s1;
+    out[(f + 2) * n + at] = s2;
+    out[(f + 3) * n + at] = s3;
+    f += 4;
+  }
+  if (f + 1 < frames) {
+    const o0 = f * dim;
+    const o1 = o0 + dim;
+    let s0 = 0;
+    let s1 = 0;
+    for (let d = 0; d < dim; d++) {
+      const x = gallery[ro + d] as number;
+      s0 += (images[o0 + d] as number) * x;
+      s1 += (images[o1 + d] as number) * x;
+    }
+    out[f * n + at] = s0;
+    out[(f + 1) * n + at] = s1;
+    f += 2;
+  }
+  if (f < frames) {
+    const fo = f * dim;
+    let s = 0;
+    for (let d = 0; d < dim; d++) s += (images[fo + d] as number) * (gallery[ro + d] as number);
+    out[f * n + at] = s;
+  }
 }
 
 function logSumExp(v: Float64Array): number {
@@ -811,7 +985,8 @@ export class GeoClip {
     return new NamedError('GeoCLIP wird beendet.', 'GeoCLIP is shutting down.');
   }
 
-  private async session(file: string): Promise<Ort.InferenceSession> {
+  /** `arena`: whether the session keeps onnxruntime's memory arena (see locationSession). */
+  private async session(file: string, arena = true): Promise<Ort.InferenceSession> {
     const ort = await onnx();
     // Checked after the import: stop() may have come while onnxruntime was loading.
     if (this.stopped) throw this.stoppedError();
@@ -820,6 +995,7 @@ export class GeoClip {
       interOpNumThreads: 1,
       executionMode: 'sequential',
       graphOptimizationLevel: 'all',
+      ...(arena ? {} : { enableCpuMemArena: false }),
       // Flattened by the Node binding into the session config entry
       // "session.intra_op.allow_spinning".
       ...(this.spin ? {} : { extra: { session: { intra_op: { allow_spinning: '0' } } } }),
@@ -847,7 +1023,12 @@ export class GeoClip {
 
   private locationSession(): Promise<Ort.InferenceSession> {
     if (!this.location) {
-      this.location = this.session(this.files().location);
+      // Without onnxruntime's memory arena, which would keep the memory of the largest run for
+      // good: when the gallery is built that is a chunk of 4096 points, afterwards the
+      // refinement's grids of 121 to 363 points. Measured at the same speed, same results to the
+      // bit. The image tower keeps its arena: its runs are all of one size (4 frames), and
+      // without the arena they were 3 to 5 % slower.
+      this.location = this.session(this.files().location, false);
       this.location.catch(() => (this.location = null));
     }
     return this.location;
@@ -932,23 +1113,25 @@ export class GeoClip {
     const coords = new Float32Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
     const size = coords.length / 2;
     const file = await this.galleryCacheFile();
-    const cached = await readEmbeddingCache(file, size, GEOCLIP_DIM);
-    if (cached) return { coords, embeds: normaliseRows(cached, GEOCLIP_DIM), size };
-    const embeds = new Float32Array(size * GEOCLIP_DIM);
+    const cached = await readHalfCache(file, size, GEOCLIP_DIM);
+    if (cached) return { coords, half: cached, scale: halfRowScales(cached, size, GEOCLIP_DIM), size };
+    // Built in chunks, each kept only as float16: the gallery then is what every later start
+    // reads from the cache, so the first start places pictures exactly as all later ones do.
+    const half = new Uint16Array(size * GEOCLIP_DIM);
     const step = 8192;
     for (let i = 0; i < size; i += step) {
       const m = Math.min(step, size - i);
-      embeds.set(await this.embedLocations(coords.subarray(2 * i, 2 * (i + m))), i * GEOCLIP_DIM);
+      half.set(float32ToFloat16(await this.embedLocations(coords.subarray(2 * i, 2 * (i + m)))), i * GEOCLIP_DIM);
       onProgress?.(i + m, size);
     }
     try {
-      await writeEmbeddingCache(file, embeds, size, GEOCLIP_DIM);
+      await writeHalfCache(file, half, size, GEOCLIP_DIM);
       this.cacheProblem = null;
     } catch (err: unknown) {
       // A full or read-only disk costs the next start the 40 s again, not this gallery.
       this.cacheProblem = err instanceof Error ? err.message : String(err);
     }
-    return { coords, embeds, size };
+    return { coords, half, scale: halfRowScales(half, size, GEOCLIP_DIM), size };
   }
 
   /** Why the last gallery build could not be cached, if it could not. */
@@ -1014,7 +1197,7 @@ export class GeoClip {
   /** Cosines of the frames (frames x 512, L2-normalised) with every gallery point: frames x 100 000. */
   async galleryCosines(images: Float32Array, frames: number): Promise<Float32Array> {
     const gallery = await this.gallery();
-    return cosines(images, frames, gallery.embeds, gallery.size, GEOCLIP_DIM);
+    return halfGalleryCosines(images, frames, gallery, GEOCLIP_DIM);
   }
 
   /**
@@ -1031,7 +1214,7 @@ export class GeoClip {
     const gallery = await this.gallery();
     const t0 = performance.now();
     const norm = meanEmbeddingNorm(images, frames, GEOCLIP_DIM);
-    const cos = opts.galleryCos ?? cosines(images, frames, gallery.embeds, gallery.size, GEOCLIP_DIM);
+    const cos = opts.galleryCos ?? halfGalleryCosines(images, frames, gallery, GEOCLIP_DIM);
     const { scores, frameLogZ } = aggregateScores(cos, frames, gallery.size, aggregation, GEOCLIP_LOGIT_SCALE, undefined, norm);
     const probs = softmax(scores);
     const support = supportOf(probs);

@@ -276,7 +276,7 @@ test('radius tiers of world-model answers by concentration', () => {
   assert.equal(worldModelRadiusKm([], 0.5), 1500);
 });
 
-test('the compact prediction answers mass queries like the full one; four-frame scoring is exact', () => {
+test('the compact prediction answers mass queries like the full one; scoring several frames per pass is exact', () => {
   // Gallery of 1000 points, probabilities on a few of them.
   const size = 1000;
   const coords = new Float32Array(2 * size);
@@ -309,9 +309,10 @@ test('the compact prediction answers mass queries like the full one; four-frame 
     for (const km of [1, 200, 5000]) assert.equal(massWithin(compact, lat, lon, km), massWithin(full, lat, lon, km));
   }
 
-  // cosines() takes four frames per pass; every sum keeps its order, so the result is exact.
+  // cosines() takes twelve frames per pass, then what is left in passes of eight, four, two and one;
+  // every sum keeps its order, so the result is exact (23 frames: one pass of each width).
   const dim = 16;
-  const frames = 6;
+  const frames = 23;
   const rand = (seed: number): (() => number) => {
     let s = seed;
     return () => {

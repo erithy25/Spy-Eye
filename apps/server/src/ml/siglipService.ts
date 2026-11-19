@@ -14,6 +14,7 @@ import {
   env,
 } from '@huggingface/transformers';
 import { l2normalizeRows } from './math.js';
+import { withoutModelFileReads } from './modelFileReads.js';
 import {
   PROBE_IMAGES,
   PROBE_TEXTS,
@@ -142,7 +143,14 @@ export class SiglipEngine {
         dtype: options.dtype,
         progress_callback,
         ...(device === 'cpu' ? {} : { device: device as 'dml' }),
-        session_options: { intraOpNumThreads: options.threads, interOpNumThreads: 1 },
+        // Without onnxruntime's memory arena: an arena grows to the largest run it has seen and
+        // never gives memory back, and the runs here change size from call to call (1 to 48
+        // pictures, 1 to 64 texts). With the node's batch mix the image tower's arena held about
+        // 0.4 GB after four passes, the text tower's about 0.7 GB after 64-text batches (country
+        // and time prompts, embedded once per process). Without it a run's memory is returned when
+        // the run ends, with the same results to the bit; picture batches of 8 and 48 took the
+        // same time (within 2 %), a search query's three texts about 5 % longer.
+        session_options: { intraOpNumThreads: options.threads, interOpNumThreads: 1, enableCpuMemArena: false },
       };
       notify({ kind: 'state', message: `Lade Text-Encoder (${device}) …`, progress: null });
       const text = (await TextModel.from_pretrained(options.modelId, { ...modelOptions, dtype: options.textDtype })) as unknown as CallableModel;
@@ -286,7 +294,9 @@ export class SiglipEngine {
 export function createSiglipService(): InferenceService {
   const engine = new SiglipEngine();
   return {
-    init: (options, notify) => engine.load(options as SiglipOptions, notify as (event: SiglipEvent) => void),
+    // The thread does nothing but this model: the file reads transformers.js leaves running end
+    // with the load (see modelFileReads.ts).
+    init: (options, notify) => withoutModelFileReads(() => engine.load(options as SiglipOptions, notify as (event: SiglipEvent) => void)),
     async call(op, args): Promise<Reply<unknown>> {
       switch (op) {
         case 'vision': {
