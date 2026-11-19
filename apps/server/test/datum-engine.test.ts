@@ -218,7 +218,7 @@ test('init does not replace a fix that this run has already queued or computed',
 });
 
 test('a final fix computed again and stopped before the new one is written is computed again at the next start', async () => {
-  const { store, engine, dispose } = await setup();
+  const { store, engine, events, dispose } = await setup();
   const later: DatumEngine[] = [];
   /** A second start of the node on the same recordings. */
   const restart = (): DatumEngine => {
@@ -248,6 +248,8 @@ test('a final fix computed again and stopped before the new one is written is co
     // started used to overwrite 'running').
     assert.equal(engine.get('a')?.status, 'running');
     assert.equal(engine.get('a')?.location?.label, 'alt');
+    // The wait was announced with the old place, so that an open console shows it at once.
+    assert.ok(events.some((e) => e.videoId === 'a' && e.status === 'pending' && e.location?.label === 'alt'));
     await fs.access(redo);
     engine.stop();
     (release as unknown as () => void)();
@@ -355,6 +357,28 @@ test('the note of a computation still to do: written for a rebuilt index, gone a
     assert.deepEqual(computed, ['r']);
     assert.equal(second.get('f')?.location?.label, 'alt', 'the stored fix stands after the failure');
     assert.equal(await noted('r'), false);
+
+    // A noted recomputation that fails for good at the next start: quietly, the stored fix on
+    // show; it stands as final in that run too, so nothing stays outstanding (--prepare ends).
+    await add(store, recording('g', 'ready'), { ...readyFix('g', 'alt'), engineVersion: ENGINE_VERSION });
+    await fs.writeFile(redo('g'), '1');
+    second.stop();
+    const third = restart();
+    let failed = 0;
+    replaceCompute(third, async (entry) => {
+      if (entry.info.id === 'g') {
+        failed++;
+        throw new Error('Galerie unlesbar');
+      }
+      return readyFix(entry.info.id, 'neu');
+    });
+    await third.init();
+    await until(() => failed === 1 && third.outstanding === 0);
+    assert.equal(failed, 1);
+    assert.equal(third.outstanding, 0, 'nothing outstanding after the failure');
+    assert.equal(third.get('g')?.status, 'ready');
+    assert.equal(third.get('g')?.location?.label, 'alt');
+    assert.equal(await noted('g'), false);
   } finally {
     for (const e of later) e.stop();
     await dispose();

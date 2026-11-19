@@ -636,7 +636,8 @@ export class DatumEngine {
     // later 'pending' would overwrite (GET /api/datum/fixes said "steht an" during the run).
     if (!this.provisional(videoId)) {
       const current = this.fixes.get(videoId) ?? pending(videoId);
-      this.fixes.set(videoId, { ...current, status: 'pending' });
+      // Announced, so that an open console shows the wait at once, not only after a reload.
+      this.publish({ ...current, status: 'pending' });
     }
     this.push(videoId, 'full');
   }
@@ -910,8 +911,14 @@ export class DatumEngine {
       // Failed for good, not cut short: the stored fix stands at the next start, as without the
       // note; a note left behind would compute it again (and fail) at every start.
       this.clearRedo(id);
-      // A quick fix is a result of its own and stays; without one the failure is shown.
-      if (quiet) return;
+      // A quick fix is a result of its own and stays; without one the failure is shown. A fix
+      // that was on show while it was computed again (outdated, or noted to be redone) stands as
+      // it is in this run too: left stale it would count as outstanding until the end of the
+      // process, and --prepare (which waits until nothing is outstanding) would never end.
+      if (quiet) {
+        if (this.fixes.get(id)?.stage !== 'quick') this.stale.delete(id);
+        return;
+      }
       this.publish({ ...pending(id), status: 'error', error: message.slice(0, 300), computedAt: Date.now(), elapsedMs: Date.now() - started });
     }
   }
