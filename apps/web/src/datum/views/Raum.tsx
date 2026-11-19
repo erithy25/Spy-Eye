@@ -3,7 +3,7 @@ import { useLang } from '../../i18n';
 import { fetchTerrain, rel, type Fix, type TerrainGrid } from '../api';
 import { SpaceView } from '../space/SpaceView';
 import { TerrainView } from '../space/TerrainView';
-import { caseLabel, placeText } from '../labels';
+import { caseLabel, placeText, zoneDoubt } from '../labels';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
 import { chosenStretch, placesLowerBound, segmentSummary, spacedStretches, spanText, stretchClock, stretchSpaces, timedStretches } from '../segments';
 import { useFullFix, windowText } from '../useFixes';
@@ -83,6 +83,8 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
   const standpoint = offered.fix ? (fix.horizon?.at ?? loc) : loc;
   const place = loc ? placeText(lang, loc, fix) : t('Ort unbestimmt');
   const time = clock ? windowText(clock.time) : null;
+  // A place of ± 7 500 km fixes no time zone: said next to the time, as in BEFUND.
+  const doubt = time && clock?.time.timezone ? zoneDoubt(lang, loc) : null;
   const summarised = segments ? segmentSummary(fix) : null;
   const withSpace = segments ? spacedStretches(fix) : [];
   const choose = (i: number): void => chooseStretch({ videoId: fix.videoId, computedAt: fix.computedAt, index: i });
@@ -110,9 +112,10 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
             ))}
           </div>
         )}
-        <span className="low dt-raum-where">
+        <span className="low dt-raum-where" title={doubt?.hint ?? undefined}>
           {place}
           {time ? ` · ${time}` : ''}
+          {doubt ? ` · ${doubt.text}` : ''}
         </span>
         <button type="button" className="text-btn" onClick={() => go('befund')}>
           {t('Zum Befund')}
