@@ -109,6 +109,8 @@ export function withLiveSummary(full: Fix, summary: Fix | undefined): Fix {
         candidates: full.candidates,
         countries: full.countries,
         ...(full.trace ? { trace: full.trace } : {}),
+        // The stretches of a recording of several places (the slim entry has only their summary).
+        ...(full.segments ? { segments: full.segments } : {}),
       }
     : live;
   return {

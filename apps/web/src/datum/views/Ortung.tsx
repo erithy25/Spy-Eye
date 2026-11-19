@@ -15,6 +15,7 @@ import { DatumSettingsPanel } from '../Settings';
 import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
 import { UPLOAD_OPTIONS, UploadDialog, type Picked } from '../UploadDialog';
+import { nearestWithin, placesText, reachKm, routeGeometry, segmentSummary } from '../segments';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { OrtungList, progressText, type GroupActions } from './OrtungList';
 
@@ -92,13 +93,16 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
   const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
   const method = fix.time.method === 'metadata' ? t('Metadaten') : fix.time.method === 'sun' ? t('Sonnenstand') : t('Uhrzeit nicht bestimmbar');
   const state = fix.status === 'running' ? t('wird geortet …') : stageOf(fix) === 'quick' ? t('vorläufig') : '';
+  // A recording of several places: the card names the longest stretch's place and how many there
+  // are, kept on one line ("mindestens 3 Orte" broke after "3").
+  const places = placesText(fix, t).replace(/ /g, '\u00a0');
   // The zone as an offset; its name (Europe/Paris) is in the title.
   const zone = fix.time.timezone ? utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun)) : '';
   return (
     <div className="dt-hud">
       <div className="dt-hud-place">{placeText(lang, loc, fix)}</div>
       <div className="dt-hud-sub" title={radiusHint(lang, loc)}>
-        {[countryText(lang, loc), radiusText(lang, loc), state].filter((x) => x !== '').join(' · ')}
+        {[countryText(lang, loc), radiusText(lang, loc), places, state].filter((x) => x !== '').join(' · ')}
       </div>
       <div className="dt-hud-clock">{bestWindowText(fix) ?? '––:––'}</div>
       <div className="dt-hud-note" title={fix.time.timezone ?? ''}>
@@ -182,12 +186,37 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
     if (uploaded > 0) datasets.refreshSoon();
   }, [uploaded]);
 
+  // The places of the chosen recording when it shows several: numbered markers and the route.
+  const route = useMemo(() => {
+    const summary = segmentSummary(current);
+    if (!current || !summary || summary.places.length < 2) return null;
+    const byPlace = new Map(summary.places.map((p) => [p.place, p]));
+    const stops = summary.route.flatMap((n) => {
+      const p = byPlace.get(n);
+      return p ? [{ key: n, lat: p.lat, lon: p.lon }] : [];
+    });
+    // The fix's own place: the summary names it (and puts it at the stretch the fix shows);
+    // summaries without it, the place nearest to the fix.
+    const loc = current.location;
+    const lead = summary.lead ?? (loc ? (nearestWithin(loc, summary.places, 50)?.place ?? null) : null);
+    const video = videoById.get(current.videoId);
+    const geometry = routeGeometry(stops, lead, `place:${current.videoId}:`, () => (video ? caseLabel(video.name) : ''));
+    return { ...geometry, places: summary.places };
+  }, [current, videoById]);
+
   const markers = useMemo<MapMarker[]>(() => {
     const out: MapMarker[] = [];
     for (const fix of fixes) {
       const video = videoById.get(fix.videoId);
       if (!fix.location || !video) continue;
       const isSel = fix.videoId === selected;
+      // The truth first: the chosen recording of several places skips its own marker below, and
+      // the line from its fix to the truth (fixShapes) should still end at one.
+      if (showTruth && fix.truth && (isSel || selected === null)) {
+        out.push({ id: `truth:${fix.videoId}`, lat: fix.truth.lat, lon: fix.truth.lon, shape: 'truth', label: isSel ? t('Wahrheit') : '', dim: !isSel });
+      }
+      // The chosen recording of several places stands as its places (route below).
+      if (isSel && route) continue;
       out.push({
         id: fix.videoId,
         lat: fix.location.lat,
@@ -198,12 +227,10 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
         selected: isSel,
         dim: selected !== null && !isSel,
       });
-      if (showTruth && fix.truth && (isSel || selected === null)) {
-        out.push({ id: `truth:${fix.videoId}`, lat: fix.truth.lat, lon: fix.truth.lon, shape: 'truth', label: isSel ? t('Wahrheit') : '', dim: !isSel });
-      }
     }
+    if (route) out.push(...route.markers);
     return out;
-  }, [fixes, videoById, selected, showTruth, t, lang]);
+  }, [fixes, videoById, selected, showTruth, t, lang, route]);
 
   // Terrain outline around a fix that is located to a few kilometres: contour lines from the
   // local elevation model, under the other geometry.
@@ -228,13 +255,15 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
   const shapes = useMemo<MapShape[]>(() => {
     if (!current) return [];
     const lines: MapShape[] = (terrain?.lines ?? []).map((l) => ({ kind: 'line', points: l.points, style: l.index ? 'contour-index' : 'contour' }));
-    return [...lines, ...fixShapes(current, full, countries, true, t, locale)];
-  }, [current, full, countries, t, locale, terrain]);
+    return [...lines, ...(route?.line ? [route.line] : []), ...fixShapes(current, full, countries, true, t, locale)];
+  }, [current, full, countries, t, locale, terrain, route]);
 
   const onMapSelect = useCallback(
     (id: string | null) => {
       if (id === null) return;
-      select(id.startsWith('truth:') ? id.slice(6) : id);
+      // A place of a recording of several: `place:<videoId>:<n>`.
+      if (id.startsWith('place:')) select(id.split(':')[1] ?? null);
+      else select(id.startsWith('truth:') ? id.slice(6) : id);
     },
     [select],
   );
@@ -343,8 +372,17 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
     setNotice({ text: parts.join(' · '), ok: true });
   };
 
+  // A recording of several places: turned to its place, as far out as its farthest place.
+  const reach = current?.location && route ? reachKm(current.location, route.places) : 0;
   const view = current?.location
-    ? { lat: current.location.lat, lon: current.location.lon, zoom: zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }
+    ? {
+        lat: current.location.lat,
+        lon: current.location.lon,
+        // A route around the world shows the whole Earth (sized to the map, as the world view).
+        ...(route && reach > 2500
+          ? { zoom: WORLD.zoom, fit: true }
+          : { zoom: route ? zoomForRadius(Math.max(5, reach * 0.6), current.location.lat) : zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }),
+      }
     : WORLD;
   const viewKey = current?.location ? `${current.videoId}:${current.computedAt}` : 'world';
   const selectedVideo = selected ? (videoById.get(selected) ?? null) : null;

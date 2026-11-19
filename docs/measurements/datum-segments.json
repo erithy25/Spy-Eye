@@ -1,0 +1,278 @@
+{
+ "measuredAt": "2026-11-19",
+ "what": "DATUM segments (engine version 10, apps/server/src/datum/segments.ts): compilations of the reference clips located segment by segment, and the single-place reference clips checked for false splits.",
+ "setup": {
+  "material": "60 reference clips re-encoded to 854x480, 30 fps, H.264, no audio; compilations by ffmpeg concat. sammlung-20min: the 101 clips of the earlier 20-minute check (60 places). sammlung-10orte, -3orte, -rueckkehr: places by a fixed rule on the manifest index (indices 3,9,...,57; 0,20,40; 1,13,25,1,37,49), each clip looped to 20-60 s (a loop repeats the same frames).",
+  "analysis": "the node's pipeline at 1 frame/s, detail standard (frames, scenes, vectors as stored); the segment logic run over the stored analysis with the node's gallery, world data and world model (the same code the node runs; the node's own results agree: 57/10/5/2 segments, 15/4/2/2 places).",
+  "gallery": "as the node runs: reference pictures of the places included; \"holdout\": the places' own Wikidata items left out",
+  "boundaryTolerance": "a true change counts as found when a segment boundary lies within 3 s",
+  "segmentError": "distance of a segment's place to the place of the piece that fills most of it (on a tie the earlier piece)",
+  "params": {
+   "minWindowSec": 4,
+   "maxWindows": 160,
+   "galleryFrames": 8,
+   "worldFramesPerWindow": 3,
+   "worldFramesTotal": 120,
+   "anchorConfidence": 0.8,
+   "sameKm": 25,
+   "worldAgreeKm": 200,
+   "worldAgree": 0.05,
+   "minPlaceSec": 5
+  }
+ },
+ "compilations": {
+  "gallery": {
+   "sammlung-20min.mp4": {
+    "windows": 104,
+    "segments": 57,
+    "segmentsWithPlace": 32,
+    "placesFound": 15,
+    "truePieces": 101,
+    "truePlaces": 60,
+    "truePlacesAt25km": 51,
+    "trueChanges": 100,
+    "changesFoundWithin3s": 54,
+    "boundariesWithoutChange": 2,
+    "boundaryErrorMedianSec": 0.267,
+    "segmentsWithin25km": 25,
+    "segmentsWithin200km": 26,
+    "segmentsWithin750km": 29,
+    "segmentErrorMedianKm": 0.998,
+    "shareOfTimeWithPlace": 0.327,
+    "shareOfTimeWithin25km": 0.25,
+    "shareOfTimeWithin200km": 0.26,
+    "shareOfTimeWithin750km": 0.29
+   },
+   "sammlung-rueckkehr.mp4": {
+    "windows": 9,
+    "segments": 5,
+    "segmentsWithPlace": 3,
+    "placesFound": 2,
+    "truePieces": 6,
+    "truePlaces": 5,
+    "truePlacesAt25km": 5,
+    "trueChanges": 5,
+    "changesFoundWithin3s": 3,
+    "boundariesWithoutChange": 1,
+    "boundaryErrorMedianSec": 0,
+    "segmentsWithin25km": 3,
+    "segmentsWithin200km": 3,
+    "segmentsWithin750km": 3,
+    "segmentErrorMedianKm": 5.931,
+    "shareOfTimeWithPlace": 0.636,
+    "shareOfTimeWithin25km": 0.523,
+    "shareOfTimeWithin200km": 0.523,
+    "shareOfTimeWithin750km": 0.614
+   },
+   "sammlung-10orte.mp4": {
+    "windows": 16,
+    "segments": 10,
+    "segmentsWithPlace": 6,
+    "placesFound": 4,
+    "truePieces": 10,
+    "truePlaces": 10,
+    "truePlacesAt25km": 10,
+    "trueChanges": 9,
+    "changesFoundWithin3s": 5,
+    "boundariesWithoutChange": 4,
+    "boundaryErrorMedianSec": 0,
+    "segmentsWithin25km": 3,
+    "segmentsWithin200km": 3,
+    "segmentsWithin750km": 6,
+    "segmentErrorMedianKm": 102.066,
+    "shareOfTimeWithPlace": 0.353,
+    "shareOfTimeWithin25km": 0.3,
+    "shareOfTimeWithin200km": 0.3,
+    "shareOfTimeWithin750km": 0.353
+   },
+   "sammlung-3orte.mp4": {
+    "windows": 8,
+    "segments": 2,
+    "segmentsWithPlace": 2,
+    "placesFound": 2,
+    "truePieces": 3,
+    "truePlaces": 3,
+    "truePlacesAt25km": 3,
+    "trueChanges": 2,
+    "changesFoundWithin3s": 1,
+    "boundariesWithoutChange": 0,
+    "boundaryErrorMedianSec": 0,
+    "segmentsWithin25km": 1,
+    "segmentsWithin200km": 1,
+    "segmentsWithin750km": 1,
+    "segmentErrorMedianKm": 616.143,
+    "shareOfTimeWithPlace": 1.0,
+    "shareOfTimeWithin25km": 0.667,
+    "shareOfTimeWithin200km": 0.667,
+    "shareOfTimeWithin750km": 0.667
+   }
+  },
+  "holdout": {
+   "sammlung-20min.mp4": {
+    "windows": 104,
+    "segments": 45,
+    "segmentsWithPlace": 25,
+    "placesFound": 12,
+    "truePieces": 101,
+    "truePlaces": 60,
+    "truePlacesAt25km": 51,
+    "trueChanges": 100,
+    "changesFoundWithin3s": 42,
+    "boundariesWithoutChange": 2,
+    "boundaryErrorMedianSec": 0.2,
+    "segmentsWithin25km": 9,
+    "segmentsWithin200km": 12,
+    "segmentsWithin750km": 19,
+    "segmentErrorMedianKm": 215.471,
+    "shareOfTimeWithPlace": 0.246,
+    "shareOfTimeWithin25km": 0.079,
+    "shareOfTimeWithin200km": 0.11,
+    "shareOfTimeWithin750km": 0.18
+   },
+   "sammlung-rueckkehr.mp4": {
+    "windows": 9,
+    "segments": 5,
+    "segmentsWithPlace": 3,
+    "placesFound": 2,
+    "truePieces": 6,
+    "truePlaces": 5,
+    "truePlacesAt25km": 5,
+    "trueChanges": 5,
+    "changesFoundWithin3s": 3,
+    "boundariesWithoutChange": 1,
+    "boundaryErrorMedianSec": 0,
+    "segmentsWithin25km": 3,
+    "segmentsWithin200km": 3,
+    "segmentsWithin750km": 3,
+    "segmentErrorMedianKm": 5.931,
+    "shareOfTimeWithPlace": 0.636,
+    "shareOfTimeWithin25km": 0.523,
+    "shareOfTimeWithin200km": 0.523,
+    "shareOfTimeWithin750km": 0.614
+   },
+   "sammlung-10orte.mp4": {
+    "windows": 16,
+    "segments": 9,
+    "segmentsWithPlace": 5,
+    "placesFound": 3,
+    "truePieces": 10,
+    "truePlaces": 10,
+    "truePlacesAt25km": 10,
+    "trueChanges": 9,
+    "changesFoundWithin3s": 4,
+    "boundariesWithoutChange": 4,
+    "boundaryErrorMedianSec": 0.0,
+    "segmentsWithin25km": 1,
+    "segmentsWithin200km": 1,
+    "segmentsWithin750km": 5,
+    "segmentErrorMedianKm": 202.348,
+    "shareOfTimeWithPlace": 0.253,
+    "shareOfTimeWithin25km": 0.1,
+    "shareOfTimeWithin200km": 0.1,
+    "shareOfTimeWithin750km": 0.253
+   },
+   "sammlung-3orte.mp4": {
+    "windows": 8,
+    "segments": 2,
+    "segmentsWithPlace": 1,
+    "placesFound": 1,
+    "truePieces": 3,
+    "truePlaces": 3,
+    "truePlacesAt25km": 3,
+    "trueChanges": 2,
+    "changesFoundWithin3s": 0,
+    "boundariesWithoutChange": 1,
+    "boundaryErrorMedianSec": null,
+    "segmentsWithin25km": 0,
+    "segmentsWithin200km": 0,
+    "segmentsWithin750km": 0,
+    "segmentErrorMedianKm": 993.089,
+    "shareOfTimeWithPlace": 0.275,
+    "shareOfTimeWithin25km": 0.0,
+    "shareOfTimeWithin200km": 0.0,
+    "shareOfTimeWithin750km": 0.0
+   }
+  }
+ },
+ "falseSplits": {
+  "sceneWindows": {
+   "clips": 60,
+   "windowsPerClip": {
+    "1": 58,
+    "2": 2
+   },
+   "split": 0,
+   "splitHoldout": 0
+  },
+  "fixed4sWindows": {
+   "clips": 60,
+   "windowsPerClip": {
+    "3": 53,
+    "2": 6,
+    "1": 1
+   },
+   "split": 0,
+   "splitHoldout": 0
+  },
+  "fixed4sWindowsPlacesFromOneWindow": {
+   "split": 0,
+   "splitHoldout": 1,
+   "withoutWorldModelTie": 3,
+   "withoutWorldModelTieHoldout": 6,
+   "examples": [
+    "datum-054 Borobudur: Mendut Temple vs Angkor Thom (2443 km)",
+    "datum-001 Kyffhaeuser: Bryn Eglwys/Chester vs Northeye (349 km)",
+    "datum-024 Charles Fort: Bryneglwys vs Caernarfon (68 km)"
+   ]
+  },
+  "node": {
+   "clips": 60,
+   "fixesWithSegments": 0,
+   "segmentStepMsMedian": 1681,
+   "segmentStepMsMax": 3838
+  }
+ },
+ "windowPrecision4s": {
+  "note": "4-s windows of the reference clips, gallery as the node runs; anchors = strong tier or a gallery answer with confidence >= 0.8",
+  "anchorsEvenHalf": {
+   "n": 29,
+   "within25km": 0.72,
+   "within200km": 0.72,
+   "within750km": 0.93
+  },
+  "anchorsOddHalf": {
+   "n": 34,
+   "within25km": 0.71,
+   "within200km": 0.76,
+   "within750km": 0.88
+  },
+  "worldModelOnlyEvenHalf": {
+   "n": 48,
+   "within25km": 0.23,
+   "within200km": 0.29,
+   "within750km": 0.52
+  },
+  "worldModelOnlyOddHalf": {
+   "n": 53,
+   "within25km": 0.15,
+   "within200km": 0.25,
+   "within750km": 0.4
+  }
+ },
+ "timing": {
+  "file": "sammlung-20min (1186 s) uploaded again on the measuring node",
+  "loadAverage": "6-9 on 4 cores (another job shared the machine)",
+  "quickAfterUploadSec": 13.1,
+  "analysisSec": 564.1,
+  "fullAfterUploadSec": 675.7,
+  "fullFixSec": 97.9,
+  "segmentStepSec": 92.4,
+  "worldModelSec": 90.1,
+  "worldModelFrames": 120,
+  "windows": 104,
+  "fullFixWithoutSegmentsSec": 11.1
+ },
+ "tried": {
+  "galleryFrames12": "20 min: 31 segments with a place, 24 within 25 km, 34 % of the time with a place; no better than 8 frames and the gallery search 105 s instead of 41 s; not kept"
+ }
+}

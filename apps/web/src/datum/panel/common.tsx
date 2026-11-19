@@ -247,6 +247,7 @@ export const KIND_CODE: Record<EvidenceKind, string> = {
   filename: 'DATEINAME',
   worldmodel: 'WELTMODELL',
   streetlevel: 'STRASSENBILD',
+  segments: 'ABSCHNITTE',
 };
 
 /** How a location was obtained, as a phrase. */
@@ -261,6 +262,7 @@ export const KIND_METHOD: Record<EvidenceKind, string> = {
   filename: 'Angabe im Dateinamen',
   worldmodel: 'Weltmodell',
   streetlevel: 'Abgleich mit Straßenbildern',
+  segments: 'Abschnittsweise Ortung',
 };
 
 /**
@@ -268,7 +270,7 @@ export const KIND_METHOD: Record<EvidenceKind, string> = {
  * (metadata, a recognised landmark and the street-level pictures that refine it, the terrain
  * horizon) before what only narrows a region.
  */
-export const KIND_ORDER: readonly EvidenceKind[] = ['metadata', 'landmark', 'streetlevel', 'horizon', 'sun', 'worldmodel', 'region', 'season', 'text', 'filename'];
+export const KIND_ORDER: readonly EvidenceKind[] = ['metadata', 'segments', 'landmark', 'streetlevel', 'horizon', 'sun', 'worldmodel', 'region', 'season', 'text', 'filename'];
 
 /** Position of a kind in KIND_ORDER; a kind of a newer engine that this console does not know goes last. */
 export function kindRank(kind: string): number {

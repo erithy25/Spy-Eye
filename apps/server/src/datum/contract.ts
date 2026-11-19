@@ -51,7 +51,8 @@ export type EvidenceKind =
   | 'text' // signs, scripts, file name
   | 'filename' // a date or place written in the file name
   | 'worldmodel' // GeoCLIP: the frames scored against 100 000 places on Earth
-  | 'streetlevel'; // frames compared with public street-level pictures around a recognised place
+  | 'streetlevel' // frames compared with public street-level pictures around a recognised place
+  | 'segments'; // the recording shows several places, one after another (Fix.segments)
 
 export interface Evidence {
   kind: EvidenceKind;
@@ -333,7 +334,8 @@ export interface Fix {
   /**
    * True on the slimmed fixes of the list (GET /api/datum/fixes?slim=1): evidence [], no trace,
    * only the middle keyframe, the top 5 candidates and countries, no sun path and no horizon
-   * profile. The full fix is GET /api/datum/fix/:id. Absent on full fixes.
+   * profile, the stretches only in their compact form (`segmentSummary`). The full fix is GET
+   * /api/datum/fix/:id. Absent on full fixes.
    */
   slim?: boolean;
   /**
@@ -343,6 +345,21 @@ export interface Fix {
    * recording; absent elsewhere and on nodes before datasets.
    */
   datasetId?: string;
+  /**
+   * The places of a recording that shows several of them (travel, dashcam, drone footage, a
+   * compilation): the recording cut into stretches, one per place, in time order, from the start
+   * of the video to its end. Present only when its pictures show at least two distinct places with
+   * reasonable confidence and the file carries no GPS position; `location` is then the place of
+   * the longest located stretch (or the answer for the whole file, where it agrees with that one)
+   * and an evidence entry of kind 'segments' says so. Absent for a recording of one place, on
+   * slim fixes (they carry `segmentSummary`) and on fixes of engine versions before 10.
+   */
+  segments?: FixSegment[];
+  /**
+   * The compact form of `segments` on the slim fixes of the list (GET /api/datum/fixes?slim=1):
+   * how many stretches and places, the places and the route through them. Absent on full fixes.
+   */
+  segmentSummary?: FixSegmentSummary;
   /**
    * Ground truth, present for videos of the reference dataset (source 'referenz') and for uploaded
    * videos whose true place was given with the upload (source 'eigene', POST /api/datum/truth).
@@ -364,6 +381,76 @@ export interface Fix {
         url?: string;
       })
     | null;
+}
+
+/**
+ * One stretch of a recording that shows several places (Fix.segments). The stretches follow each
+ * other without gaps: the first starts at 0, each ends where the next starts, the last ends at
+ * the end of the video.
+ */
+export interface FixSegment {
+  /** Seconds into the video where the stretch starts and ends. */
+  startSec: number;
+  endSec: number;
+  /** Numbers of the first and the last analysis frame of the stretch (as Keyframe.frame). */
+  firstFrame: number;
+  lastFrame: number;
+  /** A frame from the middle of the stretch and its picture (face-masked, served by the node). */
+  keyframe: { frame: number; time: number; imageUrl: string };
+  /**
+   * The place of the stretch, decided from its own frames as the place of a whole recording is
+   * (reference gallery, country prior, world model); null when its pictures do not say where it
+   * was ("unbestimmt"): a weak answer is not forced onto a neighbouring place.
+   */
+  location: FixLocation | null;
+  /**
+   * Number of the place (1-based, in the order the places first appear): a recording that comes
+   * back to a place gives both stretches the same number. null for an undetermined stretch.
+   */
+  place: number | null;
+  /** How many windows (groups of the analysis's scenes) the stretch was decided from. */
+  windows: number;
+  /**
+   * True when the stretch's place joins answers farther apart than places are told apart (25 km)
+   * because the world model of their windows puts them in the same region: it may be several
+   * places, and the count of places is then a lower bound. Absent otherwise.
+   */
+  joined?: boolean;
+}
+
+/**
+ * One distinct place of a recording with several (FixSegmentSummary.places), at the point of its
+ * most confident stretch; the fix's own place (FixSegmentSummary.lead) at the stretch the fix shows.
+ */
+export interface FixSegmentPlace extends GeoPoint {
+  /** FixSegment.place */
+  place: number;
+  radiusKm: number;
+  confidence: number;
+  label: string;
+  labelEn?: string;
+  country: string | null;
+  /** Seconds of the recording that show this place, over all its stretches. */
+  seconds: number;
+}
+
+/** The compact form of Fix.segments, as the list of fixes carries it. */
+export interface FixSegmentSummary {
+  /** Stretches of the timeline, undetermined ones included. */
+  segments: number;
+  /** Of these, the undetermined ones: with any, the places are a lower bound ("at least"). */
+  undetermined: number;
+  /** Places that may be several (FixSegment.joined): with any, the places are a lower bound too. */
+  joined?: number;
+  /**
+   * Number of the place the fix's location comes from (its point is then that stretch's, see
+   * FixSegmentPlace); absent where the fix names none of them (summaries before it existed).
+   */
+  lead?: number;
+  /** The distinct places, numbered as FixSegment.place. */
+  places: FixSegmentPlace[];
+  /** Place numbers of the located stretches in time order: the route (a return repeats a number). */
+  route: number[];
 }
 
 /**

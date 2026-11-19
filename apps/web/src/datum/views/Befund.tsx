@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { formatDecimal, formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker } from '../../map/MapCanvas';
@@ -6,6 +6,8 @@ import { useAction } from '../../ui';
 import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
+import { SegmentTimeline } from '../panel/SegmentTimeline';
+import { leadSegment, nextKey, placesLowerBound, reachKm, routeGeometry, segmentIndexAt, segmentSummary } from '../segments';
 import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps } from './Ortung';
@@ -25,6 +27,9 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const summary = selected ? byId.get(selected) : undefined;
   const { fix, error } = useFullFix(selected, summary);
   const [keyIndex, setKeyIndex] = useState(0);
+  // Where the video cannot play, the picture in its place: the chosen stretch's keyframe, or the
+  // keyframe thumbnail clicked last (whichever was chosen last).
+  const [keyPicked, setKeyPicked] = useState(false);
   const [candidate, setCandidate] = useState(0);
   // The picture under the video's place: the video itself, or the keyframe with its skyline drawn.
   const [showSkyline, setShowSkyline] = useState(false);
@@ -35,6 +40,9 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
    */
   const [videoRefused, setVideoRefused] = useState<string | null>(null);
   useEffect(() => setVideoRefused(null), [selected]);
+  const player = useRef<HTMLVideoElement | null>(null);
+  // The chosen stretch of a recording of several places (index into fix.segments).
+  const [segment, setSegment] = useState(() => (fix?.segments ? leadSegment(fix) : 0));
   const [countries, setCountries] = useState<CountryShape[]>([]);
   const action = useAction();
   const video = videos.find((v) => v.id === selected) ?? null;
@@ -52,18 +60,81 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
     // Open on the keyframe the heading was matched on, if any.
     const matched = fix?.heading ? (fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null) : null;
     setKeyIndex(Math.max(0, fix?.keyframes.findIndex((k) => k.frame === matched) ?? 0));
+    setKeyPicked(false);
     setCandidate(0);
   }
+  // Open on the stretch whose place the fix shows, once the stretches are there (the list's slim
+  // entry has only their summary; the full fix follows).
+  const segmentKey = `${resultKey}:${fix?.segments?.length ?? 0}`;
+  const [segmentShown, setSegmentShown] = useState(segmentKey);
+  if (segmentShown !== segmentKey) {
+    setSegmentShown(segmentKey);
+    setSegment(fix?.segments ? leadSegment(fix) : 0);
+  }
+  const segments = fix?.segments && fix.segments.length > 1 ? fix.segments : null;
+  const summarised = useMemo(() => segmentSummary(fix), [fix]);
+  const places = summarised?.places.length ?? 0;
+  // "mindestens": undetermined stretches, or a place the world model joined from far apart.
+  const atLeast = summarised ? placesLowerBound(summarised) : false;
+  const chosen = segments ? (segments[Math.min(segment, segments.length - 1)] ?? null) : null;
 
-  const shapes = useMemo(() => (fix ? fixShapes(fix, fix, countries, false, t, locale) : []), [fix, countries, t, locale]);
+  // A recording of several places: every located stretch as a numbered marker, joined in time
+  // order, the chosen one emphasised with its circle; otherwise the fix with its geometry.
+  const route = useMemo(() => {
+    if (!fix || !segments) return null;
+    const stops = segments.flatMap((s, i) => (s.location ? [{ key: i + 1, lat: s.location.lat, lon: s.location.lon }] : []));
+    return routeGeometry(stops, segment + 1, 'seg:', (key) => {
+      const loc = segments[key - 1]?.location;
+      return loc ? placeText(lang, loc, fix) : '';
+    });
+  }, [fix, segments, segment, lang]);
+  const shapes = useMemo(() => {
+    if (!fix) return [];
+    if (!route) return fixShapes(fix, fix, countries, false, t, locale);
+    const out = route.line ? [route.line] : [];
+    const loc = chosen?.location;
+    if (loc) out.push({ kind: 'circle', lat: loc.lat, lon: loc.lon, radiusKm: Math.max(0.05, loc.radiusKm), style: 'dashed', label: `± ${kmText(loc.radiusKm, locale)}` });
+    return out;
+  }, [fix, route, chosen, countries, t, locale]);
   const markers = useMemo<MapMarker[]>(() => {
     if (!fix?.location) return [];
-    const out: MapMarker[] = [{ id: fix.videoId, lat: fix.location.lat, lon: fix.location.lon, shape: 'fix', label: placeText(lang, fix.location, fix), selected: true }];
+    // With stretches their numbered markers stand for the fix; the truth and a chosen candidate
+    // are drawn as without them.
+    const out: MapMarker[] = route ? [...route.markers] : [{ id: fix.videoId, lat: fix.location.lat, lon: fix.location.lon, shape: 'fix', label: placeText(lang, fix.location, fix), selected: true }];
     if (fix.truth) out.push({ id: 'truth', lat: fix.truth.lat, lon: fix.truth.lon, shape: 'truth', label: t('Wahrheit') });
     const c = fix.candidates[candidate];
     if (c && candidate > 0) out.push({ id: 'cand', lat: c.lat, lon: c.lon, shape: 'incident', label: placeText(lang, c, fix) });
     return out;
-  }, [fix, candidate, t, lang]);
+  }, [fix, route, candidate, t, lang]);
+
+  /**
+   * Chooses a stretch and puts the video at its start (when the video plays here). The map turns
+   * to it, also from a candidate chosen before.
+   */
+  const chooseSegment = (index: number): void => {
+    setSegment(index);
+    setKeyPicked(false);
+    setCandidate(0);
+    const s = segments?.[index];
+    const el = player.current;
+    if (s && el && !el.error) {
+      try {
+        el.currentTime = s.startSec + 0.05;
+      } catch {
+        // not seekable yet (metadata still loading)
+      }
+    }
+  };
+
+  /**
+   * The stretch on screen follows the video: playing or scrubbed into another stretch, that one
+   * is chosen (without seeking again).
+   */
+  const followVideo = (el: HTMLVideoElement): void => {
+    if (!segments) return;
+    const i = segmentIndexAt(segments, el.currentTime);
+    if (i >= 0) setSegment((current) => (current === i ? current : i));
+  };
 
   if (!selected || !video) {
     return <div className="dt-empty-view">{t('Im Reiter ORTUNG eine Aufnahme wählen.')}</div>;
@@ -82,6 +153,21 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
           : t('Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.'),
     );
   const focus = fix.candidates[candidate] ?? fix.location;
+  // With stretches the map turns to the chosen one (or the first located; a chosen candidate goes
+  // first) and shows as far as the farthest of the others, so that the route stays in view around
+  // it. zoomForRadius(r) - 0.6 puts r about 112 px from the centre, inside the 280 px high map.
+  const pickedCandidate = candidate > 0 ? (fix.candidates[candidate] ?? null) : null;
+  const segmentAt = pickedCandidate ?? chosen?.location ?? segments?.find((s) => s.location)?.location ?? null;
+  const segmentView =
+    segments && segmentAt
+      ? (() => {
+          const reach = reachKm(
+            segmentAt,
+            segments.flatMap((s) => (s.location ? [s.location] : [])),
+          );
+          return { lat: segmentAt.lat, lon: segmentAt.lon, zoom: reach > 2500 ? 1.4 : zoomForRadius(Math.max(5, reach * 1.1, segmentAt.radiusKm * 0.3), segmentAt.lat) - 0.6 };
+        })()
+      : null;
   // The heading was matched on one keyframe; on the others its horizon would be drawn over a
   // picture it was not measured on. Older fixes name the frame only in the horizon evidence.
   const matchedFrame = fix.heading ? (fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null) : null;
@@ -98,7 +184,16 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
     fix.keyframes.length > 1 ? (
       <div className="dt-keys">
         {fix.keyframes.map((k, i) => (
-          <button key={k.frame} type="button" className={i === keyIndex ? 'on' : ''} onClick={() => setKeyIndex(i)} aria-label={`${t('Schlüsselbild')} ${i + 1}`}>
+          <button
+            key={k.frame}
+            type="button"
+            className={i === keyIndex ? 'on' : ''}
+            onClick={() => {
+              setKeyIndex(i);
+              setKeyPicked(true);
+            }}
+            aria-label={`${t('Schlüsselbild')} ${i + 1}`}
+          >
             <img src={rel(k.imageUrl)} alt="" loading="lazy" decoding="async" />
           </button>
         ))}
@@ -125,7 +220,11 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
           <span className="label">{t('Ort')}</span>
           <b>{loc ? placeText(lang, loc, fix) : t('Ort unbestimmt')}</b>
           <span className="low" title={loc ? radiusHint(lang, loc) : ''}>
-            {loc ? [countryText(lang, loc), radiusText(lang, loc)].filter((x) => x !== '').join(' · ') : ''}
+            {loc
+              ? [countryText(lang, loc), radiusText(lang, loc), segments && places >= 2 ? t(atLeast ? 'mindestens {n} Orte' : '{n} Orte', { n: places }) : '']
+                  .filter((x) => x !== '')
+                  .join(' · ')
+              : ''}
           </span>
         </div>
         <div className="dt-result-time">
@@ -176,12 +275,25 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
                 playsInline
                 preload="metadata"
                 ref={(el) => {
+                  player.current = el;
                   // The refusal can arrive before the element is in the page (switching tabs builds
                   // the view while the request is already running); React then never calls onError.
                   if (el?.error) refuseVideo();
                 }}
                 onError={refuseVideo}
+                // The video opens at the stretch the page shows (that of the fix's place), and the
+                // chosen stretch follows what plays.
+                onLoadedMetadata={(e) => {
+                  const el = e.currentTarget;
+                  if (chosen && chosen.startSec > 0 && el.currentTime < 0.05) el.currentTime = chosen.startSec + 0.05;
+                }}
+                onTimeUpdate={(e) => followVideo(e.currentTarget)}
+                onSeeked={(e) => followVideo(e.currentTarget)}
               />
+            ) : chosen && !keyPicked ? (
+              // The video does not play here: the chosen stretch's keyframe stands for it, until a
+              // keyframe below is clicked.
+              <img className="dt-video" src={rel(chosen.keyframe.imageUrl)} alt="" />
             ) : (
               key && <img className="dt-video" src={rel(key.imageUrl)} alt="" />
             )}
@@ -195,6 +307,9 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
                   {t('Himmelslinie und Horizont')}
                 </button>
               </div>
+            )}
+            {segments && fix.status === 'ready' && (
+              <SegmentTimeline fix={fix} segments={segments} selected={Math.min(segment, segments.length - 1)} onSelect={chooseSegment} places={places} atLeast={atLeast} />
             )}
             {keyThumbs}
           </section>
@@ -238,7 +353,23 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
         <div className="dt-col">
           <section className="dt-section">
             <div className="dt-mini-map">
-              {focus ? (
+              {segmentView ? (
+                <MapCanvas
+                  view={segmentView}
+                  viewKey={`${fix.videoId}:${fix.computedAt}:seg${segment}:${candidate}`}
+                  markers={markers}
+                  shapes={shapes}
+                  minZoom={1}
+                  maxZoom={16}
+                  readouts={false}
+                  globe
+                  onSelect={(id) => {
+                    // A marker several stretches share: each click the next of them.
+                    const key = id && route ? nextKey(route.keys.get(id) ?? [], segment + 1) : null;
+                    if (key !== null) chooseSegment(key - 1);
+                  }}
+                />
+              ) : focus ? (
                 <MapCanvas
                   view={{ lat: focus.lat, lon: focus.lon, zoom: zoomForRadius(Math.max(0.3, (focus as { radiusKm: number }).radiusKm), focus.lat) - 0.6 }}
                   viewKey={`${fix.videoId}:${fix.computedAt}:${candidate}`}

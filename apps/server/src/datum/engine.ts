@@ -39,9 +39,9 @@ import { config } from '../config.js';
 import { writeFileAtomic } from '../core/json.js';
 import type { EventHub } from '../events.js';
 import type { EmbeddingModel } from '../ml/model.js';
-import type { Store, VideoEntry } from '../store.js';
+import { frameUrl, type Store, type VideoEntry } from '../store.js';
 import { haversineKm } from '../core/geo.js';
-import type { Evidence, Fix, FixLocation, Keyframe, TimeEstimate, TraceStep } from './contract.js';
+import type { CountryProb, Evidence, Fix, FixCandidate, FixLocation, FixSegment, Keyframe, TimeEstimate, TraceStep } from './contract.js';
 import { truthForName, truthNames } from './dataset.js';
 import { Gallery } from './gallery.js';
 import { acquireWorldModel, releaseWorldModel, worldModelFailure, worldModelPrecision, WorldModelService, type WorldModel, type WorldModelResult } from './geoclipService.js';
@@ -61,12 +61,14 @@ import {
   type StreetLevelResult,
 } from './streetlevel.js';
 import { breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
+import { analyseSegments, DEFAULT_SEGMENT_PARAMS, segmentCountries, segmentVerdict, summariseSegments, toSegments, wholeFileEvidence, type SegmentVerdict } from './segments.js';
 import { filenameHints, readMetadata, type VideoMetadata } from './metadata.js';
 import { DAY_LABELS_EN, estimateTime, frameStatsFromJpeg, type FrameStats } from './time.js';
 import { estimateDisparity } from './depth.js';
 import { buildSpaceGrid } from './space.js';
 import { terrainAvailable } from './terrain.js';
 import { horizonProfile, refinePosition } from './horizon.js';
+import { loadWorld } from './world.js';
 import { truthKey, type TruthBook } from './truth.js';
 import { ENGINE_VERSION, OLDEST_SHOWN_VERSION } from './version.js';
 
@@ -154,6 +156,26 @@ export interface StreetLevelHooks {
  */
 const STREET_GRACE_MS = 500;
 
+/**
+ * A recording with more scenes than this stops asking the world model for its windows as soon as
+ * a job goes first (in the background any job of a person's, else a person's quick fix); the
+ * windows then go without it. A shorter one finishes, which takes a few seconds.
+ */
+const BACKGROUND_WORLD_SCENES = 6;
+
+/**
+ * Whether the segment step of a recording stops asking the world model (and, in the background,
+ * the gallery) for the windows still to come, given the jobs waiting. A short recording (the
+ * reference clips: one to three windows, a few seconds of the world model) finishes. A long one
+ * gives way: in the background to any job of a person's, and a person's own to the quick fix of
+ * a new upload. The engine runs one job at a time, the world model takes up to two minutes on a
+ * long recording, and the place of an upload should be known in seconds (see jobRank).
+ */
+export function segmentsGiveWay(scenes: number, background: boolean, waiting: readonly { kind: JobKind; background: boolean }[]): boolean {
+  if (scenes <= BACKGROUND_WORLD_SCENES) return false;
+  return background ? waiting.some((j) => !j.background) : waiting.some((j) => j.kind === 'quick' && !j.background);
+}
+
 /** How often a waiting background job looks again whether it may run. */
 const BACKGROUND_POLL_MS = 500;
 
@@ -238,6 +260,27 @@ function spread(count: number, wanted: number): number[] {
   const out: number[] = [];
   for (let i = 0; i < wanted; i++) out.push(Math.min(count - 1, Math.round(((i + 0.5) / wanted) * (count - 1))));
   return [...new Set(out)];
+}
+
+/** The same spread within the frames first..last (inclusive). */
+function spreadWithin(first: number, last: number, wanted: number): number[] {
+  return spread(last - first + 1, wanted).map((i) => first + i);
+}
+
+/**
+ * What the segments of a recording change in its full fix (see DatumEngine.segment): the verdict,
+ * the stretches the fix carries (multi-place recordings only), the frames the spaces are built from
+ * (those of the stretch shown, so that the horizon is matched where the place is) and, where the
+ * place was replaced, the places as candidates.
+ */
+interface SegmentOutcome {
+  verdict: SegmentVerdict;
+  segments: FixSegment[] | null;
+  /** Indices into the analysis frames (inclusive) for the keyframes; null: the whole recording. */
+  keyRange: [number, number] | null;
+  candidates: FixCandidate[] | null;
+  /** The countries of the places (multi-place recordings only; the whole file's mix them). */
+  countries: CountryProb[] | null;
 }
 
 /** A text in both languages. */
@@ -536,6 +579,7 @@ export class DatumEngine {
   private personWaiting(): boolean {
     return this.queue.some((j) => !j.background);
   }
+
 
   /** Index of the job that runs next (see jobRank), or -1 when the queue is empty. */
   private nextIndex(): number {
@@ -1261,11 +1305,33 @@ export class DatumEngine {
         : worldNote,
     );
 
+    // Background work (the reference set) gives way to a person's job (street level, world model).
+    const background = this.active?.id === id && this.active.background;
+
+    // A recording that shows several places is located stretch by stretch (segments.ts). It keeps
+    // its place where the answer for the whole file agrees with its longest located stretch.
+    const parts = await this.segment(entry, located, { matrix, tiles, dim, background, exclude: this.opts.holdout && truthVideo ? [truthVideo.wikidata] : null });
+    mark('Abschnitte geprüft', parts.verdict.note);
+    const placed: LocateResult =
+      parts.verdict.evidence.length > 0
+        ? {
+            ...located,
+            location: parts.verdict.location,
+            // Where a stretch's place replaced the whole file's answer, the whole file's entries
+            // speak of that answer ("1 km from the result: a recognition", "which stands"): they
+            // stay, said to be of the whole file and without weight.
+            evidence: [...parts.verdict.evidence, ...(parts.verdict.replaced ? located.evidence.map(wholeFileEvidence) : located.evidence)],
+            ...(parts.candidates ? { candidates: parts.candidates } : {}),
+            ...(parts.countries ? { countries: parts.countries } : {}),
+          }
+        : located;
+
     // Street-level pictures around a recognised place (streetlevel.ts streetLevelPlan), when the
     // node's setting allows it. The stage is mostly waiting for the picture services, so it runs
     // while the spaces are built below; the horizon and the time need its answer and wait for it.
-    // The quick stage never asks: it must not wait for any service.
-    const plan = this.streetLevelOn() ? streetLevelPlan(located) : null;
+    // The quick stage never asks: it must not wait for any service. Not for a place taken from a
+    // stretch: the frames it compares belong to the whole recording.
+    const plan = this.streetLevelOn() && !parts.verdict.replaced ? streetLevelPlan(located) : null;
     const streetStop = new AbortController();
     const streetJob: Promise<StreetLevelResult> | null = plan
       ? this.streetLevel(
@@ -1282,13 +1348,99 @@ export class DatumEngine {
         )
       : null;
     // Background work (the reference set) stops waiting on the services for a person's job.
-    const background = this.active?.id === id && this.active.background;
     const streetYield = background ? (): void => streetStop.abort() : null;
     try {
-      return await this.computeRest(entry, located, streetJob, { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield });
+      const fix = await this.computeRest(entry, placed, streetJob, { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield, keyRange: parts.keyRange });
+      return parts.segments ? { ...fix, segments: parts.segments } : fix;
     } finally {
       // Deleted meanwhile or failed: the stage stops asking the services (a finished one ignores it).
       streetStop.abort();
+    }
+  }
+
+  /**
+   * Locates the recording stretch by stretch (segments.ts): windows from the analysis's scenes,
+   * each decided from its own frames with the gallery, the country prior and the world model, then
+   * merged into places. Never fails the fix: without the analysis's scenes or on an error the
+   * recording counts as one place and the trace says why.
+   */
+  private async segment(
+    entry: VideoEntry,
+    located: LocateResult,
+    ctx: { matrix: Float32Array; tiles: number; dim: number; background: boolean; exclude: string[] | null },
+  ): Promise<SegmentOutcome> {
+    const single = (note: { de: string; en: string }): SegmentOutcome => ({
+      verdict: { multi: false, places: 0, joined: 0, location: located.location, replaced: false, lead: null, evidence: [], note },
+      segments: null,
+      keyRange: null,
+      candidates: null,
+      countries: null,
+    });
+    const id = entry.info.id;
+    const frames = entry.frames;
+    if (frames.length < 2) return single({ de: 'zu wenige Bilder für Abschnitte', en: 'too few frames for segments' });
+    try {
+      const gallery = await this.opts.gallery();
+      const world = await loadWorld();
+      // The world model looks at a few frames per window. It is given up for the rest of the
+      // recording when it has no answer (switched off, still building its gallery, failed), and a
+      // background job stops asking as soon as a person's job is waiting.
+      let worldGone = this.world === null;
+      const giveWay = (): boolean => segmentsGiveWay(entry.scenes.length, ctx.background, this.queue);
+      const analysis = await analyseSegments(
+        { frames, scenes: entry.scenes, durationSec: entry.info.durationSec, matrix: ctx.matrix, tiles: ctx.tiles, dim: ctx.dim, ...(ctx.exclude ? { excludeWikidata: ctx.exclude } : {}) },
+        {
+          world,
+          embedTexts: this.embedTexts,
+          search: (vectors, k, opts) => gallery.searchAsync(vectors, k, opts),
+          ...(this.world
+            ? {
+                predictWorld: async (indices: number[]) => {
+                  const jpegs = await Promise.all(indices.map(async (i) => fs.readFile(await this.opts.store.analysisFramePath(id, (frames[i] as { n: number }).n))));
+                  const result = await this.askWorld(jpegs);
+                  if (!result?.prediction) worldGone = true;
+                  return result?.prediction ?? null;
+                },
+              }
+            : {}),
+          stopWorld: () => worldGone || this.stopped || this.gone(entry) || giveWay(),
+          // The search runs in parts of a few seconds: it ends when the engine stops or the
+          // recording is deleted, and in the background when a person's job waits (the windows
+          // left stay undetermined). A person's own recording is searched to the end.
+          stopSearch: () => this.stopped || this.gone(entry) || (ctx.background && giveWay()),
+        },
+      );
+      if (this.stopped) throw new EngineStopped();
+      if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
+      const segments = toSegments(frames, analysis.windows, analysis.merged, (n) => frameUrl(id, n));
+      const gps = located.diagnostics.method === 'metadata';
+      // The gallery's answer for the whole file that the world model turned down: no stretch at
+      // that place leads (see segmentVerdict).
+      const rejected = located.diagnostics.worldModel?.replaced ? located.diagnostics.gallery : null;
+      const verdict = segmentVerdict(segments, located.location, { gps, sameKm: DEFAULT_SEGMENT_PARAMS.sameKm, rejected });
+      const secs = (ms: number): string => (ms / 1000).toFixed(1);
+      const unsearched = analysis.searchSkipped;
+      const how = {
+        de: ` · ${analysis.windows.length} Fenster, Weltmodell auf ${analysis.worldFrames} Bildern${analysis.worldSkipped > 0 ? `, ${analysis.worldSkipped} Fenster ohne` : ''} (${secs(analysis.timing.worldMs).replace('.', ',')} s)${unsearched > 0 ? `, ${unsearched} Fenster ohne Galerie` : ''}`,
+        en: ` · ${analysis.windows.length} windows, world model on ${analysis.worldFrames} frames${analysis.worldSkipped > 0 ? `, ${analysis.worldSkipped} windows without it` : ''} (${secs(analysis.timing.worldMs)} s)${unsearched > 0 ? `, ${unsearched} windows without the gallery` : ''}`,
+      };
+      this.opts.log(`Abschnitte "${entry.info.name}": ${verdict.note.de}${how.de}; Suche ${secs(analysis.timing.searchMs)} s in ${analysis.searches} Teilen, Entscheidung ${secs(analysis.timing.decideMs)} s`);
+      const note = { de: `${verdict.note.de}${how.de}`, en: `${verdict.note.en}${how.en}` };
+      if (!verdict.multi || verdict.lead === null) return { verdict: { ...verdict, note }, segments: null, keyRange: null, candidates: null, countries: null };
+      const lead = analysis.merged.stretches[verdict.lead];
+      const keyRange: [number, number] | null = lead ? [analysis.windows[lead.first]!.first, analysis.windows[lead.last]!.last] : null;
+      return {
+        verdict: { ...verdict, note },
+        segments,
+        keyRange,
+        candidates: verdict.replaced ? placeCandidates(segments, verdict.lead) : null,
+        countries: segmentCountries(segments, verdict.lead),
+      };
+    } catch (err: unknown) {
+      if (err instanceof EngineStopped || this.stopped || this.gone(entry)) throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      this.opts.log(`Abschnitte für "${entry.info.name}" nicht geprüft: ${message}`);
+      return single({ de: `nicht geprüft: ${message.slice(0, 120)}`, en: `not checked: ${message.slice(0, 120)}` });
     }
   }
 
@@ -1309,15 +1461,18 @@ export class DatumEngine {
       dim: number;
       /** Stops the street-level stage for a person's job (background jobs only, see awaitStreet). */
       streetYield: (() => void) | null;
+      /** Analysis frames the keyframes come from (the stretch shown); null: the whole recording. */
+      keyRange: [number, number] | null;
     },
   ): Promise<Fix> {
     const id = entry.info.id;
-    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield } = ctx;
+    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield, keyRange } = ctx;
 
-    // Spaces from keyframes: depth → walkable grid, skyline.
+    // Spaces from keyframes: depth → walkable grid, skyline. A recording of several places takes
+    // them from the stretch whose place the fix shows, so that horizon and heading belong to it.
     const keyframes: Keyframe[] = [];
     let bestSky: SkyCandidate | null = null;
-    for (const fi of spread(entry.frames.length, SPACE_FRAMES)) {
+    for (const fi of keyRange ? spreadWithin(keyRange[0], keyRange[1], SPACE_FRAMES) : spread(entry.frames.length, SPACE_FRAMES)) {
       const frame = entry.frames[fi]!;
       const jpeg = framePath(frame.n);
       const key: Keyframe = { frame: frame.n, time: frame.t, imageUrl: `media/${id}/frames/${path.basename(jpeg)}`, spaceUrl: null, skyline: null };
@@ -1487,6 +1642,34 @@ function withoutVersion(stored: StoredFix): Fix {
  */
 function galleryPlace(located: LocateResult): FixLocation | null {
   return located.diagnostics.method === 'metadata' ? located.location : located.diagnostics.gallery;
+}
+
+/**
+ * The candidates of a recording of several places whose place was taken from a stretch: its
+ * places, the fix's own first (with the stretch's point, which the console centres on), then by
+ * the time they take up; the score is that share of the time with a place. The candidates of the
+ * whole file mix the places and say nothing of any of them.
+ */
+function placeCandidates(segments: readonly FixSegment[], lead: number): FixCandidate[] {
+  const summary = summariseSegments(segments, lead);
+  const total = summary.places.reduce((s, p) => s + p.seconds, 0) || 1;
+  const shown = segments[lead];
+  const first = shown?.place ?? null;
+  return [...summary.places]
+    .sort((a, b) => Number(b.place === first) - Number(a.place === first) || b.seconds - a.seconds)
+    .slice(0, 8)
+    .map((p) => {
+      const at = p.place === first && shown?.location ? shown.location : p;
+      return {
+        lat: at.lat,
+        lon: at.lon,
+        label: at.label,
+        ...(at.labelEn ? { labelEn: at.labelEn } : {}),
+        country: at.country,
+        score: p.seconds / total,
+        radiusKm: at.radiusKm,
+      };
+    });
 }
 
 function whereText(fix: Fix): string {

@@ -994,3 +994,105 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+
+/* BEFUND: the stretches of a recording of several places, under its video. */
+.dt-seg {
+  margin-top: 12px;
+}
+
+.dt-seg-head {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.dt-seg-bar {
+  display: flex;
+  gap: 2px;
+  height: 20px;
+  outline-offset: 2px;
+  /* Should the bars not fit even at their least width, the bar scrolls, not the column. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+/* Many stretches (segments.ts barLayout): 1 px gaps and bars, so that 160 fit in 319 px. */
+.dt-seg-bar.dense {
+  gap: 1px;
+}
+
+.dt-seg-bar.dense .dt-seg-cell {
+  min-width: 1px;
+}
+
+.dt-seg-cell {
+  flex: 1 1 0;
+  min-width: 2px;
+  border: 1px solid var(--line-2);
+  color: var(--mid);
+  font-size: 10px;
+  line-height: 18px;
+  letter-spacing: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.dt-seg-cell.none {
+  border-style: dashed;
+  color: var(--faint);
+}
+
+.dt-seg-cell:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+.dt-seg-cell.on {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+}
+
+.dt-seg-detail {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+  align-items: start;
+}
+
+.dt-seg-detail img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--line-2);
+}
+
+.dt-seg-where {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dt-seg-span {
+  font-size: 11px;
+  color: var(--mid);
+  letter-spacing: 0.04em;
+}
+
+.dt-seg-where b {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.dt-seg-sub {
+  font-size: 11px;
+  color: var(--mid);
+}
+
+.dt-seg-sub.low {
+  color: var(--low);
+}

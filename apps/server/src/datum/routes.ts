@@ -16,6 +16,7 @@ import type { PlatformNode, RequestContext } from '../node.js';
 import { isValidVideoId } from '../store.js';
 import type { DatumSettings, Fix } from './contract.js';
 import { summarise } from './engine.js';
+import { summariseSegments } from './segments.js';
 import { DATASET_DIR, caseName, loadManifest, truthNames } from './dataset.js';
 import { datasetIdOf } from './datasets.js';
 import { terrainGrid } from './terrain.js';
@@ -138,13 +139,19 @@ const SLIM_TOP = 5;
 /**
  * A fix as the list needs it (GET /api/datum/fixes?slim=1): the place, the time and the counts,
  * without what only the detail view shows. Evidence, trace, sun path and horizon profile are the
- * bulk of a fix; the middle keyframe stays as the thumbnail of the row.
+ * bulk of a fix; the middle keyframe stays as the thumbnail of the row. The stretches of a recording
+ * of several places become their compact form (`segmentSummary`).
  */
 export function slimFix(fix: Fix): Fix {
-  const { trace: _trace, ...rest } = summarise(fix);
+  const { trace: _trace, segments, ...rest } = summarise(fix);
   const middle = fix.keyframes[Math.floor(fix.keyframes.length / 2)];
+  // The stretch the fix's place comes from: its keyframe is the frame of the 'segments' entry.
+  const leadFrame = fix.evidence.find((e) => e.kind === 'segments')?.frame;
+  const lead = segments && leadFrame !== undefined ? segments.findIndex((s) => s.keyframe.frame === leadFrame) : -1;
   return {
     ...rest,
+    // A recording of several places: how many, which, and the route (the stretches are in the full fix).
+    ...(segments && segments.length > 0 ? { segmentSummary: summariseSegments(segments, lead >= 0 ? lead : null) } : {}),
     evidence: [],
     keyframes: middle ? [middle] : [],
     candidates: fix.candidates.slice(0, SLIM_TOP),

@@ -8,7 +8,7 @@ import type { EmbeddingModel } from '../src/ml/model.js';
 import type { Store, VideoEntry } from '../src/store.js';
 import type { ServerEvent, VideoInfo } from '../src/types.js';
 import type { Fix } from '../src/datum/contract.js';
-import { DatumEngine, moreSky, type SkyCandidate } from '../src/datum/engine.js';
+import { DatumEngine, moreSky, segmentsGiveWay, type SkyCandidate } from '../src/datum/engine.js';
 import { ENGINE_VERSION } from '../src/datum/version.js';
 
 /**
@@ -273,4 +273,21 @@ test('the horizon match uses the keyframe with the most sky, not the first one a
   assert.equal(pick([sky(1, 0.06), sky(2, 0.4), sky(3, 0.2)]), 2);
   assert.equal(pick([sky(1, 0.3), sky(2, 0.3)]), 1, 'on a tie the earlier keyframe stays');
   assert.equal(pick([sky(1, 0.04), sky(2, 0.05)]), null, 'up to 5 % sky is no skyline to match');
+});
+
+test('the segment step of a long recording gives way: to a person\'s quick fix always, in the background to any job of a person\'s', () => {
+  const quick = { kind: 'quick' as const, background: false };
+  const full = { kind: 'full' as const, background: false };
+  const reference = { kind: 'quick' as const, background: true };
+  // A person's long recording: another person's upload waits for its quick fix, which should be
+  // there in seconds; the world model's two minutes give way. A full job or background work waiting
+  // does not stop it.
+  assert.equal(segmentsGiveWay(40, false, [quick]), true);
+  assert.equal(segmentsGiveWay(40, false, [full, reference]), false);
+  // In the background, any job of a person's.
+  assert.equal(segmentsGiveWay(40, true, [full]), true);
+  assert.equal(segmentsGiveWay(40, true, [reference]), false);
+  // A short recording (the reference clips) finishes: a few seconds.
+  assert.equal(segmentsGiveWay(3, false, [quick]), false);
+  assert.equal(segmentsGiveWay(3, true, [quick]), false);
 });

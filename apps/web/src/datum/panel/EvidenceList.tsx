@@ -162,6 +162,12 @@ function Detail({ text, frame }: { text: string; frame: number | undefined }) {
 const MODEL_NAME = /\s*\(GeoCLIP\)/g;
 
 /**
+ * An entry of the whole file in a fix whose place came from a stretch of the recording (server:
+ * segments.ts wholeFileEvidence): the prefix stays in front of a title the console words itself.
+ */
+const WHOLE_FILE = /^(?:Ganze Datei \(gemischt\)|Whole file \(mixed\)): /;
+
+/**
  * Title and explanation of an entry as the console words them. The node's texts are used, except
  * where they repeat what the entry shows anyway: a reference picture is named by its place (the
  * similarity is in the caption under the picture, and the distance is written in the console's
@@ -172,6 +178,8 @@ function entryText(entry: Evidence, lang: ReturnType<typeof useLang>, at: GeoPoi
   const { t, pick } = lang;
   let title = pick(entry.label, entry.labelEn).replace(MODEL_NAME, '');
   let detail = pick(entry.detail, entry.detailEn).replace(MODEL_NAME, '');
+  const whole = WHOLE_FILE.exec(title)?.[0] ?? '';
+  title = title.slice(whole.length);
   if (entry.kind === 'landmark' && entry.refLabel && entry.similarity !== undefined) {
     title = t('Referenzbild: {name}', { name: nameText(lang, entry.refLabel, entry.refLabelEn) });
     const km = at && entry.refLat !== undefined && entry.refLon !== undefined ? haversineKm(at.lat, at.lon, entry.refLat, entry.refLon) : null;
@@ -182,7 +190,7 @@ function entryText(entry: Evidence, lang: ReturnType<typeof useLang>, at: GeoPoi
     const m = /^(?:Länderschätzung|Country estimate):\s*(.+)$/.exec(title);
     if (m) title = t('Erste Länderschätzung: {list}', { list: m[1]!.replace(/\s*\d+(?:[.,]\d+)?\s?%/g, '') });
   }
-  return { title, detail };
+  return { title: `${whole}${title}`, detail };
 }
 
 export function EvidenceList({ evidence, onSelect, at = null }: EvidenceListProps) {

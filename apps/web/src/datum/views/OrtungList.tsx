@@ -6,6 +6,7 @@ import { uploads, useUploads, type UploadItem } from '../../uploads';
 import { rel, renameDataset, type Fix } from '../api';
 import { datasets, type DatasetGroup } from '../datasets';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
+import { placesText } from '../segments';
 import { bestWindowText, kmText } from '../useFixes';
 
 /**
@@ -59,6 +60,8 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
   const image = middleFrame(fix);
   const country = loc ? countryText(lang, loc) : '';
   const place = loc ? placeText(lang, loc, fix) : '';
+  // A recording of several places says how many (its place is that of the longest stretch).
+  const places = placesText(fix, t);
 
   const remove = (event: ReactMouseEvent): void => {
     event.stopPropagation();
@@ -119,6 +122,7 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
     sub = (
       <div className="dt-row-sub" title={radiusHint(lang, loc)}>
         {radiusText(lang, loc)}
+        {places !== '' && ` · ${places}`}
         {fix?.status === 'running' && ` · ${t('wird neu geortet …')}`}
         {fix?.truth?.errorKm != null && ` · ${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}`}
         {quick && fix?.status !== 'running' && ` · ${t('vorläufig')}`}

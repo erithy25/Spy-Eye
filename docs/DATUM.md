@@ -42,6 +42,7 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | Sonne | Sonnenstandsrechnung (NOAA) für Ort und Datum, Zeiten, in denen die Sonne im gemessenen Band steht; Zeitzone aus Land und Länge | Uhrzeitfenster in Ortszeit, Sonnenbahn, Schattenrichtung |
 | Raum | Tiefenschätzung (Depth Anything V2 Small) für drei Schlüsselbilder; Himmel, Boden und Neigung der Kamera; Abstände aus der Annahme einer Augenhöhe von 1,6 m | begehbarer Raum, Himmelslinie |
 | Horizont | Aus Höhendaten berechneter Horizont am Kandidatenort gegen die Himmelslinie des Videos; gewertet nur, wenn der Horizont im Bildausschnitt mindestens 1° Relief hat und die beste Richtung sich deutlich von den übrigen abhebt | Blickrichtung und Bildwinkel, wenn das Gelände markant ist und der Ort stimmt |
+| Abschnitte | Nur in der vollständigen Ortung: die Szenen der Auswertung als Fenster, jedes für sich mit Galerie, Länderschätzung und Weltmodell geortet, sichere Antworten zu Orten zusammengefasst (Abschnitt [Mehrere Orte in einer Aufnahme](#mehrere-orte-in-einer-aufnahme)) | eine Zeitleiste mit einem Abschnitt je Ort, wenn die Bilder mindestens zwei Orte zeigen; sonst unverändert |
 
 Jeder Beleg, jeder Schritt des Ablaufs und jede Begründung kommt vom Knoten auf Deutsch und auf
 Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
@@ -50,8 +51,8 @@ Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
 
 | Reiter | Zeigt |
 | --- | --- |
-| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
+| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
+| BEFUND | Video, bei mehreren Orten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius und Schlüsselbild; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert und verbunden), Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
 | RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
@@ -101,6 +102,124 @@ liegen auf der Prüfhälfte 93 statt 60 % der Videos auf 2 500 km genau, das Lan
 statt 33 %. Vorbehalt: Die Referenzvideos zeigen bekannte Bauwerke, deren Fotos vermutlich in den
 Flickr-Trainingsdaten von GeoCLIP liegen. Anonymes Straßenmaterial wird schlechter abschneiden;
 gemessen ist das nicht.
+
+## Mehrere Orte in einer Aufnahme
+
+Reise-, Dashcam- und Drohnenvideos oder Zusammenschnitte zeigen nacheinander mehrere Orte. Die
+Ortung aus zwölf Bildern der ganzen Datei mischt sie zu einem Punkt: Ein 20 Minuten langer
+Zusammenschnitt aus 101 Referenzclips (60 Orte) ergab „Moskau ± 1 km“ ohne jeden Hinweis. Seit
+Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt für Abschnitt
+(`apps/server/src/datum/segments.ts`).
+
+- **Fenster.** Die Szenen der Auswertung (höchstens 30 s), Szenen unter 4 s an die Nachbarszene
+  angehängt, der sie am ähnlichsten sieht; höchstens 160 Fenster.
+- **Ortung je Fenster.** Dieselbe Entscheidung wie für eine ganze Aufnahme: bis zu acht Bilder
+  des Fensters, ganz und in Ausschnitten, gegen die Galerie (in ihrem Thread, in Teilen ganzer
+  Fenster von höchstens 256 Zeilen: eine Suche über alle Fenster dauerte auf einem belasteten
+  Rechner fast eine Minute, und nach 60 s ohne Antwort wird der Suchthread beendet), eine eigene
+  Länderschätzung und das Weltmodell auf bis zu drei Bildern je Fenster,
+  höchstens 120 Bildern je Aufnahme (bei 104 Fenstern ein oder zwei je Fenster). Die Tags der
+  Datei zählen hier nicht.
+- **Orte.** Sicher ist ein Fenster, wenn ein Referenzbild klar heraussticht oder die Galerie mit
+  einer Sicherheit von mindestens 0,8 antwortet. Die Antwort des Weltmodells allein reicht nie: Auf
+  4-s-Fenstern der Referenzclips lag sie nur in 23 % (gerade Nummern) und 15 % (ungerade) der Fälle
+  auf 25 km genau, die sicheren Galerieantworten in 72 % und 71 %. Sichere Fenster näher als 25 km
+  sind ein Ort, auch über eine Kette solcher Fenster, gleich welches das sicherste ist. Orte, deren
+  sicherste Fenster das Weltmodell beider derselben Gegend zurechnet (beide legen mindestens 5 %
+  ihrer Wahrscheinlichkeit in 200 km um die Antwort des anderen), sind ebenfalls einer, außer bei
+  zwei klar herausstechenden Wiedererkennungen; ein so zusammengefasster Ort kann mehrere sein,
+  die Zahl der Orte heißt dann „mindestens“. Ein Ort braucht mindestens 5 s sicherer Fenster. Ein
+  unsicheres Fenster zählt nur zwischen zwei Fenstern desselben Orts zu ihm, und nur wenn seine
+  eigene Antwort einem der beiden nicht widerspricht; sonst bleibt es „unbestimmt“ und wird keinem
+  Ort zugeschlagen.
+- **Ergebnis.** Erst bei mindestens zwei Orten trägt die Ortung die Abschnitte (`Fix.segments`;
+  die Liste nur ihre Kurzform `segmentSummary`). Oben steht dann der Ort des längsten Abschnitts
+  mit Ort, es sei denn, die Ortung der ganzen Datei liegt keine 25 km davon entfernt. Ein Beleg
+  sagt es: „Die Aufnahme zeigt mindestens 15 Orte; oben der Abschnitt 11:19–11:43“
+  („mindestens“, solange Abschnitte unbestimmt sind oder ein Ort zusammengefasst ist). Hat das
+  Weltmodell für die ganze Datei die Antwort der Galerie verworfen, steht ein Abschnitt an diesem
+  Ort nicht oben, sondern der längste übrige: Die Deutschlandreise der Gegenprobe (Bhf. Eschborn,
+  in einem Abschnitt für den Bahnhof Norderstedt Mitte ± 3 km gehalten, 408 km daneben) hätte sonst
+  diesen falschen Ort mit 3 km Radius als Ergebnis gezeigt. Die Räume und der Horizont kommen aus
+  dem gezeigten Abschnitt. Ersetzt sein Ort die Ortung der ganzen Datei, sind die Kandidaten die
+  Orte der Aufnahme, die Länder die der Abschnitte (nach ihrer Zeit), die Belege der ganzen Datei
+  (Referenzbilder, Weltmodell, Länderschätzung) heißen „Ganze Datei (gemischt)“ und zählen nicht,
+  und Straßenbilder werden nicht gefragt (ihr Vergleich nähme Bilder der ganzen Datei). Eine
+  Aufnahme eines Orts bleibt, wie sie war; der Ablauf nennt nur den Schritt „Abschnitte geprüft“.
+- **GPS in der Datei.** Die Position gilt für die ganze Datei; es gibt keine Abschnitte. Zeigen
+  die Bilder trotzdem mehrere Orte, sagt ein Beleg ohne Gewicht: „Die Bilder zeigen 2 verschiedene
+  Orte“.
+
+### Gemessen an Zusammenschnitten
+
+Am 19. November 2026 mit `segments.ts`, wie es im Knoten läuft (die Galerie enthält Referenzbilder
+der Orte), über die von der Analyse gespeicherten Bilder und Vektoren. Vier Zusammenschnitte aus den
+Referenzclips (auf 854 × 480 Bildpunkte und 30 Bilder/s umgerechnet): der 20-Minuten-Schnitt und
+drei kürzere, deren Orte nach einer festen Regel aus der Reihenfolge des Manifests gewählt sind
+(jeder Clip in Schleife auf 20 bis 60 s; eine Schleife wiederholt dieselben Bilder). Eine Grenze
+zählt als gefunden, wenn eine Abschnittsgrenze höchstens 3 s neben dem echten Wechsel liegt; der
+Fehler eines Abschnitts ist der Abstand seines Orts zum Ort des Stücks, das ihn am längsten füllt.
+
+| Aufnahme | Stücke (Orte) | Abschnitte: mit Ort / unbestimmt | Orte | Wechsel gefunden | Grenzen ohne Wechsel | Grenzfehler (Median) | Abschnitte mit Ort ≤ 25 / 200 / 750 km | Median | Zeit mit Ort | Zeit ≤ 25 km |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 20 Minuten (19:46) | 101 (60) | 32 / 25 | ≥ 15 | 54 von 100 | 2 | 0,27 s | 25 / 26 / 29 von 32 | 1,0 km | 33 % | 25 % |
+| 10 Orte (5:00) | 10 (10) | 6 / 4 | ≥ 4 | 5 von 9 | 4 | 0 s | 3 / 3 / 6 von 6 | 102 km | 35 % | 30 % |
+| Rückkehr (3:40) | 6 (5) | 3 / 2 | ≥ 2 | 3 von 5 | 1 | 0 s | 3 / 3 / 3 von 3 | 5,9 km | 64 % | 52 % |
+| 3 Orte (2:00) | 3 (3) | 2 / 0 | ≥ 2 | 1 von 2 | 0 | 0 s | 1 / 1 / 1 von 2 | 0 und 1 232 km | 100 % | 67 % |
+| 20 Minuten, Ort ohne Referenzbild | 101 (60) | 25 / 20 | ≥ 12 | 42 von 100 | 2 | 0,2 s | 9 / 12 / 19 von 25 | 215 km | 25 % | 8 % |
+
+- Wo die Zeitleiste einen Ort nennt, stimmt er meist (20 Minuten: 25 von 32 Abschnitten auf 25 km).
+  Zwei Drittel des 20-Minuten-Schnitts bleiben unbestimmt: In zwölf Sekunden ohne erkanntes
+  Bauwerk gibt es keine sichere Antwort, und das Weltmodell auf einem Bild ist zu oft falsch.
+- Grenzen fallen auf Szenenschnitte und liegen daher meist auf die Sekunde richtig. Verfehlt wird
+  ein Wechsel, wenn unbestimmte Fenster zu einem Abschnitt zusammenfallen oder zwei ähnliche Orte
+  ohne Schnitt aufeinander folgen (zwei Bahnhöfe). Die „Grenzen ohne Wechsel“ bei 10 Orte sind
+  unbestimmte Fenster mitten in einem Ort.
+- „3 Orte“: Das Kyffhäuserdenkmal erkennt die Galerie als Ort bei Chester; das Weltmodell beider
+  Fenster sieht Großbritannien, so fällt es mit dem Glenfinnan-Viadukt zu einem Abschnitt (0:00–1:20,
+  Ort Glenfinnan) zusammen. Beim 20-Minuten-Schnitt fassen die 15 Orte unter anderem Moskau mit dem
+  Kiewer Höhlenkloster und dem Bahnhof Ulaanbaatar (beide von der Galerie für Moskauer Bauwerke
+  gehalten) sowie Berlin mit Magdeburg zusammen.
+- Ohne Referenzbild des Orts in der Galerie sinkt die Genauigkeit der Abschnitte deutlich (9 von 25
+  auf 25 km). Für unbekanntes Material ist das die ehrlichere Zahl.
+- **Falsche Teilungen.** Über alle 60 Referenzclips (je ein Ort): keine Aufnahme geteilt, mit den
+  Szenen als Fenstern (58 Clips haben nur eines) wie mit festen 4-s-Fenstern (drei je Clip), jeweils
+  mit und ohne Referenzbild des Orts in der Galerie. Härter geprüft, mit Orten schon ab einem
+  einzigen 4-s-Fenster: 0 (ohne Referenzbild 1); ohne den Abgleich über das Weltmodell wären es 3
+  (ohne Referenzbild 6), etwa Borobudur als Mendut-Tempel und als Angkor Thom. Im Knoten selbst,
+  alle 60 Referenzclips mit Fassung 10 neu geortet: keine Ortung mit Abschnitten.
+- Messdatei: `docs/measurements/datum-segments.json`.
+- **Zeit.** 20-Minuten-Schnitt hochgeladen, auf einem Rechner, den ein anderer Lauf mit einer Last
+  von 6 bis 9 auf vier Kernen teilte: Schnellortung 13,1 s, Auswertung 564 s, vollständige Ortung
+  97,9 s, davon Abschnitte 92,4 s (Weltmodell auf 120 Bildern 90,1 s; die Galeriesuche über 104
+  Fenster, 37 bis 59 s, läuft daneben). Ohne Abschnitte brauchte die vollständige Ortung derselben
+  Datei 11,1 s; die Abschnitte kosten also etwa anderthalb Minuten. Ein Referenzclip (ein oder
+  zwei Fenster): im Median 1,7 s, höchstens 3,8 s.
+- **Vorbehalte.** Alle Zusammenschnitte bestehen aus denselben 60 Clips, an denen DATUM eingestellt
+  ist; die Regel für sichere Fenster ist mit Blick auf die Fenster des 20-Minuten-Schnitts
+  entstanden, die Schwelle 0,8 auf den Fenstern der geraden Nummern geprüft und auf den ungeraden
+  bestätigt. Echtes Reise- oder Dashcam-Material ist nicht gemessen; ohne bekannte Bauwerke wird
+  der Anteil unbestimmter Abschnitte größer sein.
+
+### Grenzen der Abschnitte
+
+- Orte näher als 25 km gelten als einer (Eiffelturm und Triumphbogen, Mexiko-Stadt). Orte, die das
+  Weltmodell derselben Gegend zurechnet, ebenfalls, auch wenn sie Hunderte Kilometer auseinander
+  liegen: Das schützt vor falschen Teilungen und kostet Orte. Der Beleg sagt dann „mindestens“ und
+  wie viele Orte so zusammengefasst sind; zwei klar herausstechende Wiedererkennungen (Glenfinnan
+  und Rhuddlan Castle, 418 km) fasst das Weltmodell nicht zusammen. Auf den gemessenen Fenstern
+  ändert keine dieser Regeln (Kette, Ausnahme, Vergleich mit den Nachbarankern) die Zahlen oben;
+  bei „3 Orte“ steht nun „mindestens 2“, denn Kyffhäuser und Glenfinnan sind ein zusammengefasster
+  Ort.
+- Die Uhrzeit, der Sonnenstand und der Horizont gelten für den gezeigten Ort; eine Uhrzeit je
+  Abschnitt gibt es nicht.
+- Ohne Weltmodell (abgeschaltet oder seine Ortsgalerie wird noch berechnet) entscheiden die
+  Fenster allein mit der Galerie; die Schwelle 0,8 ist für das Zusammenspiel mit dem Weltmodell
+  gemessen. Eine lange Aufnahme (mehr als sechs Szenen) fragt das Weltmodell nicht weiter, sobald
+  eine Arbeit vorgeht: im Hintergrund jede für die Aufnahme einer Person (dann endet auch die
+  Galeriesuche, die übrigen Fenster bleiben unbestimmt), sonst die Schnellortung eines neuen
+  Uploads. Die Galeriesuche der Aufnahme einer Person läuft zu Ende (bei 160 Fenstern unter Last
+  bis etwa eine Minute); so lange wartet eine Schnellortung noch.
 
 ## Abgleich mit Straßenbildern
 

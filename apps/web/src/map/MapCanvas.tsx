@@ -20,15 +20,16 @@ import {
 } from './globe';
 import { fetchCountries } from '../datum/api';
 
-export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident' | 'fix' | 'truth';
+export type MarkerShape = 'drone' | 'helicopter' | 'fixed' | 'vehicle' | 'bodycam' | 'citizen' | 'satellite' | 'upload' | 'node' | 'incident' | 'fix' | 'truth' | 'segment';
 
 export interface MapMarker {
   id: string;
   lat: number;
   lon: number;
   shape: MarkerShape;
+  /** Name beside the marker; for 'segment' the number written inside it. */
   label: string;
-  /** Second line under the label. */
+  /** Second line under the label; for 'segment' the name beside it. */
   sub?: string;
   /** 0 = quiet; 1..3 = an alert of that severity is active here. */
   alert?: 0 | 1 | 2 | 3;
@@ -600,6 +601,31 @@ function drawShapes(
   ctx.setLineDash([]);
 }
 
+/**
+ * A numbered stretch of a recording (DATUM segments): a ring with its number, filled when chosen.
+ * Returns the ring's radius.
+ */
+function drawSegment(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: number, r: number, color: string): number {
+  ctx.font = `${m.selected ? 700 : 500} 9px ${FONT}`;
+  setSpacing(ctx, '0px');
+  // The ring holds its number; a wider one ("12+3", stretches at one point) widens it.
+  const big = Math.max(r, ctx.measureText(m.label).width / 2 + 3);
+  ctx.beginPath();
+  ctx.arc(x, y, big, 0, Math.PI * 2);
+  ctx.fillStyle = m.selected ? FG : BG;
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = m.selected ? 1.5 : 1.1;
+  ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = m.selected ? BG : m.dim ? '#5a5a5a' : '#c8c8c8';
+  ctx.fillText(m.label, x, y + 0.5);
+  ctx.textAlign = 'left';
+  return big;
+}
+
 function drawShape(ctx: CanvasRenderingContext2D, shape: MarkerShape, x: number, y: number, r: number): void {
   ctx.beginPath();
   switch (shape) {
@@ -1047,7 +1073,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         const p = positions.get(m.id);
         if (!p || p.x < -60 || p.y < -30 || p.x > width + 60 || p.y > height + 30) continue;
         const severity = m.alert ?? 0;
-        const r = m.shape === 'incident' ? 13 : m.shape === 'node' ? 6 : m.shape === 'fix' ? 7 : 5;
+        let r = m.shape === 'incident' ? 13 : m.shape === 'node' ? 6 : m.shape === 'fix' || m.shape === 'segment' ? 7 : 5;
 
         if (severity > 0) {
           const period = severity === 3 ? 1300 : severity === 2 ? 1900 : 2600;
@@ -1069,27 +1095,37 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         }
 
         const color = m.dim ? '#4a4a4a' : severity > 0 || m.selected ? FG : '#b4b4b4';
-        drawShape(ctx, m.shape, p.x, p.y, r);
+        if (m.shape === 'segment') {
+          // A stretch of a recording: its number in a ring, filled when chosen; the name beside it.
+          // The name keeps clear of a ring widened by its number.
+          r = drawSegment(ctx, m, p.x, p.y, r, color);
+          if (!m.sub) continue;
+        }
+        if (m.shape !== 'segment') drawShape(ctx, m.shape, p.x, p.y, r);
         const hollow = m.shape === 'incident' || m.shape === 'fix' || m.shape === 'truth';
-        ctx.fillStyle = m.selected || severity > 0 ? (hollow ? 'transparent' : FG) : BG;
-        if (!hollow) ctx.fill();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = m.shape === 'incident' || (m.shape === 'fix' && m.selected) ? 1.5 : 1.2;
-        ctx.stroke();
+        if (m.shape !== 'segment') {
+          ctx.fillStyle = m.selected || severity > 0 ? (hollow ? 'transparent' : FG) : BG;
+          if (!hollow) ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = m.shape === 'incident' || (m.shape === 'fix' && m.selected) ? 1.5 : 1.2;
+          ctx.stroke();
+        }
 
-        if (m.label === '') continue;
+        const named = m.shape === 'segment' ? (m.sub ?? '') : m.label;
+        if (named === '') continue;
         ctx.font = `${m.selected || severity > 0 ? 700 : 500} 10px ${FONT}`;
         setSpacing(ctx, '0.08em');
-        const text = m.label.toUpperCase();
+        const text = named.toUpperCase();
+        const second = m.shape === 'segment' ? undefined : m.sub;
         const tw = ctx.measureText(text).width;
         let lx = p.x + r + 7;
         let ly = p.y;
-        let box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (m.sub ? 18 : 7) };
+        let box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (second ? 18 : 7) };
         const clash = (b: typeof box): boolean =>
           b.x1 > width - 4 || b.x0 < 4 || labelBoxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
         if (clash(box)) {
           lx = p.x - r - 7 - tw;
-          box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (m.sub ? 18 : 7) };
+          box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (second ? 18 : 7) };
           if (clash(box)) {
             lx = p.x - tw / 2;
             ly = p.y - r - 10;
@@ -1107,11 +1143,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         ctx.strokeText(text, lx, ly);
         ctx.fillStyle = m.dim ? '#5a5a5a' : severity > 0 || m.selected ? FG : '#c8c8c8';
         ctx.fillText(text, lx, ly);
-        if (m.sub) {
+        if (second) {
           ctx.font = `400 9px ${FONT}`;
-          ctx.strokeText(m.sub, lx, ly + 12);
+          ctx.strokeText(second, lx, ly + 12);
           ctx.fillStyle = MID;
-          ctx.fillText(m.sub, lx, ly + 12);
+          ctx.fillText(second, lx, ly + 12);
         }
         setSpacing(ctx, '0px');
       }

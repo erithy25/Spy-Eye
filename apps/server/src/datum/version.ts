@@ -21,8 +21,12 @@
  *      that keep it below.
  *   9: a reference picture at the answer is called a recognition only when the answer is sure
  *      (GPS of the file, or the 'strong' landmark tier); under a wider radius it is a similarity.
+ *  10: segments: a recording that shows several places is located stretch by stretch
+ *      (`Fix.segments`, `segmentSummary` on slim fixes, evidence kind 'segments'); its place is
+ *      that of the longest located stretch (not one at a place the whole file's world model
+ *      rejected) unless the answer for the whole file agrees with it.
  */
-export const ENGINE_VERSION = 9;
+export const ENGINE_VERSION = 10;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;
