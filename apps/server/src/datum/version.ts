@@ -36,7 +36,8 @@
  *      the whole file's world model rejected cover at least a fifth of the recording
  *      (`SegmentParams.leadShare`); otherwise the whole file's answer stays above, with its
  *      countries, and the 'segments' evidence entry carries no `frame`, naming no stretch as the
- *      fix's.
+ *      fix's. With GPS in the file, one place in the pictures farther than `sameKm` from the
+ *      position gets an entry without weight that says where and how far (gpsApartEvidence).
  */
 export const ENGINE_VERSION = 12;
 

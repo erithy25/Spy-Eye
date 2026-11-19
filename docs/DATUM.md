@@ -165,7 +165,12 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   „Abschnitte geprüft“.
 - **GPS in der Datei.** Die Position gilt für die ganze Datei; es gibt keine Abschnitte. Zeigen
   die Bilder trotzdem mehrere Orte, sagt ein Beleg ohne Gewicht: „Die Bilder zeigen 2 verschiedene
-  Orte“.
+  Orte“. Zeigen sie einen Ort, der mehr als 25 km (`sameKm`, der Abstand, ab dem Antworten als
+  verschiedene Orte zählen) von der Position liegt, sagt ein Beleg ohne Gewicht, wo und wie weit:
+  „Die Bilder zeigen einen Ort 325 km von der GPS-Angabe“, mit dem längsten Abschnitt des Orts,
+  seinem Radius und seiner Sicherheit; auch bei einer Aufnahme aus einem Abschnitt. Ob die Aufnahme
+  geschnitten ist oder die GPS-Angabe zu einer anderen gehört, bleibt zu prüfen; der Ort oben ist
+  die Position.
 - **Fassung 11** macht die Abschnitte vollständig: eine Uhrzeit je Abschnitt mit Ort, eine grobe
   Region für unbestimmte Abschnitte, wo sie gemessen trägt, und eigene Räume für die längsten
   Abschnitte (die drei Abschnitte unten).
@@ -463,7 +468,11 @@ der ganzen Datei, deren zwölf Bilder alle Teile mischen: Im End-to-End-Lauf zei
   der ganzen Datei). Ein unbestimmter Abschnitt ohne einen davon heißt in RAUM „Ort unbestimmt“,
   ohne Gelände.
 - **GPS in der Datei:** unverändert keine Abschnitte; der Ablauf sagt „2 Abschnitte, ein Ort
-  (1 unbestimmt), GPS der Datei gilt“.
+  (1 unbestimmt), GPS der Datei gilt“. Liegt der Ort der Bilder mehr als 25 km von der Position,
+  kommt der Beleg ohne Gewicht aus dem Punkt „GPS in der Datei“ dazu und steht in der Evidenz
+  gleich nach der GPS-Angabe (Stadt-Land mit einer GPS-Angabe für Koblenz: „Die Bilder zeigen
+  einen Ort 325 km von der GPS-Angabe … im Abschnitt 0:36–0:48 Elstertalbrücke, Hof“); der Ablauf
+  ergänzt „der Ort der Bilder liegt 325 km davon“.
 
 **Gemessen** am 19. November 2026: Fenster, Abschnitte und grobe Regionen mit `segments.ts` der
 Fassung 11 aus den gespeicherten Auswertungen neu gerechnet, die Ortung der ganzen Datei auf dem Weg
@@ -537,8 +546,9 @@ dasselbe Video).
   in ORTUNG, im Kopf des BEFUNDS und in RAUM. Darüber steht oben der
   Abschnitt, auch wenn die unbestimmten Abschnitte weit entfernt spielen: Stadt-Land zeigt die
   Elstertalbrücke, 1 440 km neben der Hälfte in Cork. Die Schwelle 0,2 ruht auf zwei verschiedenen
-  Aufnahmen. Mit GPS in der Datei gibt es keine Zeitleiste und für einen einzigen erkannten Ort
-  keinen eigenen Beleg; die Referenzbilder der ganzen Datei nennen ihren Abstand zum GPS.
+  Aufnahmen. Mit GPS in der Datei gibt es keine Zeitleiste: Die Position gilt für die ganze
+  Datei, und ein Ort der Bilder weit davon steht nur als Beleg ohne Gewicht da, nicht als
+  Abschnitt mit eigener Uhrzeit und eigenem Raum.
 - Unbestimmte Abschnitte fassen weit entfernte Orte zusammen (Weltreise: Tschechien und Italien in
   einem Abschnitt; Stadt-Land: Rieben im Abschnitt mit Cork, weil das erste Fenster 0 bis 30 s
   reicht), weil benachbarte Fenster ohne Antwort zu einem Abschnitt werden.

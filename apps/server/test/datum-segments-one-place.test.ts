@@ -266,11 +266,14 @@ test('one place: a clip of one window stays as it was; the Leverkusen clip of tw
   assert.match(kept.note.de, /; oben 0:00–0:05$/);
 });
 
-test('GPS in the file: one place and undetermined stretches stay as they were; several places get the entry without weight as before', () => {
+test('GPS in the file: one place and undetermined stretches stay without a timeline; several places get the entry without weight as before', () => {
   const gps = loc(50.36, 7.59, { method: 'metadata', radiusKm: 0.05, label: 'GPS' });
-  const v = segmentVerdict([seg(0, 36, null, null), seg(36, 48, ELSTERTAL, 1)], gps, { gps: true });
+  // The pictures' place at the position: nothing to say beyond the trace note.
+  const atGps = loc(50.36 + 0.1, 7.59, { label: 'Deutsches Eck, Koblenz' });
+  const v = segmentVerdict([seg(0, 36, null, null), seg(36, 48, atGps, 1)], gps, { gps: true });
   assert.equal(v.multi, false);
   assert.equal(v.location, gps);
+  assert.equal(v.replaced, false);
   assert.deepEqual(v.evidence, []);
   assert.deepEqual(v.note, { de: '2 Abschnitte, ein Ort (1 unbestimmt), GPS der Datei gilt', en: "2 segments, one place (1 undetermined), the file's GPS stands" });
   const several = segmentVerdict([seg(0, 30, KOELN, 1), seg(30, 60, YEOSU, 2)], gps, { gps: true });
@@ -278,6 +281,59 @@ test('GPS in the file: one place and undetermined stretches stay as they were; s
   assert.equal(several.location, gps);
   assert.equal(several.evidence[0]!.weight, 0);
   assert.equal(several.evidence[0]!.label, 'Die Bilder zeigen 2 verschiedene Orte');
+});
+
+test('GPS in the file: one place in the pictures away from the position gets an entry without weight that says where and how far', () => {
+  const gps = loc(50.36, 7.59, { method: 'metadata', radiusKm: 0.05, label: 'GPS' });
+  // Stadt-Land with a GPS tag for Koblenz: the Elstertalbrücke is 325 km away.
+  const v = segmentVerdict([seg(0, 36, null, null), seg(36, 48, ELSTERTAL, 1)], gps, { gps: true });
+  assert.equal(v.multi, false);
+  assert.equal(v.location, gps);
+  assert.equal(v.replaced, false);
+  assert.equal(v.lead, null);
+  assert.equal(v.evidence.length, 1);
+  const e = v.evidence[0]!;
+  assert.equal(e.kind, 'segments');
+  assert.equal(e.weight, 0);
+  // No frame: the fix carries no stretches, and a frame would name one as the fix's.
+  assert.equal(e.frame, undefined);
+  assert.equal(e.label, 'Die Bilder zeigen einen Ort 325 km von der GPS-Angabe');
+  assert.equal(e.labelEn, 'The pictures show a place 325 km from the GPS position');
+  assert.match(e.detail, /^Abschnittsweise geortet zeigen die Bilder im Abschnitt 0:36–0:48 Elstertalbrücke, Hof \(± 7\.500 km, Sicherheit 87 %\), 325 km von der GPS-Angabe der Datei\. Antworten näher als 25 km beieinander zählen als ein Ort\. Die GPS-Angabe gilt für die ganze Datei und bestimmt den Ort;/);
+  assert.match(e.detailEn ?? '', /^Located segment by segment, the pictures show in the segment 0:36–0:48 Elster Viaduct, Hof \(± 7,500 km, confidence 87%\), 325 km from the GPS position in the file\. Answers closer than 25 km count as one place\./);
+  assert.deepEqual(v.note, {
+    de: '2 Abschnitte, ein Ort (1 unbestimmt), GPS der Datei gilt; der Ort der Bilder liegt 325 km davon',
+    en: "2 segments, one place (1 undetermined), the file's GPS stands; the pictures' place lies 325 km from it",
+  });
+
+  // The place in two stretches: the longest is named, with the count.
+  const two = segmentVerdict([seg(0, 10, ELSTERTAL, 1), seg(10, 30, null, null), seg(30, 50, { ...ELSTERTAL, confidence: 0.8 }, 1)], gps, { gps: true });
+  assert.match(two.evidence[0]!.detail, /zeigen die Bilder in 2 Abschnitten \(am längsten 0:30–0:50\) Elstertalbrücke, Hof \(± 7\.500 km, Sicherheit 80 %\)/);
+  assert.match(two.evidence[0]!.detailEn ?? '', /the pictures show in 2 segments \(longest 0:30–0:50\) Elster Viaduct, Hof/);
+
+  // A recording of one stretch: the same entry, without a stretch to name.
+  const one = segmentVerdict([seg(0, 12, ELSTERTAL, 1)], gps, { gps: true });
+  assert.equal(one.multi, false);
+  assert.equal(one.location, gps);
+  assert.equal(one.evidence.length, 1);
+  assert.match(one.evidence[0]!.detail, /^Abschnittsweise geortet zeigen die Bilder Elstertalbrücke, Hof \(/);
+  assert.deepEqual(one.note, { de: 'ein Abschnitt, GPS der Datei gilt; der Ort der Bilder liegt 325 km davon', en: "one segment, the file's GPS stands; the pictures' place lies 325 km from it" });
+  // ...and at the position, nothing.
+  const oneAt = segmentVerdict([seg(0, 12, loc(50.36, 7.6, { label: 'Koblenz' }), 1)], gps, { gps: true });
+  assert.deepEqual(oneAt.evidence, []);
+  assert.deepEqual(oneAt.note, { de: 'ein Abschnitt, GPS der Datei gilt', en: "one segment, the file's GPS stands" });
+
+  // The rule is the one places are told apart by (sameKm): 20 km away is the same place, 30 km another.
+  const near = segmentVerdict([seg(0, 12, null, null), seg(12, 24, loc(50.36 + 20 / 111.2, 7.59, { label: 'N20' }), 1)], gps, { gps: true });
+  assert.deepEqual(near.evidence, []);
+  const far = segmentVerdict([seg(0, 12, null, null), seg(12, 24, loc(50.36 + 30 / 111.2, 7.59, { label: 'N30' }), 1)], gps, { gps: true });
+  assert.equal(far.evidence.length, 1);
+  assert.equal(far.evidence[0]!.label, 'Die Bilder zeigen einen Ort 30 km von der GPS-Angabe');
+
+  // Without GPS nothing of this: one place and an undetermined stretch get the timeline (engine 12).
+  const noGps = segmentVerdict([seg(0, 36, null, null), seg(36, 48, ELSTERTAL, 1)], GALLILEO, { gps: false });
+  assert.equal(noGps.multi, true);
+  assert.doesNotMatch(noGps.evidence[0]!.label, /GPS/);
 });
 
 test('several places: the verdict reads as in engine 11, word for word', () => {
