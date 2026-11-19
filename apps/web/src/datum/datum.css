@@ -799,6 +799,51 @@
   min-height: 0;
 }
 
+.dt-raum-where {
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* A recording of several places: the timeline under the bar, the chosen stretch entered. */
+.dt-raum.with-segs {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.dt-raum-segs {
+  padding: 8px 16px 10px;
+  border-bottom: 1px solid var(--line-2);
+  min-width: 0;
+}
+
+.dt-raum-segs .dt-seg {
+  margin-top: 0;
+}
+
+.dt-raum-none {
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.dt-raum-offer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px 16px;
+  max-width: 720px;
+}
+
+.dt-raum-offer .label {
+  flex-basis: 100%;
+  justify-content: center;
+}
+
 /* ---------- MESSUNG ---------- */
 
 .dt-messung {
@@ -1095,4 +1140,12 @@
 
 .dt-seg-sub.low {
   color: var(--low);
+}
+
+/* Over the clock and sun dials: the stretch they show (a recording of several places). */
+.dt-dial-for {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--mid);
+  overflow-wrap: anywhere;
 }

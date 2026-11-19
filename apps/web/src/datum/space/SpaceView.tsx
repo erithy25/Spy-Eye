@@ -1193,6 +1193,14 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
     e.preventDefault();
   };
 
+  // The sun at the estimated time: its height and the length of shadows hold whichever way the
+  // camera looked; where in the picture it stands only with a heading (then drawn in the sky).
+  const sunLine = sun
+    ? sun.elevationDeg > 0.5
+      ? `${t('Sonne')} ${fmt(sun.elevationDeg, 0)}° · ${t('Schatten')} 1 : ${fmt(1 / Math.tan((sun.elevationDeg * Math.PI) / 180), 1)}${headingDeg === null ? ` · ${t('Richtung im Bild unbekannt')}` : ''}`
+      : t('Sonne unter dem Horizont')
+    : null;
+
   // Inside a tab (embedded) there is nothing to leave: Esc goes back, but the line does not offer it.
   const help = `${t('W A S D gehen · Maus schauen · Q E hoch runter · Shift schneller · R zurück')}${onExit && !embedded ? ` · ${t('Esc verlassen')}` : ''}`;
 
@@ -1255,6 +1263,7 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
           <div className="sv-readout sv-bl sv-stack sv-plain" aria-live="off">
             {DEBUG && <span ref={posRef} />}
             <span ref={viewRef} />
+            {sunLine && <span className="sv-dim">{sunLine}</span>}
           </div>
           {DEBUG && (
             <div className="sv-readout sv-br sv-stack">

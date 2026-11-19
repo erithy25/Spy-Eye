@@ -47,6 +47,7 @@ import {
 } from './hud';
 import { formatCoordinate } from '../../map/geo';
 import { hhmm, localMinutes } from '../panel/common';
+import { sunEdges } from './sunEdges';
 import './space.css';
 
 /** The console's translation function (`useLang().t`). */
@@ -72,6 +73,9 @@ export interface TerrainViewProps {
   };
   sun: { azimuthDeg: number; elevationDeg: number } | null;
   sunPath?: SunPathPoint[];
+  /** Sunrise and sunset of the report (UTC ms), as the dials write them; marked where the path crosses the horizon. */
+  sunrise?: number | null;
+  sunset?: number | null;
   /** Time zone of the place (IANA); sunrise and sunset are written in its local time, as on the dials. */
   timezone?: string | null;
   /** Terrain horizon at the camera: elevation angle (deg) for azimuth 0..359. */
@@ -307,6 +311,8 @@ interface Live {
   /** Image aspect the match assumed (width / height). */
   aspect: number;
   sunPath: SunPathPoint[];
+  sunrise: number | null;
+  sunset: number | null;
   timezone: string | null;
   horizonProfile: number[] | null;
   skyline: number[] | null;
@@ -608,6 +614,9 @@ class TerrainEngine {
       live.pitchDeg,
       live.aspect,
       live.sunPath.length,
+      live.sunPath[0]?.t ?? null,
+      live.sunrise,
+      live.sunset,
       signature(live.horizonProfile),
       signature(live.skyline),
     ]);
@@ -730,7 +739,8 @@ class TerrainEngine {
         }
         for (let i = 0; i + 1 < pts.length; i += 2) b.segment(pts[i]!, pts[i + 1]!, 1);
       }
-      // Sun path: a dot every 10 minutes above the horizon, larger on the hour.
+      // Sun path: a dot at each of its points above the horizon (every 10 minutes, every 30 on a
+      // stretch's path), larger on the hour.
       const path = live.sunPath;
       for (let i = 0; i < path.length; i++) {
         const p = path[i]!;
@@ -738,11 +748,12 @@ class TerrainEngine {
         const at = onDome(p.az, p.el);
         const onHour = Math.abs((p.t % 3_600_000) - 0) < 60_000 || Math.abs((p.t % 3_600_000) - 3_600_000) < 60_000;
         (onHour ? hours : dots).point(at, onHour ? 1 : 0.75);
-        const prev = path[i - 1];
-        const next = path[i + 1];
-        if (prev && prev.el < 0 && p.el >= 0 && !rise) rise = { p: at, t: p.t };
-        if (next && next.el < 0 && p.el >= 0) set = { p: at, t: p.t };
       }
+      // Sunrise and sunset at the times the dials write, not at the last point of the path
+      // above the horizon (which can be 30 minutes early on a stretch's path).
+      const edges = sunEdges(path, live.sunrise, live.sunset);
+      if (edges.rise) rise = { p: onDome(edges.rise.az, 0), t: edges.rise.t };
+      if (edges.set) set = { p: onDome(edges.set.az, 0), t: edges.set.t };
     }
     if (live.sun) {
       const sd = this.dir(live.sun.azimuthDeg, live.sun.elevationDeg, ex);
@@ -1116,7 +1127,7 @@ function ScaleBar({ mpp }: { mpp: number }) {
   );
 }
 
-export function TerrainView({ terrain, loading = false, camera, sun, sunPath, timezone = null, horizonProfile = null, skyline = null, label, embedded = false }: TerrainViewProps) {
+export function TerrainView({ terrain, loading = false, camera, sun, sunPath, sunrise = null, sunset = null, timezone = null, horizonProfile = null, skyline = null, label, embedded = false }: TerrainViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<TerrainEngine | null>(null);
@@ -1152,6 +1163,8 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ti
     pitchDeg: camera.pitchDeg !== undefined && Number.isFinite(camera.pitchDeg) ? camera.pitchDeg : 0,
     aspect: camera.aspect !== undefined && camera.aspect > 0 ? camera.aspect : 16 / 9,
     sunPath: sunPath ?? [],
+    sunrise: sunrise ?? null,
+    sunset: sunset ?? null,
     timezone: timezone ?? null,
     horizonProfile: horizonProfile ?? null,
     skyline: skyline ?? null,
@@ -1169,6 +1182,8 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ti
     prev.pitchDeg !== next.pitchDeg ||
     prev.aspect !== next.aspect ||
     prev.sunPath !== next.sunPath ||
+    prev.sunrise !== next.sunrise ||
+    prev.sunset !== next.sunset ||
     prev.timezone !== next.timezone ||
     prev.horizonProfile !== next.horizonProfile ||
     prev.skyline !== next.skyline
@@ -1246,7 +1261,7 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ti
 
   useEffect(() => {
     engineRef.current?.invalidate();
-  }, [exag, shadows, dome, sun?.azimuthDeg, sun?.elevationDeg, camera.headingDeg, camera.fovDeg, camera.pitchDeg, camera.aspect, sunPath, horizonProfile, skyline, t]);
+  }, [exag, shadows, dome, sun?.azimuthDeg, sun?.elevationDeg, camera.headingDeg, camera.fovDeg, camera.pitchDeg, camera.aspect, sunPath, sunrise, sunset, horizonProfile, skyline, t]);
 
   const go = (m: ViewMode): void => {
     engineRef.current?.setMode(m);
@@ -1338,8 +1353,13 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, ti
           </div>
           {dome && (
             <div className="sv-readout sv-legend" style={{ top: embedded ? 12 : 44, left: 12 }}>
-              <i />
-              <span>{t('Geländehorizont')}</span>
+              {/* Named only where it is drawn (a stretch other than the one the fix shows has none). */}
+              {horizonProfile && horizonProfile.length >= 36 && (
+                <>
+                  <i />
+                  <span>{t('Geländehorizont')}</span>
+                </>
+              )}
               {skyline && camera.headingDeg !== null && (
                 <>
                   <i className="dash" />

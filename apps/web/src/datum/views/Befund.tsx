@@ -7,10 +7,10 @@ import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
-import { leadSegment, nextKey, placesLowerBound, reachKm, routeGeometry, segmentIndexAt, segmentSummary } from '../segments';
+import { chosenStretch, nextKey, placesLowerBound, reachKm, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchClock, stretchSpaces, timedStretches } from '../segments';
 import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
-import { fixShapes, type DatumViewProps } from './Ortung';
+import { fixShapes, type DatumViewProps, type StretchProps } from './Ortung';
 
 /** The length of a recording as a clock reads it: 0:12, 4:05, 1:02:05. */
 function lengthText(seconds: number): string {
@@ -21,7 +21,7 @@ function lengthText(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
-function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
+function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }: DatumViewProps & StretchProps) {
   const lang = useLang();
   const { t, locale, pick } = lang;
   const summary = selected ? byId.get(selected) : undefined;
@@ -36,13 +36,18 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   /**
    * The node hands out the original recording only once it is fully checked for faces and none
    * were found (or with an approval); otherwise the request is refused and the keyframe is shown
-   * with the reason instead of a player that does nothing.
+   * with the reason instead of a player that does nothing. Kept in German and translated where it
+   * is shown, so that it follows a change of language.
    */
   const [videoRefused, setVideoRefused] = useState<string | null>(null);
   useEffect(() => setVideoRefused(null), [selected]);
   const player = useRef<HTMLVideoElement | null>(null);
-  // The chosen stretch of a recording of several places (index into fix.segments).
-  const [segment, setSegment] = useState(() => (fix?.segments ? leadSegment(fix) : 0));
+  // The chosen stretch of a recording of several places (index into fix.segments), kept by the
+  // shell so that RAUM enters it; another recording or result starts at the stretch the fix shows.
+  const segment = fix ? chosenStretch(fix, stretch) : 0;
+  const setSegment = (index: number): void => {
+    if (fix && index !== segment) chooseStretch({ videoId: fix.videoId, computedAt: fix.computedAt, index });
+  };
   const [countries, setCountries] = useState<CountryShape[]>([]);
   const action = useAction();
   const video = videos.find((v) => v.id === selected) ?? null;
@@ -62,14 +67,6 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
     setKeyIndex(Math.max(0, fix?.keyframes.findIndex((k) => k.frame === matched) ?? 0));
     setKeyPicked(false);
     setCandidate(0);
-  }
-  // Open on the stretch whose place the fix shows, once the stretches are there (the list's slim
-  // entry has only their summary; the full fix follows).
-  const segmentKey = `${resultKey}:${fix?.segments?.length ?? 0}`;
-  const [segmentShown, setSegmentShown] = useState(segmentKey);
-  if (segmentShown !== segmentKey) {
-    setSegmentShown(segmentKey);
-    setSegment(fix?.segments ? leadSegment(fix) : 0);
   }
   const segments = fix?.segments && fix.segments.length > 1 ? fix.segments : null;
   const summarised = useMemo(() => segmentSummary(fix), [fix]);
@@ -133,7 +130,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const followVideo = (el: HTMLVideoElement): void => {
     if (!segments) return;
     const i = segmentIndexAt(segments, el.currentTime);
-    if (i >= 0) setSegment((current) => (current === i ? current : i));
+    if (i >= 0) setSegment(i);
   };
 
   if (!selected || !video) {
@@ -147,10 +144,10 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const refuseVideo = (): void =>
     setVideoRefused(
       video.status === 'ready' && video.facesMasked > 0
-        ? t('Im Video sind Gesichter maskiert; das Original gibt es nur mit Freigabe. Gezeigt wird das Schlüsselbild.')
+        ? 'Im Video sind Gesichter maskiert; das Original gibt es nur mit Freigabe. Gezeigt wird das Schlüsselbild.'
         : video.status !== 'ready'
-          ? t('Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.')
-          : t('Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.'),
+          ? 'Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.'
+          : 'Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.',
     );
   const focus = fix.candidates[candidate] ?? fix.location;
   // With stretches the map turns to the chosen one (or the first located; a chosen candidate goes
@@ -176,6 +173,13 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
   const trace = fix.trace ?? [];
   const quick = stageOf(fix) === 'quick';
   const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
+  // The header is one statement about the fix: its place, time and confidence (with stretches,
+  // those of the stretch it shows). The clock and the sun dial follow the chosen stretch (its own
+  // time from engine 11 on; none without a place), named above them; and whether RAUM has a space
+  // for it.
+  const clock = stretchClock(fix, segments ? segment : null);
+  const clockFor = segments && chosen && timedStretches(fix) ? `${t('Abschnitt {n}', { n: segment + 1 })} · ${spanText(chosen)} · ${chosen.location ? placeText(lang, chosen.location, fix) : t('Ort unbestimmt')}` : null;
+  const stretchSpace = segments ? stretchSpaces(fix, segment).spaces.length > 0 : hasSpace;
   // The skyline is drawn on the keyframe in place of the video (one picture, switched), and only
   // when there is a line to draw.
   const skyline = key !== null && (fix.keyframes.some((k) => k.skyline) || headingHere !== null);
@@ -248,7 +252,13 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
           </div>
         )}
         <div className="dt-result-actions">
-          <button type="button" className="btn btn-solid" onClick={() => go('raum')} disabled={!hasSpace} title={hasSpace ? '' : t('Die Räume folgen, sobald die Auswertung des Videos fertig ist.')}>
+          <button
+            type="button"
+            className="btn btn-solid"
+            onClick={() => go('raum')}
+            disabled={!hasSpace}
+            title={!hasSpace ? t('Die Räume folgen, sobald die Auswertung des Videos fertig ist.') : stretchSpace ? '' : t('Für diesen Abschnitt ist kein Raum berechnet; RAUM bietet die Abschnitte mit Raum an.')}
+          >
             {t('Raum betreten')}
           </button>
           {can('source.write') && (
@@ -297,7 +307,7 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
             ) : (
               key && <img className="dt-video" src={rel(key.imageUrl)} alt="" />
             )}
-            {videoRefused !== null && !skylineOn && <p className="note">{videoRefused}</p>}
+            {videoRefused !== null && !skylineOn && <p className="note">{t(videoRefused)}</p>}
             {skyline && (
               <div className="dt-media-switch" role="group" aria-label={t('Ansicht')}>
                 <button type="button" className="text-btn" aria-pressed={!skylineOn} onClick={() => setShowSkyline(false)}>
@@ -320,11 +330,20 @@ function BefundView({ videos, can, byId, selected, go }: DatumViewProps) {
             <EvidenceList evidence={fix.evidence} at={loc} />
           </section>
           <section className="dt-section">
-            <ClockDial time={fix.time} sun={fix.sun} compact />
+            {/* With a time per stretch the dials show the chosen one: say which. */}
+            {clockFor && <p className="dt-dial-for">{clockFor}</p>}
+            {clock ? (
+              <ClockDial time={clock.time} sun={clock.sun} compact />
+            ) : (
+              <p className="empty">
+                {chosen?.location ? t('Für diesen Abschnitt ließ sich keine Uhrzeit bestimmen.') : t('Dieser Abschnitt hat keinen Ort und daher keine Uhrzeit.')}
+              </p>
+            )}
           </section>
-          {fix.sun && (
+          {clock?.sun && (
             <section className="dt-section">
-              <SunDial sun={fix.sun} heading={fix.heading} time={fix.time} />
+              {/* The heading belongs to the keyframe of the stretch the fix shows. */}
+              <SunDial sun={clock.sun} heading={clock.own ? null : fix.heading} time={clock.time} />
             </section>
           )}
           {trace.length > 0 && (

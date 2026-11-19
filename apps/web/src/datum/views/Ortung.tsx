@@ -15,7 +15,7 @@ import { DatumSettingsPanel } from '../Settings';
 import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
 import { UPLOAD_OPTIONS, UploadDialog, type Picked } from '../UploadDialog';
-import { nearestWithin, placesText, reachKm, routeGeometry, segmentSummary } from '../segments';
+import { nearestWithin, placesText, reachKm, routeGeometry, segmentSummary, type StretchChoice } from '../segments';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { OrtungList, progressText, type GroupActions } from './OrtungList';
 
@@ -28,6 +28,12 @@ export interface DatumViewProps {
   selected: string | null;
   select: (videoId: string | null) => void;
   go: (tab: 'ortung' | 'befund' | 'raum') => void;
+}
+
+/** What BEFUND and RAUM share beyond that: the stretch chosen in BEFUND, which RAUM enters. */
+export interface StretchProps {
+  stretch: StretchChoice | null;
+  chooseStretch: (choice: StretchChoice) => void;
 }
 
 // The whole Earth: the globe is sized to fit the map area (`fit`), centred on Europe and Africa.

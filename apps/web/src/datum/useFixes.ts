@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { NodeConnection } from '../useNode';
+import type { TimeEstimate } from '../../../server/src/datum/contract';
 import { fetchFix, fetchFixes, type Fix } from './api';
 
 /** The full list of fixes, with the announcements the console had received when it asked for it. */
@@ -117,7 +118,24 @@ export function withLiveSummary(full: Fix, summary: Fix | undefined): Fix {
     ...parts,
     sun: parts.sun ? { ...parts.sun, path: parts.sun.path.length > 0 ? parts.sun.path : (full.sun?.path ?? []) } : full.sun,
     horizon: parts.horizon ? { ...parts.horizon, profile: parts.horizon.profile ?? full.horizon?.profile ?? null } : full.horizon,
+    // The stretches' sun paths, which the summaries leave out as the fix's own (same computation).
+    ...(parts.segments && full.segments && parts.segments !== full.segments
+      ? {
+          segments: parts.segments.map((s, i) => {
+            const path = full.segments?.[i]?.sun?.path;
+            return s.sun && s.sun.path.length === 0 && path && full.segments?.[i]?.startSec === s.startSec ? { ...s, sun: { ...s.sun, path } } : s;
+          }),
+        }
+      : {}),
   };
+}
+
+/** Best clock window of a time estimate as "14:10–15:40" (a time from the tags: "14:32"), or null. */
+export function windowText(time: TimeEstimate): string | null {
+  const w = time.windows[0];
+  if (!w) return null;
+  if (time.method === 'metadata') return minutesText(w.startMin + (w.endMin - w.startMin) / 2);
+  return `${minutesText(w.startMin)}–${minutesText(w.endMin)}`;
 }
 
 /** Full fixes read before, by recording; switching between ORTUNG, BEFUND and RAUM reads none again. */
@@ -206,10 +224,7 @@ export function minutesText(min: number): string {
 
 /** Best clock window of a fix as "14:10–15:40", or null. */
 export function bestWindowText(fix: Fix): string | null {
-  const w = fix.time.windows[0];
-  if (!w) return null;
-  if (fix.time.method === 'metadata') return minutesText(w.startMin + (w.endMin - w.startMin) / 2);
-  return `${minutesText(w.startMin)}–${minutesText(w.endMin)}`;
+  return windowText(fix.time);
 }
 
 export function kmText(km: number, locale: string): string {

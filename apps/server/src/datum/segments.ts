@@ -30,10 +30,11 @@
  * Everything here except analyseSegments is pure; analyseSegments is handed the gallery search,
  * the world model and the frame vectors, so that tests and the measurement can stand in for them.
  */
-import type { CountryProb, Evidence, FixLocation, FixSegment, FixSegmentPlace, FixSegmentSummary } from './contract.js';
+import type { CountryProb, Evidence, FixLocation, FixSegment, FixSegmentPlace, FixSegmentRegion, FixSegmentSummary, GeoPoint, SunReport, TimeEstimate } from './contract.js';
 import type { GalleryNeighbour, GallerySearchOptions } from './gallery.js';
 import { massWithin, type GeoclipPrediction } from './geoclip.js';
 import { breathe, decideLocation, type LocateParams, type LocateResult, type RadiusTier } from './locate.js';
+import type { RegionName } from './regions.js';
 import { greatCircleKm, type EmbedTexts, type World } from './world.js';
 
 export interface SegmentParams {
@@ -68,6 +69,14 @@ export interface SegmentParams {
    * again on the main thread; 256 rows take a few seconds, and other searches go in between.
    */
   searchRows: number;
+  /**
+   * The coarse region of an undetermined window (coarsePoint): shown when the gallery's answer and
+   * the world model's best point lie at most this far apart (km), as a circle of this radius
+   * around the middle of the two. Calibrated on the undetermined windows of the compilations
+   * (docs/DATUM.md, "Grobe Region für unbestimmte Abschnitte"): with 1 500 km the truth lay inside
+   * in 32 of 34 of them (94 %), 91 to 95 % on the check sets.
+   */
+  coarseKm: number;
 }
 
 export const DEFAULT_SEGMENT_PARAMS: SegmentParams = {
@@ -83,6 +92,7 @@ export const DEFAULT_SEGMENT_PARAMS: SegmentParams = {
   worldAgree: 0.05,
   minPlaceSec: 5,
   searchRows: 256,
+  coarseKm: 1500,
 };
 
 /** An analysis frame as the store keeps it (FrameRecord): number, second and scene. */
@@ -504,6 +514,207 @@ function leadAnchor(anchors: readonly WindowAnswer[], sameKm: number): WindowAns
   return [...anchors].sort((a, b) => support(b) - support(a) || stronger(a, b))[0] as WindowAnswer;
 }
 
+/** The point halfway between two points on the great circle through them. */
+export function midpoint(a: GeoPoint, b: GeoPoint): GeoPoint {
+  const r = Math.PI / 180;
+  const x = Math.cos(a.lat * r) * Math.cos(a.lon * r) + Math.cos(b.lat * r) * Math.cos(b.lon * r);
+  const y = Math.cos(a.lat * r) * Math.sin(a.lon * r) + Math.cos(b.lat * r) * Math.sin(b.lon * r);
+  const z = Math.sin(a.lat * r) + Math.sin(b.lat * r);
+  return { lat: Math.atan2(z, Math.hypot(x, y)) / r, lon: Math.atan2(y, x) / r };
+}
+
+/**
+ * The coarse point of a window that has no place: the middle of the gallery's answer and the
+ * world model's best point, when both exist and lie at most `coarseKm` apart. Two sources that
+ * see the pictures differently (reference pictures with the country prior, GeoCLIP's 100 000
+ * places) pointing to the same area is what makes it hold: around the undetermined windows' own
+ * answers no radius up to 5 000 km held the truth in 80 % of them (71 to 76 % at 5 000 km); where
+ * the two agreed within 1 500 km, 1 500 km around their middle did in 91 to 95 % (docs/DATUM.md).
+ */
+export function coarsePoint(w: Pick<WindowAnswer, 'geoclip' | 'diagnostics'>, coarseKm: number): GeoPoint | null {
+  const gallery = w.diagnostics?.gallery ?? null;
+  const best = w.geoclip?.best ?? null;
+  if (!gallery || !best || coarseKm <= 0) return null;
+  if (greatCircleKm(gallery.lat, gallery.lon, best.lat, best.lon) > coarseKm) return null;
+  return midpoint(gallery, best);
+}
+
+/**
+ * The coarse regions of every stretch (parallel to merged.stretches; null for a located stretch or
+ * one without any): consecutive windows of an undetermined stretch with a coarse point
+ * (coarsePoint) in the same part of the world, at most `coarseKm` from the first of them, are one
+ * region, at the point of its longest window. A window without one ends the run: what lies
+ * between two runs of one region is not claimed for it.
+ */
+export function coarseRegions(
+  windows: readonly Pick<WindowAnswer, 'geoclip' | 'diagnostics' | 'startSec' | 'endSec'>[],
+  merged: Pick<MergeResult, 'stretches'>,
+  regionAt: (lat: number, lon: number) => RegionName | null,
+  coarseKm = DEFAULT_SEGMENT_PARAMS.coarseKm,
+): (FixSegmentRegion[] | null)[] {
+  return merged.stretches.map((s) => {
+    if (s.place >= 0) return null;
+    const out: FixSegmentRegion[] = [];
+    let run: { first: GeoPoint; best: GeoPoint; bestSec: number; name: RegionName; start: number; end: number } | null = null;
+    const close = (): void => {
+      if (!run) return;
+      out.push({ startSec: run.start, endSec: run.end, lat: run.best.lat, lon: run.best.lon, radiusKm: coarseKm, label: run.name.de, labelEn: run.name.en });
+      run = null;
+    };
+    for (let i = s.first; i <= s.last; i++) {
+      const w = windows[i]!;
+      const p = coarsePoint(w, coarseKm);
+      const name = p ? regionAt(p.lat, p.lon) : null;
+      if (!p || !name) {
+        close();
+        continue;
+      }
+      const secs = w.endSec - w.startSec;
+      if (run && run.name.de === name.de && greatCircleKm(run.first.lat, run.first.lon, p.lat, p.lon) <= coarseKm) {
+        run.end = w.endSec;
+        if (secs > run.bestSec) {
+          run.best = p;
+          run.bestSec = secs;
+        }
+        continue;
+      }
+      close();
+      run = { first: p, best: p, bestSec: secs, name, start: w.startSec, end: w.endSec };
+    }
+    close();
+    return out.length > 0 ? out : null;
+  });
+}
+
+/** The analysis frames (indices, inclusive) of every stretch of a merge. */
+export function stretchFrames(windows: readonly Pick<SegmentWindow, 'first' | 'last'>[], merged: Pick<MergeResult, 'stretches'>): [number, number][] {
+  return merged.stretches.map((s) => [windows[s.first]!.first, windows[s.last]!.last]);
+}
+
+/**
+ * The stretches that get a walkable space of their own (FixSegment.keyframe.spaceUrl): the located
+ * ones other than the stretch the fix shows (`lead`, whose spaces are the fix's keyframes), the
+ * longest first (the earlier on equal length), at most `cap`. Returned in time order.
+ */
+export function spaceStretches(segments: readonly Pick<FixSegment, 'location' | 'startSec' | 'endSec'>[], lead: number | null, cap: number): number[] {
+  const located = segments.map((_, i) => i).filter((i) => i !== lead && segments[i]!.location !== null);
+  const len = (i: number): number => segments[i]!.endSec - segments[i]!.startSec;
+  return located
+    .sort((a, b) => len(b) - len(a) || a - b)
+    .slice(0, Math.max(0, cap))
+    .sort((a, b) => a - b);
+}
+
+/**
+ * The time evidence of the stretch whose place the fix shows, in a fix of several places: said to
+ * come from that stretch's frames (the whole file's light mixes the places).
+ */
+export function stretchTimeEvidence(e: Evidence, span: string): Evidence {
+  return {
+    ...e,
+    label: `${e.label} (Abschnitt ${span})`,
+    labelEn: `${e.labelEn ?? e.label} (segment ${span})`,
+    detail: `Aus den Bildern des oben gezeigten Abschnitts ${span} an seinem Ort. ${e.detail}`,
+    detailEn: `From the frames of the segment shown above, ${span}, at its place. ${e.detailEn ?? e.detail}`,
+  };
+}
+
+/**
+ * The time evidence of the whole file in a fix of several places: its frames come from all of
+ * them, so its light and season mix the places; it stays, said to be the whole file's, without
+ * weight. The time shown is the stretch's (stretchTimeEvidence).
+ */
+export function wholeFileTimeEvidence(e: Evidence): Evidence {
+  return {
+    ...e,
+    label: `${WHOLE_FILE.de}${e.label}`,
+    labelEn: `${WHOLE_FILE.en}${e.labelEn ?? e.label}`,
+    detail: `Aus Bildern der ganzen Datei, die mehrere Orte vermischen; die Uhrzeit oben ist die des gezeigten Abschnitts. ${e.detail}`,
+    detailEn: `From frames of the whole file, which mix several places; the time shown above is that of the segment shown. ${e.detailEn ?? e.detail}`,
+    weight: 0,
+  };
+}
+
+/**
+ * The time evidence of a fix of several places: that of the stretch shown (stretchTimeEvidence)
+ * and the whole file's, mixed and without weight (wholeFileTimeEvidence). A recording time from
+ * the file's tags (`own` holds kind 'metadata') comes from neither the stretch's frames nor the
+ * mixed ones: it holds for the whole file and every stretch and is said once; its check
+ * against the light is that of the stretch shown. The whole file's copy would only repeat it, with
+ * a check against light that mixes the places.
+ */
+export function multiPlaceTimeEvidence(own: readonly Evidence[], whole: readonly Evidence[], span: string): Evidence[] {
+  if (!own.some((e) => e.kind === 'metadata')) return [...own.map((e) => stretchTimeEvidence(e, span)), ...whole.map(wholeFileTimeEvidence)];
+  return own.map((e) =>
+    e.kind === 'metadata'
+      ? {
+          ...e,
+          detail: `Gilt für die ganze Datei und jeden ihrer Abschnitte, in dessen Ortszeit; mit dem Licht verglichen in den Bildern des oben gezeigten Abschnitts ${span}. ${e.detail}`,
+          detailEn: `Holds for the whole file and each of its segments, in its local time; checked against the light in the frames of the segment shown above, ${span}. ${e.detailEn ?? e.detail}`,
+        }
+      : stretchTimeEvidence(e, span),
+  );
+}
+
+/**
+ * The trace's line for the spaces of the stretches: "12 weitere Räume für 32 Abschnitte mit Ort
+ * (die 12 längsten außer dem gezeigten), 4,1 s"; one of each in the singular.
+ */
+export function stretchSpacesNote(built: number, located: number, chosen: number, ms: number): SegmentText {
+  const secs = (ms / 1000).toFixed(1);
+  const longest = located - 1 > chosen;
+  return {
+    de: `${built} ${built === 1 ? 'weiterer Raum' : 'weitere Räume'} für ${located} ${located === 1 ? 'Abschnitt' : 'Abschnitte'} mit Ort${longest ? ` (${chosen === 1 ? 'der längste' : `die ${chosen} längsten`} außer dem gezeigten)` : ''}, ${secs.replace('.', ',')} s`,
+    en: `${built} more ${built === 1 ? 'space' : 'spaces'} for ${located} ${located === 1 ? 'segment' : 'segments'} with a place${longest ? ` (the ${chosen === 1 ? 'longest' : `${chosen} longest`} besides the one shown)` : ''}, ${secs} s`,
+  };
+}
+
+/**
+ * The time of day and the sun of every located stretch (FixSegment.time, sun): `timeOf` estimates
+ * them from the given analysis frames (indices) at the given place; each stretch gives up to
+ * `perStretch` of its own frames, spread over it (spreadIndices), and its own place. Undetermined
+ * stretches get none: without a place there is no clock. One stretch after another, with a turn
+ * of the event loop between them; `stop` may throw to end the whole loop (the engine stopped, the
+ * recording was deleted). A stretch whose estimate fails (a frame unreadable) keeps none, and
+ * `onError` hears of it: one stretch's clock is not worth the fix.
+ */
+export async function stretchTimes(
+  segments: readonly FixSegment[],
+  ranges: readonly [number, number][],
+  timeOf: (frames: number[], at: FixLocation) => Promise<{ time: TimeEstimate; sun: SunReport | null }>,
+  perStretch: number,
+  stop: () => void = () => undefined,
+  onError: (index: number, err: unknown) => void = () => undefined,
+): Promise<FixSegment[]> {
+  const out: FixSegment[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]!;
+    const range = ranges[i];
+    if (!seg.location || !range) {
+      out.push(seg);
+      continue;
+    }
+    stop();
+    try {
+      const result = await timeOf(spreadIndices(range[0], range[1], perStretch), seg.location);
+      // The reasoning lines stay with the fix's own time: the console's dial of a stretch shows none.
+      out.push({ ...seg, time: { ...result.time, notes: [], notesEn: [] }, sun: compactSun(result.sun) });
+    } catch (err: unknown) {
+      onError(i, err);
+      out.push(seg);
+    }
+    await breathe();
+  }
+  return out;
+}
+
+/** The sun of a stretch as FixSegment.sun keeps it: the path's angles to 0.1° (0.2 px on the dial). */
+export function compactSun(sun: SunReport | null): SunReport | null {
+  if (!sun) return null;
+  const round = (v: number): number => Math.round(v * 10) / 10;
+  return { ...sun, path: sun.path.map((p) => ({ t: p.t, az: round(p.az), el: round(p.el) })) };
+}
+
 /**
  * The compact form of the stretches for the list of fixes (FixSegmentSummary). `lead` is the index
  * of the stretch whose place the fix shows (see segmentVerdict): its place stands at that
@@ -707,8 +918,12 @@ export function segmentVerdict(segments: readonly FixSegment[], current: FixLoca
   const passedEn = passed
     ? ` The longest segment with a place (${passedSpan}: ${(passed.location as FixLocation).labelEn ?? (passed.location as FixLocation).label}) names the place the world model already rejected for the whole file; it stays in the timeline but is not shown above.`
     : '';
-  const undeterminedDe = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'Abschnitt bleibt' : 'Abschnitte bleiben'} unbestimmt.` : '';
-  const undeterminedEn = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'segment remains' : 'segments remain'} undetermined.` : '';
+  // Coarse regions (FixSegment.coarse) are no places: said so where there are any.
+  const coarse = segments.filter((s) => !s.location && s.coarse && s.coarse.length > 0).length;
+  const coarseDe = coarse > 0 ? ` Für ${coarse === undetermined ? (coarse === 1 ? 'ihn' : 'sie alle') : coarse === 1 ? 'einen davon' : `${coarse} davon`} nennt die Zeitleiste eine grobe Region, die nicht als Ort zählt.` : '';
+  const coarseEn = coarse > 0 ? ` For ${coarse === undetermined ? (coarse === 1 ? 'it' : 'all of them') : coarse === 1 ? 'one of them' : `${coarse} of them`} the timeline names a coarse region, which does not count as a place.` : '';
+  const undeterminedDe = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'Abschnitt bleibt' : 'Abschnitte bleiben'} unbestimmt.${coarseDe}` : '';
+  const undeterminedEn = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'segment remains' : 'segments remain'} undetermined.${coarseEn}` : '';
   const keptDe = agrees ? 'Die Ortung aus der ganzen Datei stimmt mit ihm überein und bleibt.' : 'Er ersetzt die Ortung aus der ganzen Datei, die die Orte vermischt.';
   const keptEn = agrees ? 'The fix from the whole file agrees with it and stands.' : 'It replaces the fix from the whole file, which mixes the places.';
   return {

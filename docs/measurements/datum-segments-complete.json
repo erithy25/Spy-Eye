@@ -1,0 +1,1950 @@
+{
+ "measuredAt": "2026-11-19",
+ "what": "DATUM engine version 11 (apps/server/src/datum/segments.ts, regions.ts, engine.ts): time of day and sun per located stretch, a coarse region for undetermined stretches, a walkable space per located stretch.",
+ "setup": {
+  "node": "own node (port 8861, no seed), the compilations of datum-segments.json and the counter-check recordings (berlin-tour, deutschlandreise, kontinente) freshly uploaded and analysed at 1 frame/s; fixes computed with engine 10, then with engine 11 on the same analysis; no other analysis on the machine meanwhile",
+  "coarseRegion": "an undetermined window names a coarse region when the gallery answer and the world model best point lie at most coarseKm apart: the great-circle midpoint with radius coarseKm, named by the UN M49 subregions of the circle (regions.ts regionAround: by the people of the listed cities inside it, one subregion where at least 90 % of them live, else the two with the most; Russia east of 60 E or of 180: Northern Asia); consecutive windows of one region are one entry",
+  "coarseCalibration": "windows decided by analyseSegments over the node analysis (harness11.mts); truth: the piece filling most of the window; seconds: every second of a shown region against the piece at that second; tuning set: compilations with the places reference pictures in the gallery (node default); checks: the same without them (holdout) and the 60 single clips in fixed 4-s windows (windows of datum-segments.json, same decision)"
+ },
+ "timeAndSpaces": [
+  {
+   "recording": "sammlung-3orte.mp4",
+   "segments": 2,
+   "fixElapsedMs": {
+    "v10": 37448,
+    "v11": 28824
+   },
+   "fixJsonBytes": {
+    "v10": 31527,
+    "v11": 38335
+   },
+   "wholeFileTime": {
+    "window": "07:10-12:25 Morgen",
+    "timezone": "Europe/London",
+    "band": [
+     2,
+     60
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "07:10-12:10 Morgen",
+    "timezone": "Europe/London",
+    "band": [
+     2,
+     90
+    ],
+    "phase": "day"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 11870,
+    "Räume der Abschnitte aufgebaut": 400,
+    "Licht und Sonnenstand bestimmt": 3029
+   },
+   "traceDetail": {
+    "Räume der Abschnitte aufgebaut": "1 weitere Räume für 2 Abschnitte mit Ort, 0,4 s",
+    "Licht und Sonnenstand bestimmt": "Morgen, Europe/London (Abschnitt 0:00–1:20) · 2 Abschnitte mit Ort je für sich, 405 ms"
+   },
+   "stretches": [
+    {
+     "startSec": 0,
+     "endSec": 80,
+     "place": 1,
+     "label": "Glenfinnan-Viadukt",
+     "truth": "de-kyffhaeuserdenkmal",
+     "time": "07:10-12:10 Morgen",
+     "timezone": "Europe/London",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 80,
+     "endSec": 120,
+     "place": 2,
+     "label": "Clarence St. Bridge, Niagara Falls",
+     "truth": "ca-clarence-st-bridge",
+     "time": "09:10-15:10 Vormittag",
+     "timezone": "America/Toronto",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    }
+   ],
+   "located": 2,
+   "timezones": 2,
+   "windowMidpointShiftMin": {
+    "median": 75.0,
+    "max": 142.5,
+    "atLeast60": 1
+   },
+   "spaces": 1
+  },
+  {
+   "recording": "sammlung-10orte.mp4",
+   "segments": 10,
+   "fixElapsedMs": {
+    "v10": 55991,
+    "v11": 39159
+   },
+   "fixJsonBytes": {
+    "v10": 32685,
+    "v11": 51058
+   },
+   "wholeFileTime": {
+    "window": "07:45-12:55 Vormittag",
+    "timezone": "Europe/Paris",
+    "band": [
+     12,
+     90
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "05:30-09:25 Morgen",
+    "timezone": "Europe/Paris",
+    "band": [
+     -6,
+     35
+    ],
+    "phase": "twilight"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 24355,
+    "Räume der Abschnitte aufgebaut": 2365,
+    "Licht und Sonnenstand bestimmt": 875
+   },
+   "traceDetail": {
+    "Räume der Abschnitte aufgebaut": "5 weitere Räume für 6 Abschnitte mit Ort, 2,4 s",
+    "Licht und Sonnenstand bestimmt": "Morgen, Europe/Paris (Abschnitt 2:00–2:30) · 6 Abschnitte mit Ort je für sich, 686 ms"
+   },
+   "stretches": [
+    {
+     "startSec": 0,
+     "endSec": 5,
+     "place": 1,
+     "label": "Ludwigshafen am Rhein, Mannheim",
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": "07:55-11:05 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 5,
+     "endSec": 12,
+     "place": null,
+     "label": null,
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 12,
+     "endSec": 17,
+     "place": 1,
+     "label": "Ludwigshafen am Rhein, Mannheim",
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": "07:55-11:05 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 17,
+     "endSec": 24,
+     "place": null,
+     "label": null,
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 24,
+     "endSec": 30,
+     "place": 1,
+     "label": "Ludwigshafen am Rhein, Mannheim",
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": "07:55-11:05 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 30,
+     "endSec": 120,
+     "place": null,
+     "label": null,
+     "truth": "de-molenfeuer-warnemuende",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 60,
+       "endSec": 120,
+       "label": "Western Europe",
+       "lat": 49.73,
+       "lon": 1.691
+      }
+     ]
+    },
+    {
+     "startSec": 120,
+     "endSec": 150,
+     "place": 2,
+     "label": "Triumphbogen, Paris",
+     "truth": "fr-arc-de-triomphe",
+     "time": "05:30-09:25 Morgen",
+     "timezone": "Europe/Paris",
+     "phase": "twilight",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 150,
+     "endSec": 180,
+     "place": 3,
+     "label": "Christ-Erlöser-Kathedrale, Moskau",
+     "truth": "ru-cathedral-of-christ-the",
+     "time": "15:05-18:05 Nachmittag",
+     "timezone": "Europe/Moscow",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 180,
+     "endSec": 210,
+     "place": 4,
+     "label": "Kathedrale von Mexiko-Stadt",
+     "truth": "mx-mexico-city-metropolitan",
+     "time": "07:00-09:50 Morgen",
+     "timezone": "America/Mexico_City",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 210,
+     "endSec": 300,
+     "place": null,
+     "label": null,
+     "truth": "pe-cusco-cathedral",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    }
+   ],
+   "located": 6,
+   "timezones": 4,
+   "windowMidpointShiftMin": {
+    "median": 82.5,
+    "max": 375.0,
+    "atLeast60": 3
+   },
+   "spaces": 5
+  },
+  {
+   "recording": "sammlung-rueckkehr.mp4",
+   "segments": 5,
+   "fixElapsedMs": {
+    "v10": 35552,
+    "v11": 25134
+   },
+   "fixJsonBytes": {
+    "v10": 29636,
+    "v11": 40134
+   },
+   "wholeFileTime": {
+    "window": "07:50-15:45 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "07:40-11:40 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 14076,
+    "Räume der Abschnitte aufgebaut": 753,
+    "Licht und Sonnenstand bestimmt": 551
+   },
+   "traceDetail": {
+    "Räume der Abschnitte aufgebaut": "2 weitere Räume für 3 Abschnitte mit Ort, 0,8 s",
+    "Licht und Sonnenstand bestimmt": "Vormittag, Europe/Berlin (Abschnitt 0:00–1:20) · 3 Abschnitte mit Ort je für sich, 415 ms"
+   },
+   "stretches": [
+    {
+     "startSec": 0,
+     "endSec": 80,
+     "place": 1,
+     "label": "U-Bahnhof Tempelhof (Südring), Berlin",
+     "truth": "de-bahnhof-berlin-lichterfelde",
+     "time": "07:40-11:40 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 80,
+     "endSec": 125,
+     "place": null,
+     "label": null,
+     "truth": "ie-church-of-st-anne",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 80,
+       "endSec": 125,
+       "label": "Northern Europe",
+       "lat": 51.644,
+       "lon": 0.33
+      }
+     ]
+    },
+    {
+     "startSec": 125,
+     "endSec": 155,
+     "place": 1,
+     "label": "U-Bahnhof Tempelhof (Südring), Berlin",
+     "truth": "de-bahnhof-berlin-lichterfelde",
+     "time": "07:40-11:40 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 155,
+     "endSec": 185,
+     "place": 2,
+     "label": "Four Times Square, New York City",
+     "truth": "us-vessel",
+     "time": "07:20-11:10 Vormittag",
+     "timezone": "America/New_York",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 185,
+     "endSec": 220,
+     "place": null,
+     "label": null,
+     "truth": "jp-tokyo-station",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    }
+   ],
+   "located": 3,
+   "timezones": 2,
+   "windowMidpointShiftMin": {
+    "median": 127.5,
+    "max": 152.5,
+    "atLeast60": 3
+   },
+   "spaces": 2
+  },
+  {
+   "recording": "berlin-tour.mp4",
+   "segments": 0,
+   "fixElapsedMs": {
+    "v10": 14870,
+    "v11": 17087
+   },
+   "fixJsonBytes": {
+    "v10": 27139,
+    "v11": 26974
+   },
+   "wholeFileTime": {
+    "window": "07:55-15:30 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "07:55-15:30 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 4948,
+    "Licht und Sonnenstand bestimmt": 118
+   },
+   "traceDetail": {
+    "Licht und Sonnenstand bestimmt": "Vormittag, Europe/Berlin"
+   }
+  },
+  {
+   "recording": "deutschlandreise.mp4",
+   "segments": 7,
+   "fixElapsedMs": {
+    "v10": 30590,
+    "v11": 25524
+   },
+   "fixJsonBytes": {
+    "v10": 31618,
+    "v11": 41309
+   },
+   "wholeFileTime": {
+    "window": "07:40-15:30 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "07:55-15:30 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     60
+    ],
+    "phase": "day"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 14038,
+    "Räume der Abschnitte aufgebaut": 874,
+    "Licht und Sonnenstand bestimmt": 609
+   },
+   "traceDetail": {
+    "Räume der Abschnitte aufgebaut": "2 weitere Räume für 3 Abschnitte mit Ort, 0,9 s",
+    "Licht und Sonnenstand bestimmt": "Vormittag, Europe/Berlin (Abschnitt 1:12–1:24) · 3 Abschnitte mit Ort je für sich, 478 ms"
+   },
+   "stretches": [
+    {
+     "startSec": 0,
+     "endSec": 12,
+     "place": null,
+     "label": null,
+     "truth": "de-zoobruecke",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 12,
+     "endSec": 17,
+     "place": 1,
+     "label": "Ludwigshafen am Rhein, Mannheim",
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": "07:55-11:05 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 17,
+     "endSec": 24,
+     "place": null,
+     "label": null,
+     "truth": "de-rheinbruecke-leverkusen",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 24,
+     "endSec": 48,
+     "place": 1,
+     "label": "Bahnhof Norderstedt Mitte, Hamburg",
+     "truth": "de-bhf-eschborn",
+     "time": "08:00-15:35 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 48,
+     "endSec": 72,
+     "place": null,
+     "label": null,
+     "truth": "de-hof-hauptbahnhof",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 48,
+       "endSec": 72,
+       "label": "Western Europe",
+       "lat": 50.862,
+       "lon": 12.192
+      }
+     ]
+    },
+    {
+     "startSec": 72,
+     "endSec": 84,
+     "place": 2,
+     "label": "Bode-Museum, Berlin",
+     "truth": "de-berliner-fernsehturm",
+     "time": "07:55-15:30 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 84,
+     "endSec": 115,
+     "place": null,
+     "label": null,
+     "truth": "de-bahnhof-berlin-lichterfelde",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 84,
+       "endSec": 96,
+       "label": "Western Europe",
+       "lat": 54.467,
+       "lon": 4.973
+      }
+     ]
+    }
+   ],
+   "located": 3,
+   "timezones": 1,
+   "windowMidpointShiftMin": {
+    "median": 12.5,
+    "max": 125.0,
+    "atLeast60": 1
+   },
+   "spaces": 2
+  },
+  {
+   "recording": "kontinente.mp4",
+   "segments": 6,
+   "fixElapsedMs": {
+    "v10": 25645,
+    "v11": 20691
+   },
+   "fixJsonBytes": {
+    "v10": 29064,
+    "v11": 38719
+   },
+   "wholeFileTime": {
+    "window": "05:30-08:20 Morgen",
+    "timezone": "Asia/Jakarta",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "06:15-08:35 Morgen",
+    "timezone": "Asia/Jakarta",
+    "band": [
+     12,
+     90
+    ],
+    "phase": "day"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 9679,
+    "Räume der Abschnitte aufgebaut": 921,
+    "Licht und Sonnenstand bestimmt": 554
+   },
+   "traceDetail": {
+    "Räume der Abschnitte aufgebaut": "2 weitere Räume für 3 Abschnitte mit Ort, 0,9 s",
+    "Licht und Sonnenstand bestimmt": "Morgen, Asia/Jakarta (Abschnitt 0:36–0:48) · 3 Abschnitte mit Ort je für sich, 405 ms"
+   },
+   "stretches": [
+    {
+     "startSec": 0,
+     "endSec": 12,
+     "place": null,
+     "label": null,
+     "truth": "ua-buhaz",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 12,
+     "endSec": 24,
+     "place": 1,
+     "label": "Schloss Chapultepec, Mexiko-Stadt",
+     "truth": "mx-chapultepec-castle",
+     "time": "16:05-18:55 Nachmittag",
+     "timezone": "America/Mexico_City",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 24,
+     "endSec": 36,
+     "place": null,
+     "label": null,
+     "truth": "br-praia-do-grumari",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 36,
+     "endSec": 48,
+     "place": 2,
+     "label": "Mendut Temple, Magelang",
+     "truth": "id-borobudur-temple",
+     "time": "06:15-08:35 Morgen",
+     "timezone": "Asia/Jakarta",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 48,
+     "endSec": 60,
+     "place": null,
+     "label": null,
+     "truth": "bj-dantokpa-market",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 60,
+     "endSec": 72,
+     "place": 3,
+     "label": "Wellington Point, Brisbane",
+     "truth": "au-wellington-point",
+     "time": "16:30-18:20 Abend",
+     "timezone": "Australia/Brisbane",
+     "phase": "golden",
+     "space": true,
+     "coarse": []
+    }
+   ],
+   "located": 3,
+   "timezones": 3,
+   "windowMidpointShiftMin": {
+    "median": 630.0,
+    "max": 635.0,
+    "atLeast60": 2
+   },
+   "spaces": 2
+  },
+  {
+   "recording": "sammlung-20min.mp4",
+   "segments": 57,
+   "fixElapsedMs": {
+    "v10": 93437,
+    "v11": 105719
+   },
+   "fixJsonBytes": {
+    "v10": 48304,
+    "v11": 140254
+   },
+   "wholeFileTime": {
+    "window": "07:15-14:15 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     12,
+     35
+    ],
+    "phase": "day"
+   },
+   "fixTime": {
+    "window": "07:55-15:30 Vormittag",
+    "timezone": "Europe/Berlin",
+    "band": [
+     3,
+     90
+    ],
+    "phase": "day"
+   },
+   "traceMs": {
+    "Abschnitte geprüft": 85765,
+    "Räume der Abschnitte aufgebaut": 5086,
+    "Licht und Sonnenstand bestimmt": 3800
+   },
+   "traceDetail": {
+    "Räume der Abschnitte aufgebaut": "12 weitere Räume für 32 Abschnitte mit Ort (die 12 längsten außer dem gezeigten), 5,1 s",
+    "Licht und Sonnenstand bestimmt": "Vormittag, Europe/Berlin (Abschnitt 11:19–11:43) · 32 Abschnitte mit Ort je für sich, 3.668 ms"
+   },
+   "stretches": [
+    {
+     "startSec": 0,
+     "endSec": 24,
+     "place": null,
+     "label": null,
+     "truth": "de-dorfkirche-rieben",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 0,
+       "endSec": 12,
+       "label": "Eastern Europe",
+       "lat": 49.928,
+       "lon": 18.055
+      }
+     ]
+    },
+    {
+     "startSec": 24,
+     "endSec": 36,
+     "place": 1,
+     "label": "Bode-Museum, Berlin",
+     "truth": "de-berliner-fernsehturm",
+     "time": "07:55-15:20 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 36,
+     "endSec": 60,
+     "place": null,
+     "label": null,
+     "truth": "jp-tokyo-station",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 60,
+     "endSec": 69,
+     "place": 2,
+     "label": "Nowodewitschi-Kloster, Moskau",
+     "truth": "ua-kyiv-pechersk-lavra",
+     "time": "08:35-15:55 Vormittag",
+     "timezone": "Europe/Moscow",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 69,
+     "endSec": 78,
+     "place": null,
+     "label": null,
+     "truth": "fr-new-gatteville-lighthouse",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 69,
+       "endSec": 73,
+       "label": "Northern Europe",
+       "lat": 53.624,
+       "lon": -3.758
+      }
+     ]
+    },
+    {
+     "startSec": 78,
+     "endSec": 90,
+     "place": 1,
+     "label": "Hottendorf, Magdeburg",
+     "truth": "de-kirche-hanshagen",
+     "time": "07:55-14:25 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 90,
+     "endSec": 147,
+     "place": null,
+     "label": null,
+     "truth": "de-bhf-eschborn",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 90,
+       "endSec": 102,
+       "label": "Western Asia",
+       "lat": 39.118,
+       "lon": 25.553
+      },
+      {
+       "startSec": 123,
+       "endSec": 147,
+       "label": "Western Europe",
+       "lat": 51.846,
+       "lon": 13.349
+      }
+     ]
+    },
+    {
+     "startSec": 147,
+     "endSec": 159,
+     "place": 3,
+     "label": "Eiffelturm, Paris",
+     "truth": "fr-eiffel-tower",
+     "time": "08:05-12:55 Vormittag",
+     "timezone": "Europe/Paris",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 159,
+     "endSec": 216,
+     "place": null,
+     "label": null,
+     "truth": "za-nelson-mandela-square",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 195,
+       "endSec": 207,
+       "label": "Southern Europe",
+       "lat": 42.273,
+       "lon": 2.709
+      },
+      {
+       "startSec": 207,
+       "endSec": 211,
+       "label": "Western Europe",
+       "lat": 48.362,
+       "lon": 16.632
+      },
+      {
+       "startSec": 211,
+       "endSec": 216,
+       "label": "Eastern Europe",
+       "lat": 49.64,
+       "lon": 20.435
+      }
+     ]
+    },
+    {
+     "startSec": 216,
+     "endSec": 228,
+     "place": 2,
+     "label": "Christ-Erlöser-Kathedrale, Moskau",
+     "truth": "ru-cathedral-of-christ-the",
+     "time": "15:05-18:05 Nachmittag",
+     "timezone": "Europe/Moscow",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 228,
+     "endSec": 237,
+     "place": null,
+     "label": null,
+     "truth": "de-molenfeuer-warnemuende",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 237,
+     "endSec": 249,
+     "place": 4,
+     "label": "Glenfinnan-Viadukt",
+     "truth": "gb-glenfinnan-viaduct",
+     "time": "08:15-10:30 Morgen",
+     "timezone": "Europe/London",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 249,
+     "endSec": 261,
+     "place": 3,
+     "label": "Triumphbogen, Paris",
+     "truth": "fr-arc-de-triomphe",
+     "time": "05:30-09:25 Morgen",
+     "timezone": "Europe/Paris",
+     "phase": "twilight",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 261,
+     "endSec": 273,
+     "place": 2,
+     "label": "Rigaer Bahnhof, Moskau",
+     "truth": "mn-ulaanbaatar-railway-station",
+     "time": "07:25-09:55 Morgen",
+     "timezone": "Europe/Moscow",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 273,
+     "endSec": 297,
+     "place": null,
+     "label": null,
+     "truth": "pe-cusco-cathedral",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 285,
+       "endSec": 289,
+       "label": "Eastern Asia",
+       "lat": 35.203,
+       "lon": 115.265
+      }
+     ]
+    },
+    {
+     "startSec": 297,
+     "endSec": 309,
+     "place": 5,
+     "label": "Oriole Park at Camden Yards, Baltimore",
+     "truth": "us-oriole-park-at-camden-yards",
+     "time": "06:15-09:05 Morgen",
+     "timezone": "America/New_York",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 309,
+     "endSec": 357,
+     "place": null,
+     "label": null,
+     "truth": "ru-russky-bridge",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 321,
+       "endSec": 333,
+       "label": "Western Europe",
+       "lat": 47.346,
+       "lon": -3.958
+      }
+     ]
+    },
+    {
+     "startSec": 357,
+     "endSec": 369,
+     "place": 4,
+     "label": "Rhuddlan Castle, Chester",
+     "truth": "gb-rhuddlan-castle",
+     "time": "06:30-09:20 Morgen",
+     "timezone": "Europe/London",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 369,
+     "endSec": 429,
+     "place": null,
+     "label": null,
+     "truth": "us-vessel",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 381,
+       "endSec": 393,
+       "label": "Northern Europe",
+       "lat": 56.471,
+       "lon": -2.382
+      },
+      {
+       "startSec": 393,
+       "endSec": 405,
+       "label": "Eastern Europe",
+       "lat": 51.525,
+       "lon": 17.665
+      }
+     ]
+    },
+    {
+     "startSec": 429,
+     "endSec": 441,
+     "place": 6,
+     "label": "Schloss Chapultepec, Mexiko-Stadt",
+     "truth": "mx-chapultepec-castle",
+     "time": "16:05-18:55 Nachmittag",
+     "timezone": "America/Mexico_City",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 441,
+     "endSec": 453,
+     "place": null,
+     "label": null,
+     "truth": "id-lovina-beach",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 453,
+     "endSec": 463,
+     "place": 6,
+     "label": "Kathedrale von Mexiko-Stadt",
+     "truth": "mx-mexico-city-metropolitan",
+     "time": "15:20-18:15 Nachmittag",
+     "timezone": "America/Mexico_City",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 463,
+     "endSec": 475,
+     "place": 7,
+     "label": "Neuhof, Hof",
+     "truth": "de-kammergutweg",
+     "time": "10:00-14:45 Nachmittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 475,
+     "endSec": 511,
+     "place": null,
+     "label": null,
+     "truth": "us-corona-del-mar-state-beach",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 487,
+       "endSec": 499,
+       "label": "Eastern Europe",
+       "lat": 58.104,
+       "lon": 34.022
+      },
+      {
+       "startSec": 499,
+       "endSec": 511,
+       "label": "Western Asia",
+       "lat": 24.42,
+       "lon": 39.514
+      }
+     ]
+    },
+    {
+     "startSec": 511,
+     "endSec": 525,
+     "place": 8,
+     "label": "Clarence St. Bridge, Niagara Falls",
+     "truth": "ca-clarence-st-bridge",
+     "time": "09:10-15:10 Vormittag",
+     "timezone": "America/Toronto",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 525,
+     "endSec": 530,
+     "place": null,
+     "label": null,
+     "truth": "au-wellington-point",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 530,
+     "endSec": 535,
+     "place": 9,
+     "label": "Wellington Point, Brisbane",
+     "truth": "au-wellington-point",
+     "time": "16:25-18:20 Abend",
+     "timezone": "Australia/Brisbane",
+     "phase": "golden",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 535,
+     "endSec": 547,
+     "place": 7,
+     "label": "Elstertalbrücke, Hof",
+     "truth": "de-elstertalbruecke",
+     "time": "06:50-09:20 Morgen",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 547,
+     "endSec": 607,
+     "place": null,
+     "label": null,
+     "truth": "gb-grytviken",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 571,
+       "endSec": 583,
+       "label": "Northern Europe",
+       "lat": 51.946,
+       "lon": -0.387
+      },
+      {
+       "startSec": 583,
+       "endSec": 607,
+       "label": "Western Europe",
+       "lat": 49.735,
+       "lon": 1.701
+      }
+     ]
+    },
+    {
+     "startSec": 607,
+     "endSec": 619,
+     "place": 10,
+     "label": "Mendut Temple, Magelang",
+     "truth": "id-borobudur-temple",
+     "time": "06:25-08:35 Morgen",
+     "timezone": "Asia/Jakarta",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 619,
+     "endSec": 655,
+     "place": null,
+     "label": null,
+     "truth": "ua-buhaz",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 643,
+       "endSec": 655,
+       "label": "Western Africa",
+       "lat": 5.974,
+       "lon": 7.52
+      }
+     ]
+    },
+    {
+     "startSec": 655,
+     "endSec": 667,
+     "place": 11,
+     "label": "Busan Harbor Bridge",
+     "truth": "kr-busan-harbor-bridge",
+     "time": "06:25-10:15 Morgen",
+     "timezone": "Asia/Seoul",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 667,
+     "endSec": 679,
+     "place": null,
+     "label": null,
+     "truth": "dz-el-mechouar-mosque",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 667,
+       "endSec": 679,
+       "label": "Northern Africa",
+       "lat": 33.298,
+       "lon": -4.708
+      }
+     ]
+    },
+    {
+     "startSec": 679,
+     "endSec": 703,
+     "place": 1,
+     "label": "Quellbrunnen, Berlin",
+     "truth": "de-bahnhof-berlin-lichterfelde",
+     "time": "07:55-15:30 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 703,
+     "endSec": 727,
+     "place": null,
+     "label": null,
+     "truth": "cz-kolin-train-station",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 715,
+       "endSec": 727,
+       "label": "Eastern Europe",
+       "lat": 51.209,
+       "lon": 15.281
+      }
+     ]
+    },
+    {
+     "startSec": 727,
+     "endSec": 739,
+     "place": 10,
+     "label": "Mendut Temple, Magelang",
+     "truth": "id-borobudur-temple",
+     "time": "06:25-08:35 Morgen",
+     "timezone": "Asia/Jakarta",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 739,
+     "endSec": 751,
+     "place": 12,
+     "label": "Burg Zwingenberg, Heidelberg",
+     "truth": "ch-schloss-der-grafen-von-greyerz",
+     "time": "06:40-10:00 Morgen",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 751,
+     "endSec": 775,
+     "place": null,
+     "label": null,
+     "truth": "bj-dantokpa-market",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 751,
+       "endSec": 763,
+       "label": "Western Africa",
+       "lat": 5.928,
+       "lon": 5.919
+      }
+     ]
+    },
+    {
+     "startSec": 775,
+     "endSec": 787,
+     "place": 7,
+     "label": "Elstertalbrücke, Hof",
+     "truth": "de-elstertalbruecke",
+     "time": "06:50-09:20 Morgen",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 787,
+     "endSec": 799,
+     "place": 11,
+     "label": "Busan Harbor Bridge",
+     "truth": "kr-busan-harbor-bridge",
+     "time": "06:25-10:15 Morgen",
+     "timezone": "Asia/Seoul",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 799,
+     "endSec": 823,
+     "place": null,
+     "label": null,
+     "truth": "al-skanderbeg-square",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 799,
+       "endSec": 811,
+       "label": "Southern Europe",
+       "lat": 39.709,
+       "lon": 20.944
+      }
+     ]
+    },
+    {
+     "startSec": 823,
+     "endSec": 835,
+     "place": 13,
+     "label": "Four Times Square, New York City",
+     "truth": "us-vessel",
+     "time": "07:30-16:15 Vormittag",
+     "timezone": "America/New_York",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 835,
+     "endSec": 871,
+     "place": null,
+     "label": null,
+     "truth": "ve-estadio-olimpico",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 847,
+       "endSec": 871,
+       "label": "Western Europe",
+       "lat": 51.087,
+       "lon": 7.939
+      }
+     ]
+    },
+    {
+     "startSec": 871,
+     "endSec": 883,
+     "place": 1,
+     "label": "Hottendorf, Magdeburg",
+     "truth": "de-kirche-hanshagen",
+     "time": "07:55-14:25 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 883,
+     "endSec": 895,
+     "place": 6,
+     "label": "Schloss Chapultepec, Mexiko-Stadt",
+     "truth": "mx-chapultepec-castle",
+     "time": "16:05-18:55 Nachmittag",
+     "timezone": "America/Mexico_City",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 895,
+     "endSec": 931,
+     "place": null,
+     "label": null,
+     "truth": "de-hof-hauptbahnhof",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 895,
+       "endSec": 907,
+       "label": "Eastern Europe",
+       "lat": 51.524,
+       "lon": 17.659
+      },
+      {
+       "startSec": 907,
+       "endSec": 919,
+       "label": "Northern Africa",
+       "lat": 33.299,
+       "lon": -4.708
+      }
+     ]
+    },
+    {
+     "startSec": 931,
+     "endSec": 952,
+     "place": 2,
+     "label": "Christ-Erlöser-Kathedrale, Moskau",
+     "truth": "ru-cathedral-of-christ-the",
+     "time": "15:05-18:05 Nachmittag",
+     "timezone": "Europe/Moscow",
+     "phase": "day",
+     "space": true,
+     "coarse": []
+    },
+    {
+     "startSec": 952,
+     "endSec": 985,
+     "place": null,
+     "label": null,
+     "truth": "eg-al-fattah-al-alim-mosque",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 952,
+       "endSec": 957,
+       "label": "Western Europe",
+       "lat": 48.359,
+       "lon": 16.631
+      },
+      {
+       "startSec": 961,
+       "endSec": 973,
+       "label": "Western Asia",
+       "lat": 24.42,
+       "lon": 39.514
+      }
+     ]
+    },
+    {
+     "startSec": 985,
+     "endSec": 997,
+     "place": 2,
+     "label": "Sawjolowoer Bahnhof, Moskau",
+     "truth": "mn-ulaanbaatar-railway-station",
+     "time": "07:20-09:55 Morgen",
+     "timezone": "Europe/Moscow",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 997,
+     "endSec": 1021,
+     "place": null,
+     "label": null,
+     "truth": "de-zoobruecke",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 997,
+       "endSec": 1009,
+       "label": "Western Europe",
+       "lat": 47.344,
+       "lon": -3.952
+      }
+     ]
+    },
+    {
+     "startSec": 1021,
+     "endSec": 1033,
+     "place": 14,
+     "label": "Kathedrale von Cusco",
+     "truth": "pe-cusco-cathedral",
+     "time": "08:20-15:15 Nachmittag",
+     "timezone": "America/Lima",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 1033,
+     "endSec": 1045,
+     "place": 15,
+     "label": "Lovina, Singaraja",
+     "truth": "id-lovina-beach",
+     "time": "06:50-09:00 Morgen",
+     "timezone": "Asia/Makassar",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 1045,
+     "endSec": 1061,
+     "place": null,
+     "label": null,
+     "truth": "fr-new-gatteville-lighthouse",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 1061,
+     "endSec": 1066,
+     "place": 9,
+     "label": "Wellington Point, Brisbane",
+     "truth": "au-wellington-point",
+     "time": "16:25-18:20 Abend",
+     "timezone": "Australia/Brisbane",
+     "phase": "golden",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 1066,
+     "endSec": 1114,
+     "place": null,
+     "label": null,
+     "truth": "za-nelson-mandela-square",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 1114,
+     "endSec": 1126,
+     "place": 1,
+     "label": "Bode-Museum, Berlin",
+     "truth": "de-berliner-fernsehturm",
+     "time": "07:55-15:20 Vormittag",
+     "timezone": "Europe/Berlin",
+     "phase": "day",
+     "space": false,
+     "coarse": []
+    },
+    {
+     "startSec": 1126,
+     "endSec": 1186.17,
+     "place": null,
+     "label": null,
+     "truth": "ee-tartu-railway-station",
+     "time": null,
+     "timezone": null,
+     "phase": null,
+     "space": false,
+     "coarse": [
+      {
+       "startSec": 1126,
+       "endSec": 1138,
+       "label": "Eastern Europe",
+       "lat": 57.794,
+       "lon": 34.156
+      },
+      {
+       "startSec": 1138,
+       "endSec": 1150,
+       "label": "Northern Europe",
+       "lat": 62.617,
+       "lon": -34.167
+      },
+      {
+       "startSec": 1174,
+       "endSec": 1186.17,
+       "label": "Northern Europe",
+       "lat": 51.319,
+       "lon": 0.267
+      }
+     ]
+    }
+   ],
+   "located": 32,
+   "timezones": 12,
+   "windowMidpointShiftMin": {
+    "median": 145.0,
+    "max": 405.0,
+    "atLeast60": 26
+   },
+   "spaces": 12
+  }
+ ],
+ "coarseRegion": {
+  "coarseKm": 1500,
+  "withReferences": {
+   "compilations": {
+    "undeterminedWindows": 84,
+    "undeterminedSec": 1072.2,
+    "ownAnswerTruthWithin": {
+     "1500": 47,
+     "2500": 55,
+     "5000": 60
+    },
+    "ownAnswerWindows": 84,
+    "withCoarseRegion": 34,
+    "withCoarseRegionSec": 451.2,
+    "truthInsideWindows": 32,
+    "truthInsideSec": 423,
+    "regionSec": 451,
+    "undeterminedStretches": 31,
+    "undeterminedStretchesWithRegion": 21,
+    "tiersAgreementEqualsRadius": {
+     "500": {
+      "windows": 6,
+      "truthInside": 4
+     },
+     "750": {
+      "windows": 16,
+      "truthInside": 14
+     },
+     "1000": {
+      "windows": 20,
+      "truthInside": 19
+     },
+     "1500": {
+      "windows": 34,
+      "truthInside": 32
+     },
+     "2000": {
+      "windows": 36,
+      "truthInside": 34
+     },
+     "2500": {
+      "windows": 36,
+      "truthInside": 34
+     },
+     "3000": {
+      "windows": 36,
+      "truthInside": 34
+     },
+     "5000": {
+      "windows": 38,
+      "truthInside": 34
+     }
+    }
+   },
+   "counterCheck": {
+    "undeterminedWindows": 9,
+    "undeterminedSec": 110,
+    "ownAnswerTruthWithin": {
+     "1500": 3,
+     "2500": 6,
+     "5000": 6
+    },
+    "ownAnswerWindows": 9,
+    "withCoarseRegion": 2,
+    "withCoarseRegionSec": 36,
+    "truthInsideWindows": 2,
+    "truthInsideSec": 36,
+    "regionSec": 36,
+    "undeterminedStretches": 7,
+    "undeterminedStretchesWithRegion": 2,
+    "tiersAgreementEqualsRadius": {
+     "500": {
+      "windows": 1,
+      "truthInside": 1
+     },
+     "750": {
+      "windows": 1,
+      "truthInside": 1
+     },
+     "1000": {
+      "windows": 1,
+      "truthInside": 1
+     },
+     "1500": {
+      "windows": 2,
+      "truthInside": 2
+     },
+     "2000": {
+      "windows": 3,
+      "truthInside": 3
+     },
+     "2500": {
+      "windows": 3,
+      "truthInside": 3
+     },
+     "3000": {
+      "windows": 3,
+      "truthInside": 3
+     },
+     "5000": {
+      "windows": 4,
+      "truthInside": 3
+     }
+    }
+   }
+  },
+  "holdout": {
+   "compilations": {
+    "undeterminedWindows": 99,
+    "undeterminedSec": 1285.2,
+    "ownAnswerTruthWithin": {
+     "1500": 61,
+     "2500": 69,
+     "5000": 75
+    },
+    "ownAnswerWindows": 99,
+    "withCoarseRegion": 42,
+    "withCoarseRegionSec": 570.2,
+    "truthInsideWindows": 40,
+    "truthInsideSec": 544,
+    "regionSec": 570,
+    "undeterminedStretches": 27,
+    "undeterminedStretchesWithRegion": 19,
+    "tiersAgreementEqualsRadius": {
+     "500": {
+      "windows": 14,
+      "truthInside": 10
+     },
+     "750": {
+      "windows": 26,
+      "truthInside": 22
+     },
+     "1000": {
+      "windows": 29,
+      "truthInside": 28
+     },
+     "1500": {
+      "windows": 42,
+      "truthInside": 40
+     },
+     "2000": {
+      "windows": 44,
+      "truthInside": 41
+     },
+     "2500": {
+      "windows": 44,
+      "truthInside": 41
+     },
+     "3000": {
+      "windows": 44,
+      "truthInside": 41
+     },
+     "5000": {
+      "windows": 50,
+      "truthInside": 45
+     }
+    }
+   },
+   "counterCheck": {
+    "undeterminedWindows": 10,
+    "undeterminedSec": 122,
+    "ownAnswerTruthWithin": {
+     "1500": 4,
+     "2500": 7,
+     "5000": 7
+    },
+    "ownAnswerWindows": 10,
+    "withCoarseRegion": 2,
+    "withCoarseRegionSec": 36,
+    "truthInsideWindows": 2,
+    "truthInsideSec": 36,
+    "regionSec": 36,
+    "undeterminedStretches": 6,
+    "undeterminedStretchesWithRegion": 2,
+    "tiersAgreementEqualsRadius": {
+     "500": {
+      "windows": 1,
+      "truthInside": 1
+     },
+     "750": {
+      "windows": 1,
+      "truthInside": 1
+     },
+     "1000": {
+      "windows": 1,
+      "truthInside": 1
+     },
+     "1500": {
+      "windows": 2,
+      "truthInside": 2
+     },
+     "2000": {
+      "windows": 3,
+      "truthInside": 3
+     },
+     "2500": {
+      "windows": 3,
+      "truthInside": 3
+     },
+     "3000": {
+      "windows": 3,
+      "truthInside": 3
+     },
+     "5000": {
+      "windows": 4,
+      "truthInside": 3
+     }
+    }
+   }
+  },
+  "singleClips4s": {
+   "withReferences": {
+    "undeterminedWindows": 116,
+    "ownAnswerWithin1500_2500_5000Pct": [
+     68,
+     72,
+     74
+    ],
+    "withCoarseRegion": 45,
+    "truthInside": 41,
+    "tier750": {
+     "windows": 26,
+     "truthInside": 21
+    }
+   },
+   "holdout": {
+    "undeterminedWindows": 131,
+    "ownAnswerWithin1500_2500_5000Pct": [
+     71,
+     74,
+     76
+    ],
+    "withCoarseRegion": 53,
+    "truthInside": 48,
+    "tier750": {
+     "windows": 33,
+     "truthInside": 27
+    }
+   }
+  },
+  "choice": "1500 km: at least 80 % inside on every set with margin (91-95 %); 750 km held 88/85/81/82 % on 16-33 windows with half as many windows shown; without the agreement no radius up to 5000 km reached 80 % (71-76 %)",
+  "names": {
+   "what": "How often the part of the world named for a shown coarse region is that of the truth (the piece filling most of the region; seconds: the piece at each second), next to how often the truth lies inside its 1 500 km circle. Named by the subregion at the circle centre (engine 11 candidate, regionOf) and by the circle (regionAround, as shipped). Regions recomputed with coarseRegions from the windows of the harness output (harness11.mts: w11.json with the places reference pictures, w11-hold.json without), so that runs merge as the naming lets them.",
+   "withReferences": {
+    "centre": {
+     "regions": 33,
+     "oneName": 33,
+     "twoNames": 0,
+     "truthInCircle": 31,
+     "truthPartNamed": 19,
+     "seconds": 487,
+     "secondsInCircle": 459,
+     "secondsPartNamed": 318
+    },
+    "circle": {
+     "regions": 32,
+     "oneName": 2,
+     "twoNames": 30,
+     "truthInCircle": 30,
+     "truthPartNamed": 28,
+     "seconds": 487,
+     "secondsInCircle": 459,
+     "secondsPartNamed": 435
+    }
+   },
+   "holdout": {
+    "centre": {
+     "regions": 36,
+     "oneName": 36,
+     "twoNames": 0,
+     "truthInCircle": 35,
+     "truthPartNamed": 24,
+     "seconds": 606,
+     "secondsInCircle": 580,
+     "secondsPartNamed": 446
+    },
+    "circle": {
+     "regions": 36,
+     "oneName": 5,
+     "twoNames": 31,
+     "truthInCircle": 35,
+     "truthPartNamed": 33,
+     "seconds": 606,
+     "secondsInCircle": 580,
+     "secondsPartNamed": 556
+    }
+   },
+   "choice": "regionAround with 90 %: names one subregion only where the circle is that clearly one part of the world (2 of 32 and 5 of 36 regions), otherwise two; the named parts held the truth in 88 and 92 % of the regions (89 and 92 % of the seconds) against 58 and 67 % (65 and 74 %) by the centre; the circle itself is unchanged"
+  }
+ },
+ "horizonPerStretch": {
+  "recording": "sammlung-20min.mp4",
+  "stretchesWithSpace": 12,
+  "refinePositionRuns": 6,
+  "refinePositionMsEach": [
+   1647,
+   2314,
+   2070,
+   2877,
+   3039,
+   3405
+  ],
+  "totalSec": 16.4,
+  "matches": 1,
+  "match": "Glenfinnan viaduct, error 0.16 deg, score 0.88",
+  "decision": "not adopted: about twice the cost of spaces and times together (7.2-8.8 s); the horizon stays with the stretch shown"
+ },
+ "console": {
+  "raumOpensChosenStretch": "BEFUND stretch 8 (Eiffel Tower) chosen, RAUM requested space grid of frame 153 (its keyframe) in DE and EN at 1600x960 and 1366x768; the stretch shown: frame 684 (the fix keyframes 684, 691, 698)"
+ }
+}

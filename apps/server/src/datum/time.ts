@@ -57,6 +57,8 @@ export interface TimeInput {
    * Without it the cache is keyed by the `embedTexts` function itself, so pass a stable function.
    */
   textCacheKey?: string;
+  /** Step of the sun path (minutes); default 10. A recording's stretches take 30 (engine.ts SEGMENT_SUN_STEP_MIN, FixSegment.sun). */
+  pathStepMin?: number;
 }
 
 export interface TimeResult {
@@ -907,13 +909,13 @@ function validYmd(s: string | null): string | null {
   }
 }
 
-function sunReportFor(date: string, place: Place, at: number | null): SunReport {
+function sunReportFor(date: string, place: Place, at: number | null, stepMin = 10): SunReport {
   const ev = sunEvents(date, place.lat, place.lon, place.timeZone);
   const state: SunState | null = at === null ? null : sunState(at, place.lat, place.lon);
   return {
     date,
     at: state,
-    path: sunPath(date, place.lat, place.lon, place.timeZone, 10),
+    path: sunPath(date, place.lat, place.lon, place.timeZone, stepMin),
     sunrise: ev.sunrise,
     sunset: ev.sunset,
     solarNoon: ev.solarNoon,
@@ -967,7 +969,7 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
     let phase: LightPhase = light.phase;
     let sun: SunReport | null = null;
     if (place) {
-      sun = sunReportFor(date, place, utc);
+      sun = sunReportFor(date, place, utc, input.pathStepMin);
       const el = sun.at!.elevationDeg;
       phase = phaseOfElevation(el);
       notes.push({
@@ -1091,7 +1093,7 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
       confidence: 0,
       ...bilingual(notes.slice(0, 5)),
     };
-    return { time, sun: place ? sunReportFor(bestDate, place, null) : null };
+    return { time, sun: place ? sunReportFor(bestDate, place, null, input.pathStepMin) : null };
   }
 
   const possible = clockWindows(dates, reasonPlace, band);
@@ -1148,7 +1150,7 @@ export async function estimateTime(input: TimeInput): Promise<TimeResult> {
       const span = (best.endMin - best.startMin + 1440) % 1440;
       at = localToUtc(bestDate, (best.startMin + span / 2) % 1440, place.timeZone);
     }
-    sun = sunReportFor(bestDate, place, at);
+    sun = sunReportFor(bestDate, place, at, input.pathStepMin);
   }
 
   const time: TimeEstimate = {

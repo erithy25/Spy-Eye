@@ -395,8 +395,13 @@ export interface FixSegment {
   /** Numbers of the first and the last analysis frame of the stretch (as Keyframe.frame). */
   firstFrame: number;
   lastFrame: number;
-  /** A frame from the middle of the stretch and its picture (face-masked, served by the node). */
-  keyframe: { frame: number; time: number; imageUrl: string };
+  /**
+   * A frame from the middle of the stretch and its picture (face-masked, served by the node). From
+   * engine 11 on, located stretches other than the one the fix shows (whose spaces are
+   * `Fix.keyframes`) carry a walkable space built from this frame, the longest stretches first and
+   * at most twelve per recording: `spaceUrl` and `pitchDeg` as on a Keyframe. Absent otherwise.
+   */
+  keyframe: { frame: number; time: number; imageUrl: string; spaceUrl?: string; pitchDeg?: number };
   /**
    * The place of the stretch, decided from its own frames as the place of a whole recording is
    * (reference gallery, country prior, world model); null when its pictures do not say where it
@@ -416,6 +421,42 @@ export interface FixSegment {
    * places, and the count of places is then a lower bound. Absent otherwise.
    */
   joined?: boolean;
+  /**
+   * The time of day and the sun of a located stretch, from its own frames at its own place (engine
+   * 11 on): the light of the whole file mixes the places. A time in the file's tags holds for the
+   * whole file and decides here too; the sun is then that of the stretch's place at that instant.
+   * Compact: no notes (they stay with the fix's own time), the sun path in 30-minute steps with
+   * angles to 0.1°. Absent for undetermined stretches and on older fixes.
+   */
+  time?: TimeEstimate;
+  sun?: SunReport | null;
+  /**
+   * Coarse regions of an undetermined stretch (engine 11 on), one per run of its windows for which
+   * the reference gallery and the world model point to the same area (their answers at most
+   * `radiusKm` apart): the area around the middle of the two, named by its part of the world. Not
+   * a place: it never counts among the places, never becomes the fix's location, and the
+   * stretch stays undetermined. Absent when no window of the stretch has one.
+   */
+  coarse?: FixSegmentRegion[];
+}
+
+/**
+ * A coarse region within an undetermined stretch (FixSegment.coarse): where its windows' pictures
+ * point to at the scale of a part of the world, with a radius calibrated on measured recordings
+ * (docs/DATUM.md, "Grobe Region").
+ */
+export interface FixSegmentRegion extends GeoPoint {
+  /** Seconds into the video: the windows it covers (within the stretch). */
+  startSec: number;
+  endSec: number;
+  radiusKm: number;
+  /**
+   * Name of the part of the world its circle holds, or of the two that share it (regions.ts
+   * regionAround), e.g. "Westeuropa" / "Western Europe", "Westeuropa oder Osteuropa" / "Western
+   * Europe or Eastern Europe".
+   */
+  label: string;
+  labelEn: string;
 }
 
 /**

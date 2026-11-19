@@ -9,6 +9,7 @@ import { useNode, type NodeConnection } from './useNode';
 import './datum/datum.css';
 import { useFixes } from './datum/useFixes';
 import { Ortung, type DatumViewProps } from './datum/views/Ortung';
+import type { StretchChoice } from './datum/segments';
 
 // Every view but ORTUNG, the first one, is loaded when it is first opened: the 3D views alone are
 // a large part of the console, and a slow machine should not parse them before the map shows.
@@ -404,6 +405,8 @@ function Shell({ node }: { node: NodeConnection }) {
   const allowed = useMemo(() => tabs.filter((tab) => tab.permission === null || node.can(tab.permission)).map((tab) => tab.id), [node, tabs]);
   const [tab, setTab] = useState<TabId>(() => initialTab(allowed));
   const [selected, setSelected] = useState<string | null>(() => initialSelection());
+  // The stretch chosen in BEFUND, which RAUM enters (datum/segments.ts chosenStretch).
+  const [stretch, setStretch] = useState<StretchChoice | null>(null);
   const datum = useFixes(node);
   const [sheet, setSheet] = useState<{ list: FrameTarget[]; index: number } | null>(null);
   const [mandateDialog, setMandateDialog] = useState(false);
@@ -503,8 +506,8 @@ function Shell({ node }: { node: NodeConnection }) {
           </Activity>
         )}
         <Suspense fallback={<ViewLoading />}>
-          {tab === 'befund' && <Befund {...datumProps} />}
-          {tab === 'raum' && <Raum {...datumProps} />}
+          {tab === 'befund' && <Befund {...datumProps} stretch={stretch} chooseStretch={setStretch} />}
+          {tab === 'raum' && <Raum {...datumProps} stretch={stretch} chooseStretch={setStretch} />}
           {tab === 'suche' && <Suche {...props} />}
           {tab === 'quellen' && <Quellen {...props} />}
           {tab === 'messung' && <Messung {...datumProps} />}

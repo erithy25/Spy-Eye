@@ -61,9 +61,27 @@ import {
   type StreetLevelResult,
 } from './streetlevel.js';
 import { breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
-import { analyseSegments, DEFAULT_SEGMENT_PARAMS, segmentCountries, segmentVerdict, summariseSegments, toSegments, wholeFileEvidence, type SegmentVerdict } from './segments.js';
+import {
+  analyseSegments,
+  clockText,
+  coarseRegions,
+  DEFAULT_SEGMENT_PARAMS,
+  multiPlaceTimeEvidence,
+  segmentCountries,
+  segmentVerdict,
+  spaceStretches,
+  spreadIndices,
+  stretchFrames,
+  stretchSpacesNote,
+  stretchTimes,
+  summariseSegments,
+  toSegments,
+  wholeFileEvidence,
+  type SegmentVerdict,
+} from './segments.js';
+import { regionAround } from './regions.js';
 import { filenameHints, readMetadata, type VideoMetadata } from './metadata.js';
-import { DAY_LABELS_EN, estimateTime, frameStatsFromJpeg, type FrameStats } from './time.js';
+import { DAY_LABELS_EN, estimateTime, frameStatsFromJpeg, type FrameStats, type TimeResult } from './time.js';
 import { estimateDisparity } from './depth.js';
 import { buildSpaceGrid } from './space.js';
 import { terrainAvailable } from './terrain.js';
@@ -75,6 +93,20 @@ import { ENGINE_VERSION, OLDEST_SHOWN_VERSION } from './version.js';
 /** Frames whose whole-frame and crop vectors go into the localisation (as in the evaluation). */
 const LOCATE_FRAMES = 12;
 const SPACE_FRAMES = 3;
+/**
+ * Located stretches of a recording of several places that get a walkable space of their own (one
+ * keyframe each, the longest stretches first; the stretch the fix shows has the fix's keyframes).
+ * Each space takes about a second (depth model and grid): twelve add some 12 s to the full fix.
+ */
+const SEGMENT_SPACES = 12;
+/** Analysis frames per located stretch whose light gives its time of day (stats and vectors). */
+const SEGMENT_TIME_FRAMES = 8;
+/**
+ * Step of the sun path of a stretch (FixSegment.sun), minutes: 49 points a day instead of the fix's
+ * 145 (a 20-minute recording of 32 located stretches carries 32 of them; at 20 minutes they made
+ * 114 of the full fix's 219 kB). The dials interpolate between the points.
+ */
+const SEGMENT_SUN_STEP_MIN = 30;
 /**
  * Sampled frames kept from the quick stage for the full one (about 0.2 MB each). Beyond this the
  * oldest are dropped; the full stage then samples again, with the same result.
@@ -278,6 +310,8 @@ interface SegmentOutcome {
   segments: FixSegment[] | null;
   /** Indices into the analysis frames (inclusive) for the keyframes; null: the whole recording. */
   keyRange: [number, number] | null;
+  /** Per stretch (parallel to `segments`), its analysis frames (indices, inclusive). */
+  ranges: [number, number][] | null;
   candidates: FixCandidate[] | null;
   /** The countries of the places (multi-place recordings only; the whole file's mix them). */
   countries: CountryProb[] | null;
@@ -1350,8 +1384,23 @@ export class DatumEngine {
     // Background work (the reference set) stops waiting on the services for a person's job.
     const streetYield = background ? (): void => streetStop.abort() : null;
     try {
-      const fix = await this.computeRest(entry, placed, streetJob, { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield, keyRange: parts.keyRange });
-      return parts.segments ? { ...fix, segments: parts.segments } : fix;
+      const stretches = parts.segments && parts.ranges && parts.verdict.lead !== null ? { segments: parts.segments, ranges: parts.ranges, lead: parts.verdict.lead } : null;
+      return await this.computeRest(entry, placed, streetJob, {
+        mark,
+        trace,
+        frameNumbers,
+        frameVectors,
+        framePath,
+        embedTexts,
+        meta,
+        hints,
+        dim,
+        matrix,
+        tiles,
+        streetYield,
+        keyRange: parts.keyRange,
+        stretches,
+      });
     } finally {
       // Deleted meanwhile or failed: the stage stops asking the services (a finished one ignores it).
       streetStop.abort();
@@ -1373,6 +1422,7 @@ export class DatumEngine {
       verdict: { multi: false, places: 0, joined: 0, location: located.location, replaced: false, lead: null, evidence: [], note },
       segments: null,
       keyRange: null,
+      ranges: null,
       candidates: null,
       countries: null,
     });
@@ -1412,7 +1462,12 @@ export class DatumEngine {
       );
       if (this.stopped) throw new EngineStopped();
       if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
-      const segments = toSegments(frames, analysis.windows, analysis.merged, (n) => frameUrl(id, n));
+      // Undetermined stretches name a coarse region where the gallery and the world model agree
+      // on one (segments.ts coarseRegions), by the parts of the world its circle holds
+      // (regions.ts regionAround); it is no place and changes nothing else.
+      const coarseKm = DEFAULT_SEGMENT_PARAMS.coarseKm;
+      const regions = coarseRegions(analysis.windows, analysis.merged, (lat, lon) => regionAround(world, lat, lon, coarseKm), coarseKm);
+      const segments = toSegments(frames, analysis.windows, analysis.merged, (n) => frameUrl(id, n)).map((s, i) => (regions[i] ? { ...s, coarse: regions[i] } : s));
       const gps = located.diagnostics.method === 'metadata';
       // The gallery's answer for the whole file that the world model turned down: no stretch at
       // that place leads (see segmentVerdict).
@@ -1426,13 +1481,14 @@ export class DatumEngine {
       };
       this.opts.log(`Abschnitte "${entry.info.name}": ${verdict.note.de}${how.de}; Suche ${secs(analysis.timing.searchMs)} s in ${analysis.searches} Teilen, Entscheidung ${secs(analysis.timing.decideMs)} s`);
       const note = { de: `${verdict.note.de}${how.de}`, en: `${verdict.note.en}${how.en}` };
-      if (!verdict.multi || verdict.lead === null) return { verdict: { ...verdict, note }, segments: null, keyRange: null, candidates: null, countries: null };
+      if (!verdict.multi || verdict.lead === null) return { verdict: { ...verdict, note }, segments: null, keyRange: null, ranges: null, candidates: null, countries: null };
       const lead = analysis.merged.stretches[verdict.lead];
       const keyRange: [number, number] | null = lead ? [analysis.windows[lead.first]!.first, analysis.windows[lead.last]!.last] : null;
       return {
         verdict: { ...verdict, note },
         segments,
         keyRange,
+        ranges: stretchFrames(analysis.windows, analysis.merged),
         candidates: verdict.replaced ? placeCandidates(segments, verdict.lead) : null,
         countries: segmentCountries(segments, verdict.lead),
       };
@@ -1459,14 +1515,24 @@ export class DatumEngine {
       meta: VideoMetadata | null;
       hints: ReturnType<typeof filenameHints>;
       dim: number;
+      /** The analysis vectors (frames x tiles rows of dim floats; tile 0 is the whole frame). */
+      matrix: Float32Array;
+      tiles: number;
       /** Stops the street-level stage for a person's job (background jobs only, see awaitStreet). */
       streetYield: (() => void) | null;
       /** Analysis frames the keyframes come from (the stretch shown); null: the whole recording. */
       keyRange: [number, number] | null;
+      /**
+       * The stretches of a recording of several places: their frames (indices, inclusive) and the
+       * one the fix shows. Each located one gets its own time and sun, and the longest their own
+       * space; the fix's time is that of the stretch shown. Null for a recording of one place.
+       */
+      stretches: { segments: FixSegment[]; ranges: [number, number][]; lead: number } | null;
     },
   ): Promise<Fix> {
     const id = entry.info.id;
-    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, streetYield, keyRange } = ctx;
+    const { mark, trace, frameNumbers, frameVectors, framePath, embedTexts, meta, hints, dim, matrix, tiles, streetYield, keyRange, stretches } = ctx;
+    const segments: FixSegment[] | null = stretches ? stretches.segments.map((s) => ({ ...s, keyframe: { ...s.keyframe } })) : null;
 
     // Spaces from keyframes: depth → walkable grid, skyline. A recording of several places takes
     // them from the stretch whose place the fix shows, so that horizon and heading belong to it.
@@ -1507,6 +1573,43 @@ export class DatumEngine {
         this.opts.log(`Raum für Bild ${frame.n} von "${entry.info.name}" nicht erzeugt: ${err instanceof Error ? err.message : String(err)}`);
       }
       keyframes.push(key);
+    }
+
+    // One space for each of the longest other located stretches (their keyframe), so that RAUM can
+    // enter the stretch chosen in BEFUND. Their skylines are not matched against the terrain: the
+    // horizon belongs to the stretch shown (see docs/DATUM.md, "Räume je Abschnitt").
+    if (stretches && segments) {
+      const started = performance.now();
+      const chosen = spaceStretches(segments, stretches.lead, SEGMENT_SPACES);
+      let built = 0;
+      for (const i of chosen) {
+        const seg = segments[i]!;
+        const n = seg.keyframe.frame;
+        if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
+        if (this.stopped) throw new EngineStopped();
+        const same = keyframes.find((k) => k.frame === n && k.spaceUrl);
+        if (same?.spaceUrl) {
+          seg.keyframe = { ...seg.keyframe, spaceUrl: same.spaceUrl, ...(same.pitchDeg !== undefined ? { pitchDeg: same.pitchDeg } : {}) };
+          built++;
+          continue;
+        }
+        await breathe();
+        try {
+          const jpeg = framePath(n);
+          const disparity = await estimateDisparity(jpeg);
+          const grid = await buildSpaceGrid(jpeg, disparity);
+          await this.ensureDir(id);
+          if (this.stopped) throw new EngineStopped();
+          await fs.writeFile(this.spacePath(id, n), grid.buffer);
+          seg.keyframe = { ...seg.keyframe, spaceUrl: `api/datum/space/${id}/${n}`, pitchDeg: grid.pitchDeg };
+          built++;
+        } catch (err: unknown) {
+          if (err instanceof EngineStopped) throw err;
+          this.opts.log(`Raum für Abschnitt ${i + 1} (Bild ${n}) von "${entry.info.name}" nicht erzeugt: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      const located = segments.filter((s) => s.location).length;
+      mark('Räume der Abschnitte aufgebaut', stretchSpacesNote(built, located, chosen.length, performance.now() - started));
     }
 
     let evidence: Evidence[] = [...located.evidence];
@@ -1590,22 +1693,72 @@ export class DatumEngine {
 
     // Time and sun. A tag with a date but no time of day names the day, not the instant: it goes
     // in where a date from the file name would (sun path of that day, clock from the light),
-    // unless the file name has a date of its own.
+    // unless the file name has a date of its own. A time in the tags holds for the whole file and
+    // decides for every stretch (estimateTime takes it first).
+    const timeAt = (vectors: Float32Array, stats: FrameStats[], at: FixLocation | null, stepMin?: number): Promise<TimeResult> =>
+      estimateTime({
+        frameEmbeddings: vectors,
+        dim,
+        embedTexts,
+        frameStats: stats,
+        location: at ? { lat: at.lat, lon: at.lon } : null,
+        country: at?.country ?? null,
+        metadataUtc: meta?.creationUtc ?? null,
+        filenameDate: hints.date,
+        metadataDate: meta?.creationDate ?? null,
+        textCacheKey: config.modelId,
+        ...(stepMin !== undefined ? { pathStepMin: stepMin } : {}),
+      });
     const stats = await Promise.all(frameNumbers.map((n) => frameStatsFromJpeg(framePath(n))));
-    const timed = await estimateTime({
-      frameEmbeddings: frameVectors,
-      dim,
-      embedTexts,
-      frameStats: stats,
-      location: location ? { lat: location.lat, lon: location.lon } : null,
-      country: location?.country ?? null,
-      metadataUtc: meta?.creationUtc ?? null,
-      filenameDate: hints.date,
-      metadataDate: meta?.creationDate ?? null,
-      textCacheKey: config.modelId,
-    });
-    mark('Licht und Sonnenstand bestimmt', timeNote(timed.time));
-    evidence.push(...timeEvidence(timed.time));
+    const whole = await timeAt(frameVectors, stats, location);
+    let timed = whole;
+    if (stretches && segments) {
+      // A recording of several places: every located stretch from its own frames at its own place
+      // (the whole file's twelve frames mix the light of all of them), and the fix the stretch it
+      // shows. The whole file's estimate stays as evidence, said to be mixed and without weight.
+      const started = performance.now();
+      // Whole-frame vectors and light statistics of analysis frames (indices).
+      const framesOf = async (picks: number[]): Promise<{ vectors: Float32Array; stats: FrameStats[] }> => {
+        const vectors = new Float32Array(picks.length * dim);
+        picks.forEach((fi, row) => vectors.set(matrix.subarray(fi * tiles * dim, fi * tiles * dim + dim), row * dim));
+        return { vectors, stats: await Promise.all(picks.map((fi) => frameStatsFromJpeg(framePath(entry.frames[fi]!.n)))) };
+      };
+      const timedSegments = await stretchTimes(
+        segments,
+        stretches.ranges,
+        async (picks, at) => {
+          const own = await framesOf(picks);
+          return timeAt(own.vectors, own.stats, at, SEGMENT_SUN_STEP_MIN);
+        },
+        SEGMENT_TIME_FRAMES,
+        () => {
+          if (this.gone(entry)) throw new Error('Aufzeichnung gelöscht.');
+          if (this.stopped) throw new EngineStopped();
+        },
+        (i, err) => this.opts.log(`Uhrzeit für Abschnitt ${i + 1} von "${entry.info.name}" nicht bestimmt: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      segments.splice(0, segments.length, ...timedSegments);
+      const counted = segments.filter((s) => s.time).length;
+      const lead = segments[stretches.lead]!;
+      const [first, last] = stretches.ranges[stretches.lead]!;
+      // The same frames as the stretch's own estimate (stretchTimes), so that both read the same light.
+      const own = await framesOf(spreadIndices(first, last, SEGMENT_TIME_FRAMES));
+      // The fix's own time: the stretch's frames at the fix's place (the stretch's place, or the
+      // whole file's answer where it agrees with it), with the sun path in the fix's steps.
+      timed = await timeAt(own.vectors, own.stats, location);
+      const span = `${clockText(lead.startSec)}–${clockText(lead.endSec)}`;
+      // A time from the file's tags is said once, for the whole file (multiPlaceTimeEvidence).
+      evidence.push(...multiPlaceTimeEvidence(timeEvidence(timed.time), timeEvidence(whole.time), span));
+      const ms = Math.round(performance.now() - started);
+      const note = timeNote(timed.time);
+      mark('Licht und Sonnenstand bestimmt', {
+        de: `${note.de} (Abschnitt ${span}) · ${counted} Abschnitte mit Ort je für sich, ${ms.toLocaleString('de-DE')} ms`,
+        en: `${note.en} (segment ${span}) · ${counted} segments with a place each on its own, ${ms.toLocaleString('en-GB')} ms`,
+      });
+    } else {
+      mark('Licht und Sonnenstand bestimmt', timeNote(timed.time));
+      evidence.push(...timeEvidence(timed.time));
+    }
 
     return {
       videoId: id,
@@ -1627,6 +1780,7 @@ export class DatumEngine {
       trace,
       stage: 'full',
       truth: null,
+      ...(segments ? { segments } : {}),
     };
   }
 }
@@ -1711,5 +1865,7 @@ export function summarise(fix: Fix): Fix {
     ...fix,
     sun: fix.sun ? { ...fix.sun, path: [] } : null,
     horizon: fix.horizon ? { ...fix.horizon, profile: null } : null,
+    // The stretches' sun paths too (49 points each): the console reads them with the full fix.
+    ...(fix.segments ? { segments: fix.segments.map((s) => (s.sun ? { ...s, sun: { ...s.sun, path: [] } } : s)) } : {}),
   };
 }

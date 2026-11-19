@@ -25,8 +25,13 @@
  *      (`Fix.segments`, `segmentSummary` on slim fixes, evidence kind 'segments'); its place is
  *      that of the longest located stretch (not one at a place the whole file's world model
  *      rejected) unless the answer for the whole file agrees with it.
+ *  11: segments complete: every located stretch has its own time of day and sun (`FixSegment.time`,
+ *      `sun`) and the fix that of the stretch it shows (the whole file's estimate is evidence of
+ *      weight 0, "Ganze Datei (gemischt)"); undetermined stretches name a coarse region where the
+ *      gallery and the world model agree (`FixSegment.coarse`); the longest located stretches get
+ *      a walkable space of their own (`FixSegment.keyframe.spaceUrl`).
  */
-export const ENGINE_VERSION = 10;
+export const ENGINE_VERSION = 11;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

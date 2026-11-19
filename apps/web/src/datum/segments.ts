@@ -4,10 +4,10 @@
  * (Fix.segmentSummary). Mirrors summariseSegments of the server (datum/segments.ts), which is not
  * imported here because it pulls in the server's localisation code.
  */
-import type { Fix, FixSegment, FixSegmentPlace, FixSegmentSummary } from '../../../server/src/datum/contract';
+import type { Fix, FixSegment, FixSegmentPlace, FixSegmentRegion, FixSegmentSummary, Keyframe, SunReport, TimeEstimate } from '../../../server/src/datum/contract';
 import type { MapMarker, MapShape } from '../map/MapCanvas';
 
-export type { FixSegment, FixSegmentPlace, FixSegmentSummary };
+export type { FixSegment, FixSegmentPlace, FixSegmentRegion, FixSegmentSummary };
 
 /** The compact form of the stretches: from the list's slim fix, else computed from the full fix. */
 export function segmentSummary(fix: Fix | null | undefined): FixSegmentSummary | null {
@@ -240,4 +240,96 @@ function between(a: [number, number], b: [number, number]): [number, number][] {
     out.push([Math.atan2(z, Math.hypot(x, y)) / r, Math.atan2(y, x) / r]);
   }
   return out;
+}
+
+/**
+ * The stretch chosen in BEFUND, shared with RAUM (App keeps it): for one result of one recording.
+ * Another recording or a new result (its computedAt) starts again at the stretch the fix shows.
+ */
+export interface StretchChoice {
+  videoId: string;
+  computedAt: number;
+  index: number;
+}
+
+/**
+ * Index of the chosen stretch of a fix: the choice where it belongs to this result and lies within
+ * its stretches, else the stretch the fix shows (leadSegment). 0 for a fix without stretches.
+ */
+export function chosenStretch(fix: Fix, choice: StretchChoice | null): number {
+  const segments = fix.segments ?? [];
+  if (segments.length === 0) return 0;
+  if (choice && choice.videoId === fix.videoId && choice.computedAt === fix.computedAt && choice.index >= 0 && choice.index < segments.length) return choice.index;
+  return leadSegment(fix);
+}
+
+/**
+ * Whether the stretches of a fix have a time of their own (engine 11 on). Before, every stretch
+ * had only the fix's time, estimated from the frames of the whole file.
+ */
+export function timedStretches(fix: Fix): boolean {
+  return (fix.segments ?? []).some((s) => s.time);
+}
+
+/**
+ * The time and sun the console shows for a stretch (BEFUND's clock and sun dial, RAUM's sun): the
+ * fix's own for the stretch the fix shows, for a fix without stretches and for fixes before
+ * engine 11 (whose stretches have no time of their own); a located stretch's own; null for a
+ * stretch of a fix whose stretches have their own times when it has none: an undetermined one (no
+ * place, no clock), or a located one whose estimate failed (the caller tells them apart by
+ * FixSegment.location). `own` says whether it is a stretch's own time rather than the fix's.
+ */
+export function stretchClock(fix: Fix, index: number | null): { time: TimeEstimate; sun: SunReport | null; own: boolean } | null {
+  const segments = fix.segments ?? [];
+  const s = index !== null ? segments[index] : undefined;
+  if (!s || !timedStretches(fix) || index === leadSegment(fix)) return { time: fix.time, sun: fix.sun, own: false };
+  if (!s.time) return null;
+  return { time: s.time, sun: s.sun ?? null, own: true };
+}
+
+/** A walkable space as RAUM enters it. */
+export interface SpaceKey {
+  frame: number;
+  imageUrl: string;
+  spaceUrl: string;
+  pitchDeg: number;
+}
+
+/**
+ * The spaces RAUM offers for a stretch: the fix's keyframes for the stretch the fix shows, for a
+ * fix without stretches and for older fixes; a stretch's own space (FixSegment.keyframe, the
+ * longest located stretches have one); none for the others (undetermined, or beyond the twelve).
+ * Fixes before engine 11 (their stretches have no time of their own) offer the fix's keyframes.
+ * `fix` says whether they are the fix's keyframes (the heading and horizon belong to those).
+ */
+export function stretchSpaces(fix: Fix, index: number | null): { fix: boolean; spaces: SpaceKey[] } {
+  const own = (k: Keyframe): SpaceKey[] => (k.spaceUrl ? [{ frame: k.frame, imageUrl: k.imageUrl, spaceUrl: k.spaceUrl, pitchDeg: k.pitchDeg ?? 0 }] : []);
+  const segments = fix.segments ?? [];
+  const s = index !== null ? segments[index] : undefined;
+  // Before engine 11 the stretches had no spaces (nor times): the fix's keyframes for all of them.
+  if (!s || !timedStretches(fix) || index === leadSegment(fix)) return { fix: true, spaces: fix.keyframes.flatMap(own) };
+  const k = s.keyframe;
+  return { fix: false, spaces: k.spaceUrl ? [{ frame: k.frame, imageUrl: k.imageUrl, spaceUrl: k.spaceUrl, pitchDeg: k.pitchDeg ?? 0 }] : [] };
+}
+
+/** The stretches RAUM can enter (stretchSpaces has a space for them), in time order. */
+export function spacedStretches(fix: Fix): number[] {
+  return (fix.segments ?? []).flatMap((_, i) => (stretchSpaces(fix, i).spaces.length > 0 ? [i] : []));
+}
+
+/**
+ * "grobe Region: eher Westeuropa, ± 1.500 km" for a coarse region of an undetermined stretch
+ * (FixSegment.coarse), with its span in front where it covers only part of the stretch. `km`
+ * writes a distance as the console does, `name` picks the region's name in the console's language.
+ */
+export function coarseText(
+  r: FixSegmentRegion,
+  stretch: Pick<FixSegment, 'startSec' | 'endSec'>,
+  t: (de: string, vars?: Record<string, string | number>) => string,
+  km: (km: number) => string,
+  name: (r: FixSegmentRegion) => string,
+): string {
+  // The radius stays on one line with its sign and unit ("± 1.500 km").
+  const text = t('grobe Region: eher {region}, ± {km}', { region: name(r), km: km(r.radiusKm).replace(/ /g, '\u00a0') }).replace('± ', '±\u00a0');
+  return r.startSec <= stretch.startSec && r.endSec >= stretch.endSec ? text : `${spanText(r)} · ${text}`;
 }

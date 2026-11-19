@@ -4,8 +4,9 @@ import { formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { rel } from '../api';
 import { countryText, placeText, radiusHint, radiusText } from '../labels';
-import { barLayout, numberFits, spanText } from '../segments';
-import { kindMethod } from './common';
+import { barLayout, coarseText, numberFits, spanText, stretchClock, timedStretches } from '../segments';
+import { kmText, windowText } from '../useFixes';
+import { kindMethod, referenceInstant, utcOffset } from './common';
 
 export interface SegmentTimelineProps {
   fix: Fix;
@@ -17,16 +18,22 @@ export interface SegmentTimelineProps {
   places: number;
   /** Whether the count of places is a lower bound (segments.ts placesLowerBound). */
   atLeast: boolean;
+  /** Whether the chosen stretch is described below the bar (BEFUND); RAUM shows the bar only. */
+  detail?: boolean;
+  /** In place of the count of places at the right of the head (RAUM: the chosen stretch). */
+  caption?: string;
 }
 
 /**
  * The stretches of a recording of several places under its video: one bar per stretch, as wide as
  * it lasts, numbered where there is room; an undetermined stretch is drawn dashed. Below, the chosen
- * stretch: its span, its place with country, radius and confidence, and its keyframe.
+ * stretch: its span, its place with country, radius, confidence and time window, and its keyframe;
+ * for an undetermined stretch the coarse regions its pictures point to, where there are any (never
+ * a place). RAUM shows the bar only (`detail` false), with the chosen stretch as `caption`.
  */
-export function SegmentTimeline({ fix, segments, selected, onSelect, places, atLeast }: SegmentTimelineProps) {
+export function SegmentTimeline({ fix, segments, selected, onSelect, places, atLeast, detail = true, caption }: SegmentTimelineProps) {
   const lang = useLang();
-  const { t } = lang;
+  const { t, locale } = lang;
   const bar = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -44,6 +51,12 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
   const chosen = segments[selected] ?? null;
   const undetermined = segments.filter((s) => !s.location).length;
   const loc = chosen?.location ?? null;
+  // The chosen stretch's time (its own from engine 11 on; the fix's for the stretch it shows).
+  // Before engine 11 the stretches had no time of their own: the fix's, from the frames of the
+  // whole file, is not said to be theirs.
+  const timed = timedStretches(fix);
+  const clock = chosen && loc && timed ? stretchClock(fix, selected) : null;
+  const more = (chosen?.coarse?.length ?? 0) - 3;
   const name = (s: FixSegment, i: number): string =>
     `${t('Abschnitt {n} von {total}', { n: i + 1, total: segments.length })} · ${spanText(s)} · ${s.location ? placeText(lang, s.location, fix) : t('unbestimmt')}`;
 
@@ -59,8 +72,12 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
           {t('Abschnitte')} <span className="count">{segments.length}</span>
         </span>
         <span className="low">
-          {atLeast ? t('mindestens {n} Orte', { n: places }) : t('{n} Orte', { n: places })}
-          {undetermined > 0 ? ` · ${t('{n} unbestimmt', { n: undetermined })}` : ''}
+          {caption ?? (
+            <>
+              {atLeast ? t('mindestens {n} Orte', { n: places }) : t('{n} Orte', { n: places })}
+              {undetermined > 0 ? ` · ${t('{n} unbestimmt', { n: undetermined })}` : ''}
+            </>
+          )}
         </span>
       </div>
       <div
@@ -115,7 +132,7 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
           );
         })}
       </div>
-      {chosen && (
+      {chosen && detail && (
         <div className="dt-seg-detail">
           <img src={rel(chosen.keyframe.imageUrl)} alt={t('Schlüsselbild von Abschnitt {n}', { n: selected + 1 })} loading="lazy" decoding="async" />
           <div className="dt-seg-where">
@@ -131,9 +148,32 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
                 <span className="dt-seg-sub">
                   {t('Konfidenz')} {formatScore(loc.confidence)} · {t(kindMethod(loc.method))}
                 </span>
+                {clock ? (
+                  <span className="dt-seg-sub" title={clock.time.timezone ?? ''}>
+                    {t('Uhrzeit')} {windowText(clock.time) ?? '––:––'}
+                    {clock.time.windows[0] ? ` · ${t(clock.time.windows[0].label)}` : ` · ${t('nicht bestimmbar')}`}
+                    {clock.time.timezone ? ` · ${utcOffset(clock.time.timezone, referenceInstant(clock.time, clock.sun))}` : ''}
+                  </span>
+                ) : (
+                  // A stretch with a place whose estimate failed (a frame unreadable): it has a place, no time.
+                  timed && <span className="dt-seg-sub">{`${t('Uhrzeit')} ––:–– · ${t('nicht bestimmbar')}`}</span>
+                )}
               </>
             ) : (
-              <span className="dt-seg-sub">{t('Die Bilder dieses Abschnitts reichen für keinen Ort.')}</span>
+              <>
+                <span className="dt-seg-sub">{t('Die Bilder dieses Abschnitts reichen für keinen Ort.')}</span>
+                {/* Where the gallery and the world model agree on an area: named, but not a place. */}
+                {(chosen.coarse ?? []).slice(0, 3).map((r) => (
+                  <span
+                    key={`${r.startSec}:${r.endSec}`}
+                    className="dt-seg-sub"
+                    title={t('Galerie und Weltmodell zeigen für diese Bilder in dieselbe Gegend. Das ist kein Ort: Es zählt nicht zu den Orten und wird nicht zum Ergebnis.')}
+                  >
+                    {coarseText(r, chosen, (de, vars) => t(de, vars), (km) => kmText(km, locale), (name) => lang.pick(name.label, name.labelEn))}
+                  </span>
+                ))}
+                {more > 0 && <span className="dt-seg-sub low">{more === 1 ? t('und eine weitere grobe Region') : t('und {n} weitere grobe Regionen', { n: more })}</span>}
+              </>
             )}
             {chosen.place !== null && (
               <span className="dt-seg-sub low">

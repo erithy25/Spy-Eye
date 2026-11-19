@@ -712,7 +712,7 @@ test('a fix whose place came from a stretch: the whole file\'s entries say so an
   assert.equal(w!.weight, 0);
   assert.equal(w!.labelEn, 'Whole file (mixed): Weltmodell (GeoCLIP): bei Moskau (20 %)');
   assert.equal(r!.label, 'Ganze Datei (gemischt): Länderschätzung: Russland 21 %');
-  assert.equal(s, sun, 'the sun is the same in every stretch of the file');
+  assert.equal(s, sun, 'the time evidence is not touched here: the engine marks the whole file\'s with wholeFileTimeEvidence');
 
   const segments: FixSegment[] = [
     { startSec: 0, endSec: 30, firstFrame: 1, lastFrame: 30, keyframe: { frame: 15, time: 14, imageUrl: 'a' }, location: loc(19.42, -99.18, { country: 'MX', countryName: 'Mexiko' }), place: 1, windows: 1 },

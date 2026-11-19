@@ -42,7 +42,7 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | Sonne | Sonnenstandsrechnung (NOAA) für Ort und Datum, Zeiten, in denen die Sonne im gemessenen Band steht; Zeitzone aus Land und Länge | Uhrzeitfenster in Ortszeit, Sonnenbahn, Schattenrichtung |
 | Raum | Tiefenschätzung (Depth Anything V2 Small) für drei Schlüsselbilder; Himmel, Boden und Neigung der Kamera; Abstände aus der Annahme einer Augenhöhe von 1,6 m | begehbarer Raum, Himmelslinie |
 | Horizont | Aus Höhendaten berechneter Horizont am Kandidatenort gegen die Himmelslinie des Videos; gewertet nur, wenn der Horizont im Bildausschnitt mindestens 1° Relief hat und die beste Richtung sich deutlich von den übrigen abhebt | Blickrichtung und Bildwinkel, wenn das Gelände markant ist und der Ort stimmt |
-| Abschnitte | Nur in der vollständigen Ortung: die Szenen der Auswertung als Fenster, jedes für sich mit Galerie, Länderschätzung und Weltmodell geortet, sichere Antworten zu Orten zusammengefasst (Abschnitt [Mehrere Orte in einer Aufnahme](#mehrere-orte-in-einer-aufnahme)) | eine Zeitleiste mit einem Abschnitt je Ort, wenn die Bilder mindestens zwei Orte zeigen; sonst unverändert |
+| Abschnitte | Nur in der vollständigen Ortung: die Szenen der Auswertung als Fenster, jedes für sich mit Galerie, Länderschätzung und Weltmodell geortet, sichere Antworten zu Orten zusammengefasst; jeder Abschnitt mit Ort bekommt Uhrzeit und Sonnenstand aus seinen eigenen Bildern, die längsten einen eigenen Raum (Abschnitt [Mehrere Orte in einer Aufnahme](#mehrere-orte-in-einer-aufnahme)) | eine Zeitleiste mit einem Abschnitt je Ort, wenn die Bilder mindestens zwei Orte zeigen, mit Uhrzeit je Abschnitt und grober Region für unbestimmte Abschnitte, wo sie gemessen trägt; sonst unverändert |
 
 Jeder Beleg, jeder Schritt des Ablaufs und jede Begründung kommt vom Knoten auf Deutsch und auf
 Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
@@ -52,8 +52,8 @@ Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
 | Reiter | Zeigt |
 | --- | --- |
 | ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, bei mehreren Orten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius und Schlüsselbild; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert und verbunden), Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
-| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen |
+| BEFUND | Video, bei mehreren Orten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert und verbunden; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
+| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; bei mehreren Orten der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
 | MESSUNG | Abweichung jeder Ortung gegen die Grundwahrheit des Referenzbestands; am Ende der Abschnitt „Einstellungen der Ortung“ |
@@ -140,8 +140,9 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   Weltmodell für die ganze Datei die Antwort der Galerie verworfen, steht ein Abschnitt an diesem
   Ort nicht oben, sondern der längste übrige: Die Deutschlandreise der Gegenprobe (Bhf. Eschborn,
   in einem Abschnitt für den Bahnhof Norderstedt Mitte ± 3 km gehalten, 408 km daneben) hätte sonst
-  diesen falschen Ort mit 3 km Radius als Ergebnis gezeigt. Die Räume und der Horizont kommen aus
-  dem gezeigten Abschnitt. Ersetzt sein Ort die Ortung der ganzen Datei, sind die Kandidaten die
+  diesen falschen Ort mit 3 km Radius als Ergebnis gezeigt. Uhrzeit und Sonnenstand, die drei
+  Räume der Ortung und der Horizont kommen aus dem gezeigten Abschnitt (Uhrzeit und Sonnenstand
+  seit Fassung 11, siehe [Uhrzeit und Sonne je Abschnitt](#uhrzeit-und-sonne-je-abschnitt)). Ersetzt sein Ort die Ortung der ganzen Datei, sind die Kandidaten die
   Orte der Aufnahme, die Länder die der Abschnitte (nach ihrer Zeit), die Belege der ganzen Datei
   (Referenzbilder, Weltmodell, Länderschätzung) heißen „Ganze Datei (gemischt)“ und zählen nicht,
   und Straßenbilder werden nicht gefragt (ihr Vergleich nähme Bilder der ganzen Datei). Eine
@@ -149,6 +150,9 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
 - **GPS in der Datei.** Die Position gilt für die ganze Datei; es gibt keine Abschnitte. Zeigen
   die Bilder trotzdem mehrere Orte, sagt ein Beleg ohne Gewicht: „Die Bilder zeigen 2 verschiedene
   Orte“.
+- **Fassung 11** macht die Abschnitte vollständig: eine Uhrzeit je Abschnitt mit Ort, eine grobe
+  Region für unbestimmte Abschnitte, wo sie gemessen trägt, und eigene Räume für die längsten
+  Abschnitte (die drei Abschnitte unten).
 
 ### Gemessen an Zusammenschnitten
 
@@ -201,6 +205,160 @@ Fehler eines Abschnitts ist der Abstand seines Orts zum Ort des Stücks, das ihn
   bestätigt. Echtes Reise- oder Dashcam-Material ist nicht gemessen; ohne bekannte Bauwerke wird
   der Anteil unbestimmter Abschnitte größer sein.
 
+### Uhrzeit und Sonne je Abschnitt
+
+- **Rechnung.** Jeder Abschnitt mit Ort bekommt Uhrzeit und Sonnenstand aus bis zu acht seiner
+  eigenen Bilder (Bildstatistik und Bildvektoren der Auswertung; die Beschreibungen für Licht und
+  Jahreszeit bettet das Text-Bild-Modell einmal je Prozess ein) an seinem eigenen Ort, in dessen
+  Zeitzone. Ein unbestimmter Abschnitt hat keinen Ort und daher keine Uhrzeit.
+- **Oben.** Die Uhrzeit der Ortung ist die des gezeigten Abschnitts, aus denselben Bildern; ihr
+  Beleg nennt ihn („Sonnenhöhe 3–90° (Abschnitt 11:19–11:43)“). Die Schätzung aus den zwölf Bildern
+  der ganzen Datei mischt das Licht aller Orte; sie bleibt als Beleg „Ganze Datei (gemischt)“ ohne
+  Gewicht. Das gilt auch, wenn die Ortung der ganzen Datei mit dem Abschnitt übereinstimmt: ihre
+  Bilder stammen trotzdem von allen Orten.
+- **Aufnahmezeit in der Datei.** Sie gilt für die ganze Datei und entscheidet auch je Abschnitt:
+  derselbe Zeitpunkt, in der Ortszeit jedes Abschnitts und mit dem Sonnenstand an seinem Ort. Ihr
+  Beleg steht einmal da, „Aufnahmezeit aus den Metadaten“: Er sagt, dass sie für die ganze Datei und
+  jeden Abschnitt gilt und mit dem Licht des gezeigten Abschnitts verglichen ist. Eine Kopie „Ganze
+  Datei (gemischt)“ gibt es dann nicht; sie hätte die Zeit nur wiederholt und am gemischten Licht
+  aller Orte geprüft.
+- **Konsole.** Der Kopf des BEFUNDS bleibt eine Aussage über die Ortung: Ort, Uhrzeit und
+  Konfidenz des gezeigten Abschnitts, auch wenn ein anderer gewählt ist. Uhr und Polardiagramm
+  folgen dem gewählten Abschnitt und nennen ihn darüber („Abschnitt 8 · 2:27–2:39 · Eiffelturm,
+  Paris“); die Zeile unter der Zeitleiste nennt sein Zeitfenster. Ein Abschnitt mit Ort, dessen
+  Schätzung fehlschlug (ein Bild unlesbar), heißt „Uhrzeit ––:–– · nicht bestimmbar“, nicht „ohne
+  Ort“. Ortungen vor Fassung 11 haben keine Uhrzeit je Abschnitt: Die Zeile unter der Zeitleiste
+  nennt dann keine, und die Uhr zeigt die der Ortung. Die Blickrichtung aus dem Horizont gehört zum
+  gezeigten Abschnitt und erscheint nur bei ihm.
+- **Gespeichert** wird die Uhrzeit eines Abschnitts ohne die Begründungszeilen (die trägt die
+  Uhrzeit oben) und mit der Sonnenbahn in 30-Minuten-Schritten auf 0,1° (oben 10 Minuten).
+
+Gemessen am 19. November 2026 auf einem eigenen Knoten, während auf dem Rechner keine andere
+Auswertung lief, mit den Zusammenschnitten von oben und der Gegenprobe (frisch hochgeladen und
+ausgewertet); die Uhrzeit der ganzen Datei ist die der Fassung 10 auf denselben Auswertungen.
+
+| Aufnahme | Abschnitte mit Ort | Zeitzonen | Fenstermitte anders als die der ganzen Datei (Median, höchstens) | derselbe Clip in mehreren Abschnitten: gleiche Uhrzeit |
+| --- | --- | --- | --- | --- |
+| 20 Minuten | 32 | 12 | 2 h 25 min, 6 h 45 min; ≥ 1 h in 26 von 32 | 8 von 9 Clips |
+| 10 Orte | 6 | 4 | 1 h 23 min, 6 h 15 min | 1 von 1 (drei Abschnitte) |
+| Rückkehr | 3 | 2 | 2 h 8 min, 2 h 33 min | 1 von 1 |
+| 3 Orte | 2 | 2 | 1 h 15 min, 2 h 23 min | – |
+| Deutschlandreise | 3 | 1 | 13 min, 2 h 5 min | – |
+| Kontinente | 3 | 3 | 10 h 30 min, 10 h 35 min | – |
+
+- Die eine Abweichung: der Bahnhof Ulaanbaatar, zweimal im Schnitt und beide Male für einen anderen
+  Moskauer Bahnhof gehalten (beides falsch), 07:25–09:55 und 07:20–09:55: gleiches Licht, ein paar
+  Kilometer anderer Ort.
+- Oben stand beim 20-Minuten-Schnitt bisher 07:15–14:15 (Sonnenhöhe 12–35°, aus Bildern aller
+  Orte), jetzt 07:55–15:30 (3–90°, aus dem Abschnitt Quellbrunnen); bei „10 Orte“ bisher 07:45–12:55
+  (Tag), jetzt 05:30–09:25 (Dämmerung, aus dem Abschnitt Arc de Triomphe).
+- Gleiche Uhrzeit für denselben Clip prüft die Stetigkeit der Rechnung (dieselben Bilder geben
+  dasselbe), nicht ihre Treffsicherheit: Die Clips tragen keine Aufnahmezeit, eine Grundwahrheit der
+  Uhrzeit gibt es nicht (siehe [Was gemessen ist](#was-gemessen-ist)).
+- Kosten: 3,1 und 3,7 s für die 32 Abschnitte des 20-Minuten-Schnitts (zwei Läufe), statt 0,1 s
+  für die Schätzung der ganzen Datei allein.
+
+### Grobe Region für unbestimmte Abschnitte
+
+- **Regel.** Ein unbestimmtes Fenster, dessen Galerieantwort und bester Ort des Weltmodells
+  höchstens 1 500 km auseinanderliegen, nennt eine grobe Region: die Mitte der beiden mit 1 500 km
+  Radius, benannt nach den Teilen der Welt, die der Kreis hält (Unterregionen der UN, Russland
+  östlich von 60° Ost und Tschukotka jenseits von 180° „Nordasien“; `apps/server/src/datum/regions.ts`,
+  `regionAround`): gezählt nach den Einwohnern der verzeichneten Städte im Kreis, ein Teil, wenn
+  mindestens 90 % von ihnen darin leben, sonst die zwei mit den meisten. Aufeinanderfolgende Fenster
+  derselben Region sind ein Eintrag; ein Fenster ohne Region beendet ihn. Unter der Zeitleiste:
+  „grobe Region: eher Westeuropa oder Osteuropa, ± 1.500 km“, mit seiner Zeit davor, wenn er nur
+  einen Teil des Abschnitts deckt.
+- **Kein Ort.** Eine grobe Region zählt nicht zu den Orten („mindestens 15 Orte“ bleibt), wird nie
+  das Ergebnis und gibt keine Uhrzeit; der Abschnitt bleibt gestrichelt und „unbestimmt“. Der Beleg
+  der Abschnitte sagt, für wie viele unbestimmte Abschnitte die Zeitleiste eine grobe Region nennt.
+- **Warum diese Regel.** Die eigene Antwort eines unbestimmten Fensters (meist der beste Ort des
+  Weltmodells) lag mit keinem Radius bis 5 000 km in 80 % der Fälle nah genug an der Wahrheit
+  (71 % bei 5 000 km). Wo Galerie und Weltmodell, die die Bilder verschieden sehen, auf dieselbe
+  Gegend zeigen, trägt es.
+
+Kalibriert an den unbestimmten Fenstern der vier Zusammenschnitte (die Fenster, die der Knoten
+entscheidet; Referenzbilder der Orte in der Galerie, wie der Knoten läuft), geprüft an denselben
+ohne Referenzbild der Orte und an den 60 Einzelclips in festen 4-s-Fenstern. „Wahrheit im Kreis“
+heißt: der Ort des Stücks, das das Fenster am längsten füllt, liegt höchstens 1 500 km von der
+Mitte entfernt; „Sekunden“ zählt jede Sekunde der gezeigten Regionen gegen den Ort in dieser
+Sekunde.
+
+| Fenster | unbestimmt | eigene Antwort, Wahrheit ≤ 1 500 / 2 500 / 5 000 km | mit grober Region | Wahrheit im Kreis | Sekunden | unbestimmte Abschnitte mit Region |
+| --- | --- | --- | --- | --- | --- | --- |
+| Zusammenschnitte (Kalibrierung) | 84 (1 072 s) | 56 / 65 / 71 % | 34 (451 s, 42 % der unbestimmten Zeit) | 32 von 34 (94 %) | 423 von 451 (94 %) | 21 von 31 |
+| davon 20 Minuten | 70 (798 s) | 57 / 63 / 70 % | 30 (346 s) | 28 von 30 | 318 von 346 | 19 von 25 |
+| Zusammenschnitte, ohne Referenzbild der Orte | 99 (1 285 s) | 62 / 70 / 76 % | 42 (570 s, 44 %) | 40 von 42 (95 %) | 544 von 570 (95 %) | 19 von 27 |
+| Einzelclips, 4-s-Fenster | 116 | 68 / 72 / 74 % | 45 | 41 von 45 (91 %) | – | – |
+| Einzelclips, 4-s-Fenster, ohne Referenzbild | 131 | 71 / 74 / 76 % | 53 | 48 von 53 (91 %) | – | – |
+| Gegenprobe (Berlin-Tour, Deutschlandreise, Kontinente) | 9 (110 s) | 33 / 67 / 67 % | 2 (36 s) | 2 von 2 | 36 von 36 | 2 von 7 |
+
+- **Wahl des Radius.** Geprüft wurden 500, 750, 1 000, 1 500, 2 000, 2 500, 3 000 und 5 000 km, jeweils
+  als Höchstabstand zwischen Galerie und Weltmodell und als Radius. Auf den Zusammenschnitten der
+  Kalibrierung: 67 % (6 Fenster), 88 % (16), 95 % (20), 94 % (34), 94 % (36), 94 % (36), 94 % (36),
+  89 % (38). 750 km hätte die 80 % auch auf den Prüfsätzen knapp gehalten (85, 81 und 82 %, 26 bis
+  33 Fenster), bei halb so vielen Fenstern; 1 500 km hält sie überall mit Abstand (91 bis 95 %) und
+  nennt doppelt so viele. Gewählt: 1 500 km.
+- **Der Name.** Ein Kreis von 1 500 km reicht über drei bis fünf Teile der Welt; die Wahrheit im
+  Kreis sagt nichts über seinen Namen. Gemessen ist darum auch, wie oft der Teil der Welt der
+  Wahrheit unter den genannten ist (die Regionen der Zusammenschnitte, wie sie der Knoten zeigt,
+  mit `coarseRegions` aus den Fenstern derselben Auswertungen neu gebildet; Messdatei, `names`):
+
+  | Regionen | benannt nach | gezeigt | Wahrheit im Kreis | Teil der Wahrheit genannt | Sekunden: im Kreis / genannt |
+  | --- | --- | --- | --- | --- | --- |
+  | mit Referenzbild der Orte | Mitte (bisher) | 33 | 31 (94 %) | 19 (58 %) | 459 / 318 von 487 (94 / 65 %) |
+  | mit Referenzbild der Orte | Kreis | 32 (2 mit einem Namen) | 30 (94 %) | 28 (88 %) | 459 / 435 von 487 (94 / 89 %) |
+  | ohne Referenzbild der Orte | Mitte (bisher) | 36 | 35 (97 %) | 24 (67 %) | 580 / 446 von 606 (96 / 74 %) |
+  | ohne Referenzbild der Orte | Kreis | 36 (5 mit einem Namen) | 35 (97 %) | 33 (92 %) | 580 / 556 von 606 (96 / 92 %) |
+
+  Nach der Mitte allein hießen Hof, Rieben und Spitterfall (Deutschland) in einigen Regionen „eher
+  Osteuropa“, der Bahnhof Tartu „Osteuropa“ statt Nordeuropa und die Al-Fattah-Moschee (Ägypten)
+  „Westasien“; nach dem Kreis heißen sie „Westeuropa oder Osteuropa“, „Nordeuropa oder Osteuropa“
+  und „Westasien oder Nordafrika“. Daneben liegt weiter der Skanderbeg-Platz in Tirana (Südeuropa):
+  „Osteuropa oder Westasien“. Der Kreis bleibt derselbe; der Name trifft seltener als er (88 und
+  92 % der Regionen gegen 94 und 97 %).
+- **Vorbehalte.** 34 Fenster sind wenig: Das 95-%-Intervall für 32 von 34 reicht von 81 bis 98 %.
+  Alle Sätze bestehen aus denselben 60 Clips bekannter Bauwerke, die vermutlich in den
+  Trainingsdaten von GeoCLIP liegen; auf anonymem Material wird die Regel seltener greifen und
+  seltener stimmen. Die Teile der Welt sind die der UN: Tschechien und Polen heißen dort Osteuropa.
+  Die Regel für den Namen ist an denselben Regionen gewählt, an denen sie gemessen ist (90 % von
+  50, 60, 70, 80 und 90 %, nach Einwohnern, Zahl der Städte oder Fläche; mit 90 % stehen fast
+  immer zwei Namen).
+
+### Räume je Abschnitt
+
+- **Welche.** Der gezeigte Abschnitt hat die drei Räume der Ortung. Von den übrigen Abschnitten mit
+  Ort bekommen die längsten einen begehbaren Raum aus ihrem Schlüsselbild, höchstens zwölf je
+  Aufnahme (`FixSegment.keyframe.spaceUrl`).
+- **RAUM** betritt den in BEFUND gewählten Abschnitt mit seinem Sonnenstand. Unten links stehen
+  Sonnenhöhe und Schattenlänge zur geschätzten Zeit („Sonne 32° · Schatten 1 : 1,6 · Richtung im
+  Bild unbekannt“): Sie gelten, wohin die Kamera auch blickte. Die Sonne am Himmel und die Richtung
+  des Schattens zeichnet der Raum nur mit einer Blickrichtung aus dem Horizont, und die gibt es nur
+  für den gezeigten Abschnitt. Über dem Raum steht die Zeitleiste, ein Klick wechselt den
+  Abschnitt (auch in BEFUND); ein Abschnitt ohne Raum nennt die Abschnitte mit Raum. „Gelände“ zeigt
+  das Gelände am Ort des gewählten Abschnitts mit seiner Sonnenbahn, ohne Geländehorizont; Aufgang
+  und Untergang stehen dort zu den Zeiten der Uhr in BEFUND (an der Sonnenbahn dazwischen, deren
+  Punkte bei einem Abschnitt 30 Minuten auseinanderliegen). Wird im Gelände ein Abschnitt ohne Ort
+  gewählt, zeigt RAUM die Ansicht aus dem Video mit dem Hinweis und den Abschnitten mit Raum; beim
+  nächsten Abschnitt mit Ort ist das Gelände wieder da.
+- **Gemessen** (20-Minuten-Schnitt, Knoten wie oben): 12 weitere Räume für 32 Abschnitte mit Ort in
+  4,1 und 5,1 s (zwei Läufe, 0,3 bis 0,5 s je Raum); die übrigen Aufnahmen 1 bis 5 Räume in 0,4 bis
+  2,4 s. In der Konsole öffnet RAUM nach der Wahl des Abschnitts 8 (Eiffelturm) dessen Raum (Bild
+  153), nach der Wahl des gezeigten Abschnitts die Räume der Ortung, in beiden Sprachen und bei
+  1600 × 960 und 1366 × 768 Bildpunkten. Die vollständige Ortung des 20-Minuten-Schnitts dauerte mit
+  Uhrzeiten und Räumen je Abschnitt 98,3 und 105,7 s, mit Fassung 10 auf demselben Knoten 93,4 s
+  (der Schritt „Abschnitte“ allein schwankte zwischen 80,6 und 85,8 s). Die Ortung als JSON wuchs von
+  48 auf 140 kB (Sonnenbahnen 73 kB, Uhrzeiten 14 kB, grobe Regionen 5 kB); die Liste der Ortungen
+  und die Ereignisse an die Konsole tragen die Sonnenbahnen der Abschnitte nicht. Jeder Raum belegt
+  104 kB auf der Platte, zwölf weitere also 1,2 MB je Aufnahme.
+- **Horizont je Abschnitt, gemessen und nicht übernommen.** Für die 12 Abschnitte mit Raum des
+  20-Minuten-Schnitts kostete der Horizontabgleich, wie ihn der gezeigte Abschnitt bekommt (25
+  Punkte um den Ort, nur bei höchstens 15 km Radius, sonst nur das Profil), zusammen 16,4 s Rechnung
+  im Hauptthread (sechs Abgleiche zu je 1,6 bis 3,4 s) und ergab eine Blickrichtung
+  (Glenfinnan-Viadukt, mittlere Abweichung 0,16°). Das ist rund doppelt so viel wie Räume und
+  Uhrzeiten zusammen (7,2 und 8,8 s); der Horizont bleibt beim gezeigten Abschnitt.
+- Messdatei: `docs/measurements/datum-segments-complete.json`.
+
 ### Grenzen der Abschnitte
 
 - Orte näher als 25 km gelten als einer (Eiffelturm und Triumphbogen, Mexiko-Stadt). Orte, die das
@@ -211,8 +369,11 @@ Fehler eines Abschnitts ist der Abstand seines Orts zum Ort des Stücks, das ihn
   ändert keine dieser Regeln (Kette, Ausnahme, Vergleich mit den Nachbarankern) die Zahlen oben;
   bei „3 Orte“ steht nun „mindestens 2“, denn Kyffhäuser und Glenfinnan sind ein zusammengefasster
   Ort.
-- Die Uhrzeit, der Sonnenstand und der Horizont gelten für den gezeigten Ort; eine Uhrzeit je
-  Abschnitt gibt es nicht.
+- Uhrzeit und Sonnenstand gibt es je Abschnitt mit Ort, Blickrichtung und Geländehorizont nur
+  für den gezeigten Abschnitt, Räume für höchstens 13 Abschnitte (den gezeigten mit drei, die zwölf
+  längsten übrigen mit je einem). Unbestimmte Abschnitte haben keine Uhrzeit; eine grobe Region
+  nennen sie nur, wo Galerie und Weltmodell übereinstimmen (42 % der unbestimmten Zeit der
+  Zusammenschnitte), und sie ist mit 1 500 km eine Angabe über einen Teil der Welt, keine Ortung.
 - Ohne Weltmodell (abgeschaltet oder seine Ortsgalerie wird noch berechnet) entscheiden die
   Fenster allein mit der Galerie; die Schwelle 0,8 ist für das Zusammenspiel mit dem Weltmodell
   gemessen. Eine lange Aufnahme (mehr als sechs Szenen) fragt das Weltmodell nicht weiter, sobald
