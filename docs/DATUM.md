@@ -145,15 +145,19 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   unbestimmten Abschnitten (siehe
   [Ein erkannter Ort und unbestimmte Abschnitte](#ein-erkannter-ort-und-unbestimmte-abschnitte)).
   Oben steht dann der Ort des längsten Abschnitts mit Ort, es sei denn, die Ortung der ganzen
-  Datei liegt keine 25 km davon entfernt. Ein Beleg
+  Datei liegt keine 25 km davon entfernt; bei einem erkannten Ort nur, wo seine Abschnitte (ohne
+  die am verworfenen Ort, siehe unten) mindestens ein Fünftel der Aufnahme umfassen, sonst bleibt
+  die Ortung der ganzen Datei oben und kein Abschnitt ist der gezeigte. Ein Beleg
   sagt es: „Die Aufnahme zeigt mindestens 15 Orte; oben der Abschnitt 11:19–11:43“
   („mindestens“, solange Abschnitte unbestimmt sind oder ein Ort zusammengefasst ist). Hat das
   Weltmodell für die ganze Datei die Antwort der Galerie verworfen, steht ein Abschnitt an diesem
-  Ort nicht oben, sondern der längste übrige: Die Deutschlandreise der Gegenprobe (Bhf. Eschborn,
+  Ort nicht oben, sondern der längste übrige (bei einem erkannten Ort, der nur dort Abschnitte hat,
+  die Ortung der ganzen Datei): Die Deutschlandreise der Gegenprobe (Bhf. Eschborn,
   in einem Abschnitt für den Bahnhof Norderstedt Mitte ± 3 km gehalten, 408 km daneben) hätte sonst
   diesen falschen Ort mit 3 km Radius als Ergebnis gezeigt. Uhrzeit und Sonnenstand, die drei
   Räume der Ortung und der Horizont kommen aus dem gezeigten Abschnitt (Uhrzeit und Sonnenstand
-  seit Fassung 11, siehe [Uhrzeit und Sonne je Abschnitt](#uhrzeit-und-sonne-je-abschnitt)). Ersetzt sein Ort die Ortung der ganzen Datei, sind die Kandidaten die
+  seit Fassung 11, siehe [Uhrzeit und Sonne je Abschnitt](#uhrzeit-und-sonne-je-abschnitt)), wo die
+  Ortung keinen zeigt, aus der ganzen Datei. Ersetzt sein Ort die Ortung der ganzen Datei, sind die Kandidaten die
   Orte der Aufnahme, die Länder die der Abschnitte (nach ihrer Zeit), die Belege der ganzen Datei
   (Referenzbilder, Weltmodell, Länderschätzung) heißen „Ganze Datei (gemischt)“ und zählen nicht,
   und Straßenbilder werden nicht gefragt (ihr Vergleich nähme Bilder der ganzen Datei). Eine
@@ -430,7 +434,9 @@ der ganzen Datei, deren zwölf Bilder alle Teile mischen: Im End-to-End-Lauf zei
   umfasst nur 13 % der Aufnahme, weniger als die 20 %, ab denen ein Ort oben steht“, oder dass er
   den verworfenen Ort nennt. Ein Anteil knapp unter der Schwelle heißt nie „20 %“ (12 s von 60,5 s:
   „nur 19 %“); einer, der sie nur in der Rechengenauigkeit verfehlt (7,2 von 36 s), zählt als ein
-  Fünftel. In der Evidenz des BEFUNDS steht dieser Beleg trotz Gewicht 0 vorn, gleich nach einer
+  Fünftel. Anteile heißen nie „0 %“ oder „100 %“, solange es einen Abschnitt mit Ort und einen
+  unbestimmten gibt: 10 s Köln in 45 Minuten (0,4 %) umfassen „nur 1 %“, 1 196 von 1 200 s
+  (99,7 %) „99 %“. In der Evidenz des BEFUNDS steht dieser Beleg trotz Gewicht 0 vorn, gleich nach einer
   Angabe aus der Datei mit Gewicht (GPS, Aufnahmezeit): Er erklärt, warum oben die ganze Datei
   steht, und gehört nicht unter die Referenzbilder.
 - **Konsole, wenn die Ortung keinen Abschnitt zeigt.** „aus der ganzen Datei“ steht gleich nach
@@ -438,10 +444,18 @@ der ganzen Datei, deren zwölf Bilder alle Teile mischen: Im End-to-End-Lauf zei
   ORTUNG, im Kopf des BEFUNDS und in RAUM, sonst läse sich „1 erkannter Ort“ als der Ort darüber.
   BEFUND öffnet die Zeitleiste am Anfang der Aufnahme. Die Karte zeigt den Ort der ganzen Datei mit
   Kreis, Sonnen- und Schattenrichtung, Blickkegel und Linie zur Grundwahrheit neben den Abschnitten;
-  sein Zeichen ist hervorgehoben, solange ein unbestimmter Abschnitt gewählt ist. Bei einem
-  unbestimmten Abschnitt zeigen Uhr und Polardiagramm die Uhrzeit des Kopfes und sagen es
-  („Abschnitt 1 · 0:00–0:36 · Ort unbestimmt · Uhrzeit aus der ganzen Datei“); seine Bilder sind
-  unter denen, aus denen sie geschätzt ist, eine eigene hat er nicht. Ein Abschnitt mit Ort zeigt
+  sein Zeichen ist hervorgehoben, solange ein unbestimmter Abschnitt gewählt ist. Liegen er und die
+  Abschnitte so weit auseinander, dass die Karte den ganzen Globus zeigt (mehr als 2 500 km), sind
+  Kreis und Strahlen dort nur wenige Bildpunkte lang; ihre Beschriftungen („± 1.500 km“, „☉ 256°“,
+  „Schatten“) fielen übereinander und unter das Schild des Orts und entfallen dann
+  (`wholeFileShapes`); Kreis und Strahlen bleiben. Der Radius steht im Kopf, Sonnen- und
+  Schattenrichtung der ganzen Datei zeigt das Polardiagramm bei einem unbestimmten Abschnitt
+  (Prüfdatei „reise-96s“ aus dem End-to-End-Lauf: die Weltreise ohne ihr Busan-Stück, gefolgt von
+  einem 12-s-Clip der Busan Harbor Bridge; Medina und Busan, 8 430 km). Näher, wie bei Stadt-Land
+  mit 253 km, bleiben die Beschriftungen. Bei einem unbestimmten Abschnitt zeigen Uhr und
+  Polardiagramm die Uhrzeit des Kopfes und sagen es („Abschnitt 1 · 0:00–0:36 · Ort unbestimmt ·
+  Uhrzeit aus der ganzen Datei“); seine Bilder sind unter denen, aus denen sie geschätzt ist, eine
+  eigene hat er nicht. Ein Abschnitt mit Ort zeigt
   seine eigene. In RAUM bietet jeder Abschnitt die Räume der ganzen Datei an, deren Bilder in ihm
   liegen, so dass jeder betreten werden kann. Ein unbestimmter Abschnitt bietet sie mit Ort und
   Uhrzeit der ganzen Datei an; ein Abschnitt mit Ort zuerst seinen eigenen Raum (sein Ort, seine
@@ -510,7 +524,10 @@ dasselbe Video).
   Ort.
 - Uhrzeit und Sonnenstand gibt es je Abschnitt mit Ort, Blickrichtung und Geländehorizont nur
   für den gezeigten Abschnitt, Räume für höchstens 13 Abschnitte (den gezeigten mit drei, die zwölf
-  längsten übrigen mit je einem). Unbestimmte Abschnitte haben keine Uhrzeit; eine grobe Region
+  längsten übrigen mit je einem). Zeigt die Ortung keinen Abschnitt (Fassung 12), haben die zwölf
+  längsten Abschnitte mit Ort je einen eigenen Raum, und die drei Räume der ganzen Datei mit ihrer
+  Blickrichtung und ihrem Horizont bietet der Abschnitt an, in dem ihr Bild liegt: höchstens 15
+  Abschnitte mit Raum, auch unbestimmte. Unbestimmte Abschnitte haben keine Uhrzeit; eine grobe Region
   nennen sie nur, wo Galerie und Weltmodell übereinstimmen (42 % der unbestimmten Zeit der
   Zusammenschnitte), und sie ist mit 1 500 km eine Angabe über einen Teil der Welt, keine Ortung.
 - Ein erkannter Ort mit unbestimmten Abschnitten steht nur oben, wenn er mindestens ein Fünftel der

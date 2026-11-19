@@ -7,7 +7,7 @@ import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
-import { chosenStretch, dialClock, nextKey, placesLowerBound, placesText, reachKm, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchSpaces, timedStretches, wholeFileShown } from '../segments';
+import { chosenStretch, dialClock, GLOBE_REACH_KM, nextKey, placesLowerBound, placesText, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchMapReach, stretchSpaces, timedStretches, wholeFileShapes, wholeFileShown } from '../segments';
 import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps, type StretchProps } from './Ortung';
@@ -78,6 +78,12 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   // of the recording): its place, time and spaces are the whole file's, said in the header and
   // drawn on the map besides the stretches.
   const whole = fix ? wholeFileShown(fix) : false;
+  // With stretches the map turns to the chosen one (or the first located; a chosen candidate goes
+  // first; an undetermined stretch of a fix that shows none: the fix's own place) and shows as far
+  // as the farthest of the others, so that the route stays in view around it.
+  const pickedCandidate = fix && candidate > 0 ? (fix.candidates[candidate] ?? null) : null;
+  const segmentAt = pickedCandidate ?? chosen?.location ?? (whole && fix ? fix.location : null) ?? segments?.find((s) => s.location)?.location ?? null;
+  const reach = fix && segments && segmentAt ? stretchMapReach(fix, segmentAt) : null;
 
   // A recording located stretch by stretch: every located stretch as a numbered marker, joined in
   // time order, the chosen one emphasised with its circle; otherwise the fix with its geometry.
@@ -93,13 +99,14 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
     if (!fix) return [];
     if (!route) return fixShapes(fix, fix, countries, false, t, locale);
     // A fix that shows none of its stretches keeps the geometry of its own place (the whole
-    // file's, in the header): its circle, sun, shadow, heading and the line to the truth.
-    const out = whole ? fixShapes(fix, fix, countries, false, t, locale) : [];
+    // file's, in the header): its circle, sun, shadow, heading and the line to the truth; without
+    // their labels where the map shows the whole globe (wholeFileShapes).
+    const out = whole && segmentAt ? wholeFileShapes(fix, segmentAt, fixShapes(fix, fix, countries, false, t, locale)) : [];
     if (route.line) out.push(route.line);
     const loc = chosen?.location;
     if (loc) out.push({ kind: 'circle', lat: loc.lat, lon: loc.lon, radiusKm: Math.max(0.05, loc.radiusKm), style: 'dashed', label: `± ${kmText(loc.radiusKm, locale)}` });
     return out;
-  }, [fix, route, whole, chosen, countries, t, locale]);
+  }, [fix, route, whole, segmentAt, chosen, countries, t, locale]);
   const markers = useMemo<MapMarker[]>(() => {
     if (!fix?.location) return [];
     // With stretches their numbered markers stand for the fix, unless it shows none of them (its
@@ -161,18 +168,11 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
           : 'Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.',
     );
   const focus = fix.candidates[candidate] ?? fix.location;
-  // With stretches the map turns to the chosen one (or the first located; a chosen candidate goes
-  // first) and shows as far as the farthest of the others, so that the route stays in view around
-  // it. zoomForRadius(r) - 0.6 puts r about 112 px from the centre, inside the 280 px high map.
-  const pickedCandidate = candidate > 0 ? (fix.candidates[candidate] ?? null) : null;
-  // An undetermined stretch of a fix that shows none: the map turns to the fix's own place.
-  const segmentAt = pickedCandidate ?? chosen?.location ?? (whole ? fix.location : null) ?? segments?.find((s) => s.location)?.location ?? null;
+  // The map of a fix with stretches turns to segmentAt (above). zoomForRadius(r) - 0.6 puts r
+  // about 112 px from the centre, inside the 280 px high map; beyond GLOBE_REACH_KM the whole globe.
   const segmentView =
-    segments && segmentAt
-      ? (() => {
-          const reach = reachKm(segmentAt, [...segments.flatMap((s) => (s.location ? [s.location] : [])), ...(whole && fix.location ? [fix.location] : [])]);
-          return { lat: segmentAt.lat, lon: segmentAt.lon, zoom: reach > 2500 ? 1.4 : zoomForRadius(Math.max(5, reach * 1.1, segmentAt.radiusKm * 0.3), segmentAt.lat) - 0.6 };
-        })()
+    segmentAt && reach !== null
+      ? { lat: segmentAt.lat, lon: segmentAt.lon, zoom: reach > GLOBE_REACH_KM ? 1.4 : zoomForRadius(Math.max(5, reach * 1.1, segmentAt.radiusKm * 0.3), segmentAt.lat) - 0.6 }
       : null;
   // The heading was matched on one keyframe; on the others its horizon would be drawn over a
   // picture it was not measured on. Older fixes name the frame only in the horizon evidence.

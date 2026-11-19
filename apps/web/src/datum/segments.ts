@@ -301,6 +301,37 @@ export function wholeFileShown(fix: Fix): boolean {
   return (fix.segments?.length ?? 0) > 1 && leadSegment(fix) < 0;
 }
 
+/** BEFUND's map shows the whole globe where the places it keeps in view reach farther than this (km). */
+export const GLOBE_REACH_KM = 2500;
+
+/**
+ * How far BEFUND's map reaches around `at`, the place it turns to, for a fix with stretches: to
+ * the farthest located stretch, and to the fix's own place where it shows none of them (that place
+ * is then drawn besides them, wholeFileShown).
+ */
+export function stretchMapReach(fix: Fix, at: { lat: number; lon: number }): number {
+  const points: { lat: number; lon: number }[] = (fix.segments ?? []).flatMap((s) => (s.location ? [s.location] : []));
+  if (fix.location && wholeFileShown(fix)) points.push(fix.location);
+  return reachKm(at, points);
+}
+
+/**
+ * The geometry of the fix's own place that BEFUND draws besides the stretches of a fix that shows
+ * none of them (its circle, sun, shadow, heading and the line to the truth), turned to `at`. On a
+ * map of the whole globe (stretchMapReach beyond GLOBE_REACH_KM) a circle of ± 1 500 km and its
+ * rays are a few pixels long: their labels would fall on each other and under the place's marker
+ * ("☉ 256°500 KM"), so circles and rays lose them there. The radius is in the header, the sun in
+ * the sun dial. Nearer, they keep them.
+ */
+export function wholeFileShapes(fix: Fix, at: { lat: number; lon: number }, shapes: readonly MapShape[]): MapShape[] {
+  if (stretchMapReach(fix, at) <= GLOBE_REACH_KM) return [...shapes];
+  return shapes.map((shape) => {
+    if (shape.kind !== 'circle' && shape.kind !== 'ray') return shape;
+    const { label, ...rest } = shape;
+    return label === undefined ? shape : rest;
+  });
+}
+
 /**
  * Index of the chosen stretch of a fix: the choice where it belongs to this result and lies within
  * its stretches, else the stretch the fix shows (leadSegment), or the first where it shows none

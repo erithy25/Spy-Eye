@@ -19,17 +19,23 @@ import {
 import {
   chosenStretch,
   dialClock,
+  GLOBE_REACH_KM,
   leadSegment,
   placesText,
   segmentSummary,
   spaceOfFix,
   spacedStretches,
   stretchClock,
+  stretchMapReach,
   stretchSpaces,
   timelinePlacesText,
   wholeFilePlace,
+  wholeFileShapes,
   wholeFileShown,
 } from '../../web/src/datum/segments.ts';
+
+/** A shape of the console's map, as wholeFileShapes takes it. */
+type MapShape = Parameters<typeof wholeFileShapes>[2][number];
 
 /**
  * Engine 12: a recording of one recognised place and undetermined stretches carries its
@@ -367,9 +373,10 @@ test('one place: the share counts only the stretches that may lead, not those at
   assert.match(v.evidence[0]!.detail, / Ohne den Abschnitt an dem Ort, den das Weltmodell für die ganze Datei verworfen hat, umfasst der Ort nur 3 % der Aufnahme, weniger als die 20 %, ab denen ein Ort oben steht\. /);
   assert.match(v.evidence[0]!.detailEn ?? '', / Without the segment at the place the world model rejected for the whole file, the place covers only 3% of the recording, less than the 20% from which a place is shown above\. /);
   assert.doesNotMatch(v.evidence[0]!.detail, /43 %/);
+  // One stretch at the rejected place: the trace line says it in the singular, as the entry does.
   assert.deepEqual(v.note, {
-    de: '1 erkannter Ort in 3 Abschnitten (1 unbestimmt); oben die ganze Datei: der Ort umfasst ohne seine Abschnitte am verworfenen Ort nur 3 % (unter 20 %)',
-    en: '1 recognised place in 3 segments (1 undetermined); the whole file stays above: without its segments at the rejected place it covers only 3% (below 20%)',
+    de: '1 erkannter Ort in 3 Abschnitten (1 unbestimmt); oben die ganze Datei: der Ort umfasst ohne seinen Abschnitt am verworfenen Ort nur 3 % (unter 20 %)',
+    en: '1 recognised place in 3 segments (1 undetermined); the whole file stays above: without its segment at the rejected place it covers only 3% (below 20%)',
   });
   // Without the rejection the 43 % count, and the longest stretch leads.
   assert.equal(segmentVerdict(joined, UK, { gps: false }).lead, 0);
@@ -381,7 +388,12 @@ test('one place: the share counts only the stretches that may lead, not those at
   assert.equal(c.location, UK);
   // Two stretches at the rejected place are said in the plural.
   const two = [seg(0, 20, BRYN, 1, { joined: true }), seg(20, 50, null, null), seg(50, 70, BRYN, 1, { joined: true }), seg(70, 97, null, null), seg(97, 100, KOELN, 1, { joined: true })];
-  assert.match(segmentVerdict(two, UK, { gps: false, rejected }).evidence[0]!.detail, / Ohne die 2 Abschnitte an dem Ort, den das Weltmodell für die ganze Datei verworfen hat, umfasst der Ort nur 3 % der Aufnahme/);
+  const tv = segmentVerdict(two, UK, { gps: false, rejected });
+  assert.match(tv.evidence[0]!.detail, / Ohne die 2 Abschnitte an dem Ort, den das Weltmodell für die ganze Datei verworfen hat, umfasst der Ort nur 3 % der Aufnahme/);
+  assert.deepEqual(tv.note, {
+    de: '1 erkannter Ort in 5 Abschnitten (2 unbestimmt); oben die ganze Datei: der Ort umfasst ohne seine Abschnitte am verworfenen Ort nur 3 % (unter 20 %)',
+    en: '1 recognised place in 5 segments (2 undetermined); the whole file stays above: without its segments at the rejected place it covers only 3% (below 20%)',
+  });
   // Enough of the place away from the rejected one: it leads, and the entry says what the share is of.
   const enough = [seg(0, 30, KOELN, 1, { joined: true }), seg(30, 60, null, null), seg(60, 70, BRYN, 1, { joined: true }), seg(70, 100, null, null)];
   const e = segmentVerdict(enough, UK, { gps: false, rejected });
@@ -406,6 +418,26 @@ test('one place: a share just under the threshold reads below it; a share at it 
   const at = segmentVerdict([seg(0, 28.8, null, null), seg(28.8, 36, YEOSU, 1)], MEDINA, { gps: false });
   assert.equal(at.lead, 1);
   assert.match(at.evidence[0]!.detail, /der Abschnitt umfasst 20 % der Aufnahme/);
+});
+
+test('one place: a stretch there is never reads 0 % of the recording, nor one beside an undetermined stretch 100 %', () => {
+  // A 45-minute drive with one 10-s landmark: 0.37 %, which rounds to 0.
+  const drive = segmentVerdict([seg(0, 1500, null, null), seg(1500, 1510, KOELN, 1), seg(1510, 2700, null, null)], UK, { gps: false });
+  assert.equal(drive.lead, null);
+  assert.match(drive.evidence[0]!.detail, /\(25:00–25:10: Zoobrücke, Köln\) umfasst nur 1 % der Aufnahme, weniger als die 20 %/);
+  assert.match(drive.evidence[0]!.detailEn ?? '', /covers only 1% of the recording, less than the 20%/);
+  assert.doesNotMatch(drive.evidence[0]!.detail, / 0 %/);
+  assert.equal(drive.note.de, '1 erkannter Ort in 3 Abschnitten (2 unbestimmt); oben die ganze Datei: der Ort umfasst nur 1 % (unter 20 %)');
+  assert.equal(drive.note.en, '1 recognised place in 3 segments (2 undetermined); the whole file stays above: the place covers only 1% (below 20%)');
+  // 5 s of 20 minutes: the same.
+  assert.match(segmentVerdict([seg(0, 5, KOELN, 1), seg(5, 1200, null, null)], UK, { gps: false }).evidence[0]!.detail, /umfasst nur 1 % der Aufnahme/);
+  // A 20-minute walk whose last 4 s stay undetermined: 99.7 %, which rounds to 100.
+  const walk = segmentVerdict([seg(0, 1196, KOELN, 1), seg(1196, 1200, null, null)], UK, { gps: false });
+  assert.equal(walk.lead, 0);
+  assert.match(walk.evidence[0]!.detail, /; der Abschnitt umfasst 99 % der Aufnahme \(ab 20 % steht ein Ort oben\)\./);
+  assert.match(walk.evidence[0]!.detailEn ?? '', /; the segment covers 99% of the recording \(a place is shown above from 20% on\)\./);
+  assert.doesNotMatch(walk.evidence[0]!.detail, /100 %/);
+  assert.match(segmentVerdict([seg(0, 1000, KOELN, 1), seg(1000, 1004, null, null)], UK, { gps: false }).evidence[0]!.detail, /der Abschnitt umfasst 99 % der Aufnahme/);
 });
 
 test('one place that agrees with the whole file keeps the whole file\'s countries; one that replaces it carries its share', () => {
@@ -517,4 +549,52 @@ test('console, a fix that shows no stretch: the header\'s time has its dials, ev
   assert.equal(wholeFilePlace(null), false);
   // With the stretch shown, an undetermined stretch has no dial (as in engine 11).
   assert.equal(dialClock(shown, 0), null);
+});
+
+test('console, a fix that shows no stretch on a map of the whole globe: its circle and rays lose their labels, nearer they keep them', () => {
+  // The end-to-end probe file reise-96s (e2e12/fixes/reise-96s.mp4.json: the world tour without its
+  // Busan piece, followed by a 12-s Busan clip, reference pictures in the gallery): the whole file
+  // says Medina ± 1 500 km, its one located stretch is Busan, 8 430 km away. BEFUND turns to either
+  // and shows the whole globe, where the circle and the 1 500-km rays are some 10 to 28 px long:
+  // their labels read "☉ 256°500 KM" over each other and under the MEDINA marker.
+  const medina = loc(24.484154, 39.578854, { method: 'worldmodel', confidence: 0.726, label: 'Medina', country: 'SA', countryName: 'Saudi-Arabien' });
+  const busan = loc(35.105556, 129.065, { confidence: 0.86, label: 'Busan Harbor Bridge', country: 'KR', countryName: 'Südkorea' });
+  const segments = [seg(0, 84, null, null), seg(84, 96, busan, 1)];
+  const v = segmentVerdict(segments, medina, { gps: false });
+  assert.equal(v.lead, null);
+  const fix = fixWith(segments, v.evidence, v.location);
+  assert.equal(wholeFileShown(fix), true);
+  // The shapes fixShapes (views/Ortung.tsx) draws for the whole file's place.
+  const own: MapShape[] = [
+    { kind: 'circle', lat: medina.lat, lon: medina.lon, radiusKm: 1500, style: 'dashed', label: '± 1.500 km' },
+    { kind: 'ray', lat: medina.lat, lon: medina.lon, azimuthDeg: 255.6, lengthKm: 1500, style: 'strong', label: '☉ 256°', arrow: false },
+    { kind: 'ray', lat: medina.lat, lon: medina.lon, azimuthDeg: 75.6, lengthKm: 900, style: 'dotted', label: 'Schatten', arrow: true },
+    { kind: 'wedge', lat: medina.lat, lon: medina.lon, azimuthDeg: 120, spreadDeg: 60, lengthKm: 1200, style: 'solid' },
+    { kind: 'line', points: [[medina.lat, medina.lon], [40, 30]], style: 'faint' },
+  ];
+  const unlabelled = own.map((shape) => {
+    if (shape.kind !== 'circle' && shape.kind !== 'ray') return shape;
+    const { label: _label, ...rest } = shape;
+    return rest;
+  });
+  for (const at of [busan, medina]) {
+    assert.ok(stretchMapReach(fix, at) > GLOBE_REACH_KM, 'BEFUND shows the whole globe');
+    // The geometry stays, in the same order; only the labels of circle and rays go.
+    assert.deepEqual(wholeFileShapes(fix, at, own), unlabelled);
+  }
+  // The whole file's place counts towards the reach only where the fix shows none of its stretches:
+  // with Busan shown the map reaches from it to nothing farther.
+  const shown = fixWith(segments, segmentVerdict(segments, medina, { gps: false, leadShare: 0.1 }).evidence, busan);
+  assert.equal(wholeFileShown(shown), false);
+  assert.equal(stretchMapReach(shown, busan), 0);
+
+  // Stadt-Land with a stricter threshold (fixes12/stadt-land-nolead.json): Frankfurt and the
+  // Elstertalbrücke 253 km apart, a near view, the labels stay.
+  const near = [seg(0, 36, null, null, { windows: 2, coarse: REGIONS }), seg(36, 48, ELSTERTAL, 1)];
+  const nv = segmentVerdict(near, GALLILEO, { gps: false, leadShare: 0.3 });
+  const nearFix = fixWith(near, nv.evidence, nv.location);
+  assert.equal(wholeFileShown(nearFix), true);
+  assert.ok(Math.abs(stretchMapReach(nearFix, ELSTERTAL) - 253) < 5);
+  assert.deepEqual(wholeFileShapes(nearFix, ELSTERTAL, own), own);
+  assert.deepEqual(wholeFileShapes(nearFix, GALLILEO, own), own);
 });

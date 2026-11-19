@@ -893,11 +893,21 @@ const pctDe = (p: number): string => `${Math.round(p * 100)} %`;
 const pctEn = (p: number): string => `${Math.round(p * 100)}%`;
 
 /**
- * A share below `limit` as a whole percent that stays below it: 19.8 % of a recording rounds to
- * 20 %, and "nur 20 %, weniger als die 20 %" would contradict itself. Elsewhere it is rounded.
+ * A place's share of the recording as a whole percent that says what is there: a stretch there is
+ * never reads 0 % (10 s of 45 minutes are 0.4 %), and stretches beside an undetermined one never
+ * 100 % (1196 of 1200 s are 99.7 %); 1 % and 99 % stand for them. Elsewhere it is rounded.
+ */
+function sharePercent(p: number): number {
+  const rounded = Math.round(p * 100);
+  return p > 0 && p < 1 ? Math.min(99, Math.max(1, rounded)) : rounded;
+}
+
+/**
+ * A share below `limit` as a whole percent (sharePercent) that stays below it: 19.8 % of a
+ * recording rounds to 20 %, and "nur 20 %, weniger als die 20 %" would contradict itself.
  */
 function belowPercent(p: number, limit: number): number {
-  return Math.max(0, Math.min(Math.round(p * 100), Math.ceil(limit * 100 - 1e-9) - 1));
+  return Math.max(0, Math.min(sharePercent(p), Math.ceil(limit * 100 - 1e-9) - 1));
 }
 
 /**
@@ -1160,10 +1170,11 @@ function onePlaceVerdict(p: VerdictParts, current: FixLocation | null, joined: n
   // What the share is of: the place, or the place without its stretches at the rejected place.
   const withoutDe = rejectedCount > 0 ? `ohne ${rejectedCount === 1 ? 'den Abschnitt' : `die ${rejectedCount} Abschnitte`} an dem Ort, den das Weltmodell für die ganze Datei verworfen hat, ` : '';
   const withoutEn = rejectedCount > 0 ? `without the ${rejectedCount === 1 ? 'segment' : `${rejectedCount} segments`} at the place the world model rejected for the whole file, ` : '';
+  const sharePct = sharePercent(share);
   const shareDe =
-    rejectedCount > 0 ? `${withoutDe}umfasst der Ort ${pctDe(share)} der Aufnahme` : `${one ? 'der Abschnitt umfasst' : 'die Abschnitte mit Ort umfassen zusammen'} ${pctDe(share)} der Aufnahme`;
+    rejectedCount > 0 ? `${withoutDe}umfasst der Ort ${sharePct} % der Aufnahme` : `${one ? 'der Abschnitt umfasst' : 'die Abschnitte mit Ort umfassen zusammen'} ${sharePct} % der Aufnahme`;
   const shareEn =
-    rejectedCount > 0 ? `${withoutEn}the place covers ${pctEn(share)} of the recording` : `${one ? 'the segment covers' : 'the segments with a place cover'} ${pctEn(share)} of the recording`;
+    rejectedCount > 0 ? `${withoutEn}the place covers ${sharePct}% of the recording` : `${one ? 'the segment covers' : 'the segments with a place cover'} ${sharePct}% of the recording`;
   const noteHead: SegmentText = {
     de: `1 erkannter Ort in ${n} Abschnitten (${undetermined} unbestimmt)`,
     en: `1 recognised place in ${n} segments (${undetermined} undetermined)`,
@@ -1214,8 +1225,8 @@ function onePlaceVerdict(p: VerdictParts, current: FixLocation | null, joined: n
         ? { de: `${noteHead.de}; oben die ganze Datei: der Ort ist der verworfene`, en: `${noteHead.en}; the whole file stays above: the place is the rejected one` }
         : rejectedCount > 0
           ? {
-              de: `${noteHead.de}; oben die ganze Datei: der Ort umfasst ohne seine Abschnitte am verworfenen Ort nur ${below} % (unter ${limitDe})`,
-              en: `${noteHead.en}; the whole file stays above: without its segments at the rejected place it covers only ${below}% (below ${limitEn})`,
+              de: `${noteHead.de}; oben die ganze Datei: der Ort umfasst ohne ${rejectedCount === 1 ? 'seinen Abschnitt' : 'seine Abschnitte'} am verworfenen Ort nur ${below} % (unter ${limitDe})`,
+              en: `${noteHead.en}; the whole file stays above: without its ${rejectedCount === 1 ? 'segment' : 'segments'} at the rejected place it covers only ${below}% (below ${limitEn})`,
             }
           : { de: `${noteHead.de}; oben die ganze Datei: der Ort umfasst nur ${below} % (unter ${limitDe})`, en: `${noteHead.en}; the whole file stays above: the place covers only ${below}% (below ${limitEn})` },
     };
