@@ -15,7 +15,7 @@ import { DatumSettingsPanel } from '../Settings';
 import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
 import { UPLOAD_OPTIONS, UploadDialog, type Picked } from '../UploadDialog';
-import { nearestWithin, placesText, reachKm, routeGeometry, segmentSummary, type StretchChoice } from '../segments';
+import { nearestWithin, placesText, reachKm, routeGeometry, segmentSummary, wholeFilePlace, type StretchChoice } from '../segments';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { OrtungList, progressText, type GroupActions } from './OrtungList';
 
@@ -101,8 +101,15 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
   const method = fix.time.method === 'metadata' ? t('Metadaten') : fix.time.method === 'sun' ? t('Sonnenstand') : t('Uhrzeit nicht bestimmbar');
   const state = fix.status === 'running' ? t('wird geortet …') : fix.status === 'pending' ? t('Neuortung steht an') : stageOf(fix) === 'quick' ? t('vorläufig') : '';
   // A recording of several places: the card names the longest stretch's place and how many there
-  // are, kept on one line ("mindestens 3 Orte" broke after "3").
-  const places = placesText(fix, t).replace(/ /g, '\u00a0');
+  // are, each part kept on one line ("mindestens 3 Orte" broke after "3"); one recognised place
+  // and its undetermined stretches may break between the two.
+  const places = placesText(fix, t)
+    .split(', ')
+    .map((part) => part.replace(/ /g, '\u00a0'))
+    .join(', ');
+  // Where the fix shows none of its stretches, its place is the whole file's answer: said right
+  // after it, so that "1 erkannter Ort" next to it is not read as that place.
+  const whole = wholeFilePlace(fix) ? t('aus der ganzen Datei').replace(/ /g, '\u00a0') : '';
   // The zone as an offset; its name (Europe/Paris) is in the title.
   const zone = fix.time.timezone ? utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun)) : '';
   // A place wider than ± 1 500 km fixes no time zone: said next to the offset, as in BEFUND.
@@ -111,7 +118,7 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
     <div className="dt-hud">
       <div className="dt-hud-place">{placeText(lang, loc, fix)}</div>
       <div className="dt-hud-sub" title={radiusHint(lang, loc)}>
-        {[countryText(lang, loc), radiusText(lang, loc), places, state].filter((x) => x !== '').join(' · ')}
+        {[countryText(lang, loc), radiusText(lang, loc), whole, places, state].filter((x) => x !== '').join(' · ')}
       </div>
       <div className="dt-hud-clock">{bestWindowText(fix) ?? '––:––'}</div>
       <div className="dt-hud-note" title={[fix.time.timezone ?? '', doubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>

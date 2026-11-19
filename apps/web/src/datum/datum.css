@@ -329,6 +329,16 @@
   white-space: nowrap;
 }
 
+/* Radius, deviation and count of places break between them, never inside one, rather than be
+   cut: the list is 263 px wide at every window size. */
+.dt-row-sub.dt-row-parts {
+  white-space: normal;
+}
+
+.dt-row-parts > span {
+  white-space: nowrap;
+}
+
 .dt-row-ask {
   display: flex;
   gap: 12px;
@@ -583,8 +593,20 @@
   text-overflow: ellipsis;
 }
 
+/* Where the header is too narrow (a count of stretches beside a deviation at 1 366 px), the place
+   gives way first: its line under the name breaks between its parts, and the other columns keep
+   their width. Shrinking is shared by shrink factor times width; with a factor of 100 the others
+   still lost a fraction of a pixel, enough for an ellipsis ("DATUM-00…"). */
 .dt-result-place {
-  flex: 0 1 auto;
+  flex: 0 100000 auto;
+}
+
+.dt-result .low.dt-result-parts {
+  white-space: normal;
+}
+
+.dt-result-parts > span {
+  white-space: nowrap;
 }
 
 .dt-result-time b {

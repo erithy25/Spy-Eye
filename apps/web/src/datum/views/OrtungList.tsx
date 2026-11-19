@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { deleteVideo, errorText, type VideoInfo } from '../../api';
 import { formatPercent } from '../../format';
 import { useLang } from '../../i18n';
@@ -6,7 +6,7 @@ import { uploads, useUploads, type UploadItem } from '../../uploads';
 import { rel, renameDataset, type Fix } from '../api';
 import { datasets, type DatasetGroup } from '../datasets';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
-import { placesText } from '../segments';
+import { placesText, wholeFilePlace } from '../segments';
 import { bestWindowText, kmText } from '../useFixes';
 
 /**
@@ -62,8 +62,13 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
   const image = middleFrame(fix);
   const country = loc ? countryText(lang, loc) : '';
   const place = loc ? placeText(lang, loc, fix) : '';
-  // A recording of several places says how many (its place is that of the longest stretch).
-  const places = placesText(fix, t);
+  // A recording of several places says how many (its place is that of the longest stretch); one of
+  // one recognised place, how many stretches stay undetermined, in the timeline's short words
+  // (the row has room for no more; the title has them in full). Where the fix shows none of its
+  // stretches, its place is the whole file's: said after the radius, so that "1 erkannter Ort"
+  // is not read as that place.
+  const places = placesText(fix, t, true);
+  const whole = wholeFilePlace(fix);
 
   const remove = (event: ReactMouseEvent): void => {
     event.stopPropagation();
@@ -121,14 +126,27 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
       </div>
     );
   } else if (loc) {
+    // The parts break between them rather than be cut: the deviation from a ground truth comes
+    // before the count of places, so that it stays on the first line.
+    const parts = [
+      radiusText(lang, loc),
+      whole ? t('aus der ganzen Datei') : '',
+      fix?.truth?.errorKm != null ? `${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}` : '',
+      places,
+      fix?.status === 'running' ? t('wird neu geortet …') : '',
+      fix?.status === 'pending' ? t('Neuortung steht an') : '',
+      quick && fix?.status === 'ready' ? t('vorläufig') : '',
+    ].filter((x) => x !== '');
+    const title = [radiusHint(lang, loc), whole ? t('aus der ganzen Datei') : '', placesText(fix, t)].filter((x) => x !== '').join(' · ');
     sub = (
-      <div className="dt-row-sub" title={radiusHint(lang, loc)}>
-        {radiusText(lang, loc)}
-        {places !== '' && ` · ${places}`}
-        {fix?.status === 'running' && ` · ${t('wird neu geortet …')}`}
-        {fix?.status === 'pending' && ` · ${t('Neuortung steht an')}`}
-        {fix?.truth?.errorKm != null && ` · ${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}`}
-        {quick && fix?.status === 'ready' && ` · ${t('vorläufig')}`}
+      <div className="dt-row-sub dt-row-parts" title={title}>
+        {/* The dot stays with the part before it; the line may break at the space after it. */}
+        {parts.map((part, i) => (
+          <Fragment key={i}>
+            <span>{i < parts.length - 1 ? `${part}\u00a0·` : part}</span>
+            {i < parts.length - 1 ? ' ' : ''}
+          </Fragment>
+        ))}
       </div>
     );
   }

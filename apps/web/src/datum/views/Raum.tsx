@@ -5,7 +5,7 @@ import { SpaceView } from '../space/SpaceView';
 import { TerrainView } from '../space/TerrainView';
 import { caseLabel, placeText, zoneDoubt } from '../labels';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
-import { chosenStretch, placesLowerBound, segmentSummary, spacedStretches, spanText, stretchClock, stretchSpaces, timedStretches } from '../segments';
+import { chosenStretch, placesLowerBound, segmentSummary, spaceOfFix, spacedStretches, spanText, stretchClock, stretchSpaces, timedStretches, wholeFileShown } from '../segments';
 import { useFullFix, windowText } from '../useFixes';
 import type { DatumViewProps, StretchProps } from './Ortung';
 
@@ -38,22 +38,30 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
   const chosen = segments && index !== null ? (segments[index] ?? null) : null;
   const offered = useMemo(() => (fix && segments ? stretchSpaces(fix, index) : { fix: true, spaces: (fix?.keyframes ?? []).filter((k) => k.spaceUrl).map((k) => ({ frame: k.frame, imageUrl: k.imageUrl, spaceUrl: k.spaceUrl as string, pitchDeg: k.pitchDeg ?? 0 })) }), [fix, segments, index]);
   const spaces = offered.spaces;
-  const key = spaces[Math.min(keyIndex, Math.max(0, spaces.length - 1))] ?? null;
-  // The place of the chosen stretch (the fix's own where the fix's spaces are shown).
-  const loc = offered.fix ? (fix?.location ?? null) : (chosen?.location ?? null);
-  const clock = fix ? stretchClock(fix, index) : null;
+  const keyAt = Math.min(keyIndex, Math.max(0, spaces.length - 1));
+  const key = spaces[keyAt] ?? null;
+  // Whether the space entered is one of the fix's keyframes: then the fix's place, time, heading
+  // and horizon go with it. A stretch offers either kind, and where the fix shows no stretch a
+  // located one offers both: its own space, then the whole file's keyframes among its frames
+  // (stretchSpaces); without a space, the stretch's own kind.
+  const keyFix = key ? spaceOfFix(offered, keyAt) : offered.fix;
+  // The place of the chosen stretch (the fix's own with the fix's spaces), and its time.
+  const loc = keyFix ? (fix?.location ?? null) : (chosen?.location ?? null);
+  const clock = fix ? (keyFix ? { time: fix.time, sun: fix.sun, own: false } : stretchClock(fix, index)) : null;
   const terrainKey = loc ? `${loc.lat.toFixed(5)},${loc.lon.toFixed(5)}` : '';
   // The terrain needs a place: a stretch without one (chosen in the timeline while the terrain
   // was shown) shows the video's view, which says why; the choice of view stays for the next
   // stretch with a place.
   const view: Mode = loc ? mode : 'video';
-  const matchedFrame = fix && offered.fix ? headingFrame(fix) : null;
-  const matchedIndex = matchedFrame === null ? -1 : spaces.findIndex((k) => k.frame === matchedFrame);
+  const matchedFrame = fix && spaces.some((_, i) => spaceOfFix(offered, i)) ? headingFrame(fix) : null;
+  const matchedIndex = matchedFrame === null ? -1 : spaces.findIndex((k, i) => spaceOfFix(offered, i) && k.frame === matchedFrame);
 
-  // Open on the keyframe the heading belongs to, where the compass and the sun are absolute.
+  // Open on the keyframe the heading belongs to, where the compass and the sun are absolute; a
+  // located stretch on its own space, with its own place and time.
+  const opensOnFix = offered.fix;
   useEffect(() => {
-    setKeyIndex(Math.max(0, matchedIndex));
-  }, [selected, index, matchedIndex]);
+    setKeyIndex(opensOnFix ? Math.max(0, matchedIndex) : 0);
+  }, [selected, index, matchedIndex, opensOnFix]);
 
   useEffect(() => {
     if (view !== 'gelaende' || !loc || terrain?.key === terrainKey) return;
@@ -74,19 +82,21 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
   // The heading is applied to the keyframe it was matched on only (one of the fix's); the other
   // keyframes and the stretches' own spaces keep a relative compass. Without a recorded frame
   // (older fixes) it is applied to the fix's keyframes as before.
-  const heading = offered.fix && fix.heading && key && (matchedFrame === null || matchedFrame === key.frame) ? fix.heading : null;
+  const heading = keyFix && fix.heading && key && (matchedFrame === null || matchedFrame === key.frame) ? fix.heading : null;
   // The skyline the heading was matched with, for the terrain view (which has no keyframe choice).
-  const matchedKey = offered.fix ? (matchedFrame === null ? (fix.keyframes.find((k) => k.frame === key?.frame) ?? null) : (fix.keyframes.find((k) => k.frame === matchedFrame) ?? null)) : null;
+  const matchedKey = keyFix ? (matchedFrame === null ? (fix.keyframes.find((k) => k.frame === key?.frame) ?? null) : (fix.keyframes.find((k) => k.frame === matchedFrame) ?? null)) : null;
   // The horizon profile and the heading were computed at `horizon.at`, which may lie a few
   // kilometres from the fix location; the terrain camera stands there. A stretch's own place has
   // no horizon match (it is computed for the stretch the fix shows).
-  const standpoint = offered.fix ? (fix.horizon?.at ?? loc) : loc;
+  const standpoint = keyFix ? (fix.horizon?.at ?? loc) : loc;
   const place = loc ? placeText(lang, loc, fix) : t('Ort unbestimmt');
   const time = clock ? windowText(clock.time) : null;
   // A place of ± 7 500 km fixes no time zone: said next to the time, as in BEFUND.
   const doubt = time && clock?.time.timezone ? zoneDoubt(lang, loc) : null;
   const summarised = segments ? segmentSummary(fix) : null;
   const withSpace = segments ? spacedStretches(fix) : [];
+  // The fix's spaces of a fix that shows no stretch: its place is the whole file's, said so.
+  const whole = segments !== null && keyFix && wholeFileShown(fix);
   const choose = (i: number): void => chooseStretch({ videoId: fix.videoId, computedAt: fix.computedAt, index: i });
 
   return (
@@ -106,7 +116,14 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
         {view === 'video' && spaces.length > 1 && (
           <div className="seg" role="group" aria-label={t('Schlüsselbild')}>
             {spaces.map((k, i) => (
-              <button key={k.frame} type="button" className={i === keyIndex ? 'on' : ''} onClick={() => setKeyIndex(i)}>
+              <button
+                key={k.frame}
+                type="button"
+                className={i === keyAt ? 'on' : ''}
+                onClick={() => setKeyIndex(i)}
+                // Beside a stretch's own space, the whole file's keyframes say whose they are.
+                title={offered.fixFrom !== undefined && spaceOfFix(offered, i) ? t('aus der ganzen Datei') : undefined}
+              >
                 {`${t('Bild')} ${i + 1}`}
               </button>
             ))}
@@ -114,6 +131,7 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
         )}
         <span className="low dt-raum-where" title={doubt?.hint ?? undefined}>
           {place}
+          {whole ? ` · ${t('aus der ganzen Datei')}` : ''}
           {time ? ` · ${time}` : ''}
           {doubt ? ` · ${doubt.text}` : ''}
         </span>
@@ -148,7 +166,7 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
               imageUrl={rel(key.imageUrl)}
               label={loc ? placeText(lang, loc, fix) : video.name}
               headingDeg={heading?.deg ?? null}
-              fovDeg={offered.fix ? (fix.heading?.fovDeg ?? 62) : 62}
+              fovDeg={keyFix ? (fix.heading?.fovDeg ?? 62) : 62}
               pitchDeg={key.pitchDeg}
               sun={sun}
               onExit={() => go('befund')}
@@ -163,7 +181,8 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
                   <span className="label">{t('Abschnitte mit Raum')}</span>
                   {withSpace.map((i) => {
                     const s = segments[i]!;
-                    const name = s.location ? placeText(lang, s.location, fix) : '';
+                    // An undetermined stretch has a space only from the whole file's (stretchSpaces).
+                    const name = s.location ? placeText(lang, s.location, fix) : t('unbestimmt');
                     return (
                       <button key={i} type="button" className="text-btn" onClick={() => choose(i)} title={`${spanText(s)} · ${name}`}>
                         {`${i + 1} · ${name}`}
@@ -186,17 +205,17 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
               camera={{
                 lat: standpoint.lat,
                 lon: standpoint.lon,
-                headingDeg: offered.fix ? (fix.heading?.deg ?? null) : null,
-                fovDeg: offered.fix ? (fix.heading?.fovDeg ?? 62) : 62,
-                pitchDeg: offered.fix ? fix.heading?.pitchDeg : undefined,
-                aspect: offered.fix ? fix.heading?.aspect : undefined,
+                headingDeg: keyFix ? (fix.heading?.deg ?? null) : null,
+                fovDeg: keyFix ? (fix.heading?.fovDeg ?? 62) : 62,
+                pitchDeg: keyFix ? fix.heading?.pitchDeg : undefined,
+                aspect: keyFix ? fix.heading?.aspect : undefined,
               }}
               sun={sun}
               sunPath={clock?.sun?.path ?? []}
               sunrise={clock?.sun?.sunrise ?? null}
               sunset={clock?.sun?.sunset ?? null}
               timezone={clock?.time.timezone ?? null}
-              horizonProfile={offered.fix ? (fix.horizon?.profile ?? null) : null}
+              horizonProfile={keyFix ? (fix.horizon?.profile ?? null) : null}
               skyline={matchedKey?.skyline ?? null}
               label={placeText(lang, loc, fix)}
               embedded

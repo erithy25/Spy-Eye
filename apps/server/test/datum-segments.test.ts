@@ -148,7 +148,7 @@ test('anchors: a standing-out landmark or a sure gallery answer, never the world
   assert.ok(!isAnchor(win(0, 10, null), { anchorConfidence: 0.8 }));
 });
 
-test('merge: a recording of one place is not split, whatever its weak windows say', () => {
+test('merge: a recording of one place is not split, whatever its weak windows say; its undetermined window keeps the place', () => {
   const windows = [
     win(0, 10, loc(PARIS.lat, PARIS.lon)),
     // The world model alone, far off: weak, it does not make a place.
@@ -162,10 +162,22 @@ test('merge: a recording of one place is not split, whatever its weak windows sa
   // The weak window between two anchors of the place: no answer joins it, a contradicting answer stays undetermined.
   assert.deepEqual(merged.labels, [0, -1, 0, 0, 0]);
   const segments = toSegments(framesWith(50, []), windows, merged, (n) => `media/x/frames/${n}.jpg`);
-  const verdict = segmentVerdict(segments, loc(PARIS.lat, PARIS.lon), { gps: false });
-  assert.equal(verdict.multi, false);
-  assert.equal(verdict.evidence.length, 0);
+  assert.equal(segments.length, 3);
+  const paris = loc(PARIS.lat, PARIS.lon);
+  const verdict = segmentVerdict(segments, paris, { gps: false });
+  // Engine 12: one place and an undetermined stretch get a timeline (the Tokyo window may be
+  // elsewhere), but no second place, and the place stays Paris: the whole file agrees with the
+  // longest stretch (40 of 50 s are Paris).
+  assert.equal(verdict.multi, true);
+  assert.equal(verdict.places, 1);
+  assert.equal(verdict.lead, 2);
   assert.equal(verdict.replaced, false);
+  assert.equal(verdict.location, paris);
+  assert.equal(verdict.evidence.length, 1);
+  assert.equal(verdict.evidence[0]!.weight, 0.5);
+  assert.equal(verdict.evidence[0]!.label, 'Die Aufnahme zeigt einen erkannten Ort; ein Abschnitt unbestimmt; oben der Abschnitt 0:20–0:50');
+  assert.match(verdict.evidence[0]!.detail, /Die Ortung aus der ganzen Datei stimmt mit ihm überein und bleibt\./);
+  assert.doesNotMatch(verdict.evidence[0]!.detail, /mindestens|verschiedene Orte/);
 });
 
 test('merge: two places, a return and an undetermined window between them', () => {

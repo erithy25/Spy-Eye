@@ -4,7 +4,7 @@ import { formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { rel } from '../api';
 import { countryText, placeText, radiusHint, radiusText, zoneDoubt } from '../labels';
-import { barLayout, coarseText, numberFits, spanText, stretchClock, timedStretches } from '../segments';
+import { barLayout, coarseText, numberFits, spanText, stretchClock, timedStretches, timelinePlacesText } from '../segments';
 import { kmText, windowText } from '../useFixes';
 import { kindMethod, referenceInstant, utcOffset } from './common';
 
@@ -25,11 +25,12 @@ export interface SegmentTimelineProps {
 }
 
 /**
- * The stretches of a recording of several places under its video: one bar per stretch, as wide as
- * it lasts, numbered where there is room; an undetermined stretch is drawn dashed. Below, the chosen
- * stretch: its span, its place with country, radius, confidence and time window, and its keyframe;
- * for an undetermined stretch the coarse regions its pictures point to, where there are any (never
- * a place). RAUM shows the bar only (`detail` false), with the chosen stretch as `caption`.
+ * The stretches of a recording under its video (several places, or one recognised place and
+ * undetermined stretches): one bar per stretch, as wide as it lasts, numbered where there is room;
+ * an undetermined stretch is drawn dashed. Below, the chosen stretch: its span, its place with
+ * country, radius, confidence and time window, and its keyframe; for an undetermined stretch the
+ * coarse regions its pictures point to, where there are any (never a place). RAUM shows the bar
+ * only (`detail` false), with the chosen stretch as `caption`.
  */
 export function SegmentTimeline({ fix, segments, selected, onSelect, places, atLeast, detail = true, caption }: SegmentTimelineProps) {
   const lang = useLang();
@@ -78,7 +79,7 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
         <span className="low">
           {caption ?? (
             <>
-              {atLeast ? t('mindestens {n} Orte', { n: places }) : t('{n} Orte', { n: places })}
+              {timelinePlacesText(places, atLeast, t)}
               {undetermined > 0 ? ` · ${t('{n} unbestimmt', { n: undetermined })}` : ''}
             </>
           )}
@@ -180,10 +181,12 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
                 {more > 0 && <span className="dt-seg-sub low">{more === 1 ? t('und eine weitere grobe Region') : t('und {n} weitere grobe Regionen', { n: more })}</span>}
               </>
             )}
-            {chosen.place !== null && (
+            {/* "Ort 1 von 1" would say nothing: with one place only what may make it several. */}
+            {chosen.place !== null && (places >= 2 || chosen.joined) && (
               <span className="dt-seg-sub low">
-                {t('Ort {n} von {total}', { n: chosen.place, total: places })}
-                {chosen.joined ? ` · ${t('vom Weltmodell aus weiter entfernten Antworten zusammengefasst, vielleicht mehrere Orte')}` : ''}
+                {[places >= 2 ? t('Ort {n} von {total}', { n: chosen.place, total: places }) : '', chosen.joined ? t('vom Weltmodell aus weiter entfernten Antworten zusammengefasst, vielleicht mehrere Orte') : '']
+                  .filter((x) => x !== '')
+                  .join(' · ')}
               </span>
             )}
           </div>

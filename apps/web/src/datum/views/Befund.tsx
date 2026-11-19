@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react';
 import { formatDecimal, formatScore } from '../../format';
 import { useLang } from '../../i18n';
 import { MapCanvas, type MapMarker } from '../../map/MapCanvas';
@@ -7,7 +7,7 @@ import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
-import { chosenStretch, nextKey, placesLowerBound, reachKm, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchClock, stretchSpaces, timedStretches } from '../segments';
+import { chosenStretch, dialClock, nextKey, placesLowerBound, placesText, reachKm, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchSpaces, timedStretches, wholeFileShown } from '../segments';
 import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
 import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
 import { fixShapes, type DatumViewProps, type StretchProps } from './Ortung';
@@ -74,9 +74,13 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   // "mindestens": undetermined stretches, or a place the world model joined from far apart.
   const atLeast = summarised ? placesLowerBound(summarised) : false;
   const chosen = segments ? (segments[Math.min(segment, segments.length - 1)] ?? null) : null;
+  // A fix that shows none of its stretches (engine 12: one recognised place that covers too little
+  // of the recording): its place, time and spaces are the whole file's, said in the header and
+  // drawn on the map besides the stretches.
+  const whole = fix ? wholeFileShown(fix) : false;
 
-  // A recording of several places: every located stretch as a numbered marker, joined in time
-  // order, the chosen one emphasised with its circle; otherwise the fix with its geometry.
+  // A recording located stretch by stretch: every located stretch as a numbered marker, joined in
+  // time order, the chosen one emphasised with its circle; otherwise the fix with its geometry.
   const route = useMemo(() => {
     if (!fix || !segments) return null;
     const stops = segments.flatMap((s, i) => (s.location ? [{ key: i + 1, lat: s.location.lat, lon: s.location.lon }] : []));
@@ -88,21 +92,28 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   const shapes = useMemo(() => {
     if (!fix) return [];
     if (!route) return fixShapes(fix, fix, countries, false, t, locale);
-    const out = route.line ? [route.line] : [];
+    // A fix that shows none of its stretches keeps the geometry of its own place (the whole
+    // file's, in the header): its circle, sun, shadow, heading and the line to the truth.
+    const out = whole ? fixShapes(fix, fix, countries, false, t, locale) : [];
+    if (route.line) out.push(route.line);
     const loc = chosen?.location;
     if (loc) out.push({ kind: 'circle', lat: loc.lat, lon: loc.lon, radiusKm: Math.max(0.05, loc.radiusKm), style: 'dashed', label: `± ${kmText(loc.radiusKm, locale)}` });
     return out;
-  }, [fix, route, chosen, countries, t, locale]);
+  }, [fix, route, whole, chosen, countries, t, locale]);
   const markers = useMemo<MapMarker[]>(() => {
     if (!fix?.location) return [];
-    // With stretches their numbered markers stand for the fix; the truth and a chosen candidate
-    // are drawn as without them.
-    const out: MapMarker[] = route ? [...route.markers] : [{ id: fix.videoId, lat: fix.location.lat, lon: fix.location.lon, shape: 'fix', label: placeText(lang, fix.location, fix), selected: true }];
+    // With stretches their numbered markers stand for the fix, unless it shows none of them (its
+    // place is then the whole file's, a marker of its own); the truth and a chosen candidate are
+    // drawn as without them.
+    // Chosen with an undetermined stretch, which has no marker of its own: the header's place then
+    // goes with the dials.
+    const own: MapMarker = { id: fix.videoId, lat: fix.location.lat, lon: fix.location.lon, shape: 'fix', label: placeText(lang, fix.location, fix), selected: !route || (whole && !chosen?.location) };
+    const out: MapMarker[] = route ? [...route.markers, ...(whole ? [own] : [])] : [own];
     if (fix.truth) out.push({ id: 'truth', lat: fix.truth.lat, lon: fix.truth.lon, shape: 'truth', label: t('Wahrheit') });
     const c = fix.candidates[candidate];
     if (c && candidate > 0) out.push({ id: 'cand', lat: c.lat, lon: c.lon, shape: 'incident', label: placeText(lang, c, fix) });
     return out;
-  }, [fix, route, candidate, t, lang]);
+  }, [fix, route, whole, chosen, candidate, t, lang]);
 
   /**
    * Chooses a stretch and puts the video at its start (when the video plays here). The map turns
@@ -154,14 +165,12 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   // first) and shows as far as the farthest of the others, so that the route stays in view around
   // it. zoomForRadius(r) - 0.6 puts r about 112 px from the centre, inside the 280 px high map.
   const pickedCandidate = candidate > 0 ? (fix.candidates[candidate] ?? null) : null;
-  const segmentAt = pickedCandidate ?? chosen?.location ?? segments?.find((s) => s.location)?.location ?? null;
+  // An undetermined stretch of a fix that shows none: the map turns to the fix's own place.
+  const segmentAt = pickedCandidate ?? chosen?.location ?? (whole ? fix.location : null) ?? segments?.find((s) => s.location)?.location ?? null;
   const segmentView =
     segments && segmentAt
       ? (() => {
-          const reach = reachKm(
-            segmentAt,
-            segments.flatMap((s) => (s.location ? [s.location] : [])),
-          );
+          const reach = reachKm(segmentAt, [...segments.flatMap((s) => (s.location ? [s.location] : [])), ...(whole && fix.location ? [fix.location] : [])]);
           return { lat: segmentAt.lat, lon: segmentAt.lon, zoom: reach > 2500 ? 1.4 : zoomForRadius(Math.max(5, reach * 1.1, segmentAt.radiusKm * 0.3), segmentAt.lat) - 0.6 };
         })()
       : null;
@@ -176,11 +185,15 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   const quick = stageOf(fix) === 'quick';
   const hasSpace = fix.keyframes.some((k) => k.spaceUrl);
   // The header is one statement about the fix: its place, time and confidence (with stretches,
-  // those of the stretch it shows). The clock and the sun dial follow the chosen stretch (its own
-  // time from engine 11 on; none without a place), named above them; and whether RAUM has a space
-  // for it.
-  const clock = stretchClock(fix, segments ? segment : null);
-  const clockFor = segments && chosen && timedStretches(fix) ? `${t('Abschnitt {n}', { n: segment + 1 })} · ${spanText(chosen)} · ${chosen.location ? placeText(lang, chosen.location, fix) : t('Ort unbestimmt')}` : null;
+  // those of the stretch it shows, or the whole file's where it shows none). The clock and the sun
+  // dial follow the chosen stretch (its own time from engine 11 on; none without a place, except
+  // where the fix shows no stretch: the header's time, the whole file's, see dialClock), named
+  // above them; and whether RAUM has a space for it.
+  const clock = dialClock(fix, segments ? segment : null);
+  const clockFor =
+    segments && chosen && timedStretches(fix)
+      ? [t('Abschnitt {n}', { n: segment + 1 }), spanText(chosen), chosen.location ? placeText(lang, chosen.location, fix) : t('Ort unbestimmt'), clock?.whole ? t('Uhrzeit aus der ganzen Datei') : ''].filter((x) => x !== '').join(' · ')
+      : null;
   const stretchSpace = segments ? stretchSpaces(fix, segment).spaces.length > 0 : hasSpace;
   // The skyline is drawn on the keyframe in place of the video (one picture, switched), and only
   // when there is a line to draw.
@@ -225,11 +238,20 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
         <div className="dt-result-place">
           <span className="label">{t('Ort')}</span>
           <b>{loc ? placeText(lang, loc, fix) : t('Ort unbestimmt')}</b>
-          <span className="low" title={loc ? radiusHint(lang, loc) : ''}>
+          {/* The parts break between them where the header is narrow (a long count of stretches
+              next to a deviation); "aus der ganzen Datei" follows the radius, so that it is said
+              of the place, not of the count. */}
+          <span className="low dt-result-parts" title={loc ? radiusHint(lang, loc) : ''}>
             {loc
-              ? [countryText(lang, loc), radiusText(lang, loc), segments && places >= 2 ? t(atLeast ? 'mindestens {n} Orte' : '{n} Orte', { n: places }) : '']
+              ? [countryText(lang, loc), radiusText(lang, loc), whole ? t('aus der ganzen Datei') : '', segments ? placesText(fix, t) : '']
                   .filter((x) => x !== '')
-                  .join(' · ')
+                  .map((part, i, all) => (
+                    // The dot stays with the part before it; the line may break at the space after it.
+                    <Fragment key={i}>
+                      <span>{i < all.length - 1 ? `${part}\u00a0·` : part}</span>
+                      {i < all.length - 1 ? ' ' : ''}
+                    </Fragment>
+                  ))
               : ''}
           </span>
         </div>

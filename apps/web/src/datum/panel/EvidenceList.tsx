@@ -31,8 +31,12 @@ function groupEvidence(evidence: Evidence[]): Group[] {
     groups.set(item.kind, group);
   }
   for (const group of groups.values()) group.items.sort((a, b) => b.weight - a.weight);
-  // What decided the fix first; equal weight keeps the order of KIND_ORDER.
-  return [...groups.values()].sort((a, b) => b.total - a.total || kindRank(a.kind) - kindRank(b.kind));
+  // What decided the fix first; equal weight keeps the order of KIND_ORDER. Two exceptions lead:
+  // a weighed file tag (GPS, recording time) is a fact of the file, and the stretches' entry says
+  // how the place above relates to the timeline (which stretch it is, or why the whole file's
+  // answer stays above). That entry can carry no weight, which would otherwise put it last.
+  const head = (g: Group): number => (g.kind === 'metadata' && g.total > 0.0001 ? 0 : g.kind === 'segments' ? 1 : 2);
+  return [...groups.values()].sort((a, b) => head(a) - head(b) || b.total - a.total || kindRank(a.kind) - kindRank(b.kind));
 }
 
 /**

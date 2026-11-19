@@ -1,0 +1,472 @@
+{
+  "measuredAt": "2026-11-19",
+  "what": "DATUM engine version 12 (apps/server/src/datum/segments.ts segmentVerdict, SegmentParams.leadShare; engine.ts): a recording of one recognised place and at least one undetermined stretch carries its stretches; the place shows above only where its stretches cover at least leadShare (0.2) of the recording and it is not the place the whole file's world model rejected.",
+  "setup": {
+    "windows": "windows, stretches and coarse regions recomputed from the stored analyses with the segments.ts of engine 11 (8691158), as the node runs (gallery with the reference pictures of the places, \"normal\") and without them (\"holdout\": the truth pieces' Wikidata items excluded from the gallery, DATUM_HOLDOUT=1 for the reference clips)",
+    "wholeFile": "the answer for the whole file by the engine's own path (12 frames sampled from the file, world model, locate); equal to the node's fix on 13 of 13 recordings, and the source of the holdout answers",
+    "recordings": "60 reference clips (datasets/datum/manifest.json), the 9 compilations of datum-segments.json and datum-segments-complete.json (sammlung-3orte, -10orte, -rueckkehr, -20min, berlin-tour, kontinente, deutschlandreise, deutschlandreise-b2, ein-ort-lang) and the 4 end-to-end files (weltreise, stadt-land, europa-rand, weltreise-zeit; weltreise-zeit is weltreise with a recording time in its tags)",
+    "metric": "per second of the recording, the great-circle distance from the fix's place to the true place playing in that second; mean and median over the recording, shares of seconds within 25 and 200 km and inside the fix's circle; then averaged over the affected cases"
+  },
+  "affected": {
+    "rule": "exactly one recognised place, at least two stretches (so at least one undetermined), no GPS in the file",
+    "cases": 7,
+    "referenceClips": {
+      "normal": [
+        "datum-004.mp4"
+      ],
+      "holdout": [
+        "datum-004.mp4"
+      ],
+      "windowsPerClip": {
+        "1": 58,
+        "2": 2
+      },
+      "note": "datum-044 has two windows but no place (world model only); no clip gets two places; the other 59 clips are untouched (falseSplits of datum-segments.json reproduced)"
+    },
+    "compilations": {
+      "normal": [],
+      "holdout": [
+        "sammlung-3orte.mp4"
+      ],
+      "note": "normal: 7 already show at least two places, berlin-tour and ein-ort-lang are one stretch"
+    },
+    "endToEnd": {
+      "normal": [
+        "stadt-land.mp4"
+      ],
+      "holdout": [
+        "stadt-land.mp4",
+        "weltreise.mp4",
+        "weltreise-zeit.mp4"
+      ],
+      "note": "weltreise and weltreise-zeit are the same video, so the holdout cases are effectively two recordings"
+    },
+    "alsoChecked": "reise-12min.mp4 (no truth) shows 9 places: already a timeline, not affected"
+  },
+  "options": {
+    "engine11": {
+      "rule": "fewer than two places: no timeline, the whole file's answer",
+      "better": 0,
+      "worse": 0,
+      "equal": 7,
+      "meanOfMeansKm": 2550,
+      "within25": 0.048,
+      "within200": 0.333
+    },
+    "A_timelineOnly": {
+      "rule": "the stretches as timeline, the whole file's place, time and spaces above",
+      "better": 0,
+      "worse": 0,
+      "equal": 7,
+      "meanOfMeansKm": 2550,
+      "within25": 0.048,
+      "within200": 0.333
+    },
+    "B_alwaysShowStretch": {
+      "rule": "as several places: the longest located stretch not at the rejected place leads unless the whole file's answer lies within 25 km",
+      "better": 2,
+      "worse": 4,
+      "worseByKm": {
+        "stadt-land": 3,
+        "stadt-land (holdout)": 31,
+        "weltreise (holdout)": 2731,
+        "weltreise-zeit (holdout)": 2731
+      },
+      "equal": 1,
+      "meanOfMeansKm": 3292,
+      "within25": 0.369,
+      "within200": 0.44
+    },
+    "C1_wholeRadiusNotNarrower": {
+      "better": 2,
+      "worse": 3,
+      "meanOfMeansKm": 3291
+    },
+    "C2_wholeRadiusAtLeast1500": {
+      "note": "identical to B"
+    },
+    "C3_undeterminedAtLeastAThird": {
+      "note": "identical to B"
+    },
+    "C4_undeterminedAtLeast12s": {
+      "better": 0,
+      "worse": 4,
+      "meanOfMeansKm": 3335
+    },
+    "C5_noCoarseRegionAtThePlace": {
+      "better": 0,
+      "worse": 2,
+      "meanOfMeansKm": 3330
+    },
+    "C6_C7_tierStrongOrRecognised": {
+      "better": 0,
+      "worse": 1,
+      "meanOfMeansKm": 2550,
+      "note": "no principled basis: the recognised tier is calibrated at 7 500 km, wider than similar at 1 500 km; within 25 km over all anchors of the measured windows, normal / holdout: strong 89 % / 75 %, recognised 71 % / 0 % (n = 4), similar 61 % / 30 %"
+    },
+    "C8_shareAtLeastAFifth_engine12": {
+      "rule": "B only where the stretches of the place together last at least 0.2 of the recording; otherwise A",
+      "better": 2,
+      "worse": 2,
+      "worseByKm": {
+        "stadt-land": 3,
+        "stadt-land (holdout)": 31
+      },
+      "equal": 3,
+      "meanOfMeansKm": 2511,
+      "within25": 0.369,
+      "within200": 0.405
+    }
+  },
+  "leadShare": {
+    "value": 0.2,
+    "measuredShares": {
+      "weltreise (holdout)": 0.125,
+      "stadt-land (both)": 0.25,
+      "sammlung-3orte (holdout)": 0.275,
+      "datum-004 (both)": 0.417
+    },
+    "note": "any value above 0.125 and up to 0.25 gives the same results; 0.2 lies between the two distinct recordings that decide it (weltreise holdout, stadt-land) and rests on them alone: the next end-to-end run should check it again. sammlung-3orte (holdout) is at 27.5 % but its only located stretch is at the place the whole file's world model rejected, so the whole file stays above. Stretches at that rejected place do not count towards the share (engine 12 as shipped: they cannot lead, and a short stretch elsewhere must not stand for a recording they fill); counted so, sammlung-3orte (holdout) holds 0 %, and none of the 7 results changes"
+  },
+  "cases": [
+    {
+      "recording": "datum-004.mp4 (Rheinbrücke Leverkusen)",
+      "mode": "normal",
+      "durationSec": 12.0,
+      "windows": 2,
+      "stretches": 2,
+      "locatedSec": 5.0,
+      "undeterminedSec": 7.0,
+      "placeShare": 0.417,
+      "wholeFile": "Deutschherrnbrücke, Frankfurt ±1,500 km",
+      "rejectedByWholeFileWorldModel": null,
+      "engine11": {
+        "place": "Deutschherrnbrücke, Frankfurt ±1,500 km",
+        "meanKm": 160,
+        "medianKm": 160,
+        "within25": 0.0,
+        "within200": 1.0,
+        "inCircle": 1.0
+      },
+      "alwaysShowStretch": {
+        "place": "Zoobrücke, Köln ±1,500 km",
+        "meanKm": 9,
+        "medianKm": 9,
+        "within25": 1.0,
+        "within200": 1.0,
+        "inCircle": 1.0
+      },
+      "engine12": {
+        "place": "Zoobrücke, Köln ±1,500 km",
+        "meanKm": 9,
+        "medianKm": 9,
+        "within25": 1.0,
+        "within200": 1.0,
+        "inCircle": 1.0,
+        "rule": "stretch above (42 %)"
+      },
+      "timeline": {
+        "placeSec": 5,
+        "truthInCircleSec": 5,
+        "placeMeanKm": 9,
+        "coarseSec": 0,
+        "coarseTruthInsideSec": 0,
+        "nothingSec": 7
+      }
+    },
+    {
+      "recording": "datum-004.mp4 (Rheinbrücke Leverkusen)",
+      "mode": "holdout",
+      "durationSec": 12.0,
+      "windows": 2,
+      "stretches": 2,
+      "locatedSec": 5.0,
+      "undeterminedSec": 7.0,
+      "placeShare": 0.417,
+      "wholeFile": "Deutschherrnbrücke, Frankfurt ±1,500 km",
+      "rejectedByWholeFileWorldModel": null,
+      "engine11": {
+        "place": "Deutschherrnbrücke, Frankfurt ±1,500 km",
+        "meanKm": 160,
+        "medianKm": 160,
+        "within25": 0.0,
+        "within200": 1.0,
+        "inCircle": 1.0
+      },
+      "alwaysShowStretch": {
+        "place": "Zoobrücke, Köln ±1,500 km",
+        "meanKm": 9,
+        "medianKm": 9,
+        "within25": 1.0,
+        "within200": 1.0,
+        "inCircle": 1.0
+      },
+      "engine12": {
+        "place": "Zoobrücke, Köln ±1,500 km",
+        "meanKm": 9,
+        "medianKm": 9,
+        "within25": 1.0,
+        "within200": 1.0,
+        "inCircle": 1.0,
+        "rule": "stretch above (42 %)"
+      },
+      "timeline": {
+        "placeSec": 5,
+        "truthInCircleSec": 5,
+        "placeMeanKm": 9,
+        "coarseSec": 0,
+        "coarseTruthInsideSec": 0,
+        "nothingSec": 7
+      }
+    },
+    {
+      "recording": "stadt-land.mp4",
+      "mode": "normal",
+      "durationSec": 48.0,
+      "windows": 3,
+      "stretches": 2,
+      "locatedSec": 12.0,
+      "undeterminedSec": 36.0,
+      "placeShare": 0.25,
+      "wholeFile": "Gallileo, Frankfurt ±1,500 km",
+      "rejectedByWholeFileWorldModel": null,
+      "engine11": {
+        "place": "Gallileo, Frankfurt ±1,500 km",
+        "meanKm": 765,
+        "medianKm": 382,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 1.0
+      },
+      "alwaysShowStretch": {
+        "place": "Elstertalbrücke, Hof ±7,500 km",
+        "meanKm": 768,
+        "medianKm": 192,
+        "within25": 0.25,
+        "within200": 0.5,
+        "inCircle": 1.0
+      },
+      "engine12": {
+        "place": "Elstertalbrücke, Hof ±7,500 km",
+        "meanKm": 768,
+        "medianKm": 192,
+        "within25": 0.25,
+        "within200": 0.5,
+        "inCircle": 1.0,
+        "rule": "stretch above (25 %)"
+      },
+      "timeline": {
+        "placeSec": 12,
+        "truthInCircleSec": 12,
+        "placeMeanKm": 0,
+        "coarseSec": 36,
+        "coarseTruthInsideSec": 36,
+        "nothingSec": 0
+      },
+      "note": "per truth piece, whole file (Gallileo, Frankfurt) -> engine 12 (Elstertalbrücke, Hof): Cork 1 212 / 1 213 -> 1 440 km, Dorfkirche Rieben 382 -> 192 km, Elstertalbrücke 253 -> 0 km"
+    },
+    {
+      "recording": "stadt-land.mp4",
+      "mode": "holdout",
+      "durationSec": 48.0,
+      "windows": 3,
+      "stretches": 2,
+      "locatedSec": 12.0,
+      "undeterminedSec": 36.0,
+      "placeShare": 0.25,
+      "wholeFile": "St. Marien, Osnabrück ±7,500 km",
+      "rejectedByWholeFileWorldModel": null,
+      "engine11": {
+        "place": "St. Marien, Osnabrück ±7,500 km",
+        "meanKm": 734,
+        "medianKm": 344,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 1.0
+      },
+      "alwaysShowStretch": {
+        "place": "Deutschherrnbrücke, Frankfurt ±1,500 km",
+        "meanKm": 765,
+        "medianKm": 381,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 1.0
+      },
+      "engine12": {
+        "place": "Deutschherrnbrücke, Frankfurt ±1,500 km",
+        "meanKm": 765,
+        "medianKm": 381,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 1.0,
+        "rule": "stretch above (25 %)"
+      },
+      "timeline": {
+        "placeSec": 12,
+        "truthInCircleSec": 12,
+        "placeMeanKm": 251,
+        "coarseSec": 36,
+        "coarseTruthInsideSec": 36,
+        "nothingSec": 0
+      },
+      "note": "the stretch is a false similar anchor (Deutschherrnbrücke, Frankfurt, 251 km from the Elstertalbrücke): +31 km per second against the whole file's St. Marien, Osnabrück"
+    },
+    {
+      "recording": "weltreise.mp4",
+      "mode": "holdout",
+      "durationSec": 96.0,
+      "windows": 7,
+      "stretches": 3,
+      "locatedSec": 12.0,
+      "undeterminedSec": 84.0,
+      "placeShare": 0.125,
+      "wholeFile": "Medina ±1,500 km",
+      "rejectedByWholeFileWorldModel": "Lianhu railway station, Xi’an ±7,500 km",
+      "engine11": {
+        "place": "Medina ±1,500 km",
+        "meanKm": 6936,
+        "medianKm": 5760,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 0.12
+      },
+      "alwaysShowStretch": {
+        "place": "Yi-Sun-sin-Brücke, Yeosu ±1,500 km",
+        "meanKm": 9667,
+        "medianKm": 8654,
+        "within25": 0.0,
+        "within200": 0.12,
+        "inCircle": 0.12
+      },
+      "engine12": {
+        "place": "Medina ±1,500 km",
+        "meanKm": 6936,
+        "medianKm": 5760,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 0.12,
+        "rule": "whole file above (12.5 % < 20 %)"
+      },
+      "timeline": {
+        "placeSec": 12,
+        "truthInCircleSec": 12,
+        "placeMeanKm": 126,
+        "coarseSec": 12,
+        "coarseTruthInsideSec": 12,
+        "nothingSec": 72
+      },
+      "note": "always showing the 12-s stretch (Yi-Sun-sin-Brücke, Yeosu, 126 km from the Busan bridge) above the 96-s world tour would cost 2 731 km per second"
+    },
+    {
+      "recording": "weltreise-zeit.mp4",
+      "mode": "holdout",
+      "durationSec": 96.0,
+      "windows": 7,
+      "stretches": 3,
+      "locatedSec": 12.0,
+      "undeterminedSec": 84.0,
+      "placeShare": 0.125,
+      "wholeFile": "Medina ±1,500 km",
+      "rejectedByWholeFileWorldModel": "Lianhu railway station, Xi’an ±7,500 km",
+      "engine11": {
+        "place": "Medina ±1,500 km",
+        "meanKm": 6936,
+        "medianKm": 5760,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 0.12
+      },
+      "alwaysShowStretch": {
+        "place": "Yi-Sun-sin-Brücke, Yeosu ±1,500 km",
+        "meanKm": 9667,
+        "medianKm": 8654,
+        "within25": 0.0,
+        "within200": 0.12,
+        "inCircle": 0.12
+      },
+      "engine12": {
+        "place": "Medina ±1,500 km",
+        "meanKm": 6936,
+        "medianKm": 5760,
+        "within25": 0.0,
+        "within200": 0.0,
+        "inCircle": 0.12,
+        "rule": "whole file above (12.5 % < 20 %)"
+      },
+      "timeline": {
+        "placeSec": 12,
+        "truthInCircleSec": 12,
+        "placeMeanKm": 126,
+        "coarseSec": 12,
+        "coarseTruthInsideSec": 12,
+        "nothingSec": 72
+      }
+    },
+    {
+      "recording": "sammlung-3orte.mp4",
+      "mode": "holdout",
+      "durationSec": 120.0,
+      "windows": 8,
+      "stretches": 2,
+      "locatedSec": 33.0,
+      "undeterminedSec": 87.0,
+      "placeShare": 0.275,
+      "wholeFile": "Vereinigtes Königreich ±1,500 km",
+      "rejectedByWholeFileWorldModel": "Vereinigtes Königreich ±1,469 km",
+      "engine11": {
+        "place": "Vereinigtes Königreich ±1,500 km",
+        "meanKm": 2155,
+        "medianKm": 1231,
+        "within25": 0.33,
+        "within200": 0.33,
+        "inCircle": 0.67
+      },
+      "alwaysShowStretch": {
+        "place": "Vereinigtes Königreich ±1,500 km",
+        "meanKm": 2155,
+        "medianKm": 1231,
+        "within25": 0.33,
+        "within200": 0.33,
+        "inCircle": 0.67
+      },
+      "engine12": {
+        "place": "Vereinigtes Königreich ±1,500 km",
+        "meanKm": 2155,
+        "medianKm": 1231,
+        "within25": 0.33,
+        "within200": 0.33,
+        "inCircle": 0.67,
+        "rule": "whole file above (the stretch is at the place its world model rejected)"
+      },
+      "timeline": {
+        "placeSec": 33,
+        "truthInCircleSec": 33,
+        "placeMeanKm": 993,
+        "coarseSec": 80,
+        "coarseTruthInsideSec": 80,
+        "nothingSec": 7
+      },
+      "note": "the timeline names Bryn Eglwys for 0:00–0:33 (the Kyffhäuser), then \"Nordeuropa oder Westeuropa\" (Glenfinnan inside) and \"Nordamerika\" (Clarence St Bridge inside)"
+    }
+  ],
+  "timelineOverTheSevenCases": {
+    "placeSec": 91,
+    "truthInCircleSec": 91,
+    "coarseRegionSec": 176,
+    "truthInsideCoarseSec": 176,
+    "nothingClaimedSec": 165,
+    "note": "located stretches 5 + 5 + 12 + 12 + 33 + 12 + 12 s, coarse regions 36 + 36 + 80 + 12 + 12 s, nothing claimed 7 + 7 + 7 + 72 + 72 s"
+  },
+  "context": "the same rule as B over the 17 cases of several places (engine 11): better 9, worse 5, equal 3 (weltreise +2 742 km, europa-rand +464 km); mean of means 4 593 -> 3 959 km",
+  "nodeCheck": {
+    "node": "a copy build of the worktree (engine 12) on its own port, SICHT_OFFLINE=1, stadt-land.mp4 uploaded and analysed at 1 frame/s",
+    "lead": "fix Elstertalbrücke, Hof ± 7 500 km (0 km from the truth of 0:36–0:48); time \"Morgen, Europe/Berlin\" from the stretch's frames, the whole file's as \"Ganze Datei (gemischt)\" with weight 0; the three keyframes from 0:38–0:45; candidates [Elstertalbrücke 0.25], countries [DE 25 %]; the whole file's world-model, reference and country entries \"Ganze Datei (gemischt)\", \"deren Bilder auch die unbestimmten Abschnitte einschließen\"; trace \"1 erkannter Ort in 2 Abschnitten (1 unbestimmt); oben 0:36–0:48, ersetzt die Ortung der ganzen Datei\", \"keine weiteren: der einzige Abschnitt mit Ort ist der gezeigte\", \"1 Abschnitt mit Ort für sich\"; full fix 7.7 s",
+    "noLead": "the same recording computed again with leadShare 0.3 patched into the copy build (25 % < 30 %): fix Gallileo, Frankfurt as in engine 11, the whole file's time and keyframes, the segments entry with weight 0 and no frame, the located stretch with its own time (Europe/Berlin) and its own space; trace \"oben die ganze Datei: der Ort umfasst nur 25 % (unter 30 %)\", \"1 weiterer Raum für 1 Abschnitt mit Ort\", \"(ganze Datei) · 1 Abschnitt mit Ort für sich\"; the list's summary without lead",
+    "console": "ORTUNG row and card, BEFUND header, timeline head and detail, RAUM bar and caption for both stretches, DE and EN, 1600 x 960: \"1 erkannter Ort, ein Abschnitt unbestimmt\" / \"1 recognised place, one segment undetermined\", timeline \"1 erkannter Ort · 1 unbestimmt\"; without lead \"aus der ganzen Datei\" next to the place in BEFUND and in RAUM for the whole file's spaces of the undetermined stretch, the whole file's place on the map besides the stretch's marker"
+  },
+  "caveats": [
+    "Seven cases, two of them pairs of the same recording (datum-004 in both modes, weltreise and weltreise-zeit): the threshold rests on two distinct recordings.",
+    "The holdout cases of the end-to-end files and the compilations are not what a node computes (DATUM_HOLDOUT=1 leaves out reference pictures for the reference clips only); they stand for material whose places the gallery does not hold.",
+    "All material consists of the same 60 reference clips of known landmarks."
+  ]
+}

@@ -30,8 +30,15 @@
  *      weight 0, "Ganze Datei (gemischt)"); undetermined stretches name a coarse region where the
  *      gallery and the world model agree (`FixSegment.coarse`); the longest located stretches get
  *      a walkable space of their own (`FixSegment.keyframe.spaceUrl`).
+ *  12: one recognised place and undetermined stretches: the fix carries the stretches too (the
+ *      undetermined ones may show other places, which the whole file's answer mixes in). Its place
+ *      shows above, with its time, sun and spaces, only where its stretches away from the place
+ *      the whole file's world model rejected cover at least a fifth of the recording
+ *      (`SegmentParams.leadShare`); otherwise the whole file's answer stays above, with its
+ *      countries, and the 'segments' evidence entry carries no `frame`, naming no stretch as the
+ *      fix's.
  */
-export const ENGINE_VERSION = 11;
+export const ENGINE_VERSION = 12;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

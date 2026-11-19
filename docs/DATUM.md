@@ -42,7 +42,7 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | Sonne | Sonnenstandsrechnung (NOAA) für Ort und Datum, Zeiten, in denen die Sonne im gemessenen Band steht; Zeitzone aus Land und Länge | Uhrzeitfenster in Ortszeit, Sonnenbahn, Schattenrichtung |
 | Raum | Tiefenschätzung (Depth Anything V2 Small) für drei Schlüsselbilder; Himmel, Boden und Neigung der Kamera; Abstände aus der Annahme einer Augenhöhe von 1,6 m | begehbarer Raum, Himmelslinie |
 | Horizont | Aus Höhendaten berechneter Horizont am Kandidatenort gegen die Himmelslinie des Videos; gewertet nur, wenn der Horizont im Bildausschnitt mindestens 1° Relief hat und die beste Richtung sich deutlich von den übrigen abhebt | Blickrichtung und Bildwinkel, wenn das Gelände markant ist und der Ort stimmt |
-| Abschnitte | Nur in der vollständigen Ortung: die Szenen der Auswertung als Fenster, jedes für sich mit Galerie, Länderschätzung und Weltmodell geortet, sichere Antworten zu Orten zusammengefasst; jeder Abschnitt mit Ort bekommt Uhrzeit und Sonnenstand aus seinen eigenen Bildern, die längsten einen eigenen Raum (Abschnitt [Mehrere Orte in einer Aufnahme](#mehrere-orte-in-einer-aufnahme)) | eine Zeitleiste mit einem Abschnitt je Ort, wenn die Bilder mindestens zwei Orte zeigen, mit Uhrzeit je Abschnitt und grober Region für unbestimmte Abschnitte, wo sie gemessen trägt; sonst unverändert |
+| Abschnitte | Nur in der vollständigen Ortung: die Szenen der Auswertung als Fenster, jedes für sich mit Galerie, Länderschätzung und Weltmodell geortet, sichere Antworten zu Orten zusammengefasst; jeder Abschnitt mit Ort bekommt Uhrzeit und Sonnenstand aus seinen eigenen Bildern, die längsten einen eigenen Raum (Abschnitt [Mehrere Orte in einer Aufnahme](#mehrere-orte-in-einer-aufnahme)) | eine Zeitleiste mit einem Abschnitt je Ort, wenn die Bilder mindestens zwei Orte zeigen oder (seit Fassung 12) einen erkannten Ort und mindestens einen unbestimmten Abschnitt, mit Uhrzeit je Abschnitt mit Ort und grober Region für unbestimmte Abschnitte, wo sie gemessen trägt; sonst unverändert |
 
 Jeder Beleg, jeder Schritt des Ablaufs und jede Begründung kommt vom Knoten auf Deutsch und auf
 Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
@@ -51,9 +51,9 @@ Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
 
 | Reiter | Zeigt |
 | --- | --- |
-| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, bei mehreren Orten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert und verbunden; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
-| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; bei mehreren Orten der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
+| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
+| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert und verbunden; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
+| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; bei einer Aufnahme mit Zeitleiste der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
 | MESSUNG | Abweichung jeder Ortung gegen die Grundwahrheit des Referenzbestands; am Ende der Abschnitt „Einstellungen der Ortung“ |
@@ -140,9 +140,12 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   unsicheres Fenster zählt nur zwischen zwei Fenstern desselben Orts zu ihm, und nur wenn seine
   eigene Antwort einem der beiden nicht widerspricht; sonst bleibt es „unbestimmt“ und wird keinem
   Ort zugeschlagen.
-- **Ergebnis.** Erst bei mindestens zwei Orten trägt die Ortung die Abschnitte (`Fix.segments`;
-  die Liste nur ihre Kurzform `segmentSummary`). Oben steht dann der Ort des längsten Abschnitts
-  mit Ort, es sei denn, die Ortung der ganzen Datei liegt keine 25 km davon entfernt. Ein Beleg
+- **Ergebnis.** Bei mindestens zwei Orten trägt die Ortung die Abschnitte (`Fix.segments`;
+  die Liste nur ihre Kurzform `segmentSummary`), seit Fassung 12 auch bei einem erkannten Ort und
+  unbestimmten Abschnitten (siehe
+  [Ein erkannter Ort und unbestimmte Abschnitte](#ein-erkannter-ort-und-unbestimmte-abschnitte)).
+  Oben steht dann der Ort des längsten Abschnitts mit Ort, es sei denn, die Ortung der ganzen
+  Datei liegt keine 25 km davon entfernt. Ein Beleg
   sagt es: „Die Aufnahme zeigt mindestens 15 Orte; oben der Abschnitt 11:19–11:43“
   („mindestens“, solange Abschnitte unbestimmt sind oder ein Ort zusammengefasst ist). Hat das
   Weltmodell für die ganze Datei die Antwort der Galerie verworfen, steht ein Abschnitt an diesem
@@ -154,13 +157,17 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   Orte der Aufnahme, die Länder die der Abschnitte (nach ihrer Zeit), die Belege der ganzen Datei
   (Referenzbilder, Weltmodell, Länderschätzung) heißen „Ganze Datei (gemischt)“ und zählen nicht,
   und Straßenbilder werden nicht gefragt (ihr Vergleich nähme Bilder der ganzen Datei). Eine
-  Aufnahme eines Orts bleibt, wie sie war; der Ablauf nennt nur den Schritt „Abschnitte geprüft“.
+  Aufnahme aus einem einzigen Abschnitt bleibt, wie sie war; der Ablauf nennt nur den Schritt
+  „Abschnitte geprüft“.
 - **GPS in der Datei.** Die Position gilt für die ganze Datei; es gibt keine Abschnitte. Zeigen
   die Bilder trotzdem mehrere Orte, sagt ein Beleg ohne Gewicht: „Die Bilder zeigen 2 verschiedene
   Orte“.
 - **Fassung 11** macht die Abschnitte vollständig: eine Uhrzeit je Abschnitt mit Ort, eine grobe
   Region für unbestimmte Abschnitte, wo sie gemessen trägt, und eigene Räume für die längsten
   Abschnitte (die drei Abschnitte unten).
+- **Fassung 12** gibt auch einer Aufnahme mit einem erkannten Ort und unbestimmten Abschnitten die
+  Zeitleiste; ihr Ort steht oben, wo er mindestens ein Fünftel der Aufnahme umfasst (siehe [Ein
+  erkannter Ort und unbestimmte Abschnitte](#ein-erkannter-ort-und-unbestimmte-abschnitte)).
 
 ### Gemessen an Zusammenschnitten
 
@@ -223,7 +230,11 @@ Fehler eines Abschnitts ist der Abstand seines Orts zum Ort des Stücks, das ihn
   Beleg nennt ihn („Sonnenhöhe 3–90° (Abschnitt 11:19–11:43)“). Die Schätzung aus den zwölf Bildern
   der ganzen Datei mischt das Licht aller Orte; sie bleibt als Beleg „Ganze Datei (gemischt)“ ohne
   Gewicht. Das gilt auch, wenn die Ortung der ganzen Datei mit dem Abschnitt übereinstimmt: ihre
-  Bilder stammen trotzdem von allen Orten.
+  Bilder stammen trotzdem von allen Orten. Zeigt die Ortung keinen Abschnitt (seit Fassung 12: ein
+  erkannter Ort unter einem Fünftel der Aufnahme oder nur am verworfenen Ort, siehe [Ein erkannter
+  Ort und unbestimmte Abschnitte](#ein-erkannter-ort-und-unbestimmte-abschnitte)), ist ihre Uhrzeit
+  die der ganzen Datei, mit gewichtetem Beleg wie ohne Abschnitte; die Abschnitte mit Ort haben
+  trotzdem ihre eigene.
 - **Aufnahmezeit in der Datei.** Sie gilt für die ganze Datei und entscheidet auch je Abschnitt:
   derselbe Zeitpunkt, in der Ortszeit jedes Abschnitts und mit dem Sonnenstand an seinem Ort. Ihr
   Beleg steht einmal da, „Aufnahmezeit aus den Metadaten“: Er sagt, dass sie für die ganze Datei und
@@ -344,7 +355,8 @@ Sekunde.
 
 - **Welche.** Der gezeigte Abschnitt hat die drei Räume der Ortung. Von den übrigen Abschnitten mit
   Ort bekommen die längsten einen begehbaren Raum aus ihrem Schlüsselbild, höchstens zwölf je
-  Aufnahme (`FixSegment.keyframe.spaceUrl`).
+  Aufnahme (`FixSegment.keyframe.spaceUrl`). Zeigt die Ortung keinen Abschnitt (Fassung 12), sind
+  ihre drei Räume die der ganzen Datei, und jeder Abschnitt mit Ort zählt zu den übrigen.
 - **RAUM** betritt den in BEFUND gewählten Abschnitt mit seinem Sonnenstand. Unten links stehen
   Sonnenhöhe und Schattenlänge zur geschätzten Zeit („Sonne 32° · Schatten 1 : 1,6 · Richtung im
   Bild unbekannt“): Sie gelten, wohin die Kamera auch blickte. Die Sonne am Himmel und die Richtung
@@ -374,6 +386,118 @@ Sekunde.
   Uhrzeiten zusammen (7,2 und 8,8 s); der Horizont bleibt beim gezeigten Abschnitt.
 - Messdatei: `docs/measurements/datum-segments-complete.json`.
 
+### Ein erkannter Ort und unbestimmte Abschnitte
+
+Bis Fassung 11 bekam nur eine Aufnahme mit mindestens zwei erkannten Orten eine Zeitleiste. Eine
+mit einem erkannten Ort und unbestimmten Abschnitten galt als ein Ort, und oben stand die Ortung
+der ganzen Datei, deren zwölf Bilder alle Teile mischen: Im End-to-End-Lauf zeigte „Stadt-Land“
+(24 s Cork, dann 24 s Dorfkirche Rieben und Elstertalbrücke) nur „Gallileo, Frankfurt ± 1 500 km“,
+253 km vom nächsten wahren Ort; dass die erste Hälfte in Irland spielt, sagte nur die Zeile
+„2 Abschnitte, ein Ort (1 unbestimmt)“ im Ablauf. Seit Fassung 12 (`segmentVerdict` in
+`apps/server/src/datum/segments.ts`):
+
+- **Zeitleiste.** Ein erkannter Ort und mindestens ein unbestimmter Abschnitt tragen die Abschnitte
+  wie mehrere Orte: jeder Abschnitt mit Ort mit eigener Uhrzeit, eigenem Sonnenstand und eigenem
+  Raum, die unbestimmten mit ihren groben Regionen. Ein zweiter Ort wird nicht behauptet: die
+  Ergebniskarte in ORTUNG und der Kopf des BEFUNDS sagen „1 erkannter Ort, ein Abschnitt
+  unbestimmt“ („2 Abschnitte unbestimmt“), die Liste in ORTUNG und die Zeitleiste kürzer
+  „1 erkannter Ort · 1 unbestimmt“, nie „mindestens 1 Orte“; die Route der Karte in ORTUNG bleibt
+  Aufnahmen mit mindestens zwei Orten vorbehalten. Die Zeile unter dem Namen in der Liste und unter
+  dem Ort im Kopf bricht zwischen ihren Teilen um, statt abgeschnitten zu werden (die Liste ist bei
+  jeder Fenstergröße 263 Bildpunkte breit); in der Liste steht die Abweichung zur Grundwahrheit
+  vor der Zahl der Orte.
+- **Oben der Abschnitt**, wenn die Abschnitte des Orts zusammen mindestens ein Fünftel der Aufnahme
+  umfassen (`SegmentParams.leadShare` = 0,2) und er nicht der Ort ist, den das Weltmodell für die
+  ganze Datei verworfen hat. Abschnitte an diesem verworfenen Ort zählen beim Anteil nicht mit: Sie
+  können nicht oben stehen, und 40 s am verworfenen Ort machen 3 s Köln in 100 s nicht zu 43 % der
+  Aufnahme. Dann gilt, was für mehrere Orte gilt: Uhrzeit, Sonnenstand, die drei
+  Räume und der Horizont kommen aus dem Abschnitt, die Ortung der ganzen Datei bleibt nur, wo sie
+  keine 25 km von ihm liegt; ersetzt er sie, heißen ihre Belege „Ganze Datei (gemischt)“ ohne
+  Gewicht („deren Bilder auch die unbestimmten Abschnitte einschließen“), und Straßenbilder werden
+  nicht gefragt. Ersetzt er sie, tragen Kandidat und Land den Anteil des Orts an der ganzen
+  Aufnahme, nicht an der Zeit mit Ort (Stadt-Land: Deutschland 25 %, nicht 100 %). Bleibt sie,
+  bleiben auch ihre Kandidaten, ihre Länder und ihre Belege mit Gewicht: Ein Anteil an der Aufnahme
+  neben ihrer Länderschätzung gäbe demselben Land zwei Zahlen (ein Eiffelturm mit 40 s unsicherer
+  Fenster in 60 s: „Frankreich 33 %“ neben der Schätzung der ganzen Datei). Der Beleg: „Die
+  Aufnahme zeigt einen erkannten Ort; ein Abschnitt unbestimmt; oben der Abschnitt 0:36–0:48 … der
+  Abschnitt umfasst 25 % der Aufnahme (ab 20 % steht ein Ort oben). Er ersetzt die Ortung aus der
+  ganzen Datei, deren Bilder auch die unbestimmten Abschnitte einschließen.“ Liegen Abschnitte am
+  verworfenen Ort, sagt er, wovon der Anteil ist: „ohne den Abschnitt an dem Ort, den das Weltmodell
+  für die ganze Datei verworfen hat, umfasst der Ort 20 % der Aufnahme“.
+- **Sonst oben die ganze Datei**: Ort, Uhrzeit, Räume, Kandidaten, Länder und Straßenbildabgleich
+  bleiben die der ganzen Datei. Der Beleg (Gewicht 0, ohne Bildnummer: er nennt keinen Abschnitt
+  als den gezeigten) sagt, warum: „Der Abschnitt mit Ort (1:00–1:12: Yi-Sun-sin-Brücke, Yeosu)
+  umfasst nur 13 % der Aufnahme, weniger als die 20 %, ab denen ein Ort oben steht“, oder dass er
+  den verworfenen Ort nennt. Ein Anteil knapp unter der Schwelle heißt nie „20 %“ (12 s von 60,5 s:
+  „nur 19 %“); einer, der sie nur in der Rechengenauigkeit verfehlt (7,2 von 36 s), zählt als ein
+  Fünftel. In der Evidenz des BEFUNDS steht dieser Beleg trotz Gewicht 0 vorn, gleich nach einer
+  Angabe aus der Datei mit Gewicht (GPS, Aufnahmezeit): Er erklärt, warum oben die ganze Datei
+  steht, und gehört nicht unter die Referenzbilder.
+- **Konsole, wenn die Ortung keinen Abschnitt zeigt.** „aus der ganzen Datei“ steht gleich nach
+  dem Radius, also beim Ort und vor der Zahl der Orte: in der Ergebniskarte und der Liste in
+  ORTUNG, im Kopf des BEFUNDS und in RAUM, sonst läse sich „1 erkannter Ort“ als der Ort darüber.
+  BEFUND öffnet die Zeitleiste am Anfang der Aufnahme. Die Karte zeigt den Ort der ganzen Datei mit
+  Kreis, Sonnen- und Schattenrichtung, Blickkegel und Linie zur Grundwahrheit neben den Abschnitten;
+  sein Zeichen ist hervorgehoben, solange ein unbestimmter Abschnitt gewählt ist. Bei einem
+  unbestimmten Abschnitt zeigen Uhr und Polardiagramm die Uhrzeit des Kopfes und sagen es
+  („Abschnitt 1 · 0:00–0:36 · Ort unbestimmt · Uhrzeit aus der ganzen Datei“); seine Bilder sind
+  unter denen, aus denen sie geschätzt ist, eine eigene hat er nicht. Ein Abschnitt mit Ort zeigt
+  seine eigene. In RAUM bietet jeder Abschnitt die Räume der ganzen Datei an, deren Bilder in ihm
+  liegen, so dass jeder betreten werden kann. Ein unbestimmter Abschnitt bietet sie mit Ort und
+  Uhrzeit der ganzen Datei an; ein Abschnitt mit Ort zuerst seinen eigenen Raum (sein Ort, seine
+  Uhrzeit), dann sie (beim Darüberfahren „aus der ganzen Datei“, mit Ort, Uhrzeit und Blickrichtung
+  der ganzen Datei). Ein unbestimmter Abschnitt ohne einen davon heißt in RAUM „Ort unbestimmt“,
+  ohne Gelände.
+- **GPS in der Datei:** unverändert keine Abschnitte; der Ablauf sagt „2 Abschnitte, ein Ort
+  (1 unbestimmt), GPS der Datei gilt“.
+
+**Gemessen** am 19. November 2026: Fenster, Abschnitte und grobe Regionen mit `segments.ts` der
+Fassung 11 aus den gespeicherten Auswertungen neu gerechnet, die Ortung der ganzen Datei auf dem Weg
+der Engine (zwölf Bilder der Datei, Weltmodell, Galerie; auf 13 von 13 Aufnahmen gleich der des
+Knotens), mit Referenzbild der Orte in der Galerie und ohne („ohne Ref.“). Maß: je Sekunde der
+Abstand des Orts oben zum wahren Ort dieser Sekunde, gemittelt über die Aufnahme. Betroffen sind
+7 Fälle: von den 60 Referenzclips nur datum-004 (Rheinbrücke Leverkusen, zwei Fenster; 58 Clips
+haben ein Fenster, datum-044 zwei ohne Ort), mit wie ohne Referenzbild; von den Zusammenschnitten
+nur „3 Orte“ ohne Ref. (die übrigen zeigen mindestens zwei Orte oder sind ein Abschnitt); von den
+End-to-End-Dateien Stadt-Land, ohne Ref. auch die Weltreise (zweimal: „Weltreise-Zeit“ ist
+dasselbe Video).
+
+| Fall | Anteil des Orts | oben bis Fassung 11 | oben mit Fassung 12 | km je Sekunde (Mittel) 11 → 12 | Abschnitt immer oben |
+| --- | --- | --- | --- | --- | --- |
+| datum-004, mit und ohne Ref. | 42 % | Deutschherrnbrücke, Frankfurt | Zoobrücke, Köln | 160 → 9 | 9 |
+| Stadt-Land | 25 % | Gallileo, Frankfurt | Elstertalbrücke, Hof ± 7 500 km | 765 → 768 (Median 382 → 192) | 768 |
+| Stadt-Land ohne Ref. | 25 % | St. Marien, Osnabrück | Deutschherrnbrücke, Frankfurt | 734 → 765 | 765 |
+| Weltreise (und -Zeit) ohne Ref. | 13 % | Medina | Medina | 6 936 → 6 936 | 9 667 |
+| 3 Orte ohne Ref. | 28 % (am verworfenen Ort) | Vereinigtes Königreich | Vereinigtes Königreich | 2 155 → 2 155 | 2 155 |
+
+- **Über die 7 Fälle** im Mittel 2 550 km bis Fassung 11, 2 511 km mit Fassung 12; auf 25 km genau
+  5 → 37 % der Sekunden, auf 200 km 33 → 40 %. Besser in 2 Fällen (datum-004), schlechter in 2
+  (Stadt-Land +3 km, ohne Ref. +31 km), gleich in 3. Bei Stadt-Land liegt die Elstertalbrücke für
+  0:36–0:48 0 km und für Rieben 192 statt 382 km neben der Wahrheit, für die Hälfte in Cork aber
+  1 440 statt 1 212 km; die Zeitleiste nennt dafür „Nordeuropa oder Westeuropa“.
+- **Die Zeitleiste stimmt:** Wo sie einen Ort nennt, liegt die Wahrheit in seinem Kreis (91 von
+  91 s), wo sie eine grobe Region nennt, in ihr (176 von 176 s); 165 s bleiben ohne Angabe. Nur die
+  Zeitleiste, mit dem Ort oben wie bisher, hätte den Ort oben in allen 7 Fällen gelassen; Kopf und
+  Zeitleiste hätten bei Stadt-Land zwei 253 km entfernte Orte genannt, ohne ein Wort dazu.
+- **Warum ein Fünftel.** Den Abschnitt immer oben zu zeigen, wie bei mehreren Orten, setzte 12 s
+  einer Brücke in Yeosu über eine Weltreise von 96 s: im Mittel 2 731 km je Sekunde schlechter,
+  über die 7 Fälle 3 292 km. Geprüfte Bedingungen statt des Anteils trafen dieselben Fälle wie
+  „immer“ (Radius der ganzen Datei mindestens 1 500 km, unbestimmt mindestens ein Drittel der
+  Aufnahme), kosteten ohne zu helfen (Radius der ganzen Datei nicht kleiner als der des Abschnitts:
+  2 besser, 3 schlechter; unbestimmt mindestens 12 s: 0 besser, 4 schlechter; keine grobe Region am
+  Ort: 0 besser, 2 schlechter) oder ruhten auf nichts (nur die Stufen „stark“ und „erkannt“: Die
+  Stufe „erkannt“ ist mit ± 7 500 km weiter kalibriert als „ähnlich“ mit ± 1 500 km). Jeder Anteil
+  über 12,5 % bis 25 % ergibt dieselben Ergebnisse; 0,2 liegt zwischen den beiden Aufnahmen, die
+  entscheiden (Weltreise ohne Ref., Stadt-Land), und ruht allein auf ihnen. Der nächste
+  End-to-End-Lauf soll ihn nachprüfen.
+- **Im Knoten** (eine Kopie der Fassung 12 auf eigenem Port, Stadt-Land hochgeladen): oben
+  „Elstertalbrücke, Hof ± 7 500 km“, Uhrzeit „Morgen“ aus 0:36–0:48, die drei Räume aus
+  0:38–0:45, Kandidat und Land mit 25 %; mit auf 0,3 gesetzter Schwelle neu geortet (25 % < 30 %)
+  oben wieder „Gallileo, Frankfurt“ mit Uhrzeit und Räumen der ganzen Datei, der Abschnitt mit Ort
+  mit eigener Uhrzeit und eigenem Raum. Die Konsole las sich in beiden Fällen in Deutsch und
+  Englisch wie oben beschrieben.
+- Messdatei: `docs/measurements/datum-segments-one-place.json`.
+
 ### Grenzen der Abschnitte
 
 - Orte näher als 25 km gelten als einer (Eiffelturm und Triumphbogen, Mexiko-Stadt). Orte, die das
@@ -389,13 +513,18 @@ Sekunde.
   längsten übrigen mit je einem). Unbestimmte Abschnitte haben keine Uhrzeit; eine grobe Region
   nennen sie nur, wo Galerie und Weltmodell übereinstimmen (42 % der unbestimmten Zeit der
   Zusammenschnitte), und sie ist mit 1 500 km eine Angabe über einen Teil der Welt, keine Ortung.
-- Die Zeitleiste erscheint erst ab zwei erkannten Orten. Eine Aufnahme mit einem erkannten Ort und
-  unbestimmten Abschnitten gilt als ein Ort, auch wenn die unbestimmten woanders spielen: Im
-  End-to-End-Lauf zeigte „Stadt-Land“ (24 s Cork, dann 24 s Dorfkirche Rieben und
-  Elstertalbrücke) nur „Frankfurt ± 1 500 km“, 253 km vom nächsten wahren Ort; dass die erste Hälfte
-  in Irland spielt, sagt nur die Zeile „2 Abschnitte, ein Ort (1 unbestimmt)“ im Ablauf. Ebenso
-  fassen unbestimmte Abschnitte weit entfernte Orte zusammen (Weltreise: Tschechien und Italien in
-  einem Abschnitt), weil benachbarte Fenster ohne Antwort zu einem Abschnitt werden.
+- Ein erkannter Ort mit unbestimmten Abschnitten steht nur oben, wenn er mindestens ein Fünftel der
+  Aufnahme umfasst (ohne seine Abschnitte am verworfenen Ort). Darunter steht oben die Ortung der
+  ganzen Datei, die alle Teile mischt (Weltreise ohne Ref.: Medina, im Mittel 6 936 km neben der
+  Wahrheit); dass die Aufnahme mehr zeigt, sagen dann Zeitleiste, Beleg und „aus der ganzen Datei“
+  in ORTUNG, im Kopf des BEFUNDS und in RAUM. Darüber steht oben der
+  Abschnitt, auch wenn die unbestimmten Abschnitte weit entfernt spielen: Stadt-Land zeigt die
+  Elstertalbrücke, 1 440 km neben der Hälfte in Cork. Die Schwelle 0,2 ruht auf zwei verschiedenen
+  Aufnahmen. Mit GPS in der Datei gibt es keine Zeitleiste und für einen einzigen erkannten Ort
+  keinen eigenen Beleg; die Referenzbilder der ganzen Datei nennen ihren Abstand zum GPS.
+- Unbestimmte Abschnitte fassen weit entfernte Orte zusammen (Weltreise: Tschechien und Italien in
+  einem Abschnitt; Stadt-Land: Rieben im Abschnitt mit Cork, weil das erste Fenster 0 bis 30 s
+  reicht), weil benachbarte Fenster ohne Antwort zu einem Abschnitt werden.
 - Ohne Weltmodell (abgeschaltet oder seine Ortsgalerie wird noch berechnet) entscheiden die
   Fenster allein mit der Galerie; die Schwelle 0,8 ist für das Zusammenspiel mit dem Weltmodell
   gemessen. Eine lange Aufnahme (mehr als sechs Szenen) fragt das Weltmodell nicht weiter, sobald

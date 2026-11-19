@@ -24,8 +24,11 @@
  *      answer leaves room for one of them; otherwise it stays undetermined, honestly, instead of
  *      being forced onto a place.
  *   4. Stretches. Neighbouring windows of the same place (or both undetermined) form one stretch.
- *      Only when at least two distinct places hold for at least `minPlaceSec` each does the fix
- *      carry the stretches (Fix.segments); a recording of one place stays as it was.
+ *      The fix carries the stretches (Fix.segments) when at least two distinct places hold for at
+ *      least `minPlaceSec` each, and (engine 12 on) when one place does and other stretches stay
+ *      undetermined: those may show other places, which the whole file's answer mixes in. Its
+ *      place shows above only where it holds at least `leadShare` of the recording (see
+ *      segmentVerdict). A recording that is one stretch stays as it was.
  *
  * Everything here except analyseSegments is pure; analyseSegments is handed the gallery search,
  * the world model and the frame vectors, so that tests and the measurement can stand in for them.
@@ -77,6 +80,19 @@ export interface SegmentParams {
    * in 32 of 34 of them (94 %), 91 to 95 % on the check sets.
    */
   coarseKm: number;
+  /**
+   * A recording of one recognised place and undetermined stretches shows that place above (its
+   * time, sun and spaces too) only when its stretches together last at least this share of the
+   * recording; below, the whole file's answer stays above and the stretches are the timeline.
+   * Measured on the 7 such cases of the reference clips, compilations and end-to-end files
+   * (docs/DATUM.md, "Ein erkannter Ort und unbestimmte Abschnitte"): always showing the stretch put
+   * a 12-s bridge above a 96-s world tour (12.5 %, +2 731 km per second on average); where the
+   * place held 25 % or more (Stadt-Land, the Leverkusen clip) it gained 151 km or cost at most
+   * 31 km. Any value above 0.125 and up to 0.25 gives the same results there. Stretches at the
+   * place the whole file's world model rejected do not count: they cannot lead, and a short
+   * stretch elsewhere must not stand for a recording they fill.
+   */
+  leadShare: number;
 }
 
 export const DEFAULT_SEGMENT_PARAMS: SegmentParams = {
@@ -93,6 +109,7 @@ export const DEFAULT_SEGMENT_PARAMS: SegmentParams = {
   minPlaceSec: 5,
   searchRows: 256,
   coarseKm: 1500,
+  leadShare: 0.2,
 };
 
 /** An analysis frame as the store keeps it (FrameRecord): number, second and scene. */
@@ -606,8 +623,33 @@ export function spaceStretches(segments: readonly Pick<FixSegment, 'location' | 
 }
 
 /**
- * The time evidence of the stretch whose place the fix shows, in a fix of several places: said to
- * come from that stretch's frames (the whole file's light mixes the places).
+ * What the whole file's frames hold besides the stretch a fix shows: several places, or (one
+ * recognised place) the undetermined stretches, which may show others. Its entries say which.
+ */
+export type WholeFileMix = 'places' | 'undetermined';
+
+const MIXED_TEXT: Record<WholeFileMix, { fix: SegmentText; frames: SegmentText }> = {
+  places: {
+    fix: { de: 'deren Bilder mehrere Orte vermischen', en: 'whose pictures mix several places' },
+    frames: { de: 'die mehrere Orte vermischen', en: 'which mix several places' },
+  },
+  undetermined: {
+    fix: { de: 'deren Bilder auch die unbestimmten Abschnitte einschließen', en: 'whose pictures include the undetermined segments too' },
+    frames: { de: 'die auch die unbestimmten Abschnitte einschließen', en: 'which include the undetermined segments too' },
+  },
+};
+
+/**
+ * The words for `mix`. Anything but 'undetermined' is several places: the entry functions are
+ * handed to Array.map, whose index must not pick a text.
+ */
+function mixed(mix: unknown): { fix: SegmentText; frames: SegmentText } {
+  return mix === 'undetermined' ? MIXED_TEXT.undetermined : MIXED_TEXT.places;
+}
+
+/**
+ * The time evidence of the stretch whose place the fix shows, in a fix of stretches: said to come
+ * from that stretch's frames (the whole file's light mixes the places).
  */
 export function stretchTimeEvidence(e: Evidence, span: string): Evidence {
   return {
@@ -620,31 +662,33 @@ export function stretchTimeEvidence(e: Evidence, span: string): Evidence {
 }
 
 /**
- * The time evidence of the whole file in a fix of several places: its frames come from all of
- * them, so its light and season mix the places; it stays, said to be the whole file's, without
- * weight. The time shown is the stretch's (stretchTimeEvidence).
+ * The time evidence of the whole file in a fix whose place a stretch shows: its frames come from
+ * all of the recording, so its light and season mix the places (or the place with the
+ * undetermined stretches, `mix`); it stays, said to be the whole file's, without weight. The time
+ * shown is the stretch's (stretchTimeEvidence).
  */
-export function wholeFileTimeEvidence(e: Evidence): Evidence {
+export function wholeFileTimeEvidence(e: Evidence, mix: WholeFileMix = 'places'): Evidence {
+  const m = mixed(mix).frames;
   return {
     ...e,
     label: `${WHOLE_FILE.de}${e.label}`,
     labelEn: `${WHOLE_FILE.en}${e.labelEn ?? e.label}`,
-    detail: `Aus Bildern der ganzen Datei, die mehrere Orte vermischen; die Uhrzeit oben ist die des gezeigten Abschnitts. ${e.detail}`,
-    detailEn: `From frames of the whole file, which mix several places; the time shown above is that of the segment shown. ${e.detailEn ?? e.detail}`,
+    detail: `Aus Bildern der ganzen Datei, ${m.de}; die Uhrzeit oben ist die des gezeigten Abschnitts. ${e.detail}`,
+    detailEn: `From frames of the whole file, ${m.en}; the time shown above is that of the segment shown. ${e.detailEn ?? e.detail}`,
     weight: 0,
   };
 }
 
 /**
- * The time evidence of a fix of several places: that of the stretch shown (stretchTimeEvidence)
+ * The time evidence of a fix whose place a stretch shows: that of the stretch (stretchTimeEvidence)
  * and the whole file's, mixed and without weight (wholeFileTimeEvidence). A recording time from
  * the file's tags (`own` holds kind 'metadata') comes from neither the stretch's frames nor the
  * mixed ones: it holds for the whole file and every stretch and is said once; its check
  * against the light is that of the stretch shown. The whole file's copy would only repeat it, with
  * a check against light that mixes the places.
  */
-export function multiPlaceTimeEvidence(own: readonly Evidence[], whole: readonly Evidence[], span: string): Evidence[] {
-  if (!own.some((e) => e.kind === 'metadata')) return [...own.map((e) => stretchTimeEvidence(e, span)), ...whole.map(wholeFileTimeEvidence)];
+export function multiPlaceTimeEvidence(own: readonly Evidence[], whole: readonly Evidence[], span: string, mix: WholeFileMix = 'places'): Evidence[] {
+  if (!own.some((e) => e.kind === 'metadata')) return [...own.map((e) => stretchTimeEvidence(e, span)), ...whole.map((e) => wholeFileTimeEvidence(e, mix))];
   return own.map((e) =>
     e.kind === 'metadata'
       ? {
@@ -658,15 +702,27 @@ export function multiPlaceTimeEvidence(own: readonly Evidence[], whole: readonly
 
 /**
  * The trace's line for the spaces of the stretches: "12 weitere Räume für 32 Abschnitte mit Ort
- * (die 12 längsten außer dem gezeigten), 4,1 s"; one of each in the singular.
+ * (die 12 längsten außer dem gezeigten), 4,1 s"; one of each in the singular. `shown` is false
+ * where the fix shows no stretch (its spaces are the whole file's): every located one may get one.
  */
-export function stretchSpacesNote(built: number, located: number, chosen: number, ms: number): SegmentText {
+export function stretchSpacesNote(built: number, located: number, chosen: number, ms: number, shown = true): SegmentText {
+  // One recognised place whose only stretch is the one shown: its spaces are the fix's.
+  if (chosen === 0 && shown && located === 1) return { de: 'keine weiteren: der einzige Abschnitt mit Ort ist der gezeigte', en: 'none more: the only segment with a place is the one shown' };
   const secs = (ms / 1000).toFixed(1);
-  const longest = located - 1 > chosen;
+  const longest = (shown ? located - 1 : located) > chosen;
+  const besidesDe = shown ? ' außer dem gezeigten' : '';
+  const besidesEn = shown ? ' besides the one shown' : '';
   return {
-    de: `${built} ${built === 1 ? 'weiterer Raum' : 'weitere Räume'} für ${located} ${located === 1 ? 'Abschnitt' : 'Abschnitte'} mit Ort${longest ? ` (${chosen === 1 ? 'der längste' : `die ${chosen} längsten`} außer dem gezeigten)` : ''}, ${secs.replace('.', ',')} s`,
-    en: `${built} more ${built === 1 ? 'space' : 'spaces'} for ${located} ${located === 1 ? 'segment' : 'segments'} with a place${longest ? ` (the ${chosen === 1 ? 'longest' : `${chosen} longest`} besides the one shown)` : ''}, ${secs} s`,
+    de: `${built} ${built === 1 ? 'weiterer Raum' : 'weitere Räume'} für ${located} ${located === 1 ? 'Abschnitt' : 'Abschnitte'} mit Ort${longest ? ` (${chosen === 1 ? 'der längste' : `die ${chosen} längsten`}${besidesDe})` : ''}, ${secs.replace('.', ',')} s`,
+    en: `${built} more ${built === 1 ? 'space' : 'spaces'} for ${located} ${located === 1 ? 'segment' : 'segments'} with a place${longest ? ` (the ${chosen === 1 ? 'longest' : `${chosen} longest`}${besidesEn})` : ''}, ${secs} s`,
   };
+}
+
+/** The trace's words for the stretches timed on their own: "32 Abschnitte mit Ort je für sich"; one in the singular. */
+export function stretchTimesNote(counted: number): SegmentText {
+  return counted === 1
+    ? { de: '1 Abschnitt mit Ort für sich', en: '1 segment with a place on its own' }
+    : { de: `${counted} Abschnitte mit Ort je für sich`, en: `${counted} segments with a place each on its own` };
 }
 
 /**
@@ -761,9 +817,12 @@ export function summariseSegments(segments: readonly FixSegment[], lead: number 
 }
 
 /**
- * The countries of a recording of several places: the countries of its located stretches, each
- * with its share of the located time, the fix's own country first. The country estimate of the
- * whole file mixes the places (China and India for a recording of Mexico, Indonesia and Benin).
+ * The countries of a recording whose place a stretch shows: the countries of its located
+ * stretches, each with its share of the located time, the fix's own country first. The country
+ * estimate of the whole file mixes the places (China and India for a recording of Mexico,
+ * Indonesia and Benin). With one recognised place the share is of the whole recording: the
+ * located time alone would give its country all of it, and the undetermined stretches may lie
+ * anywhere.
  */
 export function segmentCountries(segments: readonly FixSegment[], lead: number | null): CountryProb[] {
   const seconds = new Map<string, { name: string; s: number }>();
@@ -775,10 +834,28 @@ export function segmentCountries(segments: readonly FixSegment[], lead: number |
     seconds.set(s.location.country, { name: known?.name ?? s.location.countryName ?? s.location.country, s: (known?.s ?? 0) + len });
     total += len;
   }
+  const onePlace = new Set(segments.filter((s) => s.location && s.place !== null).map((s) => s.place)).size === 1;
+  const span = segments.length > 0 ? segments[segments.length - 1]!.endSec - segments[0]!.startSec : 0;
+  if (onePlace && span > total) total = span;
   const first = lead !== null ? (segments[lead]?.location?.country ?? null) : null;
   return [...seconds.entries()]
     .map(([iso, v]) => ({ iso, name: v.name, p: total > 0 ? v.s / total : 0 }))
     .sort((a, b) => Number(b.iso === first) - Number(a.iso === first) || b.p - a.p);
+}
+
+/**
+ * The countries a fix of stretches carries in place of the whole file's (segmentCountries), or
+ * null where the whole file's stay. They stay where no stretch is shown, and where one recognised
+ * place agrees with the whole file's answer: that fix keeps the whole file's place, candidates and
+ * evidence with its weight, the country estimate among them, and the place's share of the whole
+ * recording next to it would give the same country two figures (Frankreich 33 % in the bars, the
+ * whole file's estimate in the entry). With several places the countries of the stretches stand
+ * even where the whole file agrees (engine 10 on): its estimate mixes the places.
+ */
+export function verdictCountries(verdict: Pick<SegmentVerdict, 'lead' | 'places' | 'replaced'>, segments: readonly FixSegment[]): CountryProb[] | null {
+  if (verdict.lead === null) return null;
+  if (verdict.places === 1 && !verdict.replaced) return null;
+  return segmentCountries(segments, verdict.lead);
 }
 
 /** A text in both languages. */
@@ -795,27 +872,138 @@ export interface SegmentVerdict {
   places: number;
   /** Of these, the places that may be several (FixSegment.joined). */
   joined: number;
-  /** The fix's place: the current one, or that of the longest located stretch. */
+  /** The fix's place: the current one, or that of the stretch it shows. */
   location: FixLocation | null;
   /** Whether `location` was replaced. */
   replaced: boolean;
-  /** Index into the segments of the stretch the place comes from (multi only). */
+  /**
+   * Index into the segments of the stretch the place comes from (multi only). Null where the fix
+   * carries the stretches but shows none of them: one recognised place that holds less than
+   * `leadShare` of the recording, or only at the place the whole file's world model rejected.
+   * The fix then keeps the whole file's place, time and spaces.
+   */
   lead: number | null;
-  /** Evidence to add (none for a recording of one place). */
+  /** Evidence to add (none for a recording of one stretch). */
   evidence: Evidence[];
   /** The trace step's detail. */
   note: SegmentText;
 }
 
 const pctDe = (p: number): string => `${Math.round(p * 100)} %`;
+const pctEn = (p: number): string => `${Math.round(p * 100)}%`;
 
 /**
- * What the stretches mean for the fix. A recording of one place keeps everything as it was. With
+ * A share below `limit` as a whole percent that stays below it: 19.8 % of a recording rounds to
+ * 20 %, and "nur 20 %, weniger als die 20 %" would contradict itself. Elsewhere it is rounded.
+ */
+function belowPercent(p: number, limit: number): number {
+  return Math.max(0, Math.min(Math.round(p * 100), Math.ceil(limit * 100 - 1e-9) - 1));
+}
+
+/**
+ * Tolerance of the share against `leadShare`: stretch bounds are seconds of the video, whose sums
+ * and quotients carry float error (9.6 of 48 s is 0.19999999999999998).
+ */
+const SHARE_EPS = 1e-9;
+
+/** What segmentVerdict's two ways (several places, one place) share. */
+interface VerdictParts {
+  segments: readonly FixSegment[];
+  located: readonly FixSegment[];
+  undetermined: number;
+  sameKm: number;
+  /** Whether the place of a location is the one the whole file's world model rejected. */
+  atRejected: (loc: FixLocation) => boolean;
+  /** How places are told apart, and what a joined place means. */
+  rule: SegmentText;
+  /** " Für ihn nennt die Zeitleiste eine grobe Region …" where undetermined stretches have one. */
+  coarse: SegmentText;
+}
+
+/**
+ * Index of the longest located stretch, on equal length the surer one; -1 without any. With
+ * `skip`, none at the place the whole file's decision rejected.
+ */
+function longestStretch(p: VerdictParts, skip: boolean): number {
+  let best = -1;
+  p.segments.forEach((s, i) => {
+    if (!s.location || s.place === null || (skip && p.atRejected(s.location))) return;
+    const b = best >= 0 ? (p.segments[best] as FixSegment) : null;
+    const len = s.endSec - s.startSec;
+    const bestLen = b ? b.endSec - b.startSec : -1;
+    if (!b || len > bestLen || (len === bestLen && s.location.confidence > (b.location as FixLocation).confidence)) best = i;
+  });
+  return best;
+}
+
+/** "0:36–0:48" */
+function spanOf(s: Pick<FixSegment, 'startSec' | 'endSec'>): string {
+  return `${clockText(s.startSec)}–${clockText(s.endSec)}`;
+}
+
+/**
+ * The stretch a fix shows and what is said of it: the longest located stretch not at the
+ * rejected place (`lead`), and the longest of all where that one is at the rejected place
+ * (`passed`, shown below it in the timeline, said why).
+ */
+function shownStretch(p: VerdictParts, lead: number): {
+  shown: FixSegment;
+  place: FixLocation;
+  span: string;
+  passed: FixSegment | null;
+  passedSpan: string;
+  why: SegmentText;
+  passedText: SegmentText;
+} {
+  const first = longestStretch(p, false);
+  const passed = lead !== first && first >= 0 ? (p.segments[first] as FixSegment) : null;
+  const shown = p.segments[lead] as FixSegment;
+  const place = shown.location as FixLocation;
+  const shownLen = shown.endSec - shown.startSec;
+  // Another stretch as long, decided by the confidence: "the longest" alone would not be true.
+  const tie = p.segments.some((s, i) => i !== lead && s.location && s.place !== null && (passed === null || !p.atRejected(s.location)) && s.endSec - s.startSec === shownLen);
+  const restEn = passed ? 'remaining ' : '';
+  // The only stretch with a place is not "the longest" of anything.
+  const why: SegmentText =
+    p.located.length === 1
+      ? { de: 'der Abschnitt mit Ort', en: 'the segment with a place' }
+      : tie
+        ? { de: `der sicherste der gleich langen längsten ${passed ? 'übrigen ' : ''}Abschnitte mit Ort`, en: `the surest of the equally long longest ${restEn}segments with a place` }
+        : { de: `der längste ${passed ? 'übrige ' : ''}Abschnitt mit Ort`, en: `the longest ${restEn}segment with a place` };
+  const passedSpan = passed ? spanOf(passed) : '';
+  const passedLoc = passed?.location ?? null;
+  const passedText: SegmentText = passedLoc
+    ? {
+        de: ` Der längste Abschnitt mit Ort (${passedSpan}: ${passedLoc.label}) nennt den Ort, den das Weltmodell für die ganze Datei schon verworfen hat; er bleibt in der Zeitleiste, steht aber nicht oben.`,
+        en: ` The longest segment with a place (${passedSpan}: ${passedLoc.labelEn ?? passedLoc.label}) names the place the world model already rejected for the whole file; it stays in the timeline but is not shown above.`,
+      }
+    : { de: '', en: '' };
+  return { shown, place, span: spanOf(shown), passed, passedSpan, why, passedText };
+}
+
+/** The 'segments' entry's fields that name the stretch the fix shows (its keyframe is the lead's mark, see routes.ts slimFix). */
+function shownFields(shown: FixSegment, place: FixLocation): Pick<Evidence, 'frame' | 'refLabel' | 'refLabelEn' | 'refLat' | 'refLon'> {
+  return { frame: shown.keyframe.frame, refLabel: place.label, refLabelEn: place.labelEn ?? place.label, refLat: place.lat, refLon: place.lon };
+}
+
+/**
+ * What the stretches mean for the fix. A recording of one stretch keeps everything as it was. With
  * at least two places, the fix carries the stretches and its place must not pretend: it
  * stays where the answer for the whole file agrees with the longest located stretch, and becomes
  * that stretch's place otherwise; an evidence entry names the places and the stretch shown. With
  * GPS in the file, the file's position stands (it covers the whole file) and the entry only says
  * that the pictures show several places.
+ *
+ * One recognised place with undetermined stretches (engine 12) carries the stretches too: the
+ * undetermined ones may show other places, and the whole file's answer mixes their frames in
+ * (Stadt-Land: 24 s Cork, then a church and a bridge in Germany, gave "Frankfurt"). Its place shows
+ * above, as for several places, only when its stretches together last at least `leadShare` of the
+ * recording; a short stretch would otherwise stand for a long recording it says nothing of (a
+ * 12-s bridge in Korea above a 96-s world tour). Below that, the whole file's answer stays above,
+ * with its time and spaces, and the stretches are the timeline: each located one with its own
+ * time and space, the undetermined ones with their coarse regions. With GPS such a recording
+ * stays as it was: the file's position covers the whole file, and one place in the pictures
+ * does not contradict it.
  *
  * `rejected` is the gallery's answer for the whole file where the world model replaced it
  * (LocateDiagnostics.gallery): a stretch at that place does not lead. The whole file's decision
@@ -824,29 +1012,31 @@ const pctDe = (p: number): string => `${Math.round(p * 100)} %`;
  * bring it back as the fix's place with a radius of a few kilometres. The stretch keeps its answer
  * in the timeline.
  */
-export function segmentVerdict(segments: readonly FixSegment[], current: FixLocation | null, opts: { gps: boolean; sameKm?: number; rejected?: FixLocation | null }): SegmentVerdict {
+export function segmentVerdict(
+  segments: readonly FixSegment[],
+  current: FixLocation | null,
+  opts: { gps: boolean; sameKm?: number; rejected?: FixLocation | null; leadShare?: number },
+): SegmentVerdict {
   const places = new Set(segments.map((s) => s.place).filter((p) => p !== null)).size;
   const located = segments.filter((s) => s.location && s.place !== null);
   const undetermined = segments.filter((s) => !s.location).length;
   const joined = new Set(segments.filter((s) => s.joined && s.place !== null).map((s) => s.place)).size;
   const sameKm = opts.sameKm ?? DEFAULT_SEGMENT_PARAMS.sameKm;
-  if (places < 2) {
+  // One stretch, no place (a place always has a located stretch; checked all the same), or one
+  // place in a file with GPS: nothing to show stretch by stretch.
+  if (places === 0 || located.length === 0 || segments.length < 2 || (places === 1 && opts.gps)) {
+    const gpsNote = places === 1 && opts.gps ? { de: ', GPS der Datei gilt', en: ", the file's GPS stands" } : { de: '', en: '' };
     const note: SegmentText =
       segments.length <= 1
         ? { de: 'ein Abschnitt', en: 'one segment' }
         : {
-            de: `${segments.length} Abschnitte, ein Ort${undetermined > 0 ? ` (${undetermined} unbestimmt)` : ''}`,
-            en: `${segments.length} segments, one place${undetermined > 0 ? ` (${undetermined} undetermined)` : ''}`,
+            de: `${segments.length} Abschnitte, ein Ort${undetermined > 0 ? ` (${undetermined} unbestimmt)` : ''}${gpsNote.de}`,
+            en: `${segments.length} segments, one place${undetermined > 0 ? ` (${undetermined} undetermined)` : ''}${gpsNote.en}`,
           };
     return { multi: false, places, joined, location: current, replaced: false, lead: null, evidence: [], note };
   }
-  // Undetermined stretches may hold further places, and so may a place the world model joined
-  // from answers that lie apart: then the count is a lower bound.
-  const atLeast: SegmentText = undetermined > 0 || joined > 0 ? { de: 'mindestens ', en: 'at least ' } : { de: '', en: '' };
   // How places are told apart; distinct places are farther apart than this, but one place need
   // not be narrower (the world model's ties, see mergeWindows).
-  const ruleDe = `Antworten näher als ${sameKm} km beieinander zählen als ein Ort.`;
-  const ruleEn = `Answers closer than ${sameKm} km count as one place.`;
   const joinedDe =
     joined > 0
       ? ` ${joined === 1 ? 'Ein Ort fasst' : `${joined} Orte fassen`} Antworten zusammen, die weiter auseinanderliegen, weil das Weltmodell ihrer Fenster sie derselben Gegend zurechnet; es können also mehr Orte sein.`
@@ -855,6 +1045,30 @@ export function segmentVerdict(segments: readonly FixSegment[], current: FixLoca
     joined > 0
       ? ` ${joined === 1 ? 'One place joins' : `${joined} places join`} answers that lie farther apart, because the world model of their windows puts them in the same region; there may be more places.`
       : '';
+  const rule: SegmentText = { de: `Antworten näher als ${sameKm} km beieinander zählen als ein Ort.${joinedDe}`, en: `Answers closer than ${sameKm} km count as one place.${joinedEn}` };
+  // Coarse regions (FixSegment.coarse) are no places: said so where there are any.
+  const withCoarse = segments.filter((s) => !s.location && s.coarse && s.coarse.length > 0).length;
+  const coarse: SegmentText =
+    withCoarse > 0
+      ? {
+          de: ` Für ${withCoarse === undetermined ? (withCoarse === 1 ? 'ihn' : 'sie alle') : withCoarse === 1 ? 'einen davon' : `${withCoarse} davon`} nennt die Zeitleiste eine grobe Region, die nicht als Ort zählt.`,
+          en: ` For ${withCoarse === undetermined ? (withCoarse === 1 ? 'it' : 'all of them') : withCoarse === 1 ? 'one of them' : `${withCoarse} of them`} the timeline names a coarse region, which does not count as a place.`,
+        }
+      : { de: '', en: '' };
+  const rejected = opts.rejected ?? null;
+  const parts: VerdictParts = {
+    segments,
+    located,
+    undetermined,
+    sameKm,
+    atRejected: (loc) => rejected !== null && greatCircleKm(rejected.lat, rejected.lon, loc.lat, loc.lon) <= sameKm,
+    rule,
+    coarse,
+  };
+  if (places === 1) return onePlaceVerdict(parts, current, joined, opts.leadShare ?? DEFAULT_SEGMENT_PARAMS.leadShare);
+  // Undetermined stretches may hold further places, and so may a place the world model joined
+  // from answers that lie apart: then the count is a lower bound.
+  const atLeast: SegmentText = undetermined > 0 || joined > 0 ? { de: 'mindestens ', en: 'at least ' } : { de: '', en: '' };
   if (opts.gps) {
     return {
       multi: false,
@@ -868,69 +1082,31 @@ export function segmentVerdict(segments: readonly FixSegment[], current: FixLoca
           kind: 'segments',
           label: `Die Bilder zeigen ${atLeast.de}${places} verschiedene Orte`,
           labelEn: `The pictures show ${atLeast.en}${places} different places`,
-          detail: `Abschnittsweise geortet zeigen die Bilder ${atLeast.de}${places} verschiedene Orte. ${ruleDe}${joinedDe} Die GPS-Angabe der Datei gilt für die ganze Datei und bestimmt den Ort; ob die Aufnahme geschnitten oder zusammengesetzt ist, sollte geprüft werden.`,
-          detailEn: `Located segment by segment, the pictures show ${atLeast.en}${places} different places. ${ruleEn}${joinedEn} The GPS position in the file covers the whole file and decides the place; whether the recording was cut or put together should be checked.`,
+          detail: `Abschnittsweise geortet zeigen die Bilder ${atLeast.de}${places} verschiedene Orte. ${rule.de} Die GPS-Angabe der Datei gilt für die ganze Datei und bestimmt den Ort; ob die Aufnahme geschnitten oder zusammengesetzt ist, sollte geprüft werden.`,
+          detailEn: `Located segment by segment, the pictures show ${atLeast.en}${places} different places. ${rule.en} The GPS position in the file covers the whole file and decides the place; whether the recording was cut or put together should be checked.`,
           weight: 0,
         },
       ],
       note: { de: `${atLeast.de}${places} Orte in den Bildern, GPS der Datei gilt`, en: `${atLeast.en}${places} places in the pictures, the file's GPS stands` },
     };
   }
-  const rejected = opts.rejected ?? null;
-  const atRejected = (loc: FixLocation): boolean => rejected !== null && greatCircleKm(rejected.lat, rejected.lon, loc.lat, loc.lon) <= sameKm;
-  // The longest located stretch; on equal length the surer one. With `skip`, none at the place
-  // the whole file's decision rejected.
-  const longest = (skip: boolean): number => {
-    let best = -1;
-    segments.forEach((s, i) => {
-      if (!s.location || s.place === null || (skip && atRejected(s.location))) return;
-      const b = best >= 0 ? (segments[best] as FixSegment) : null;
-      const len = s.endSec - s.startSec;
-      const bestLen = b ? b.endSec - b.startSec : -1;
-      if (!b || len > bestLen || (len === bestLen && s.location.confidence > (b.location as FixLocation).confidence)) best = i;
-    });
-    return best;
-  };
-  const first = longest(false);
-  const other = longest(true);
-  const lead = other >= 0 ? other : first;
-  // The longest names the rejected place: shown below it, said why.
-  const passed = lead !== first ? (segments[first] as FixSegment) : null;
-  const shown = segments[lead] as FixSegment;
-  const place = shown.location as FixLocation;
-  const shownLen = shown.endSec - shown.startSec;
-  // Another stretch as long, decided by the confidence: "the longest" alone would not be true.
-  const tie = segments.some((s, i) => i !== lead && s.location && s.place !== null && (passed === null || !atRejected(s.location)) && s.endSec - s.startSec === shownLen);
+  const other = longestStretch(parts, true);
+  const lead = other >= 0 ? other : longestStretch(parts, false);
+  const { shown, place, span, passed, passedSpan, why, passedText } = shownStretch(parts, lead);
   // Agreeing means the same place as the stretches are told apart (sameKm), not overlapping circles:
   // two answers of 1 500 km 800 km apart would agree, and the top would name another city.
   const agrees = current !== null && greatCircleKm(current.lat, current.lon, place.lat, place.lon) <= sameKm;
-  const location = agrees ? current : place;
-  const span = `${clockText(shown.startSec)}–${clockText(shown.endSec)}`;
   const labelDe = place.label;
   const labelEn = place.labelEn ?? place.label;
-  const restEn = passed ? 'remaining ' : '';
-  const whyDe = tie ? `der sicherste der gleich langen längsten ${passed ? 'übrigen ' : ''}Abschnitte mit Ort` : `der längste ${passed ? 'übrige ' : ''}Abschnitt mit Ort`;
-  const whyEn = tie ? `the surest of the equally long longest ${restEn}segments with a place` : `the longest ${restEn}segment with a place`;
-  const passedSpan = passed ? `${clockText(passed.startSec)}–${clockText(passed.endSec)}` : '';
-  const passedDe = passed
-    ? ` Der längste Abschnitt mit Ort (${passedSpan}: ${(passed.location as FixLocation).label}) nennt den Ort, den das Weltmodell für die ganze Datei schon verworfen hat; er bleibt in der Zeitleiste, steht aber nicht oben.`
-    : '';
-  const passedEn = passed
-    ? ` The longest segment with a place (${passedSpan}: ${(passed.location as FixLocation).labelEn ?? (passed.location as FixLocation).label}) names the place the world model already rejected for the whole file; it stays in the timeline but is not shown above.`
-    : '';
-  // Coarse regions (FixSegment.coarse) are no places: said so where there are any.
-  const coarse = segments.filter((s) => !s.location && s.coarse && s.coarse.length > 0).length;
-  const coarseDe = coarse > 0 ? ` Für ${coarse === undetermined ? (coarse === 1 ? 'ihn' : 'sie alle') : coarse === 1 ? 'einen davon' : `${coarse} davon`} nennt die Zeitleiste eine grobe Region, die nicht als Ort zählt.` : '';
-  const coarseEn = coarse > 0 ? ` For ${coarse === undetermined ? (coarse === 1 ? 'it' : 'all of them') : coarse === 1 ? 'one of them' : `${coarse} of them`} the timeline names a coarse region, which does not count as a place.` : '';
-  const undeterminedDe = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'Abschnitt bleibt' : 'Abschnitte bleiben'} unbestimmt.${coarseDe}` : '';
-  const undeterminedEn = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'segment remains' : 'segments remain'} undetermined.${coarseEn}` : '';
+  const undeterminedDe = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'Abschnitt bleibt' : 'Abschnitte bleiben'} unbestimmt.${coarse.de}` : '';
+  const undeterminedEn = undetermined > 0 ? ` ${undetermined} ${undetermined === 1 ? 'segment remains' : 'segments remain'} undetermined.${coarse.en}` : '';
   const keptDe = agrees ? 'Die Ortung aus der ganzen Datei stimmt mit ihm überein und bleibt.' : 'Er ersetzt die Ortung aus der ganzen Datei, die die Orte vermischt.';
   const keptEn = agrees ? 'The fix from the whole file agrees with it and stands.' : 'It replaces the fix from the whole file, which mixes the places.';
   return {
     multi: true,
     places,
     joined,
-    location,
+    location: agrees ? current : place,
     replaced: !agrees,
     lead,
     evidence: [
@@ -938,19 +1114,137 @@ export function segmentVerdict(segments: readonly FixSegment[], current: FixLoca
         kind: 'segments',
         label: `Die Aufnahme zeigt ${atLeast.de}${places} Orte; oben der Abschnitt ${span}`,
         labelEn: `The recording shows ${atLeast.en}${places} places; shown above: segment ${span}`,
-        detail: `Abschnittsweise geortet: ${segments.length} Abschnitte, ${located.length} davon mit Ort, ${atLeast.de}${places} verschiedene Orte. ${ruleDe}${joinedDe}${passedDe} Oben steht ${whyDe}, ${span}: ${labelDe}, ± ${kmDe(place.radiusKm)}, Sicherheit ${pctDe(place.confidence)}. ${keptDe}${undeterminedDe} Die Zeitleiste unter dem Video zeigt jeden Abschnitt.`,
-        detailEn: `Located segment by segment: ${segments.length} segments, ${located.length} of them with a place, ${atLeast.en}${places} different places. ${ruleEn}${joinedEn}${passedEn} Shown above is ${whyEn}, ${span}: ${labelEn}, ± ${kmEn(place.radiusKm)}, confidence ${Math.round(place.confidence * 100)}%. ${keptEn}${undeterminedEn} The timeline under the video shows every segment.`,
+        detail: `Abschnittsweise geortet: ${segments.length} Abschnitte, ${located.length} davon mit Ort, ${atLeast.de}${places} verschiedene Orte. ${rule.de}${passedText.de} Oben steht ${why.de}, ${span}: ${labelDe}, ± ${kmDe(place.radiusKm)}, Sicherheit ${pctDe(place.confidence)}. ${keptDe}${undeterminedDe} Die Zeitleiste unter dem Video zeigt jeden Abschnitt.`,
+        detailEn: `Located segment by segment: ${segments.length} segments, ${located.length} of them with a place, ${atLeast.en}${places} different places. ${rule.en}${passedText.en} Shown above is ${why.en}, ${span}: ${labelEn}, ± ${kmEn(place.radiusKm)}, confidence ${pctEn(place.confidence)}. ${keptEn}${undeterminedEn} The timeline under the video shows every segment.`,
         weight: agrees ? 0.5 : 0.9,
-        frame: shown.keyframe.frame,
-        refLabel: labelDe,
-        refLabelEn: labelEn,
-        refLat: place.lat,
-        refLon: place.lon,
+        ...shownFields(shown, place),
       },
     ],
     note: {
       de: `${atLeast.de}${places} Orte in ${segments.length} Abschnitten; oben ${span}${agrees ? '' : ', ersetzt die Ortung der ganzen Datei'}${passed ? `, nicht ${passedSpan} (verworfen)` : ''}`,
       en: `${atLeast.en}${places} places in ${segments.length} segments; shown ${span}${agrees ? '' : ', replaces the fix of the whole file'}${passed ? `, not ${passedSpan} (rejected)` : ''}`,
+    },
+  };
+}
+
+/**
+ * segmentVerdict for one recognised place and at least one undetermined stretch (see there): the
+ * stretches always, the place above only from `leadShare` of the recording on and not at the
+ * place the whole file's world model rejected.
+ */
+function onePlaceVerdict(p: VerdictParts, current: FixLocation | null, joined: number, leadShare: number): SegmentVerdict {
+  const { segments, located, undetermined, rule, coarse } = p;
+  const n = segments.length;
+  const span = Math.max(0, segments[n - 1]!.endSec - segments[0]!.startSec);
+  // The share counts only the stretches that may lead: those at the place the whole file's world
+  // model rejected cannot, and a short stretch elsewhere must not stand for a recording they fill
+  // (40 s of a rejected place and 3 s of Köln in 100 s are not 43 % Köln).
+  const counted = located.filter((s) => !p.atRejected(s.location as FixLocation));
+  const rejectedCount = located.length - counted.length;
+  const placeSec = counted.reduce((sum, s) => sum + (s.endSec - s.startSec), 0);
+  const share = span > 0 ? placeSec / span : 0;
+  const candidate = longestStretch(p, true);
+  const lead = candidate >= 0 && share + SHARE_EPS >= leadShare ? candidate : null;
+  const one = located.length === 1;
+  const undeterminedDe = undetermined === 1 ? 'ein Abschnitt unbestimmt' : `${undetermined} Abschnitte unbestimmt`;
+  const undeterminedEn = undetermined === 1 ? 'one segment undetermined' : `${undetermined} segments undetermined`;
+  // The undetermined stretches are what the whole file's answer mixes in: said first, with their
+  // coarse regions.
+  const elsewhereDe = `${undetermined === 1 ? 'Ein Abschnitt bleibt unbestimmt; er kann' : `${undetermined} Abschnitte bleiben unbestimmt; sie können`} einen anderen Ort zeigen.${coarse.de}`;
+  const elsewhereEn = `${undetermined === 1 ? 'One segment remains undetermined and may show another place.' : `${undetermined} segments remain undetermined and may show other places.`}${coarse.en}`;
+  // How places are told apart says something only where several stretches have one (or the
+  // world model joined answers far apart).
+  const ruled = !one || joined > 0;
+  const countDe = `Abschnittsweise geortet: ${n} Abschnitte, ${one ? 'einer' : located.length} davon mit Ort, ein erkannter Ort.${ruled ? ` ${rule.de}` : ''}`;
+  const countEn = `Located segment by segment: ${n} segments, ${one ? 'one' : located.length} of them with a place, one recognised place.${ruled ? ` ${rule.en}` : ''}`;
+  // What the share is of: the place, or the place without its stretches at the rejected place.
+  const withoutDe = rejectedCount > 0 ? `ohne ${rejectedCount === 1 ? 'den Abschnitt' : `die ${rejectedCount} Abschnitte`} an dem Ort, den das Weltmodell für die ganze Datei verworfen hat, ` : '';
+  const withoutEn = rejectedCount > 0 ? `without the ${rejectedCount === 1 ? 'segment' : `${rejectedCount} segments`} at the place the world model rejected for the whole file, ` : '';
+  const shareDe =
+    rejectedCount > 0 ? `${withoutDe}umfasst der Ort ${pctDe(share)} der Aufnahme` : `${one ? 'der Abschnitt umfasst' : 'die Abschnitte mit Ort umfassen zusammen'} ${pctDe(share)} der Aufnahme`;
+  const shareEn =
+    rejectedCount > 0 ? `${withoutEn}the place covers ${pctEn(share)} of the recording` : `${one ? 'the segment covers' : 'the segments with a place cover'} ${pctEn(share)} of the recording`;
+  const noteHead: SegmentText = {
+    de: `1 erkannter Ort in ${n} Abschnitten (${undetermined} unbestimmt)`,
+    en: `1 recognised place in ${n} segments (${undetermined} undetermined)`,
+  };
+  if (lead === null) {
+    const first = segments[longestStretch(p, false)] as FixSegment;
+    const loc = first.location as FixLocation;
+    const firstSpan = spanOf(first);
+    // Why no stretch shows above: its place is the one the whole file turned down, or it covers too
+    // little of the recording to stand for it. The share said stays below the threshold.
+    const atRejected = candidate < 0;
+    const below = belowPercent(share, leadShare);
+    const limitDe = pctDe(leadShare);
+    const limitEn = pctEn(leadShare);
+    const whyDe = atRejected
+      ? one
+        ? `Der Abschnitt mit Ort (${firstSpan}: ${loc.label}) nennt den Ort, den das Weltmodell für die ganze Datei schon verworfen hat; er bleibt in der Zeitleiste, steht aber nicht oben.`
+        : `Die Abschnitte mit Ort (der längste ${firstSpan}: ${loc.label}) nennen den Ort, den das Weltmodell für die ganze Datei schon verworfen hat; sie bleiben in der Zeitleiste, stehen aber nicht oben.`
+      : rejectedCount > 0
+        ? `${withoutDe.charAt(0).toUpperCase()}${withoutDe.slice(1)}umfasst der Ort nur ${below} % der Aufnahme, weniger als die ${limitDe}, ab denen ein Ort oben steht.`
+        : `${one ? `Der Abschnitt mit Ort (${firstSpan}: ${loc.label}) umfasst` : 'Die Abschnitte mit Ort umfassen zusammen'} nur ${below} % der Aufnahme, weniger als die ${limitDe}, ab denen ein Ort oben steht.`;
+    const whyEn = atRejected
+      ? one
+        ? `The segment with a place (${firstSpan}: ${loc.labelEn ?? loc.label}) names the place the world model already rejected for the whole file; it stays in the timeline but is not shown above.`
+        : `The segments with a place (the longest ${firstSpan}: ${loc.labelEn ?? loc.label}) name the place the world model already rejected for the whole file; they stay in the timeline but are not shown above.`
+      : rejectedCount > 0
+        ? `${withoutEn.charAt(0).toUpperCase()}${withoutEn.slice(1)}the place covers only ${below}% of the recording, less than the ${limitEn} from which a place is shown above.`
+        : `${one ? `The segment with a place (${firstSpan}: ${loc.labelEn ?? loc.label}) covers` : 'The segments with a place cover'} only ${below}% of the recording, less than the ${limitEn} from which a place is shown above.`;
+    return {
+      multi: true,
+      places: 1,
+      joined,
+      location: current,
+      replaced: false,
+      lead: null,
+      evidence: [
+        {
+          kind: 'segments',
+          label: `Die Aufnahme zeigt einen erkannten Ort; ${undeterminedDe}`,
+          labelEn: `The recording shows one recognised place; ${undeterminedEn}`,
+          // No frame: the entry names no stretch as the fix's (see routes.ts slimFix, the console's leadSegment).
+          detail: `${countDe} ${elsewhereDe} ${whyDe} Ort, Uhrzeit und Räume oben sind die der ganzen Datei, deren Bilder auch die unbestimmten Abschnitte einschließen; ${one ? 'der Abschnitt mit Ort hat' : 'die Abschnitte mit Ort haben'} in der Zeitleiste unter dem Video ${one ? 'seine' : 'ihre'} eigene Uhrzeit.`,
+          detailEn: `${countEn} ${elsewhereEn} ${whyEn} The place, time and spaces above are those of the whole file, whose pictures include the undetermined segments too; in the timeline under the video the ${one ? 'segment with a place has its' : 'segments with a place have their'} own time.`,
+          weight: 0,
+        },
+      ],
+      note: atRejected
+        ? { de: `${noteHead.de}; oben die ganze Datei: der Ort ist der verworfene`, en: `${noteHead.en}; the whole file stays above: the place is the rejected one` }
+        : rejectedCount > 0
+          ? {
+              de: `${noteHead.de}; oben die ganze Datei: der Ort umfasst ohne seine Abschnitte am verworfenen Ort nur ${below} % (unter ${limitDe})`,
+              en: `${noteHead.en}; the whole file stays above: without its segments at the rejected place it covers only ${below}% (below ${limitEn})`,
+            }
+          : { de: `${noteHead.de}; oben die ganze Datei: der Ort umfasst nur ${below} % (unter ${limitDe})`, en: `${noteHead.en}; the whole file stays above: the place covers only ${below}% (below ${limitEn})` },
+    };
+  }
+  const { shown, place, span: shownSpan, passed, passedSpan, why, passedText } = shownStretch(p, lead);
+  const agrees = current !== null && greatCircleKm(current.lat, current.lon, place.lat, place.lon) <= p.sameKm;
+  const keptDe = agrees ? 'Die Ortung aus der ganzen Datei stimmt mit ihm überein und bleibt.' : 'Er ersetzt die Ortung aus der ganzen Datei, deren Bilder auch die unbestimmten Abschnitte einschließen.';
+  const keptEn = agrees ? 'The fix from the whole file agrees with it and stands.' : 'It replaces the fix from the whole file, whose pictures include the undetermined segments too.';
+  return {
+    multi: true,
+    places: 1,
+    joined,
+    location: agrees ? current : place,
+    replaced: !agrees,
+    lead,
+    evidence: [
+      {
+        kind: 'segments',
+        label: `Die Aufnahme zeigt einen erkannten Ort; ${undeterminedDe}; oben der Abschnitt ${shownSpan}`,
+        labelEn: `The recording shows one recognised place; ${undeterminedEn}; shown above: segment ${shownSpan}`,
+        detail: `${countDe}${passedText.de} ${elsewhereDe} Oben steht ${why.de}, ${shownSpan}: ${place.label}, ± ${kmDe(place.radiusKm)}, Sicherheit ${pctDe(place.confidence)}; ${shareDe} (ab ${pctDe(leadShare)} steht ein Ort oben). ${keptDe} Die Zeitleiste unter dem Video zeigt jeden Abschnitt.`,
+        detailEn: `${countEn}${passedText.en} ${elsewhereEn} Shown above is ${why.en}, ${shownSpan}: ${place.labelEn ?? place.label}, ± ${kmEn(place.radiusKm)}, confidence ${pctEn(place.confidence)}; ${shareEn} (a place is shown above from ${pctEn(leadShare)} on). ${keptEn} The timeline under the video shows every segment.`,
+        weight: agrees ? 0.5 : 0.9,
+        ...shownFields(shown, place),
+      },
+    ],
+    note: {
+      de: `${noteHead.de}; oben ${shownSpan}${agrees ? '' : ', ersetzt die Ortung der ganzen Datei'}${passed ? `, nicht ${passedSpan} (verworfen)` : ''}`,
+      en: `${noteHead.en}; shown ${shownSpan}${agrees ? '' : ', replaces the fix of the whole file'}${passed ? `, not ${passedSpan} (rejected)` : ''}`,
     },
   };
 }
@@ -961,18 +1255,20 @@ export const WHOLE_FILE: SegmentText = { de: 'Ganze Datei (gemischt): ', en: 'Wh
 /**
  * An evidence entry of the whole file's decision in a fix whose place came from a stretch: what
  * it says of "the result" ("1 km from the result: a recognition", "which stands") is said of the
- * whole file's answer, which mixes the places and is no longer the fix's. Entries that name a
- * place (reference pictures, the world model, the country estimate) say so and lose their weight;
- * the others (sun, file name) stay as they are.
+ * whole file's answer, which mixes the places (or the place with the undetermined stretches,
+ * `mix`) and is no longer the fix's. Entries that name a place (reference pictures, the world
+ * model, the country estimate) say so and lose their weight; the others (sun, file name) stay as
+ * they are.
  */
-export function wholeFileEvidence(e: Evidence): Evidence {
+export function wholeFileEvidence(e: Evidence, mix: WholeFileMix = 'places'): Evidence {
   if (e.kind !== 'landmark' && e.kind !== 'worldmodel' && e.kind !== 'region') return e;
+  const m = mixed(mix).fix;
   return {
     ...e,
     label: `${WHOLE_FILE.de}${e.label}`,
     labelEn: `${WHOLE_FILE.en}${e.labelEn ?? e.label}`,
-    detail: `Aus der Ortung der ganzen Datei, deren Bilder mehrere Orte vermischen; „Ergebnis“ ist hier deren Antwort, nicht der oben gezeigte Ort. ${e.detail}`,
-    detailEn: `From the fix of the whole file, whose pictures mix several places; "result" here is its answer, not the place shown above. ${e.detailEn ?? e.detail}`,
+    detail: `Aus der Ortung der ganzen Datei, ${m.de}; „Ergebnis“ ist hier deren Antwort, nicht der oben gezeigte Ort. ${e.detail}`,
+    detailEn: `From the fix of the whole file, ${m.en}; "result" here is its answer, not the place shown above. ${e.detailEn ?? e.detail}`,
     weight: 0,
   };
 }

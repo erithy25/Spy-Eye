@@ -1,5 +1,6 @@
 /**
- * The stretches of a recording that shows several places (Fix.segments, engine 10 on), as the
+ * The stretches of a recording located stretch by stretch (Fix.segments: several places from
+ * engine 10 on, one recognised place and undetermined stretches from engine 12 on), as the
  * console reads them: from the full fix, or from the compact form the list carries
  * (Fix.segmentSummary). Mirrors summariseSegments of the server (datum/segments.ts), which is not
  * imported here because it pulls in the server's localisation code.
@@ -62,19 +63,51 @@ export function placesLowerBound(summary: Pick<FixSegmentSummary, 'undetermined'
   return (summary.undetermined ?? 0) > 0 || (summary.joined ?? 0) > 0;
 }
 
-/** How many distinct places a recording shows (0 for a recording of one place or an older fix). */
+/** How many distinct places a recording shows (0 for a recording of one stretch or an older fix). */
 export function placeCount(fix: Fix | null | undefined): number {
   return segmentSummary(fix)?.places.length ?? 0;
 }
 
 /**
- * "7 Orte", or "mindestens 7 Orte" when the count is a lower bound (placesLowerBound); '' for a
- * recording of one place. `t` is the console's translation.
+ * "7 Orte", or "mindestens 7 Orte" when the count is a lower bound (placesLowerBound); for one
+ * recognised place and undetermined stretches (engine 12) "1 erkannter Ort, ein Abschnitt
+ * unbestimmt" (never "mindestens 1 Orte": the undetermined stretches are said instead), or
+ * `compact` "1 erkannter Ort · 1 unbestimmt" as the timeline says it (the list's row has room for
+ * no more); '' for a recording of one stretch. `t` is the console's translation.
  */
-export function placesText(fix: Fix | null | undefined, t: (de: string, vars?: Record<string, string | number>) => string): string {
+export function placesText(fix: Fix | null | undefined, t: (de: string, vars?: Record<string, string | number>) => string, compact = false): string {
   const summary = segmentSummary(fix);
-  if (!summary || summary.places.length < 2) return '';
+  if (!summary || summary.places.length === 0) return '';
+  if (summary.places.length === 1) {
+    const u = summary.undetermined ?? 0;
+    if (u === 0) return '';
+    if (compact) return `${t('1 erkannter Ort')} · ${t('{n} unbestimmt', { n: u })}`;
+    return `${t('1 erkannter Ort')}, ${u === 1 ? t('ein Abschnitt unbestimmt') : t('{n} Abschnitte unbestimmt', { n: u })}`;
+  }
   return t(placesLowerBound(summary) ? 'mindestens {n} Orte' : '{n} Orte', { n: summary.places.length });
+}
+
+/**
+ * Whether the place a fix shows is the whole file's while the fix carries stretches
+ * (wholeFileShown), told from the full fix or from the list's compact form: there, one recognised
+ * place without `lead` (one-place summaries exist from engine 12 on, and a fix that shows its
+ * stretch always names its place). The list and the result card in ORTUNG say it next to the
+ * place: "1 erkannter Ort" beside the whole file's answer would read as that place.
+ */
+export function wholeFilePlace(fix: Fix | null | undefined): boolean {
+  if (!fix) return false;
+  if (fix.segments && fix.segments.length > 0) return wholeFileShown(fix);
+  const summary = fix.segmentSummary;
+  return !!summary && summary.segments > 1 && summary.places.length === 1 && (summary.undetermined ?? 0) > 0 && summary.lead === undefined;
+}
+
+/**
+ * The count of places at the head of the timeline: "mindestens 3 Orte", "2 Orte", or "1 erkannter
+ * Ort" for one place (the undetermined stretches follow it there on their own).
+ */
+export function timelinePlacesText(places: number, atLeast: boolean, t: (de: string, vars?: Record<string, string | number>) => string): string {
+  if (places === 1) return t('1 erkannter Ort');
+  return atLeast ? t('mindestens {n} Orte', { n: places }) : t('{n} Orte', { n: places });
 }
 
 /** "4:12", "1:02:05": a second of the video as its clock reads. */
@@ -116,15 +149,23 @@ export function numberFits(px: number, n: number): boolean {
 }
 
 /**
- * The stretch the fix's place comes from: the one whose place is the fix's location (the longest
- * located stretch, or the one the answer for the whole file agrees with); else the first located.
+ * The stretch the fix's place comes from: the one the 'segments' entry names by its keyframe (the
+ * longest located stretch, or the one the answer for the whole file agrees with); -1 where that
+ * entry names none (engine 12: one recognised place that covers too little of the recording, or
+ * only at the place the whole file rejected; the fix's place, time and spaces are then the whole
+ * file's, see wholeFileShown). Fixes whose entry is missing: the stretch at the fix's location,
+ * else the first located.
  */
 export function leadSegment(fix: Fix): number {
   const segments = fix.segments ?? [];
   const loc = fix.location;
-  const lead = fix.evidence.find((e) => e.kind === 'segments')?.frame;
+  const entry = fix.evidence.find((e) => e.kind === 'segments');
+  const lead = entry?.frame;
   const byFrame = lead !== undefined ? segments.findIndex((s) => s.keyframe.frame === lead) : -1;
   if (byFrame >= 0) return byFrame;
+  // Before engine 12 the entry of a fix with stretches always named one (and GPS files carry no
+  // stretches): an entry without a frame is a fix that shows none of them.
+  if (entry && lead === undefined && segments.length > 0) return -1;
   if (loc) {
     const at = segments.findIndex((s) => s.location && s.location.lat === loc.lat && s.location.lon === loc.lon);
     if (at >= 0) return at;
@@ -253,14 +294,23 @@ export interface StretchChoice {
 }
 
 /**
+ * Whether a fix with stretches shows none of them (leadSegment -1): its place, time and spaces are
+ * those of the whole file, which the console says next to them, and the timeline holds the rest.
+ */
+export function wholeFileShown(fix: Fix): boolean {
+  return (fix.segments?.length ?? 0) > 1 && leadSegment(fix) < 0;
+}
+
+/**
  * Index of the chosen stretch of a fix: the choice where it belongs to this result and lies within
- * its stretches, else the stretch the fix shows (leadSegment). 0 for a fix without stretches.
+ * its stretches, else the stretch the fix shows (leadSegment), or the first where it shows none
+ * (the video opens at its start). 0 for a fix without stretches.
  */
 export function chosenStretch(fix: Fix, choice: StretchChoice | null): number {
   const segments = fix.segments ?? [];
   if (segments.length === 0) return 0;
   if (choice && choice.videoId === fix.videoId && choice.computedAt === fix.computedAt && choice.index >= 0 && choice.index < segments.length) return choice.index;
-  return leadSegment(fix);
+  return Math.max(0, leadSegment(fix));
 }
 
 /**
@@ -287,6 +337,20 @@ export function stretchClock(fix: Fix, index: number | null): { time: TimeEstima
   return { time: s.time, sun: s.sun ?? null, own: true };
 }
 
+/**
+ * The time BEFUND's clock and sun dial show for a stretch: stretchClock, and for an undetermined
+ * stretch of a fix that shows none of its stretches (wholeFileShown) the fix's own, which is the
+ * whole file's (`whole`): the time in the header then has its dials, and that stretch's frames
+ * are among those it was read from. The stretch has still no time of its own; the dials say whose.
+ */
+export function dialClock(fix: Fix, index: number | null): { time: TimeEstimate; sun: SunReport | null; own: boolean; whole: boolean } | null {
+  const clock = stretchClock(fix, index);
+  if (clock) return { ...clock, whole: false };
+  const s = index !== null ? fix.segments?.[index] : undefined;
+  if (s && !s.location && wholeFileShown(fix)) return { time: fix.time, sun: fix.sun, own: false, whole: true };
+  return null;
+}
+
 /** A walkable space as RAUM enters it. */
 export interface SpaceKey {
   frame: number;
@@ -300,16 +364,39 @@ export interface SpaceKey {
  * fix without stretches and for older fixes; a stretch's own space (FixSegment.keyframe, the
  * longest located stretches have one); none for the others (undetermined, or beyond the twelve).
  * Fixes before engine 11 (their stretches have no time of their own) offer the fix's keyframes.
- * `fix` says whether they are the fix's keyframes (the heading and horizon belong to those).
+ * `fix` says whether they are the fix's keyframes (the heading and horizon belong to those, and
+ * the fix's place and time).
+ *
+ * Where the fix shows no stretch (wholeFileShown), its keyframes are the whole file's, spread over
+ * the recording, and each is offered by the stretch it lies in, so that every one can be entered:
+ * an undetermined stretch offers those among its frames (`fix` true; none: `fix` false, it has no
+ * place); a located one its own space first and then those (`fixFrom`, the index of the first of
+ * them: they go with the fix's place, time and heading, the own one with the stretch's).
  */
-export function stretchSpaces(fix: Fix, index: number | null): { fix: boolean; spaces: SpaceKey[] } {
+export function stretchSpaces(fix: Fix, index: number | null): { fix: boolean; spaces: SpaceKey[]; fixFrom?: number } {
   const own = (k: Keyframe): SpaceKey[] => (k.spaceUrl ? [{ frame: k.frame, imageUrl: k.imageUrl, spaceUrl: k.spaceUrl, pitchDeg: k.pitchDeg ?? 0 }] : []);
   const segments = fix.segments ?? [];
   const s = index !== null ? segments[index] : undefined;
+  const lead = leadSegment(fix);
   // Before engine 11 the stretches had no spaces (nor times): the fix's keyframes for all of them.
-  if (!s || !timedStretches(fix) || index === leadSegment(fix)) return { fix: true, spaces: fix.keyframes.flatMap(own) };
+  if (!s || !timedStretches(fix) || index === lead) return { fix: true, spaces: fix.keyframes.flatMap(own) };
   const k = s.keyframe;
-  return { fix: false, spaces: k.spaceUrl ? [{ frame: k.frame, imageUrl: k.imageUrl, spaceUrl: k.spaceUrl, pitchDeg: k.pitchDeg ?? 0 }] : [] };
+  const ownSpace: SpaceKey[] = k.spaceUrl ? [{ frame: k.frame, imageUrl: k.imageUrl, spaceUrl: k.spaceUrl, pitchDeg: k.pitchDeg ?? 0 }] : [];
+  if (lead < 0) {
+    // The last stretch ends with the video: a keyframe at its very end is still its own.
+    const last = segments.length - 1;
+    const inside = (kf: Keyframe): boolean => kf.time >= s.startSec && (kf.time < s.endSec || (index === last && kf.time <= s.endSec));
+    // A whole-file keyframe on the stretch's own frame is offered once, as the stretch's.
+    const whole = fix.keyframes.filter((kf) => inside(kf) && !ownSpace.some((o) => o.frame === kf.frame)).flatMap(own);
+    if (!s.location) return whole.length > 0 ? { fix: true, spaces: whole } : { fix: false, spaces: [] };
+    if (whole.length > 0) return { fix: false, spaces: [...ownSpace, ...whole], fixFrom: ownSpace.length };
+  }
+  return { fix: false, spaces: ownSpace };
+}
+
+/** Whether the i-th space of stretchSpaces is one of the fix's keyframes (see there). */
+export function spaceOfFix(offered: { fix: boolean; fixFrom?: number }, i: number): boolean {
+  return offered.fixFrom !== undefined ? i >= offered.fixFrom : offered.fix;
 }
 
 /** The stretches RAUM can enter (stretchSpaces has a space for them), in time order. */

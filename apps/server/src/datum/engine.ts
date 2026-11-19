@@ -68,17 +68,19 @@ import {
   coarseRegions,
   DEFAULT_SEGMENT_PARAMS,
   multiPlaceTimeEvidence,
-  segmentCountries,
   segmentVerdict,
   spaceStretches,
   spreadIndices,
   stretchFrames,
   stretchSpacesNote,
   stretchTimes,
+  stretchTimesNote,
   summariseSegments,
   toSegments,
+  verdictCountries,
   wholeFileEvidence,
   type SegmentVerdict,
+  type WholeFileMix,
 } from './segments.js';
 import { regionAround } from './regions.js';
 import { filenameHints, readMetadata, type VideoMetadata } from './metadata.js';
@@ -95,8 +97,8 @@ import { ENGINE_VERSION, OLDEST_SHOWN_VERSION } from './version.js';
 const LOCATE_FRAMES = 12;
 const SPACE_FRAMES = 3;
 /**
- * Located stretches of a recording of several places that get a walkable space of their own (one
- * keyframe each, the longest stretches first; the stretch the fix shows has the fix's keyframes).
+ * Located stretches that get a walkable space of their own (one keyframe each, the longest
+ * stretches first; the stretch the fix shows, if any, has the fix's keyframes).
  * Each space takes about a second (depth model and grid): twelve add some 12 s to the full fix.
  */
 const SEGMENT_SPACES = 12;
@@ -302,9 +304,9 @@ function spreadWithin(first: number, last: number, wanted: number): number[] {
 
 /**
  * What the segments of a recording change in its full fix (see DatumEngine.segment): the verdict,
- * the stretches the fix carries (multi-place recordings only), the frames the spaces are built from
- * (those of the stretch shown, so that the horizon is matched where the place is) and, where the
- * place was replaced, the places as candidates.
+ * the stretches the fix carries (several places, or one place and undetermined stretches), the
+ * frames the spaces are built from (those of the stretch shown, so that the horizon is matched
+ * where the place is) and, where the place was replaced, the places as candidates.
  */
 interface SegmentOutcome {
   verdict: SegmentVerdict;
@@ -314,7 +316,7 @@ interface SegmentOutcome {
   /** Per stretch (parallel to `segments`), its analysis frames (indices, inclusive). */
   ranges: [number, number][] | null;
   candidates: FixCandidate[] | null;
-  /** The countries of the places (multi-place recordings only; the whole file's mix them). */
+  /** The countries of the stretches (where a stretch is shown and stands for the fix; the whole file's mix them; see verdictCountries). */
   countries: CountryProb[] | null;
 }
 
@@ -1408,10 +1410,14 @@ export class DatumEngine {
     // Background work (the reference set) gives way to a person's job (street level, world model).
     const background = this.active?.id === id && this.active.background;
 
-    // A recording that shows several places is located stretch by stretch (segments.ts). It keeps
-    // its place where the answer for the whole file agrees with its longest located stretch.
+    // A recording that shows several places, or one place and stretches that show none, is located
+    // stretch by stretch (segments.ts). It keeps its place where the answer for the whole file
+    // agrees with its longest located stretch, or where no stretch leads (segmentVerdict).
     const parts = await this.segment(entry, located, { matrix, tiles, dim, background, exclude: this.opts.holdout && truthVideo ? [truthVideo.wikidata] : null });
     mark('Abschnitte geprüft', parts.verdict.note);
+    // What the whole file's frames mix with the stretch shown: other places, or the undetermined
+    // stretches of a recording of one recognised place (its entries say which).
+    const mix: WholeFileMix = parts.verdict.places === 1 ? 'undetermined' : 'places';
     const placed: LocateResult =
       parts.verdict.evidence.length > 0
         ? {
@@ -1420,7 +1426,7 @@ export class DatumEngine {
             // Where a stretch's place replaced the whole file's answer, the whole file's entries
             // speak of that answer ("1 km from the result: a recognition", "which stands"): they
             // stay, said to be of the whole file and without weight.
-            evidence: [...parts.verdict.evidence, ...(parts.verdict.replaced ? located.evidence.map(wholeFileEvidence) : located.evidence)],
+            evidence: [...parts.verdict.evidence, ...(parts.verdict.replaced ? located.evidence.map((e) => wholeFileEvidence(e, mix)) : located.evidence)],
             ...(parts.candidates ? { candidates: parts.candidates } : {}),
             ...(parts.countries ? { countries: parts.countries } : {}),
           }
@@ -1450,7 +1456,7 @@ export class DatumEngine {
     // Background work (the reference set) stops waiting on the services for a person's job.
     const streetYield = background ? (): void => streetStop.abort() : null;
     try {
-      const stretches = parts.segments && parts.ranges && parts.verdict.lead !== null ? { segments: parts.segments, ranges: parts.ranges, lead: parts.verdict.lead } : null;
+      const stretches = parts.segments && parts.ranges ? { segments: parts.segments, ranges: parts.ranges, lead: parts.verdict.lead, mix } : null;
       return await this.computeRest(entry, placed, streetJob, {
         mark,
         trace,
@@ -1547,16 +1553,21 @@ export class DatumEngine {
       };
       this.opts.log(`Abschnitte "${entry.info.name}": ${verdict.note.de}${how.de}; Suche ${secs(analysis.timing.searchMs)} s in ${analysis.searches} Teilen, Entscheidung ${secs(analysis.timing.decideMs)} s`);
       const note = { de: `${verdict.note.de}${how.de}`, en: `${verdict.note.en}${how.en}` };
-      if (!verdict.multi || verdict.lead === null) return { verdict: { ...verdict, note }, segments: null, keyRange: null, ranges: null, candidates: null, countries: null };
-      const lead = analysis.merged.stretches[verdict.lead];
+      if (!verdict.multi) return { verdict: { ...verdict, note }, segments: null, keyRange: null, ranges: null, candidates: null, countries: null };
+      // A fix that shows no stretch (one place that covers too little of the recording, or only
+      // at the place the whole file rejected) keeps the whole file's keyframes and countries; its
+      // stretches still get their own time, sun and spaces (computeRest).
+      const lead = verdict.lead !== null ? analysis.merged.stretches[verdict.lead] : undefined;
       const keyRange: [number, number] | null = lead ? [analysis.windows[lead.first]!.first, analysis.windows[lead.last]!.last] : null;
       return {
         verdict: { ...verdict, note },
         segments,
         keyRange,
         ranges: stretchFrames(analysis.windows, analysis.merged),
-        candidates: verdict.replaced ? placeCandidates(segments, verdict.lead) : null,
-        countries: segmentCountries(segments, verdict.lead),
+        candidates: verdict.replaced && verdict.lead !== null ? placeCandidates(segments, verdict.lead) : null,
+        // One place that agrees with the whole file keeps the whole file's countries with its
+        // candidates and evidence (verdictCountries).
+        countries: verdictCountries(verdict, segments),
       };
     } catch (err: unknown) {
       if (err instanceof EngineStopped || this.stopped || this.gone(entry)) throw err;
@@ -1589,11 +1600,13 @@ export class DatumEngine {
       /** Analysis frames the keyframes come from (the stretch shown); null: the whole recording. */
       keyRange: [number, number] | null;
       /**
-       * The stretches of a recording of several places: their frames (indices, inclusive) and the
-       * one the fix shows. Each located one gets its own time and sun, and the longest their own
-       * space; the fix's time is that of the stretch shown. Null for a recording of one place.
+       * The stretches of a recording located stretch by stretch: their frames (indices,
+       * inclusive), the one the fix shows (null: none, the fix keeps the whole file's time and
+       * keyframes) and what the whole file's frames mix in. Each located one gets its own time and
+       * sun, and the longest their own space; the fix's time is that of the stretch shown. Null
+       * for a recording of one stretch.
        */
-      stretches: { segments: FixSegment[]; ranges: [number, number][]; lead: number } | null;
+      stretches: { segments: FixSegment[]; ranges: [number, number][]; lead: number | null; mix: WholeFileMix } | null;
     },
   ): Promise<Fix> {
     const id = entry.info.id;
@@ -1675,7 +1688,7 @@ export class DatumEngine {
         }
       }
       const located = segments.filter((s) => s.location).length;
-      mark('Räume der Abschnitte aufgebaut', stretchSpacesNote(built, located, chosen.length, performance.now() - started));
+      mark('Räume der Abschnitte aufgebaut', stretchSpacesNote(built, located, chosen.length, performance.now() - started, stretches.lead !== null));
     }
 
     let evidence: Evidence[] = [...located.evidence];
@@ -1779,9 +1792,10 @@ export class DatumEngine {
     const whole = await timeAt(frameVectors, stats, location);
     let timed = whole;
     if (stretches && segments) {
-      // A recording of several places: every located stretch from its own frames at its own place
-      // (the whole file's twelve frames mix the light of all of them), and the fix the stretch it
-      // shows. The whole file's estimate stays as evidence, said to be mixed and without weight.
+      // A recording located stretch by stretch: every located stretch from its own frames at its
+      // own place (the whole file's twelve frames mix the light of all of them), and the fix the
+      // stretch it shows. The whole file's estimate stays as evidence, said to be mixed and
+      // without weight; where the fix shows no stretch, it is the fix's own.
       const started = performance.now();
       // Whole-frame vectors and light statistics of analysis frames (indices).
       const framesOf = async (picks: number[]): Promise<{ vectors: Float32Array; stats: FrameStats[] }> => {
@@ -1804,22 +1818,29 @@ export class DatumEngine {
         (i, err) => this.opts.log(`Uhrzeit für Abschnitt ${i + 1} von "${entry.info.name}" nicht bestimmt: ${err instanceof Error ? err.message : String(err)}`),
       );
       segments.splice(0, segments.length, ...timedSegments);
-      const counted = segments.filter((s) => s.time).length;
-      const lead = segments[stretches.lead]!;
-      const [first, last] = stretches.ranges[stretches.lead]!;
-      // The same frames as the stretch's own estimate (stretchTimes), so that both read the same light.
-      const own = await framesOf(spreadIndices(first, last, SEGMENT_TIME_FRAMES));
-      // The fix's own time: the stretch's frames at the fix's place (the stretch's place, or the
-      // whole file's answer where it agrees with it), with the sun path in the fix's steps.
-      timed = await timeAt(own.vectors, own.stats, location);
-      const span = `${clockText(lead.startSec)}–${clockText(lead.endSec)}`;
-      // A time from the file's tags is said once, for the whole file (multiPlaceTimeEvidence).
-      evidence.push(...multiPlaceTimeEvidence(timeEvidence(timed.time), timeEvidence(whole.time), span));
+      const counted = stretchTimesNote(segments.filter((s) => s.time).length);
+      const lead = stretches.lead !== null ? segments[stretches.lead] : undefined;
+      const range = stretches.lead !== null ? stretches.ranges[stretches.lead] : undefined;
+      let from: { de: string; en: string } = { de: 'ganze Datei', en: 'whole file' };
+      if (lead && range) {
+        // The same frames as the stretch's own estimate (stretchTimes), so that both read the same light.
+        const own = await framesOf(spreadIndices(range[0], range[1], SEGMENT_TIME_FRAMES));
+        // The fix's own time: the stretch's frames at the fix's place (the stretch's place, or the
+        // whole file's answer where it agrees with it), with the sun path in the fix's steps.
+        timed = await timeAt(own.vectors, own.stats, location);
+        const span = `${clockText(lead.startSec)}–${clockText(lead.endSec)}`;
+        // A time from the file's tags is said once, for the whole file (multiPlaceTimeEvidence).
+        evidence.push(...multiPlaceTimeEvidence(timeEvidence(timed.time), timeEvidence(whole.time), span, stretches.mix));
+        from = { de: `Abschnitt ${span}`, en: `segment ${span}` };
+      } else {
+        // No stretch shown: the fix's time is the whole file's, at the whole file's place.
+        evidence.push(...timeEvidence(whole.time));
+      }
       const ms = Math.round(performance.now() - started);
       const note = timeNote(timed.time);
       mark('Licht und Sonnenstand bestimmt', {
-        de: `${note.de} (Abschnitt ${span}) · ${counted} Abschnitte mit Ort je für sich, ${ms.toLocaleString('de-DE')} ms`,
-        en: `${note.en} (segment ${span}) · ${counted} segments with a place each on its own, ${ms.toLocaleString('en-GB')} ms`,
+        de: `${note.de} (${from.de}) · ${counted.de}, ${ms.toLocaleString('de-DE')} ms`,
+        en: `${note.en} (${from.en}) · ${counted.en}, ${ms.toLocaleString('en-GB')} ms`,
       });
     } else {
       mark('Licht und Sonnenstand bestimmt', timeNote(timed.time));
@@ -1875,14 +1896,16 @@ function galleryPlace(located: LocateResult): FixLocation | null {
 }
 
 /**
- * The candidates of a recording of several places whose place was taken from a stretch: its
- * places, the fix's own first (with the stretch's point, which the console centres on), then by
- * the time they take up; the score is that share of the time with a place. The candidates of the
- * whole file mix the places and say nothing of any of them.
+ * The candidates of a recording whose place was taken from a stretch: its places, the fix's own
+ * first (with the stretch's point, which the console centres on), then by the time they take up;
+ * the score is that share of the time with a place, and with one recognised place its share of
+ * the whole recording (as segmentCountries: the undetermined stretches may show others). The
+ * candidates of the whole file mix the places and say nothing of any of them.
  */
-function placeCandidates(segments: readonly FixSegment[], lead: number): FixCandidate[] {
+export function placeCandidates(segments: readonly FixSegment[], lead: number): FixCandidate[] {
   const summary = summariseSegments(segments, lead);
-  const total = summary.places.reduce((s, p) => s + p.seconds, 0) || 1;
+  const span = segments.length > 0 ? segments[segments.length - 1]!.endSec - segments[0]!.startSec : 0;
+  const total = (summary.places.length === 1 ? Math.max(span, summary.places[0]!.seconds) : summary.places.reduce((s, p) => s + p.seconds, 0)) || 1;
   const shown = segments[lead];
   const first = shown?.place ?? null;
   return [...summary.places]

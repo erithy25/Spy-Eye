@@ -457,7 +457,10 @@ test('spaces: the trace says one space and one stretch in the singular', () => {
     en: '12 more spaces for 32 segments with a place (the 12 longest besides the one shown), 4.1 s',
   });
   assert.deepEqual(stretchSpacesNote(1, 2, 1, 1200), { de: '1 weiterer Raum für 2 Abschnitte mit Ort, 1,2 s', en: '1 more space for 2 segments with a place, 1.2 s' });
-  assert.deepEqual(stretchSpacesNote(0, 1, 0, 0), { de: '0 weitere Räume für 1 Abschnitt mit Ort, 0,0 s', en: '0 more spaces for 1 segment with a place, 0.0 s' });
+  // Engine 12: one recognised place whose only stretch is the one shown has no further space to build.
+  assert.deepEqual(stretchSpacesNote(0, 1, 0, 0), { de: 'keine weiteren: der einzige Abschnitt mit Ort ist der gezeigte', en: 'none more: the only segment with a place is the one shown' });
+  // A fix that shows no stretch: its one located stretch was chosen, its space failed.
+  assert.deepEqual(stretchSpacesNote(0, 1, 1, 400, false), { de: '0 weitere Räume für 1 Abschnitt mit Ort, 0,4 s', en: '0 more spaces for 1 segment with a place, 0.4 s' });
   assert.equal(stretchSpacesNote(1, 3, 1, 900).de, '1 weiterer Raum für 3 Abschnitte mit Ort (der längste außer dem gezeigten), 0,9 s');
   assert.equal(stretchSpacesNote(1, 3, 1, 900).en, '1 more space for 3 segments with a place (the longest besides the one shown), 0.9 s');
 });
