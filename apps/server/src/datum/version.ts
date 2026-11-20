@@ -36,10 +36,15 @@
  *      the whole file's world model rejected cover at least a fifth of the recording
  *      (`SegmentParams.leadShare`); otherwise the whole file's answer stays above, with its
  *      countries, and the 'segments' evidence entry carries no `frame`, naming no stretch as the
- *      fix's. With GPS in the file, one place in the pictures farther than `sameKm` from the
- *      position gets an entry without weight that says where and how far (gpsApartEvidence).
+ *      fix's.
+ *  13: with GPS in the file, one place in the pictures farther than `sameKm` from the position
+ *      gets a 'segments' entry without weight and without `frame` that says where and how far
+ *      (gpsApartEvidence): none where a stretch of a chained place lies at the position, only the
+ *      stretches away from it named for a place the world model joined, and a place the whole
+ *      file's world model rejected said to be that one. Stored engine-12 fixes lack the entry or
+ *      carry its first form (commit a3b32a9) and are computed again.
  */
-export const ENGINE_VERSION = 12;
+export const ENGINE_VERSION = 13;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

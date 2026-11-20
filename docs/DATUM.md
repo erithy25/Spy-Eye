@@ -166,17 +166,39 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
 - **GPS in der Datei.** Die Position gilt für die ganze Datei; es gibt keine Abschnitte. Zeigen
   die Bilder trotzdem mehrere Orte, sagt ein Beleg ohne Gewicht: „Die Bilder zeigen 2 verschiedene
   Orte“. Zeigen sie einen Ort, der mehr als 25 km (`sameKm`, der Abstand, ab dem Antworten als
-  verschiedene Orte zählen) von der Position liegt, sagt ein Beleg ohne Gewicht, wo und wie weit:
-  „Die Bilder zeigen einen Ort 325 km von der GPS-Angabe“, mit dem längsten Abschnitt des Orts,
-  seinem Radius und seiner Sicherheit; auch bei einer Aufnahme aus einem Abschnitt. Ob die Aufnahme
-  geschnitten ist oder die GPS-Angabe zu einer anderen gehört, bleibt zu prüfen; der Ort oben ist
-  die Position.
+  verschiedene Orte zählen) von der Position liegt, sagt seit Fassung 13 ein Beleg ohne Gewicht,
+  wo und wie weit: „Die Bilder zeigen einen Ort 325 km von der GPS-Angabe“, mit dem längsten
+  Abschnitt abseits der Position, seinem Radius, seiner Sicherheit und seinem eigenen Abstand; auch
+  bei einer Aufnahme aus einem Abschnitt. Ob die Aufnahme geschnitten ist oder die GPS-Angabe zu
+  einer anderen gehört, bleibt zu prüfen; der Ort oben ist die Position. Gemessen wird jeder
+  Abschnitt des Orts, nicht nur der längste:
+  - Liegt ein Abschnitt keine 25 km von der Position, liegt der Ort dort, nach derselben Regel wie
+    die Kette der Antworten (eine Fahrt Dortmund, Bochum, Essen, 32 km von Ende zu Ende, mit der
+    GPS-Angabe an einem der beiden Enden: kein Beleg).
+  - Ein Ort, den das Weltmodell aus weit auseinanderliegenden Antworten zusammengefasst hat, kann
+    mehrere sein: Der Beleg nennt nur seine Abschnitte abseits der Position, sagt das, zählt die bei
+    der Position („Ein Teil der Bilder zeigt einen Ort 726 km von der GPS-Angabe … im Abschnitt
+    0:00–0:30 Bryn Eglwys, Chester … es können also mehr Orte sein. Ein weiterer Abschnitt des
+    Orts liegt bei der GPS-Angabe“).
+  - Die Bezeichnung gehört nur dem genannten Abschnitt: „in 3 Abschnitten einen Ort, im längsten
+    (0:25–1:00) Essen“; bei gleich langen „im sichersten der gleich langen längsten“.
+  - Liegen die Abschnitte abseits der Position alle an dem Ort, den das Weltmodell für die ganze
+    Datei verworfen hat, sagt der Beleg das und stellt die GPS-Angabe nicht in Frage. Eine
+    Aufnahme wie die Deutschlandreise (Bhf. Eschborn, für den Bahnhof Norderstedt Mitte 408 km
+    daneben gehalten) hieße mit einer GPS-Angabe für Eschborn sonst „Die Bilder zeigen einen Ort
+    408 km von der GPS-Angabe … ob die GPS-Angabe zu einer anderen Aufnahme gehört, sollte
+    geprüft werden“, wegen einer Antwort, die die Ortung selbst verworfen hat; so heißt es „Die
+    Bilder zeigen den vom Weltmodell verworfenen Ort, 408 km von der GPS-Angabe“.
 - **Fassung 11** macht die Abschnitte vollständig: eine Uhrzeit je Abschnitt mit Ort, eine grobe
   Region für unbestimmte Abschnitte, wo sie gemessen trägt, und eigene Räume für die längsten
   Abschnitte (die drei Abschnitte unten).
 - **Fassung 12** gibt auch einer Aufnahme mit einem erkannten Ort und unbestimmten Abschnitten die
   Zeitleiste; ihr Ort steht oben, wo er mindestens ein Fünftel der Aufnahme umfasst (siehe [Ein
   erkannter Ort und unbestimmte Abschnitte](#ein-erkannter-ort-und-unbestimmte-abschnitte)).
+- **Fassung 13** gibt einer Datei mit GPS, deren Bilder einen Ort abseits der Position zeigen,
+  den Beleg ohne Gewicht aus dem Punkt „GPS in der Datei“. Ortungen der Fassung 12 werden neu
+  gerechnet: Sie haben ihn nicht oder in seiner ersten Form, die den Ort nur am längsten Abschnitt
+  maß und den verworfenen Ort nicht erkannte.
 
 ### Gemessen an Zusammenschnitten
 
@@ -469,10 +491,12 @@ der ganzen Datei, deren zwölf Bilder alle Teile mischen: Im End-to-End-Lauf zei
   ohne Gelände.
 - **GPS in der Datei:** unverändert keine Abschnitte; der Ablauf sagt „2 Abschnitte, ein Ort
   (1 unbestimmt), GPS der Datei gilt“. Liegt der Ort der Bilder mehr als 25 km von der Position,
-  kommt der Beleg ohne Gewicht aus dem Punkt „GPS in der Datei“ dazu und steht in der Evidenz
-  gleich nach der GPS-Angabe (Stadt-Land mit einer GPS-Angabe für Koblenz: „Die Bilder zeigen
-  einen Ort 325 km von der GPS-Angabe … im Abschnitt 0:36–0:48 Elstertalbrücke, Hof“); der Ablauf
-  ergänzt „der Ort der Bilder liegt 325 km davon“.
+  kommt seit Fassung 13 der Beleg ohne Gewicht aus dem Punkt „GPS in der Datei“ dazu und steht in
+  der Evidenz gleich nach der GPS-Angabe (Stadt-Land mit einer GPS-Angabe für Koblenz: „Die Bilder
+  zeigen einen Ort 325 km von der GPS-Angabe … im Abschnitt 0:36–0:48 Elstertalbrücke, Hof“); der
+  Ablauf ergänzt „der Ort der Bilder liegt 325 km davon“, bei einem zusammengefassten Ort mit
+  Abschnitten bei der Position „ein Teil der Bilder liegt … davon“, am verworfenen Ort „…, am
+  verworfenen Ort“.
 
 **Gemessen** am 19. November 2026: Fenster, Abschnitte und grobe Regionen mit `segments.ts` der
 Fassung 11 aus den gespeicherten Auswertungen neu gerechnet, die Ortung der ganzen Datei auf dem Weg
@@ -548,7 +572,10 @@ dasselbe Video).
   Elstertalbrücke, 1 440 km neben der Hälfte in Cork. Die Schwelle 0,2 ruht auf zwei verschiedenen
   Aufnahmen. Mit GPS in der Datei gibt es keine Zeitleiste: Die Position gilt für die ganze
   Datei, und ein Ort der Bilder weit davon steht nur als Beleg ohne Gewicht da, nicht als
-  Abschnitt mit eigener Uhrzeit und eigenem Raum.
+  Abschnitt mit eigener Uhrzeit und eigenem Raum. Gemessen wird dabei je Abschnitt sein Ort, eine
+  Antwort: Liegt nur ein anderes sicheres Fenster eines Abschnitts keine 25 km von der Position
+  (eine Fahrt in einem Abschnitt, der Essen heißt, mit der GPS-Angabe am Anfang in Dortmund),
+  nennt der Beleg den Ort trotzdem abseits.
 - Unbestimmte Abschnitte fassen weit entfernte Orte zusammen (Weltreise: Tschechien und Italien in
   einem Abschnitt; Stadt-Land: Rieben im Abschnitt mit Cork, weil das erste Fenster 0 bis 30 s
   reicht), weil benachbarte Fenster ohne Antwort zu einem Abschnitt werden.

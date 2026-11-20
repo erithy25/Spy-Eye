@@ -1000,44 +1000,120 @@ function shownFields(shown: FixSegment, place: FixLocation): Pick<Evidence, 'fra
 }
 
 /**
+ * The located stretches of one place that lie at a point, by the rule places are told apart by:
+ * within `sameKm` of it. A place the world model did not join is one chain of anchors each closer
+ * than `sameKm` to the next (mergeWindows), so a point at one of its stretches is at the place and
+ * at all its stretches (a drive from Dortmund through Bochum to Essen, 32 km, with the GPS tag in
+ * Dortmund). A joined place may be several: from the stretches at the point the chain goes on only
+ * through stretches each closer than `sameKm` to the next.
+ */
+function stretchesAt(point: GeoPoint, located: readonly FixSegment[], sameKm: number, joined: boolean): Set<FixSegment> {
+  const near = (from: GeoPoint, s: FixSegment): boolean => s.location !== null && greatCircleKm(from.lat, from.lon, s.location.lat, s.location.lon) <= sameKm;
+  const at = new Set(located.filter((s) => near(point, s)));
+  if (at.size === 0) return at;
+  if (!joined) return new Set(located);
+  const next = [...at];
+  for (let s = next.pop(); s !== undefined; s = next.pop()) {
+    const from = s.location as FixLocation;
+    for (const o of located) {
+      if (at.has(o) || !near(from, o)) continue;
+      at.add(o);
+      next.push(o);
+    }
+  }
+  return at;
+}
+
+/** The entry of gpsApartEvidence and what the trace note adds after "GPS der Datei gilt". */
+export interface GpsApart {
+  entry: Evidence;
+  note: SegmentText;
+}
+
+/**
  * The entry for a file with GPS whose pictures show one place away from that position: farther
  * than `sameKm`, the distance at which answers count as different places. The file's position
  * stands (it covers the whole file); the entry has no weight and names no frame, as the entry of
  * several places with GPS does, and says where and how far. Null where the place lies at the
- * position, or where there is no position to compare with.
+ * position (one of its stretches is within `sameKm`; for a place the world model joined, all of
+ * them are, also through a chain), or where there is no position to compare with.
+ *
+ * Only the stretches away from the position are named: the longest of them, with its own place
+ * and distance and how many there are; the ones of a joined place at the position are counted
+ * apart. Stretches at `rejected`, the gallery's answer for the whole file that the world model
+ * turned down (the test of segmentVerdict's `atRejected`), do not put the GPS position in doubt:
+ * the whole file's decision saw the same pictures and found that place wrong (Bhf. Eschborn with
+ * its GPS tag, held for the Bahnhof Norderstedt Mitte 408 km away). Where the other stretches away
+ * from the position are all at that place, the entry says it is the rejected one and does not ask
+ * whether the GPS tag belongs to another recording.
  */
-export function gpsApartEvidence(
-  segments: readonly FixSegment[],
-  located: readonly FixSegment[],
-  current: FixLocation | null,
-  sameKm: number,
-): { entry: Evidence; km: number } | null {
+export function gpsApartEvidence(p: {
+  segments: readonly FixSegment[];
+  located: readonly FixSegment[];
+  current: FixLocation | null;
+  sameKm: number;
+  rejected: FixLocation | null;
+  joined: boolean;
+  /** How places are told apart, and what a joined place means (segmentVerdict's `rule`). */
+  rule: SegmentText;
+}): GpsApart | null {
+  const { segments, located, current, sameKm, rejected, rule } = p;
   if (!current) return null;
-  // The longest stretch of the place, on equal length the surer one: where the pictures say most.
-  let best: FixSegment | null = null;
-  for (const s of located) {
-    if (!s.location) continue;
-    const len = s.endSec - s.startSec;
-    const bestLen = best ? best.endSec - best.startSec : -1;
-    if (!best || len > bestLen || (len === bestLen && s.location.confidence > (best.location as FixLocation).confidence)) best = s;
+  const atGps = stretchesAt(current, located, sameKm, p.joined);
+  const apart = located.filter((s) => s.location && !atGps.has(s));
+  if (apart.length === 0) return null;
+  const isRejected = (s: FixSegment): boolean => rejected !== null && greatCircleKm(rejected.lat, rejected.lon, (s.location as FixLocation).lat, (s.location as FixLocation).lon) <= sameKm;
+  const elsewhere = apart.filter((s) => !isRejected(s));
+  // What the entry names: the stretches away from the position and from the rejected place, or,
+  // where there are none, those at the rejected place.
+  const onlyRejected = elsewhere.length === 0;
+  const named = onlyRejected ? apart : elsewhere;
+  // The longest of them, on equal length the surer one: where the pictures say most.
+  const len = (s: FixSegment): number => s.endSec - s.startSec;
+  let best = named[0] as FixSegment;
+  for (const s of named) {
+    if (len(s) > len(best) || (len(s) === len(best) && (s.location as FixLocation).confidence > (best.location as FixLocation).confidence)) best = s;
   }
-  if (!best?.location) return null;
-  const place = best.location;
+  const place = best.location as FixLocation;
   const km = greatCircleKm(current.lat, current.lon, place.lat, place.lon);
-  if (km <= sameKm) return null;
-  const n = located.filter((s) => s.location).length;
-  const whereDe = segments.length < 2 ? '' : n === 1 ? ` im Abschnitt ${spanOf(best)}` : ` in ${n} Abschnitten (am längsten ${spanOf(best)})`;
-  const whereEn = segments.length < 2 ? '' : n === 1 ? ` in the segment ${spanOf(best)}` : ` in ${n} segments (longest ${spanOf(best)})`;
+  const k = named.length;
+  const span = spanOf(best);
+  // Another stretch as long, decided by the confidence: "the longest" alone would not be true.
+  const tie = named.some((s) => s !== best && len(s) === len(best));
+  // The label is said of the stretch it belongs to only, not of every stretch counted.
+  const whereDe =
+    segments.length < 2 ? '' : k === 1 ? ` im Abschnitt ${span}` : ` in ${k} Abschnitten einen Ort, ${tie ? 'im sichersten der gleich langen längsten' : 'im längsten'} (${span})`;
+  const whereEn =
+    segments.length < 2 ? '' : k === 1 ? ` in the segment ${span}` : ` one place in ${k} segments, ${tie ? 'in the surest of the equally long longest' : 'in the longest'} (${span})`;
+  const atCount = atGps.size;
+  const atDe = atCount > 0 ? ` ${atCount === 1 ? 'Ein weiterer Abschnitt des Orts liegt' : `${atCount} weitere Abschnitte des Orts liegen`} bei der GPS-Angabe.` : '';
+  const atEn = atCount > 0 ? ` ${atCount === 1 ? 'One more segment of the place lies' : `${atCount} more segments of the place lie`} at the GPS position.` : '';
+  const rejectedCount = onlyRejected ? 0 : apart.length - elsewhere.length;
+  const alsoDe =
+    rejectedCount > 0 ? ` ${rejectedCount === 1 ? 'Ein weiterer Abschnitt nennt' : `${rejectedCount} weitere Abschnitte nennen`} den Ort, den das Weltmodell für die ganze Datei schon verworfen hat.` : '';
+  const alsoEn = rejectedCount > 0 ? ` ${rejectedCount === 1 ? 'One more segment names' : `${rejectedCount} more segments name`} the place the world model already rejected for the whole file.` : '';
+  const closeDe = onlyRejected
+    ? `${k === 1 ? `${place.label} ist der Ort` : `Die ${k} Abschnitte abseits der GPS-Angabe nennen den Ort`}, den das Weltmodell für die ganze Datei schon verworfen hat; er stellt die GPS-Angabe nicht in Frage. Die GPS-Angabe gilt für die ganze Datei und bestimmt den Ort.`
+    : 'Die GPS-Angabe gilt für die ganze Datei und bestimmt den Ort; ob die Aufnahme geschnitten oder zusammengesetzt ist oder die GPS-Angabe zu einer anderen Aufnahme gehört, sollte geprüft werden.';
+  const closeEn = onlyRejected
+    ? `${k === 1 ? `${place.labelEn ?? place.label} is` : `The ${k} segments away from the GPS position name`} the place the world model already rejected for the whole file, so it does not call the GPS position into question. The GPS position covers the whole file and decides the place.`
+    : 'The GPS position covers the whole file and decides the place; whether the recording was cut or put together, or whether the GPS position belongs to another recording, should be checked.';
+  // Part of the pictures at the position (a joined place), or all of them away from it.
+  const someDe = atCount > 0 ? 'Ein Teil der Bilder zeigt' : 'Die Bilder zeigen';
+  const someEn = atCount > 0 ? 'Some of the pictures show' : 'The pictures show';
   const labelEn = place.labelEn ?? place.label;
   return {
-    km,
     entry: {
       kind: 'segments',
-      label: `Die Bilder zeigen einen Ort ${kmDe(km)} von der GPS-Angabe`,
-      labelEn: `The pictures show a place ${kmEn(km)} from the GPS position`,
-      detail: `Abschnittsweise geortet zeigen die Bilder${whereDe} ${place.label} (± ${kmDe(place.radiusKm)}, Sicherheit ${pctDe(place.confidence)}), ${kmDe(km)} von der GPS-Angabe der Datei. Antworten näher als ${sameKm} km beieinander zählen als ein Ort. Die GPS-Angabe gilt für die ganze Datei und bestimmt den Ort; ob die Aufnahme geschnitten oder zusammengesetzt ist oder die GPS-Angabe zu einer anderen Aufnahme gehört, sollte geprüft werden.`,
-      detailEn: `Located segment by segment, the pictures show${whereEn} ${labelEn} (± ${kmEn(place.radiusKm)}, confidence ${pctEn(place.confidence)}), ${kmEn(km)} from the GPS position in the file. Answers closer than ${sameKm} km count as one place. The GPS position covers the whole file and decides the place; whether the recording was cut or put together, or whether the GPS position belongs to another recording, should be checked.`,
+      label: onlyRejected ? `${someDe} den vom Weltmodell verworfenen Ort, ${kmDe(km)} von der GPS-Angabe` : `${someDe} einen Ort ${kmDe(km)} von der GPS-Angabe`,
+      labelEn: onlyRejected ? `${someEn} the place the world model rejected, ${kmEn(km)} from the GPS position` : `${someEn} a place ${kmEn(km)} from the GPS position`,
+      detail: `Abschnittsweise geortet zeigen die Bilder${whereDe} ${place.label} (± ${kmDe(place.radiusKm)}, Sicherheit ${pctDe(place.confidence)}), ${kmDe(km)} von der GPS-Angabe der Datei. ${rule.de}${atDe}${alsoDe} ${closeDe}`,
+      detailEn: `Located segment by segment, the pictures show${whereEn} ${labelEn} (± ${kmEn(place.radiusKm)}, confidence ${pctEn(place.confidence)}), ${kmEn(km)} from the GPS position in the file. ${rule.en}${atEn}${alsoEn} ${closeEn}`,
       weight: 0,
+    },
+    note: {
+      de: `${atCount > 0 ? 'ein Teil der Bilder' : 'der Ort der Bilder'} liegt ${kmDe(km)} davon${onlyRejected ? ', am verworfenen Ort' : ''}`,
+      en: `${atCount > 0 ? 'some of the pictures lie' : "the pictures' place lies"} ${kmEn(km)} from it${onlyRejected ? ', at the rejected place' : ''}`,
     },
   };
 }
@@ -1061,14 +1137,15 @@ export function gpsApartEvidence(
  * stays as it was: the file's position covers the whole file and decides the place. Where the
  * pictures' one place lies farther than `sameKm` from that position (a recording cut together, or
  * a GPS tag of another recording), an entry without weight says so, as it does for several
- * places (gpsApartEvidence); with a single stretch too.
+ * places (gpsApartEvidence, engine 13); with a single stretch too.
  *
  * `rejected` is the gallery's answer for the whole file where the world model replaced it
  * (LocateDiagnostics.gallery): a stretch at that place does not lead. The whole file's decision
  * saw more frames and both models and turned that answer down; a stretch decided from a few frames
  * of the same pictures (a station that the gallery takes for another one 400 km away) must not
  * bring it back as the fix's place with a radius of a few kilometres. The stretch keeps its answer
- * in the timeline.
+ * in the timeline. With GPS such a stretch does not put the position in doubt either: the entry
+ * says the place is the rejected one (gpsApartEvidence).
  */
 export function segmentVerdict(
   segments: readonly FixSegment[],
@@ -1080,25 +1157,7 @@ export function segmentVerdict(
   const undetermined = segments.filter((s) => !s.location).length;
   const joined = new Set(segments.filter((s) => s.joined && s.place !== null).map((s) => s.place)).size;
   const sameKm = opts.sameKm ?? DEFAULT_SEGMENT_PARAMS.sameKm;
-  // One stretch, no place (a place always has a located stretch; checked all the same), or one
-  // place in a file with GPS: nothing to show stretch by stretch.
-  if (places === 0 || located.length === 0 || segments.length < 2 || (places === 1 && opts.gps)) {
-    const apart = places === 1 && opts.gps ? gpsApartEvidence(segments, located, current, sameKm) : null;
-    const gpsNote =
-      places === 1 && opts.gps
-        ? apart
-          ? { de: `, GPS der Datei gilt; der Ort der Bilder liegt ${kmDe(apart.km)} davon`, en: `, the file's GPS stands; the pictures' place lies ${kmEn(apart.km)} from it` }
-          : { de: ', GPS der Datei gilt', en: ", the file's GPS stands" }
-        : { de: '', en: '' };
-    const note: SegmentText =
-      segments.length <= 1
-        ? { de: `ein Abschnitt${gpsNote.de}`, en: `one segment${gpsNote.en}` }
-        : {
-            de: `${segments.length} Abschnitte, ein Ort${undetermined > 0 ? ` (${undetermined} unbestimmt)` : ''}${gpsNote.de}`,
-            en: `${segments.length} segments, one place${undetermined > 0 ? ` (${undetermined} undetermined)` : ''}${gpsNote.en}`,
-          };
-    return { multi: false, places, joined, location: current, replaced: false, lead: null, evidence: apart ? [apart.entry] : [], note };
-  }
+  const rejected = opts.rejected ?? null;
   // How places are told apart; distinct places are farther apart than this, but one place need
   // not be narrower (the world model's ties, see mergeWindows).
   const joinedDe =
@@ -1110,6 +1169,25 @@ export function segmentVerdict(
       ? ` ${joined === 1 ? 'One place joins' : `${joined} places join`} answers that lie farther apart, because the world model of their windows puts them in the same region; there may be more places.`
       : '';
   const rule: SegmentText = { de: `Antworten näher als ${sameKm} km beieinander zählen als ein Ort.${joinedDe}`, en: `Answers closer than ${sameKm} km count as one place.${joinedEn}` };
+  // One stretch, no place (a place always has a located stretch; checked all the same), or one
+  // place in a file with GPS: nothing to show stretch by stretch.
+  if (places === 0 || located.length === 0 || segments.length < 2 || (places === 1 && opts.gps)) {
+    const apart = places === 1 && opts.gps ? gpsApartEvidence({ segments, located, current, sameKm, rejected, joined: joined > 0, rule }) : null;
+    const gpsNote =
+      places === 1 && opts.gps
+        ? apart
+          ? { de: `, GPS der Datei gilt; ${apart.note.de}`, en: `, the file's GPS stands; ${apart.note.en}` }
+          : { de: ', GPS der Datei gilt', en: ", the file's GPS stands" }
+        : { de: '', en: '' };
+    const note: SegmentText =
+      segments.length <= 1
+        ? { de: `ein Abschnitt${gpsNote.de}`, en: `one segment${gpsNote.en}` }
+        : {
+            de: `${segments.length} Abschnitte, ein Ort${undetermined > 0 ? ` (${undetermined} unbestimmt)` : ''}${gpsNote.de}`,
+            en: `${segments.length} segments, one place${undetermined > 0 ? ` (${undetermined} undetermined)` : ''}${gpsNote.en}`,
+          };
+    return { multi: false, places, joined, location: current, replaced: false, lead: null, evidence: apart ? [apart.entry] : [], note };
+  }
   // Coarse regions (FixSegment.coarse) are no places: said so where there are any.
   const withCoarse = segments.filter((s) => !s.location && s.coarse && s.coarse.length > 0).length;
   const coarse: SegmentText =
@@ -1119,7 +1197,6 @@ export function segmentVerdict(
           en: ` For ${withCoarse === undetermined ? (withCoarse === 1 ? 'it' : 'all of them') : withCoarse === 1 ? 'one of them' : `${withCoarse} of them`} the timeline names a coarse region, which does not count as a place.`,
         }
       : { de: '', en: '' };
-  const rejected = opts.rejected ?? null;
   const parts: VerdictParts = {
     segments,
     located,

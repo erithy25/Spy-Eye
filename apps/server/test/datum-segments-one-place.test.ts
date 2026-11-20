@@ -5,15 +5,19 @@ import { placeCandidates } from '../src/datum/engine.js';
 import { slimFix } from '../src/datum/routes.js';
 import {
   DEFAULT_SEGMENT_PARAMS,
+  mergeWindows,
   multiPlaceTimeEvidence,
   segmentCountries,
   segmentVerdict,
   stretchSpacesNote,
   stretchTimesNote,
   summariseSegments,
+  toSegments,
   verdictCountries,
   wholeFileEvidence,
   wholeFileTimeEvidence,
+  type SegmentFrame,
+  type WindowAnswer,
 } from '../src/datum/segments.js';
 // The console's helpers (pure; their imports are types only).
 import {
@@ -306,10 +310,15 @@ test('GPS in the file: one place in the pictures away from the position gets an 
     en: "2 segments, one place (1 undetermined), the file's GPS stands; the pictures' place lies 325 km from it",
   });
 
-  // The place in two stretches: the longest is named, with the count.
+  // The place in two stretches: the longest is named, with the count; its label is said of it only.
   const two = segmentVerdict([seg(0, 10, ELSTERTAL, 1), seg(10, 30, null, null), seg(30, 50, { ...ELSTERTAL, confidence: 0.8 }, 1)], gps, { gps: true });
-  assert.match(two.evidence[0]!.detail, /zeigen die Bilder in 2 Abschnitten \(am längsten 0:30–0:50\) Elstertalbrücke, Hof \(± 7\.500 km, Sicherheit 80 %\)/);
-  assert.match(two.evidence[0]!.detailEn ?? '', /the pictures show in 2 segments \(longest 0:30–0:50\) Elster Viaduct, Hof/);
+  assert.match(two.evidence[0]!.detail, /zeigen die Bilder in 2 Abschnitten einen Ort, im längsten \(0:30–0:50\) Elstertalbrücke, Hof \(± 7\.500 km, Sicherheit 80 %\), 325 km von der GPS-Angabe der Datei\./);
+  assert.match(two.evidence[0]!.detailEn ?? '', /the pictures show one place in 2 segments, in the longest \(0:30–0:50\) Elster Viaduct, Hof \(± 7,500 km, confidence 80%\), 325 km from/);
+  // Two stretches as long: the one named is decided by the confidence, and the text says so.
+  const tie = segmentVerdict([seg(0, 20, ELSTERTAL, 1), seg(20, 30, null, null), seg(30, 50, { ...ELSTERTAL, confidence: 0.8 }, 1)], gps, { gps: true });
+  assert.match(tie.evidence[0]!.detail, /in 2 Abschnitten einen Ort, im sichersten der gleich langen längsten \(0:00–0:20\) Elstertalbrücke, Hof \(± 7\.500 km, Sicherheit 87 %\)/);
+  assert.match(tie.evidence[0]!.detailEn ?? '', /one place in 2 segments, in the surest of the equally long longest \(0:00–0:20\) Elster Viaduct, Hof \(± 7,500 km, confidence 87%\)/);
+  assert.doesNotMatch(`${tie.evidence[0]!.detail} ${tie.evidence[0]!.detailEn}`, /am längsten|im längsten|\(longest|in the longest/);
 
   // A recording of one stretch: the same entry, without a stretch to name.
   const one = segmentVerdict([seg(0, 12, ELSTERTAL, 1)], gps, { gps: true });
@@ -334,6 +343,126 @@ test('GPS in the file: one place in the pictures away from the position gets an 
   const noGps = segmentVerdict([seg(0, 36, null, null), seg(36, 48, ELSTERTAL, 1)], GALLILEO, { gps: false });
   assert.equal(noGps.multi, true);
   assert.doesNotMatch(noGps.evidence[0]!.label, /GPS/);
+});
+
+test('GPS in the file: a place in the pictures that the whole file\'s world model rejected is said to be that place and does not put the GPS tag in doubt', () => {
+  // The Deutschlandreise of the cross-check: Bhf. Eschborn, held for the Bahnhof Norderstedt Mitte
+  // 408 km away by the gallery; the whole file's world model turned that answer down (engine.ts
+  // hands it in as `rejected`), and the window decided from the same pictures says Norderstedt.
+  const gps = loc(50.1416, 8.5636, { method: 'metadata', radiusKm: 0.05, confidence: 0.98, label: 'Eschborn' });
+  const NORDERSTEDT = loc(53.7066, 9.9932, { radiusKm: 3, confidence: 0.86, label: 'Bahnhof Norderstedt Mitte' });
+  for (const segments of [[seg(0, 20, NORDERSTEDT, 1)], [seg(0, 30, null, null), seg(30, 50, NORDERSTEDT, 1)]]) {
+    const v = segmentVerdict(segments, gps, { gps: true, rejected: NORDERSTEDT });
+    assert.equal(v.location, gps);
+    assert.equal(v.multi, false);
+    assert.equal(v.evidence.length, 1);
+    const e = v.evidence[0]!;
+    assert.equal(e.weight, 0);
+    assert.equal(e.frame, undefined);
+    assert.equal(e.label, 'Die Bilder zeigen den vom Weltmodell verworfenen Ort, 408 km von der GPS-Angabe');
+    assert.equal(e.labelEn, 'The pictures show the place the world model rejected, 408 km from the GPS position');
+    assert.match(e.detail, /Bahnhof Norderstedt Mitte ist der Ort, den das Weltmodell für die ganze Datei schon verworfen hat; er stellt die GPS-Angabe nicht in Frage\. Die GPS-Angabe gilt für die ganze Datei und bestimmt den Ort\.$/);
+    assert.match(e.detailEn ?? '', /Bahnhof Norderstedt Mitte is the place the world model already rejected for the whole file, so it does not call the GPS position into question\./);
+    // A correct GPS tag is not put in doubt by an answer the engine itself discarded.
+    assert.doesNotMatch(`${e.detail} ${e.detailEn}`, /anderen Aufnahme|another recording|geschnitten|cut or put together/);
+    assert.match(v.note.de, /, GPS der Datei gilt; der Ort der Bilder liegt 408 km davon, am verworfenen Ort$/);
+    assert.match(v.note.en, /, the file's GPS stands; the pictures' place lies 408 km from it, at the rejected place$/);
+  }
+  // Two stretches there: counted, and said of both.
+  const both = segmentVerdict([seg(0, 20, NORDERSTEDT, 1), seg(20, 30, null, null), seg(30, 40, NORDERSTEDT, 1)], gps, { gps: true, rejected: NORDERSTEDT });
+  assert.match(both.evidence[0]!.detail, /in 2 Abschnitten einen Ort, im längsten \(0:00–0:20\) Bahnhof Norderstedt Mitte .* Die 2 Abschnitte abseits der GPS-Angabe nennen den Ort, den das Weltmodell für die ganze Datei schon verworfen hat;/);
+  // Without a rejected answer (or another one) the same pictures may well show another recording.
+  for (const rejected of [null, GALLILEO]) {
+    const v = segmentVerdict([seg(0, 30, null, null), seg(30, 50, NORDERSTEDT, 1)], gps, { gps: true, rejected });
+    assert.equal(v.evidence[0]!.label, 'Die Bilder zeigen einen Ort 408 km von der GPS-Angabe');
+    assert.match(v.evidence[0]!.detail, /oder die GPS-Angabe zu einer anderen Aufnahme gehört, sollte geprüft werden\.$/);
+    assert.doesNotMatch(v.evidence[0]!.detail, /verworfen/);
+    assert.match(v.note.de, /der Ort der Bilder liegt 408 km davon$/);
+  }
+  // A joined place with a stretch at the rejected place and one elsewhere: the one elsewhere is
+  // named, the other counted as the rejected one.
+  const mixed = segmentVerdict([seg(0, 40, NORDERSTEDT, 1, { joined: true }), seg(40, 50, null, null), seg(50, 60, BRYN, 1, { joined: true })], gps, { gps: true, rejected: NORDERSTEDT });
+  const m = mixed.evidence[0]!;
+  assert.match(m.label, /^Die Bilder zeigen einen Ort \d+ km von der GPS-Angabe$/);
+  assert.match(m.detail, /zeigen die Bilder im Abschnitt 0:50–1:00 Bryn Eglwys, Chester /);
+  assert.match(m.detail, / Ein weiterer Abschnitt nennt den Ort, den das Weltmodell für die ganze Datei schon verworfen hat\. /);
+  assert.match(m.detailEn ?? '', / One more segment names the place the world model already rejected for the whole file\. /);
+});
+
+test('GPS in the file: a place the world model joined is measured stretch by stretch, and only the stretches away from the position are named', () => {
+  const gps = loc(KOELN.lat, KOELN.lon, { method: 'metadata', radiusKm: 0.05, label: 'GPS' });
+  // Bryn Eglwys and the Zoobrücke, 726 km apart, joined by the world model; the GPS tag is in Köln.
+  // Whichever is longer, the Bryn stretch is away from the position and named alone; the Köln
+  // stretch lies at it, and the joined place may be several.
+  for (const [segments, span] of [
+    [[seg(0, 30, BRYN, 1, { joined: true }), seg(30, 60, null, null), seg(60, 80, KOELN, 1, { joined: true })], '0:00–0:30'],
+    [[seg(0, 10, BRYN, 1, { joined: true }), seg(10, 40, null, null), seg(40, 80, KOELN, 1, { joined: true })], '0:00–0:10'],
+  ] as const) {
+    const v = segmentVerdict(segments, gps, { gps: true });
+    assert.equal(v.location, gps);
+    assert.equal(v.multi, false);
+    assert.equal(v.joined, 1);
+    assert.equal(v.evidence.length, 1, `an entry with the Bryn stretch ${span}`);
+    const e = v.evidence[0]!;
+    assert.equal(e.weight, 0);
+    assert.equal(e.label, 'Ein Teil der Bilder zeigt einen Ort 726 km von der GPS-Angabe');
+    assert.equal(e.labelEn, 'Some of the pictures show a place 726 km from the GPS position');
+    assert.match(e.detail, new RegExp(`^Abschnittsweise geortet zeigen die Bilder im Abschnitt ${span} Bryn Eglwys, Chester \\(± 1\\.500 km, Sicherheit 88 %\\), 726 km von der GPS-Angabe der Datei\\. `));
+    assert.doesNotMatch(e.detail, /in 2 Abschnitten/, 'the Köln stretch does not show Bryn Eglwys');
+    assert.match(e.detail, /Ein Ort fasst Antworten zusammen, die weiter auseinanderliegen, weil das Weltmodell ihrer Fenster sie derselben Gegend zurechnet; es können also mehr Orte sein\. Ein weiterer Abschnitt des Orts liegt bei der GPS-Angabe\. /);
+    assert.match(e.detailEn ?? '', /One place joins answers that lie farther apart, because the world model of their windows puts them in the same region; there may be more places\. One more segment of the place lies at the GPS position\. /);
+    assert.deepEqual(v.note, {
+      de: '3 Abschnitte, ein Ort (1 unbestimmt), GPS der Datei gilt; ein Teil der Bilder liegt 726 km davon',
+      en: "3 segments, one place (1 undetermined), the file's GPS stands; some of the pictures lie 726 km from it",
+    });
+  }
+  // The joined place away from the position altogether: one place in two stretches, said to be
+  // possibly several.
+  const koblenz = loc(50.36, 7.59, { method: 'metadata', radiusKm: 0.05, label: 'GPS' });
+  const away = segmentVerdict([seg(0, 30, BRYN, 1, { joined: true }), seg(30, 60, null, null), seg(60, 80, KOELN, 1, { joined: true })], koblenz, { gps: true });
+  assert.match(away.evidence[0]!.detail, /in 2 Abschnitten einen Ort, im längsten \(0:00–0:30\) Bryn Eglwys, Chester .*; es können also mehr Orte sein\. Die GPS-Angabe gilt/);
+  assert.doesNotMatch(away.evidence[0]!.detail, /bei der GPS-Angabe\./);
+});
+
+test('GPS in the file: a place chained from answers each closer than 25 km lies at the position where one of its stretches does, at either end', () => {
+  // A drive Dortmund, Bochum, Essen (17 and 14.5 km apart, 32 km end to end), built as the engine
+  // builds it: windows, places (mergeWindows), stretches (toSegments). Weak answers elsewhere in
+  // between leave no room for the anchors around them and stay undetermined.
+  const DORTMUND = loc(51.5136, 7.4653, { radiusKm: 3, label: 'Dortmund' });
+  const BOCHUM = loc(51.4818, 7.2162, { radiusKm: 3, label: 'Bochum' });
+  const ESSEN = loc(51.4556, 7.0116, { radiusKm: 3, label: 'Essen' });
+  const weak = loc(40.4, -3.7, { method: 'worldmodel', confidence: 0.5, radiusKm: 300, label: 'Madrid' });
+  const win = (startSec: number, endSec: number, location: FixLocation, tier: WindowAnswer['tier']): WindowAnswer => ({ first: startSec, last: endSec - 1, startSec, endSec, location, tier, geoclip: null, diagnostics: null });
+  const windows = [win(0, 10, DORTMUND, 'similar'), win(10, 15, weak, null), win(15, 20, BOCHUM, 'similar'), win(20, 25, weak, null), win(25, 45, ESSEN, 'similar'), win(45, 60, ESSEN, 'similar')];
+  const merged = mergeWindows(windows);
+  assert.equal(merged.places.length, 1, 'one place through the chain');
+  assert.deepEqual(merged.joined, [false]);
+  const frames: SegmentFrame[] = Array.from({ length: 60 }, (_, i) => ({ n: i + 1, t: i, s: 0 }));
+  const segments = toSegments(frames, windows, merged, String);
+  assert.deepEqual(
+    segments.map((s) => [s.startSec, s.endSec, s.location?.label ?? null]),
+    [
+      [0, 10, 'Dortmund'],
+      [10, 15, null],
+      [15, 20, 'Bochum'],
+      [20, 25, null],
+      [25, 60, 'Essen'],
+    ],
+  );
+  for (const at of [DORTMUND, ESSEN]) {
+    const gps = loc(at.lat, at.lon, { method: 'metadata', radiusKm: 0.05, label: 'GPS' });
+    const v = segmentVerdict(segments, gps, { gps: true });
+    assert.deepEqual(v.evidence, [], `GPS in ${at.label}: the place is at the position`);
+    assert.deepEqual(v.note, { de: '5 Abschnitte, ein Ort (2 unbestimmt), GPS der Datei gilt', en: "5 segments, one place (2 undetermined), the file's GPS stands" });
+  }
+  // Away from all of it: one entry, the longest stretch named with its own place and distance,
+  // the other two counted, not said to show Essen.
+  const koblenz = loc(50.36, 7.59, { method: 'metadata', radiusKm: 0.05, label: 'GPS' });
+  const away = segmentVerdict(segments, koblenz, { gps: true });
+  assert.equal(away.evidence.length, 1);
+  assert.equal(away.evidence[0]!.label, 'Die Bilder zeigen einen Ort 128 km von der GPS-Angabe');
+  assert.match(away.evidence[0]!.detail, /^Abschnittsweise geortet zeigen die Bilder in 3 Abschnitten einen Ort, im längsten \(0:25–1:00\) Essen \(± 3 km, Sicherheit 90 %\), 128 km von der GPS-Angabe der Datei\. Antworten näher als 25 km beieinander zählen als ein Ort\. Die GPS-Angabe gilt/);
+  assert.match(away.evidence[0]!.detailEn ?? '', /^Located segment by segment, the pictures show one place in 3 segments, in the longest \(0:25–1:00\) Essen \(± 3 km, confidence 90%\), 128 km from the GPS position in the file\./);
 });
 
 test('several places: the verdict reads as in engine 11, word for word', () => {
