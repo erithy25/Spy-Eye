@@ -17,7 +17,7 @@ import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
 import { UPLOAD_OPTIONS, UploadDialog, type Picked } from '../UploadDialog';
 import { nearestWithin, placesText, routeFrame, routeGeometry, segmentSummary, wholeFilePlace, type StretchChoice } from '../segments';
-import { bestWindowText, kmText, rivalText, useFullFix, windowsText, zoomForRadius } from '../useFixes';
+import { bestWindowText, kmText, rivalText, routeMapView, useFullFix, windowsText, zoomForRadius } from '../useFixes';
 import { OrtungList, progressText, type GroupActions } from './OrtungList';
 
 export interface DatumViewProps {
@@ -39,12 +39,6 @@ export interface StretchProps {
 
 // The whole Earth: the globe is sized to fit the map area (`fit`), centred on Europe and Africa.
 const WORLD: MapView = { lat: 24, lon: 12, zoom: 2.25, fit: true };
-
-/**
- * The map's right side the result card covers (CSS pixels): its width and its distance from the
- * right edge (datum.css .dt-hud: 312 + 64) and a gap.
- */
-const RESULT_CARD_PX = 312 + 64 + 16;
 
 /**
  * The view cone of a heading `length` km long. A heading from the terrain horizon was solved at
@@ -452,14 +446,12 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
   };
 
   // A recording of several places: all of them in the area left of the result card (which covers
-  // the map's right side, RESULT_CARD_PX), around their middle; a route around the world shows the
-  // whole Earth there (sized to that area).
+  // the map's right side), around their middle; a route around the world shows the whole Earth
+  // there (routeMapView).
   const frame = current?.location && route ? routeFrame(route.places) : null;
   const view: MapView = current?.location
     ? frame
-      ? frame.reachKm > 2500
-        ? { lat: frame.lat, lon: frame.lon, zoom: WORLD.zoom, fit: true, insetRight: RESULT_CARD_PX }
-        : { lat: frame.lat, lon: frame.lon, zoom: zoomForRadius(Math.max(5, frame.reachKm), frame.lat), reachKm: Math.max(5, frame.reachKm * 1.12), insetRight: RESULT_CARD_PX }
+      ? routeMapView(frame, WORLD.zoom)
       : { lat: current.location.lat, lon: current.location.lon, zoom: zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }
     : WORLD;
   const viewKey = current?.location ? `${current.videoId}:${current.computedAt}` : 'world';

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Heading, SunPathPoint, SunReport, TimeEstimate } from '../../../../server/src/datum/contract';
 import { formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
-import { fmtDeg, fmtElev, fmtLongDate, hhmm, localMinutes, norm360, polar, rivalWindow, sunInWindow, sunOnPath, windowSpan } from './common';
+import { fmtDeg, fmtElev, fmtLongDate, hhmm, instantOfMinute, localMinutes, norm360, polar, rivalWindow, sunInWindow, sunOnPath, windowSpan } from './common';
 import './panel.css';
 
 export interface SunDialProps {
@@ -54,9 +54,9 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
   const zone = time.timezone;
   const path = [...sun.path].sort((a, b) => a.t - b.t);
   const first = path[0];
-  // Local minute -> instant, anchored at the first point of the path (no change of offset within a day).
-  const m0 = first ? localMinutes(first.t, zone) : 0;
-  const tOf = (m: number): number => (first ? first.t + ((((m - m0) % 1440) + 1440) % 1440) * 60000 : 0);
+  // Local minute -> instant on the path's day, with the change of offset of a day the clocks go
+  // forward or back (instantOfMinute).
+  const tOf = (m: number): number => (first ? instantOfMinute(first.t, zone, m) : 0);
   const sorted = first ? [...path].sort((a, b) => localMinutes(a.t, zone) - localMinutes(b.t, zone)) : [];
   const dayFrom = sorted[0] ? localMinutes(sorted[0].t, zone) : 0;
   const daySpan = sorted.length > 1 ? localMinutes((sorted[sorted.length - 1] as SunPathPoint).t, zone) - dayFrom : 0;

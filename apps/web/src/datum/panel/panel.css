@@ -488,6 +488,17 @@
   font-size: 9px;
 }
 
+/* The sun's readout sits between its mark and the dial's middle, where the faint shadow of a
+   second window as likely (morning or afternoon) can run: a rim of the background under its
+   letters (the sun is drawn last) keeps it readable. */
+.dp-sun-label,
+.dp-sun-time {
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
 /* key / value rows under the dials and in the fix */
 .dp-kv {
   margin: 10px 0 0;

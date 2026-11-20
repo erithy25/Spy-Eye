@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MapView } from '../map/MapCanvas';
 import type { NodeConnection } from '../useNode';
 import type { TimeEstimate } from '../../../server/src/datum/contract';
 import { fetchFix, fetchFixes, type Fix } from './api';
@@ -213,12 +214,13 @@ export function useFullFix(videoId: string | null, summary: Fix | undefined): { 
 
 /**
  * Whether a fix's first candidate is its own place (within 1 km): so for an answer of the pictures;
- * not where the file's GPS gave the place (the candidates are the pictures').
+ * never where the file's GPS gave the place (method 'metadata'): the candidates are the pictures'
+ * own answers, which the list offers to choose even where the first agrees with the position.
  */
 export function firstCandidateIsFix(fix: Pick<Fix, 'location' | 'candidates'>): boolean {
   const loc = fix.location;
   const first = fix.candidates[0];
-  if (!loc || !first) return false;
+  if (!loc || !first || loc.method === 'metadata') return false;
   const r = Math.PI / 180;
   const x = Math.sin(((first.lat - loc.lat) * r) / 2) ** 2 + Math.cos(loc.lat * r) * Math.cos(first.lat * r) * Math.sin(((first.lon - loc.lon) * r) / 2) ** 2;
   return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(x))) < 1;
@@ -234,6 +236,24 @@ export function fixMapView(fix: Pick<Fix, 'location' | 'candidates'>, candidate:
   const focus = (candidate >= 0 ? fix.candidates[candidate] : undefined) ?? fix.location ?? fix.candidates[0] ?? null;
   if (!focus) return null;
   return { lat: focus.lat, lon: focus.lon, zoom: focus.radiusKm > globeKm ? 1.4 : zoomForRadius(Math.max(0.3, focus.radiusKm), focus.lat) - 0.6 };
+}
+
+/**
+ * The map's right side the result card of the ORTUNG covers (CSS pixels): its width and its
+ * distance from the right edge (datum.css .dt-hud: 312 + 64) and a gap.
+ */
+export const RESULT_CARD_PX = 312 + 64 + 16;
+
+/**
+ * The ORTUNG's view of a recording of several places (segments.ts routeFrame): all of them in the
+ * area left of the result card (MapView.insetRight), around their middle; a route reaching farther
+ * than 2 500 km shows the whole Earth there (`fit`, sized to that area; `worldZoom` until the map
+ * has a size).
+ */
+export function routeMapView(frame: { lat: number; lon: number; reachKm: number }, worldZoom: number): MapView {
+  return frame.reachKm > 2500
+    ? { lat: frame.lat, lon: frame.lon, zoom: worldZoom, fit: true, insetRight: RESULT_CARD_PX }
+    : { lat: frame.lat, lon: frame.lon, zoom: zoomForRadius(Math.max(5, frame.reachKm), frame.lat), reachKm: Math.max(5, frame.reachKm * 1.12), insetRight: RESULT_CARD_PX };
 }
 
 /** Map zoom at which a circle of `radiusKm` fills about a third of a 1000 px wide view. */

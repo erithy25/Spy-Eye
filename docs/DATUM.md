@@ -48,14 +48,22 @@ Jeder Beleg, jeder Schritt des Ablaufs und jede Begründung kommt vom Knoten auf
 Englisch; die Konsole zeigt die Sprache, die eingestellt ist. Die Karte trägt die deutschen Namen
 der OpenStreetMap; auf Englisch nennt sie Orte, Stadtteile und Flüsse mit ihrem englischen Namen
 („8th Arrondissement“, „River Thames“) aus einer Tabelle, die `src/scripts/map/placeNamesEn.ts` aus den
-zwischengespeicherten Quellkacheln schreibt; neu gezogene Kacheln tragen ihn selbst.
+zwischengespeicherten Quellkacheln schreibt; neu gezogene Kacheln tragen ihn selbst. Jede
+Beschriftung heißt dabei wie das Objekt, aus dem sie gezogen ist (`name:en`, sonst der örtliche
+Name): Steht ein deutscher Name für Orte mit verschiedenen englischen Namen, gilt der englische nur
+an seiner Stelle der Kachel (Homburg im Saarland bleibt „Homburg“, das belgische Homburg heißt
+„Hombourg“; die Weser bleibt die Weser, die Vesdre, deren deutscher Name Weser ist, heißt
+„Vesdre“). Die Stücke eines Flusses, die bis zu 150 km auseinander liegen (auch die in
+Quellkacheln, aus denen keine Kachel der Konsole gezogen ist), tragen einen Namen: den, den die
+meisten Stücke mit eigenem englischen Namen nennen, bei Gleichstand mit dem deutschen diesen (die
+Mosel ist „Moselle“, der Teltowkanal „Teltow Canal“, die Spree bleibt „Spree“).
 
 ## Bedienung
 
 | Reiter | Zeigt |
 | --- | --- |
-| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel (nach einem Horizontabgleich an dem Punkt, für den er gilt, mit einer blassen Linie vom Ort dorthin); links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“; sind Morgen und Nachmittag gleich wahrscheinlich, „oder 14:30–18:15“ dazu, ebenso in der Ergebniskarte, und die Sonne des zweiten Fensters blass auf der Karte); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge, um ihre Mitte und links der Ergebniskarte, die sie nicht verdeckt; Namen der Karte weichen Markierungen, Kreisen, Strahlen und Länderanteilen, statt von ihnen zerschnitten zu werden, und alle Beschriftungen der Werkzeugleiste oben links wie den Zoomknöpfen; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n liegt bei einer Aufnahme mit einem Bild je Sekunde in Sekunde n − 1), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
+| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel (nach einem Horizontabgleich an dem Punkt, für den er gilt, mit einer blassen Linie vom Ort dorthin); links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“; sind Morgen und Nachmittag gleich wahrscheinlich, „oder 14:30–18:15“ dazu, ebenso in der Ergebniskarte, und die Sonne des zweiten Fensters blass auf der Karte); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge, um ihre Mitte und links der Ergebniskarte, die sie nicht verdeckt; Namen der Karte weichen den Markierungen, ihren Beschriftungen und den Beschriftungen von Kreisen, Strahlen und Länderanteilen („± 25 km“, „☉ 123°“, „SCHATTEN“, „DE 38 %“), statt von ihnen zerschnitten zu werden (die Linien der Kreise, Strahlen und Blickkegel selbst laufen über die Namen hinweg); die Beschriftungen der Markierungen und Formen stehen ganz auf der Karte (eine Markierung am oberen Rand beschriftet sich darunter), und alle Beschriftungen weichen der Werkzeugleiste oben links wie den Zoomknöpfen; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
+| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n liegt bei einer Aufnahme mit einem Bild je Sekunde in Sekunde n − 1), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (Wahrscheinlichkeit je Land, die Masse des Weltmodells, wo es den Ort gab, oder, wo ein Abschnitt den Ort zeigt, der Anteil jedes Lands an der Aufnahmezeit; das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
 | RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit, „Sonne am Horizont, Schatten sehr lang“ bis 0,5° Höhe) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; liegt dort nur die Weltübersicht der Höhendaten vor (Zoomstufe 4, etwa 9 km je Messpunkt), sagt das Gelände es und zeichnet keine Höhenlinien; bei einer Aufnahme mit Zeitleiste der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
@@ -109,7 +117,11 @@ der auf int8 verkleinerten Form.
   Karte der ORTUNG schattiert und beschriftet es, so wenig es trägt. „Land richtig“ unter [Was
   gemessen ist](#was-gemessen-ist) ist das erste Land dieser Liste. Die erste Länderschätzung
   (Text-Bild-Modell mit den Ländern der Referenzbilder) gehört dann zur ersetzten Antwort der
-  Galerie: Ihr Beleg sagt das und zählt nicht (seit Fassung 14).
+  Galerie: Ihr Beleg sagt das und zählt nicht (seit Fassung 14). Zeigt ein Abschnitt den Ort
+  (mehrere Orte, oder ein Ort, der die Antwort der ganzen Datei ersetzt), sind die Länder die der
+  Abschnitte nach ihrer Zeit, auch wo das Weltmodell den Ort gab: Die Konsole überschreibt sie dann
+  „Anteil der Aufnahmezeit“, lässt sie in der Reihenfolge des Knotens (das Land des Orts zuerst)
+  und nennt einen Unterschied als Anteil der Aufnahmezeit, nicht als Wahrscheinlichkeit.
 - **Sicherheitsangabe.** Antwortet das Weltmodell, gilt ein eigenes Modell der Sicherheit, das
   an der Abstimmungshälfte eingestellt ist; ohne Weltmodell gilt das bisherige der Galerie.
 - **Rechnen.** Modell und Vergleich mit den 100 000 Orten laufen in einem eigenen Thread, einmal
@@ -944,12 +956,21 @@ Einordnung:
   Konsole sagt es im Gelände, zeichnet keine Höhenlinien (auch nicht auf der Karte der ORTUNG)
   und nennt statt der Spanne des Reliefs nur die ungefähre Höhe. Das betrifft die meisten Orte
   außerhalb der Regionen des Referenzbestands, auch erkannte Bauwerke dort (Qubāʾ-Moschee).
-- Die Höhendaten haben an manchen Küsten einzelne Löcher von mehreren hundert Metern (Busan:
-  −400 m an der Uferlinie, die feinere Zoomstufe misst dort 3 m). Der Knoten ersetzt eine Zelle,
-  die mehr als 60 m unter (150 m über) dem Median ihrer 5 × 5 Nachbarn liegt und mehr als das
-  Vier- (Sechs-)fache von deren mittlerer Abweichung, durch diesen Median; steile Täler und Gipfel
-  bleiben. Die Spanne des Reliefs gilt für das bereinigte Raster (Busan: −44 bis 525 m statt −400
-  bis 525 m).
+- Die Höhendaten haben an manchen Küsten Löcher von mehreren hundert Metern (Busan: −400 m an
+  der Uferlinie, die feinere Zoomstufe misst dort 3 m; Streifen von −100 bis −5 000 m entlang der
+  Piers von New York und am Strand von Corona del Mar, in Tokio und Baltimore daneben Spitzen von
+  200 bis 700 m). Der Knoten prüft jede Zelle des Rasters gegen den Median ihrer 5 × 5 Nachbarn
+  (am Rand des Rasters weniger): Sie fällt auf, wenn sie mehr als 60 m darunter (150 m darüber)
+  liegt und mehr als das Vier- (Sechs-)fache des Medians der absoluten Abweichungen vom Median.
+  Auffällige Zellen, die einander berühren, bilden eine Gruppe, und durch diesen Median ersetzt
+  wird eine Gruppe, die in 2 × 2 Zellen passt, eine Senke, deren tiefste Zelle mehr als 60 m unter
+  dem Meeresspiegel liegt, und Spitzen bis zu zwei Zellen neben einer ersetzten Senke. Täler und
+  Gipfel, die breiter als etwa zwei Zellen sind, fallen nicht auf; schmalere Schluchten, Grate und
+  Inseln über dem Meeresspiegel bilden eine längere Gruppe und bleiben (eine Schlucht wie der Black
+  Canyon des Gunnison, 500 m tief und 340 m breit, im Raster der ORTUNG mit Zellen von 150 m). Nur
+  eine schmale Form, die in einem Fleck von höchstens 2 × 2 Zellen auffällt, wird wie ein Loch
+  geglättet (zwei Zellen eines Tals bei Glenfinnan im Raster von 12 km). Die Spanne des Reliefs gilt für das
+  bereinigte Raster (Busan: −44 bis 525 m statt −400 bis 525 m).
 - Die Grundwahrheit ist die Koordinate des Wikidata-Objekts (etwa der Mittelpunkt eines
   Bauwerks), nicht der Standort der Kamera; Abweichungen unter einem Kilometer sind daher nicht
   aussagekräftig.

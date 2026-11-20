@@ -1,5 +1,6 @@
 import type { CountryProb } from '../../../../server/src/datum/contract';
 import { useLang } from '../../i18n';
+import { countryRows, type CountryList } from '../segments';
 import { fmtPct } from './common';
 import './panel.css';
 
@@ -9,32 +10,35 @@ export interface CountryBarsProps {
   limit?: number;
   /**
    * Country of the place the result states (the header's), if any. Its row is marked, and listed
-   * even where it is not among the first `limit`: the list is a probability per country over all
-   * the evidence (the world model's mass per country where it gave the place), whose first
-   * country need not be the place's.
+   * even where it is not among the first `limit`: the list's first country need not be the place's
+   * (a probability per country over all the evidence, or the world model's mass per country where
+   * it gave the place).
    */
   answer?: string | null;
-  /** Whether the list is the world model's mass per country (it gave the place). */
-  worldModel?: boolean;
+  /**
+   * What the list is (segments.ts countryListOf): the probability per country (default), the
+   * world model's mass per country (it gave the place), or the stretches' shares of the recording
+   * time, which keep the server's order (the place's own country first).
+   */
+  list?: CountryList;
 }
 
-export function CountryBars({ countries, limit = 5, answer = null, worldModel = false }: CountryBarsProps) {
+export function CountryBars({ countries, limit = 5, answer = null, list = 'probability' }: CountryBarsProps) {
   const { t, region } = useLang();
-  const sorted = [...countries].sort((a, b) => b.p - a.p);
-  const first = sorted.slice(0, limit);
-  // The place's country below the first ones, where it is not among them.
-  const extra = answer !== null && !first.some((c) => c.iso === answer) ? (sorted.find((c) => c.iso === answer) ?? null) : null;
-  const shown = extra ? [...first, extra] : first;
-  const rest = sorted.filter((c) => !shown.includes(c)).reduce((sum, c) => sum + c.p, 0);
-  const top = shown[0]?.p ?? 1;
-  const answerRow = answer !== null ? (shown.find((c) => c.iso === answer) ?? null) : null;
+  const { sorted, shown, extra, rest, answerRow, apart } = countryRows(countries, list, limit, answer);
+  const top = Math.max(1e-9, ...shown.map((c) => c.p));
   // Where the place's country is not the list's first, the list says what it is.
-  const apart = answerRow !== null && sorted[0] !== undefined && sorted[0].iso !== answerRow.iso;
+  const note = (land: string, p: string): string =>
+    list === 'shares'
+      ? t('Der Ort oben liegt in {land} ({p} der Aufnahmezeit); die Liste ist die Aufnahmezeit je Land.', { land, p })
+      : list === 'worldmodel'
+        ? t('Der Ort oben liegt in {land} ({p}): dort hat das Weltmodell seine stärkste Häufung, in anderen Ländern mehr verteilte Wahrscheinlichkeit.', { land, p })
+        : t('Der Ort oben liegt in {land} ({p}); die Liste ist die Wahrscheinlichkeit je Land über alle Hinweise.', { land, p });
   return (
     <section className="dp dp-countries" aria-label={t('Länder')}>
       <header className="dp-head">
         <h3 className="label">{t('Länder')}</h3>
-        <span className="dp-head-note">{worldModel ? t('Weltmodell, je Land') : t('Wahrscheinlichkeit')}</span>
+        <span className="dp-head-note">{list === 'shares' ? t('Anteil der Aufnahmezeit') : list === 'worldmodel' ? t('Weltmodell, je Land') : t('Wahrscheinlichkeit')}</span>
       </header>
       {shown.length === 0 && <p className="dp-empty">{t('Keine Länderschätzung.')}</p>}
       <ol className="dp-country-list">
@@ -62,13 +66,7 @@ export function CountryBars({ countries, limit = 5, answer = null, worldModel = 
           </li>
         )}
       </ol>
-      {apart && answerRow && (
-        <p className="dp-country-note">
-          {worldModel
-            ? t('Der Ort oben liegt in {land} ({p}): dort hat das Weltmodell seine stärkste Häufung, in anderen Ländern mehr verteilte Wahrscheinlichkeit.', { land: region(answerRow.iso, answerRow.name), p: fmtPct(answerRow.p) })
-            : t('Der Ort oben liegt in {land} ({p}); die Liste ist die Wahrscheinlichkeit je Land über alle Hinweise.', { land: region(answerRow.iso, answerRow.name), p: fmtPct(answerRow.p) })}
-        </p>
-      )}
+      {apart && answerRow && <p className="dp-country-note">{note(region(answerRow.iso, answerRow.name), fmtPct(answerRow.p))}</p>}
     </section>
   );
 }

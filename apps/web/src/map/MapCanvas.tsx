@@ -389,6 +389,53 @@ interface Box {
 const overlaps = (a: Box, b: Box): boolean => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
 /**
+ * Zoom of a view framed by `reachKm` (MapView.reachKm): a circle of that radius takes 0.42 of the
+ * shorter side of the area left of `insetRight` (at least 120 px wide). The flat map enlarges high
+ * latitudes by 1 / cos(latitude); the globe does not.
+ */
+export function reachZoom(reachKm: number, lat: number, width: number, height: number, insetRight: number, globe: boolean, minZoom: number, maxZoom: number): number {
+  const free = Math.max(120, width - insetRight);
+  const mpp = (Math.max(0.05, reachKm) * 1000) / (0.42 * Math.min(free, height));
+  const c = globe ? 1 : Math.cos((Math.max(-80, Math.min(80, lat)) * Math.PI) / 180);
+  return Math.max(minZoom, Math.min(maxZoom, Math.log2((156543.03 * c) / mpp)));
+}
+
+/**
+ * The flat map's centre (world coordinates 0..1) that shows (lat, lon) in the middle of the area
+ * left of `insetRight` (a result card over the map's right side): that half width east of it.
+ */
+export function flatInsetCentre(lat: number, lon: number, zoom: number, insetRight: number): { x: number; y: number } {
+  const p = project(lat, lon);
+  return { x: p.x + Math.max(0, insetRight) / 2 / worldSize(zoom), y: p.y };
+}
+
+/**
+ * The point of the globe's view (always centred in the map) to turn into its middle, so that the
+ * point now in the middle comes to lie in the middle of the area left of `insetRight`: half that
+ * width east of the middle, at most half the globe's radius (a small globe does not turn the
+ * places to its far side).
+ */
+export function globeInsetPoint(width: number, height: number, radius: number, insetRight: number): { x: number; y: number } {
+  return { x: width / 2 + Math.min(Math.max(0, insetRight) / 2, 0.5 * radius), y: height / 2 };
+}
+
+/**
+ * The text the base map writes for a place: the tile's German name, or in English (`english`, the
+ * German country names to the English ones, null in German) a country by that table and every
+ * other place by its English name (placeNameEn: the tile's own, the tables of the shipped tiles,
+ * the German exonyms of cities); cities, towns and countries in capitals.
+ */
+export function placeLabelText(p: Pick<PlaceLabel, 'name' | 'nameEn' | 'cls'>, english: ReadonlyMap<string, string> | null): string {
+  const name = !english ? p.name : p.cls === 'country' ? (english.get(p.name) ?? p.name) : placeNameEn(p);
+  return p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? name.toUpperCase() : name;
+}
+
+/** The text the base map writes for a river or canal: in English its English name ("Themse" is the Thames). */
+export function riverLabelText(l: Pick<LineLabel, 'name' | 'nameEn'>, english: boolean): string {
+  return english ? riverNameEn(l) : l.name;
+}
+
+/**
  * Where a shape wants its label (a circle's radius, a ray's end, an area's share): the point and
  * the side the text goes from it ('left': starting there, 'center': centred on it).
  */
@@ -447,7 +494,9 @@ interface ShapeLabelPlacement {
  * tool bar's corner (MapCanvasProps.clearTopLeft), every
  * marker symbol, the labels of selected and alerting markers (always shown), the labels of the
  * shapes (a share of a country, a radius, a ray: tried at their place and around it, left out
- * where none is free), then the other markers' labels (left out where none is free).
+ * where none is free), then the other markers' labels (left out where none is free). Every label
+ * lies wholly on the map; the lines of the shapes take no room (the base map's names run under
+ * them).
  */
 export function overlayLayout(
   ctx: CanvasRenderingContext2D,
@@ -476,8 +525,9 @@ export function overlayLayout(
     boxes.push({ x0: p.x - r - 2, y0: p.y - r - 2, x1: p.x + r + 2, y1: p.y + r + 2 });
   }
   // A label's tries keep clear of its own symbol by construction (r + 7 beside it, r + 10 above
-  // or below), so one test against every box serves.
-  const free = (b: Box): boolean => b.x1 <= width - 4 && b.x0 >= 4 && !boxes.some((o) => overlaps(b, o));
+  // or below), so one test against every box serves; on the map, not cut at any of its edges (a
+  // marker just below the top edge labels itself below, not half above the map).
+  const free = (b: Box): boolean => b.x0 >= 4 && b.x1 <= width - 4 && b.y0 >= 2 && b.y1 <= height - 2 && !boxes.some((o) => overlaps(b, o));
   const placeMarkerLabel = (pl: MarkerPlacement, forced: boolean): void => {
     const { m, x, y, r } = pl;
     const named = m.shape === 'segment' ? (m.sub ?? '') : m.label;
@@ -507,9 +557,12 @@ export function overlayLayout(
       }
     }
     if (!forced) return;
+    // Forced beside the symbol, kept on the map (its text from 7 px above its middle line to
+    // `below` under it).
     const first = tries[0] as (typeof tries)[number];
-    const box = { x0: first.lx - 2, y0: first.ly - 7, x1: first.lx + tw + 2, y1: first.ly + first.below };
-    pl.label = { text, second, x: first.lx, y: first.ly, box };
+    const ly = Math.max(9, Math.min(first.ly, height - 2 - first.below));
+    const box = { x0: first.lx - 2, y0: ly - 7, x1: first.lx + tw + 2, y1: ly + first.below };
+    pl.label = { text, second, x: first.lx, y: ly, box };
     boxes.push(box);
   };
   const forced = (pl: MarkerPlacement): boolean => pl.m.selected === true || (pl.m.alert ?? 0) > 0;
@@ -840,13 +893,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const fitted = useRef(globe && view.fit === true);
   const viewZoom = (v: MapView): number => {
     const { width, height } = size.current;
-    if (v.reachKm !== undefined && width > 0 && height > 0) {
-      // The circle's radius takes 0.42 of the free area's shorter side.
-      const free = Math.max(120, width - (v.insetRight ?? 0));
-      const mpp = (Math.max(0.05, v.reachKm) * 1000) / (0.42 * Math.min(free, height));
-      const c = globe ? 1 : Math.cos((Math.max(-80, Math.min(80, v.lat)) * Math.PI) / 180);
-      return Math.max(minZoom, Math.min(maxZoom, Math.log2((156543.03 * c) / mpp)));
-    }
+    if (v.reachKm !== undefined && width > 0 && height > 0) return reachZoom(v.reachKm, v.lat, width, height, v.insetRight ?? 0, globe, minZoom, maxZoom);
     if (!globe) return v.zoom;
     const fit = v.fit ? fitZoom(v.insetRight ?? 0) : null;
     if (fit !== null) return Math.max(minZoom, Math.min(maxZoom, fit));
@@ -865,18 +912,18 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
    */
   const targetOf = (v: MapView): ViewState => {
     const zoom = viewZoom(v);
-    const shift = (v.insetRight ?? 0) / 2;
+    const inset = v.insetRight ?? 0;
     const { width, height } = size.current;
-    if (shift <= 0 || width === 0 || height === 0) return { ...project(v.lat, v.lon), zoom };
+    if (inset <= 0 || width === 0 || height === 0) return { ...project(v.lat, v.lon), zoom };
     if (globe) {
       // The globe turns (it is always centred in the view): by at most 30°, so that a small globe
       // (the whole Earth) does not turn the places around (lat, lon) to its far side.
       const g = makeGlobe(v.lat, v.lon, zoom, width, height);
-      const c = unprojectGlobe(g, width / 2 + Math.min(shift, 0.5 * g.r), height / 2);
+      const at = globeInsetPoint(width, height, g.r, inset);
+      const c = unprojectGlobe(g, at.x, at.y);
       return c ? { ...project(c.lat, c.lon), zoom } : { ...project(v.lat, v.lon), zoom };
     }
-    const p = project(v.lat, v.lon);
-    return { x: p.x + shift / worldSize(zoom), y: p.y, zoom };
+    return { ...flatInsetCentre(v.lat, v.lon, zoom, inset), zoom };
   };
   /** A view framed by the map's size (reachKm, insetRight), until the user moves it: framed again on resizing. */
   const framed = useRef<MapView | null>(view.reachKm !== undefined || (view.insetRight ?? 0) > 0 ? view : null);
@@ -1092,11 +1139,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       ctx.font = `${font.weight} ${font.size}px ${FONT}`;
       setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
       // The tiles carry German names; in English (the country names are loaded) countries, and
-      // every other place by its English name (placeNameEn: the tile's own, the table of the
-      // shipped tiles, the German exonyms of cities).
-      const english = countryNamesRef.current;
-      const name = !english ? p.name : p.cls === 'country' ? (english.get(p.name) ?? p.name) : placeNameEn(p);
-      const text = p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? name.toUpperCase() : name;
+      // every other place by its English name (placeLabelText).
+      const text = placeLabelText(p, countryNamesRef.current);
       const w = ctx.measureText(text).width + 8;
       const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
       if (!free(box)) continue;
@@ -1112,7 +1156,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     const englishRivers = countryNamesRef.current !== null;
     for (const { l, x, y } of rivers) {
       // In English rivers too by their English names ("Themse" is the Thames).
-      const name = englishRivers ? riverNameEn(l) : l.name;
+      const name = riverLabelText(l, englishRivers);
       const earlier = riverNames.get(name) ?? [];
       if (earlier.some((e) => Math.hypot(e.x - x, e.y - y) < 420)) continue;
       ctx.font = `400 italic 10px ${FONT}`;

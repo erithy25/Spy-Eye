@@ -134,6 +134,22 @@ export function sunOnPath(path: readonly SunPathPoint[], t: number): { az: numbe
 }
 
 /**
+ * The instant of a local clock minute on the day of a sun path whose first point is `start` (the
+ * day's local midnight, sun.ts sunPath). The minutes since that point are corrected by the change
+ * of the zone's offset within the day: on the days the clocks go forward or back the path spans 23
+ * or 25 hours, and 16:22 lies 15 h 22 min (17 h 22 min) after midnight, as the server puts its own
+ * sun with localToUtc. A minute the day skips (02:30 when the clocks jump from 02:00 to 03:00)
+ * lands an hour before.
+ */
+export function instantOfMinute(start: number, zone: string | null, minute: number): number {
+  const m0 = localMinutes(start, zone);
+  const t = start + ((((minute - m0) % DAY_MIN) + DAY_MIN) % DAY_MIN) * 60000;
+  // How far the clock at t is from the minute asked for, within ±12 h: ±60 on those days, else 0.
+  const drift = ((((localMinutes(t, zone) - minute) % DAY_MIN) + DAY_MIN + DAY_MIN / 2) % DAY_MIN) - DAY_MIN / 2;
+  return t - drift * 60000;
+}
+
+/**
  * The sun at the middle of a clock window, from the day's path (as the server puts SunReport.at at
  * the middle of the first window): direction, height, shadow direction, and the shadow's length
  * per object height above 0.5° (as the server's shadowRatio). Null without a path.
@@ -142,9 +158,7 @@ export function sunInWindow(sun: Pick<SunReport, 'path'>, zone: string | null, w
   const path = [...sun.path].sort((a, b) => a.t - b.t);
   const first = path[0];
   if (!first) return null;
-  const m0 = localMinutes(first.t, zone);
-  const minute = windowMid(w.startMin, w.endMin);
-  const p = sunOnPath(path, first.t + ((((minute - m0) % DAY_MIN) + DAY_MIN) % DAY_MIN) * 60000);
+  const p = sunOnPath(path, instantOfMinute(first.t, zone, windowMid(w.startMin, w.endMin)));
   if (!p) return null;
   return { azimuthDeg: p.az, elevationDeg: p.el, shadowAzimuthDeg: norm360(p.az + 180), shadowRatio: p.el > 0.5 ? 1 / Math.tan((p.el * Math.PI) / 180) : null };
 }

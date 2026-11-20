@@ -631,6 +631,9 @@ export const EN: Record<string, string> = {
     'The place above lies in {land} ({p}): the world model has its strongest cluster there, and more probability spread over other countries.',
   'Der Ort oben liegt in {land} ({p}); die Liste ist die Wahrscheinlichkeit je Land über alle Hinweise.':
     'The place above lies in {land} ({p}); the list is the probability per country over all the evidence.',
+  'Anteil der Aufnahmezeit': 'Share of recording time',
+  'Der Ort oben liegt in {land} ({p} der Aufnahmezeit); die Liste ist die Aufnahmezeit je Land.':
+    'The place above lies in {land} ({p} of the recording time); the list is the recording time per country.',
   Sonnenhöhe: 'Sun elevation',
   Stützung: 'Support',
   Tag: 'Day',

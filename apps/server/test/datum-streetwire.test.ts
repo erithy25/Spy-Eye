@@ -498,6 +498,11 @@ test('a match: the place is pinned, the pictures are numbered as the route count
     assert.ok(sl.distanceKm(input.candidates[0]!.lat, input.candidates[0]!.lon, LANDMARK.lat, LANDMARK.lon) < 1);
     assert.equal(input.dim, DIM);
     assert.ok(input.tiles && input.tiles.vectors.length === input.tiles.frameRow.length * DIM, 'the frames and their crops are the query');
+    // The frames are named on the analysis's scale (frames 1 to 6 or 7 of the 6 s clip at one a
+    // second), not on the file's own 10 a second, which the pictures' entries would name.
+    const lastN = entry.frames[entry.frames.length - 1]!.n;
+    assert.ok(input.frameNumbers && input.frameNumbers.length > 0, 'frame numbers given');
+    assert.ok(input.frameNumbers.every((n) => n >= 1 && n <= lastN), `frame numbers ${input.frameNumbers.join(',')} beyond ${lastN}`);
     assert.ok(deps[0]?.signal, 'the engine can stop the stage');
     // The refined place, with the label of the landmark.
     const expected = matchedResult().location!;

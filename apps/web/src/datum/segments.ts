@@ -173,6 +173,72 @@ export function leadSegment(fix: Fix): number {
   return Math.max(0, segments.findIndex((s) => s.location !== null));
 }
 
+/**
+ * What a fix's list of countries is (CountryBars): 'shares', the countries of its located stretches
+ * with each one's share of the recording time; 'worldmodel', the world model's mass per country
+ * where it gave the place; else 'probability', the probability per country over all the evidence.
+ */
+export type CountryList = 'shares' | 'worldmodel' | 'probability';
+
+/**
+ * The located stretches' time per country as a share of the recording (mirrors segmentCountries of
+ * the server, datum/segments.ts): of the located time, of the whole recording where its stretches
+ * show one recognised place.
+ */
+export function stretchShares(segments: readonly Pick<FixSegment, 'startSec' | 'endSec' | 'place' | 'location'>[]): Map<string, number> {
+  const seconds = new Map<string, number>();
+  let total = 0;
+  for (const s of segments) {
+    if (!s.location?.country) continue;
+    const len = Math.max(0, s.endSec - s.startSec);
+    seconds.set(s.location.country, (seconds.get(s.location.country) ?? 0) + len);
+    total += len;
+  }
+  const onePlace = new Set(segments.filter((s) => s.location && s.place !== null).map((s) => s.place)).size === 1;
+  const first = segments[0];
+  const last = segments[segments.length - 1];
+  const span = first && last ? last.endSec - first.startSec : 0;
+  if (onePlace && span > total) total = span;
+  return new Map([...seconds.entries()].map(([iso, s]): [string, number] => [iso, total > 0 ? s / total : 0]));
+}
+
+/**
+ * What a fix's countries are (CountryList). Where a stretch shows the place, the server puts the
+ * stretches' time per country in place of the whole file's estimate (engine 10 on: several places,
+ * or one place that replaced the whole file's answer; segments.ts verdictCountries), whatever gave
+ * the place: the list is told by its figures, the stretches' shares of the recording.
+ */
+export function countryListOf(fix: Pick<Fix, 'countries' | 'segments' | 'location'>): CountryList {
+  const segments = fix.segments ?? [];
+  if (segments.length > 0 && fix.countries.length > 0) {
+    const shares = stretchShares(segments);
+    if (shares.size === fix.countries.length && fix.countries.every((c) => Math.abs((shares.get(c.iso) ?? -1) - c.p) < 0.002)) return 'shares';
+  }
+  return fix.location?.method === 'worldmodel' ? 'worldmodel' : 'probability';
+}
+
+/**
+ * The rows of CountryBars: the countries in the list's order (by probability, largest first; the
+ * stretches' shares as the server orders them, the fix's own country first), the first `limit`, the
+ * place's country below them where it is not among them (`extra`), what the others sum to, and
+ * whether the place's country is not the list's first (`apart`, said below the list).
+ */
+export function countryRows<C extends { iso: string; p: number }>(
+  countries: readonly C[],
+  list: CountryList,
+  limit: number,
+  answer: string | null,
+): { sorted: C[]; shown: C[]; extra: C | null; rest: number; answerRow: C | null; apart: boolean } {
+  const sorted = list === 'shares' ? [...countries] : [...countries].sort((a, b) => b.p - a.p);
+  const first = sorted.slice(0, limit);
+  const extra = answer !== null && !first.some((c) => c.iso === answer) ? (sorted.find((c) => c.iso === answer) ?? null) : null;
+  const shown = extra ? [...first, extra] : first;
+  const rest = sorted.filter((c) => !shown.includes(c)).reduce((sum, c) => sum + c.p, 0);
+  const answerRow = answer !== null ? (shown.find((c) => c.iso === answer) ?? null) : null;
+  const apart = answerRow !== null && sorted[0] !== undefined && sorted[0].iso !== answerRow.iso;
+  return { sorted, shown, extra, rest, answerRow, apart };
+}
+
 /** Great-circle distance (km). */
 function km(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
   const r = Math.PI / 180;

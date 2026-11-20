@@ -3,7 +3,7 @@
  * (apps/server/src/scripts/map/extractTiles.ts nameOf). Pure, so that the server's tests can check
  * it.
  */
-import { PLACE_NAMES_EN, RIVER_NAMES_EN } from './placeNamesEn';
+import { PLACE_NAMES_EN, RIVER_NAMES_EN, TILE_PLACE_NAMES_EN, TILE_RIVER_NAMES_EN } from './placeNamesEn';
 
 /**
  * German exonyms of cities and their English names, beside the table of the shipped tiles (some
@@ -107,6 +107,16 @@ export function placeNameEn(p: { name: string; nameEn?: string }): string {
     return `${n}${ORDINAL(n)} Arrondissement, ${district[2] as string}`;
   }
   return p.name;
+}
+
+/**
+ * The English name of one label of a shipped tile ("z/x/y") whose German name stands for features
+ * named differently in English (Homburg: the town in the Saarland, and Hombourg in Belgium; the
+ * Weser, and the Vesdre): by the label's point in the tile (a place's point, a river's first
+ * point, tile units). Undefined for every other label: the tables by name speak for those.
+ */
+export function tileNameEn(kind: 'place' | 'river', tile: string, name: string, x: number, y: number): string | undefined {
+  return (kind === 'place' ? TILE_PLACE_NAMES_EN : TILE_RIVER_NAMES_EN)[tile]?.[`${name}@${x},${y}`];
 }
 
 /** English name of a river or canal label: the tile's own, else the table of the shipped tiles, else as it stands. */

@@ -38,9 +38,9 @@ git pull
   die Messung auf einem Windows-Rechner läuft in der CI); danach startet derselbe Befehl in unter
   einer Minute und ohne Netz. Ohne Netz entfällt nur der Abgleich mit Straßenbildern; die
   Ortung läuft ohne ihn durch und sagt im Beleg, warum.
-- Nach dem Aktualisieren rechnet der Knoten beim ersten Start alle Ortungen im Hintergrund neu
-  (Fassung 7 des Verfahrens, mit Weltmodell), je Ortung etwa 5 bis 15 s. Die alten Ortungen
-  bleiben bis dahin auf der Karte.
+- Nach dem Aktualisieren rechnet der Knoten beim ersten Start alle Ortungen einer älteren
+  Fassung des Verfahrens im Hintergrund neu (die Fassungen und was sie ändern nennt
+  `docs/DATUM.md`), je Ortung etwa 5 bis 15 s. Die alten Ortungen bleiben bis dahin auf der Karte.
 - Beim ersten Start ist die Konsole sofort nach dem Download erreichbar; die 60 Videos werden
   dann im Hintergrund ausgewertet und geortet (15 bis 30 Minuten), die Karte füllt sich nach und
   nach. Für eine Vorführung vorher einmal `.\datum.cmd -NurPruefen` laufen lassen: Das wertet

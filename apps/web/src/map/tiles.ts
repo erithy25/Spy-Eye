@@ -3,6 +3,7 @@
  * apps/server/src/scripts/map/extractTiles.ts) and turns them into canvas paths. No map service
  * is contacted at run time.
  */
+import { tileNameEn } from './placeNames';
 
 export const EXTENT = 4096;
 
@@ -32,7 +33,11 @@ interface RawTile {
 
 export interface PlaceLabel {
   name: string;
-  /** English name where the tile carries one that differs (tiles extracted with it; else placeNames.ts). */
+  /**
+   * English name where the tile carries one that differs (tiles extracted with it), or where the
+   * label's German name stands for places named differently in English (placeNames.ts tileNameEn);
+   * else placeNames.ts by name.
+   */
   nameEn?: string;
   /** city | town | village | suburb | quarter | hamlet | neighbourhood */
   cls: string;
@@ -43,7 +48,7 @@ export interface PlaceLabel {
 
 export interface LineLabel {
   name: string;
-  /** English name where the tile carries one that differs. */
+  /** English name where the tile carries one that differs, or this label's own (placeNames.ts tileNameEn). */
   nameEn?: string;
   x: number;
   y: number;
@@ -192,7 +197,10 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
       (isStream ? geom.streams : geom.rivers).push(vertices);
       if (item.n) {
         const spot = labelSpot(vertices, item.n);
-        if (spot) riverLabels.push(item.e ? { ...spot, nameEn: item.e } : spot);
+        // The English name: the tile's own, else that of this very label where its German name
+        // stands for rivers named differently in English (placeNames.ts tileNameEn).
+        const en = item.e ?? tileNameEn('river', `${z}/${x}/${y}`, item.n, item.l[0] as number, item.l[1] as number);
+        if (spot) riverLabels.push(en ? { ...spot, nameEn: en } : spot);
       }
     }
   }
@@ -224,7 +232,10 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
     boundaries,
     contours,
     contoursIndex,
-    places: (raw.pl ?? []).map((p) => ({ name: p.n, ...(p.e ? { nameEn: p.e } : {}), cls: p.c, rank: p.r, x: p.p[0], y: p.p[1] })),
+    places: (raw.pl ?? []).map((p) => {
+      const en = p.e ?? (p.c !== 'country' ? tileNameEn('place', `${z}/${x}/${y}`, p.n, p.p[0], p.p[1]) : undefined);
+      return { name: p.n, ...(en ? { nameEn: en } : {}), cls: p.c, rank: p.r, x: p.p[0], y: p.p[1] };
+    }),
     peaks: (raw.pk ?? []).map((p) => ({ name: p.n, height: p.h, x: p.p[0], y: p.p[1] })),
     pois: (raw.poi ?? []).map((p) => ({ kind: p.k, name: p.n, x: p.p[0], y: p.p[1] })),
     riverLabels,

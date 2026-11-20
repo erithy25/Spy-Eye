@@ -33,6 +33,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { repoRoot } from '../../config.js';
+import { englishOf, nameOf } from './englishNames.js';
 import { decodeTile, type MvtFeature, type MvtLayer } from './mvt.js';
 
 interface Area {
@@ -398,15 +399,7 @@ interface TileOut {
   ct?: { h: number; l: number[] }[];
 }
 
-const nameOf = (f: MvtFeature): string => String(f.properties['name:de'] ?? f.properties['name'] ?? f.properties['name:latin'] ?? '').trim();
-/**
- * The English console's name of a feature whose German one is `german`: `name:en`, else the local
- * `name`, where it differs and is written in Latin letters; undefined otherwise (the German stands).
- */
-const englishOf = (f: MvtFeature, german: string): string | undefined => {
-  const en = String(f.properties['name:en'] ?? f.properties['name_en'] ?? f.properties['name'] ?? '').trim();
-  return en !== '' && en !== german && /^[\u0000-\u024f\u1e00-\u1eff\u2000-\u206f]+$/.test(en) ? en : undefined;
-};
+// The German name of a feature and its English one beside it: englishNames.ts (nameOf, englishOf).
 
 function convert(layers: Map<string, MvtLayer>, z: number): TileOut {
   const out: TileOut = {};

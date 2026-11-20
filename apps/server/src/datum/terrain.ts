@@ -345,27 +345,43 @@ const SPIKE_M = 150;
 /** ... unless the neighbourhood itself varies that much (multiples of its median absolute deviation). */
 const PIT_MAD = 4;
 const SPIKE_MAD = 6;
+/** Outlying cells that touch each other and fit in a box this many cells wide and high are one isolated pit or spike. */
+const ISOLATED_CELLS = 2;
+/** A group of pits whose deepest cell lies this far below sea level (m) is under water. */
+const UNDERWATER_M = 60;
+/** A group of spikes this close (cells) to a replaced pit is the overshoot of the same hole. */
+const OVERSHOOT_CELLS = 2;
 
 /**
- * Replaces isolated pits and spikes of the elevation source by the median of their 5 × 5
- * neighbourhood, in place; returns how many cells it changed. The tiles have holes of several
- * hundred metres on some coasts (Busan: one 2 × 2 pit of −400 m among 0 to 60 m, the finer zoom
- * reads 3 m there), which set the relief range shown and a crater in the 3D terrain. A cell counts
- * as such only where it lies more than PIT_M below (SPIKE_M above) the median of the 25 around it
- * and more than PIT_MAD (SPIKE_MAD) times their median absolute deviation: steep valleys and
- * summits vary as much around them and stay. Every test reads the heights as they came, so a
- * cluster of up to 2 × 2 bad cells is found as a whole.
+ * Replaces pits and spikes of the elevation source by the median of their 5 × 5 neighbourhood, in
+ * place; returns how many cells it changed. The tiles have holes of several hundred metres on some
+ * coasts (Busan: one 2 × 2 pit of −400 m among 0 to 60 m, the finer zoom reads 3 m there; strips of
+ * −100 to −5 000 m along the piers of New York and the beach of Corona del Mar, with spikes of 200 to
+ * 700 m beside some of them in Tokyo and Baltimore), which set the relief range shown and a crater
+ * in the 3D terrain.
+ *
+ * A cell is an outlier where it lies more than PIT_M below (SPIKE_M above) the median of the 25
+ * around it (fewer at the edge of the grid) and more than PIT_MAD (SPIKE_MAD) times their median
+ * absolute deviation: valleys and summits wider than the window's half vary as much around them.
+ * Every test reads the heights as they came. Outliers that touch each other (8 neighbours) form a
+ * group, which is replaced as a whole where it is
+ *   - isolated: it fits in ISOLATED_CELLS × ISOLATED_CELLS cells (whatever its height: at the
+ *     grid's scale such a pit or spike is no landform the grid can show), or
+ *   - a pit under water: its deepest cell lies more than UNDERWATER_M below sea level, or
+ *   - spikes within OVERSHOOT_CELLS of a replaced pit (the overshoot of the same hole).
+ * Any other group stays (pits no deeper than that, spikes away from a replaced pit, larger than
+ * 2 × 2): a canyon, ridge or island one or two cells wide (the Black Canyon of the Gunnison at
+ * 150 m cells) is a line through the grid, where the window's median is its rim or the sea around
+ * it.
  */
 export function despike(heights: number[], size: number): number {
   const src = Float64Array.from(heights);
-  const w = size + 1;
-  // Summed heights, to screen every cell against its window's mean in constant time.
-  const sums = new Float64Array(w * w);
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) sums[(r + 1) * w + c + 1] = (src[r * size + c] as number) + (sums[r * w + c + 1] as number) + (sums[(r + 1) * w + c] as number) - (sums[r * w + c] as number);
-  }
-  let changed = 0;
+  const count = size * size;
+  // -1: pit, 1: spike, 0: neither; and the median that replaces an outlier.
+  const kind = new Int8Array(count);
+  const median = new Float64Array(count);
   const window: number[] = [];
+  const deviations: number[] = [];
   for (let r = 0; r < size; r++) {
     const r0 = Math.max(0, r - 2);
     const r1 = Math.min(size - 1, r + 2);
@@ -373,23 +389,93 @@ export function despike(heights: number[], size: number): number {
       const c0 = Math.max(0, c - 2);
       const c1 = Math.min(size - 1, c + 2);
       const n = (r1 - r0 + 1) * (c1 - c0 + 1);
-      const sum = (sums[(r1 + 1) * w + c1 + 1] as number) - (sums[r0 * w + c1 + 1] as number) - (sums[(r1 + 1) * w + c0] as number) + (sums[r0 * w + c0] as number);
+      const k = Math.floor(n / 2);
       const v = src[r * size + c] as number;
-      // The bad cells pull the mean towards them: a loose screen, the median decides.
-      const mean = sum / n;
-      if (v > mean - PIT_M / 2 && v < mean + SPIKE_M / 2) continue;
+      // The median (the k-th smallest of the window) lies more than PIT_M above the cell only where
+      // at least n - k cells do, and more than SPIKE_M below it only where at least k + 1 do: a
+      // screen without sorting that passes every cell the rule below can replace.
+      let above = 0;
+      let below = 0;
+      for (let rr = r0; rr <= r1; rr++) {
+        for (let cc = c0; cc <= c1; cc++) {
+          const x = src[rr * size + cc] as number;
+          if (x > v + PIT_M) above++;
+          else if (x < v - SPIKE_M) below++;
+        }
+      }
+      if (above < n - k && below < k + 1) continue;
       window.length = 0;
       for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) window.push(src[rr * size + cc] as number);
       window.sort((a, b) => a - b);
-      const median = window[Math.floor(window.length / 2)] as number;
-      const deviations = window.map((x) => Math.abs(x - median)).sort((a, b) => a - b);
-      const mad = deviations[Math.floor(deviations.length / 2)] as number;
-      if (v < median - Math.max(PIT_M, PIT_MAD * mad) || v > median + Math.max(SPIKE_M, SPIKE_MAD * mad)) {
-        heights[r * size + c] = median;
-        changed++;
-      }
+      const m = window[k] as number;
+      deviations.length = 0;
+      for (const x of window) deviations.push(Math.abs(x - m));
+      deviations.sort((a, b) => a - b);
+      const mad = deviations[k] as number;
+      const i = r * size + c;
+      if (v < m - Math.max(PIT_M, PIT_MAD * mad)) kind[i] = -1;
+      else if (v > m + Math.max(SPIKE_M, SPIKE_MAD * mad)) kind[i] = 1;
+      else continue;
+      median[i] = m;
     }
   }
+
+  // Groups of touching outliers of one kind.
+  const groups: { kind: number; cells: number[]; isolated: boolean; deepest: number }[] = [];
+  const seen = new Uint8Array(count);
+  for (let i = 0; i < count; i++) {
+    if (kind[i] === 0 || seen[i] === 1) continue;
+    const cells = [i];
+    seen[i] = 1;
+    let rMin = size;
+    let rMax = -1;
+    let cMin = size;
+    let cMax = -1;
+    let deepest = Infinity;
+    for (let j = 0; j < cells.length; j++) {
+      const at = cells[j] as number;
+      const r = Math.floor(at / size);
+      const c = at % size;
+      rMin = Math.min(rMin, r);
+      rMax = Math.max(rMax, r);
+      cMin = Math.min(cMin, c);
+      cMax = Math.max(cMax, c);
+      deepest = Math.min(deepest, src[at] as number);
+      for (let rr = Math.max(0, r - 1); rr <= Math.min(size - 1, r + 1); rr++) {
+        for (let cc = Math.max(0, c - 1); cc <= Math.min(size - 1, c + 1); cc++) {
+          const next = rr * size + cc;
+          if (seen[next] === 1 || kind[next] !== kind[i]) continue;
+          seen[next] = 1;
+          cells.push(next);
+        }
+      }
+    }
+    groups.push({ kind: kind[i] as number, cells, isolated: rMax - rMin < ISOLATED_CELLS && cMax - cMin < ISOLATED_CELLS, deepest });
+  }
+
+  let changed = 0;
+  const replacedPit = new Uint8Array(count);
+  const replace = (cells: readonly number[]): void => {
+    for (const at of cells) {
+      heights[at] = median[at] as number;
+      changed++;
+    }
+  };
+  for (const g of groups) {
+    if (g.kind !== -1 || !(g.isolated || g.deepest < -UNDERWATER_M)) continue;
+    replace(g.cells);
+    for (const at of g.cells) replacedPit[at] = 1;
+  }
+  const nearReplacedPit = (cells: readonly number[]): boolean =>
+    cells.some((at) => {
+      const r = Math.floor(at / size);
+      const c = at % size;
+      for (let rr = Math.max(0, r - OVERSHOOT_CELLS); rr <= Math.min(size - 1, r + OVERSHOOT_CELLS); rr++) {
+        for (let cc = Math.max(0, c - OVERSHOOT_CELLS); cc <= Math.min(size - 1, c + OVERSHOOT_CELLS); cc++) if (replacedPit[rr * size + cc] === 1) return true;
+      }
+      return false;
+    });
+  for (const g of groups) if (g.kind === 1 && (g.isolated || nearReplacedPit(g.cells))) replace(g.cells);
   return changed;
 }
 

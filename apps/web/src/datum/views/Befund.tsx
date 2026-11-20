@@ -7,7 +7,7 @@ import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
-import { chosenStretch, dialClock, GLOBE_REACH_KM, leadSegment, nextKey, placesLowerBound, placesText, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchClock, stretchMapReach, stretchSpaces, timedStretches, wholeFileShapes, wholeFileShown } from '../segments';
+import { chosenStretch, countryListOf, dialClock, GLOBE_REACH_KM, leadSegment, nextKey, placesLowerBound, placesText, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchClock, stretchMapReach, stretchSpaces, timedStretches, wholeFileShapes, wholeFileShown } from '../segments';
 import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
 import { bestWindowText, firstCandidateIsFix, fixMapView, kmText, useFullFix, windowLabelText, zoomForRadius } from '../useFixes';
 import { fixShapes, headingShapes, sunShapes, type DatumViewProps, type StretchProps } from './Ortung';
@@ -474,7 +474,9 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
             />
           </section>
           <section className="dt-section">
-            <CountryBars countries={fix.countries} limit={5} answer={loc?.country ?? null} worldModel={loc?.method === 'worldmodel'} />
+            {/* The stretches' shares of the recording time where a stretch shows the place, else the
+                world model's mass or the probability per country (countryListOf). */}
+            <CountryBars countries={fix.countries} limit={5} answer={loc?.country ?? null} list={countryListOf(fix)} />
           </section>
         </div>
       </div>

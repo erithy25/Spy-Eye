@@ -488,6 +488,17 @@ test('quick stage: located from the file alone, before the analysis, every text 
     assert.ok(full.trace?.some((s) => s.label === 'Weltmodell befragt' && /Schnellortung/.test(s.detail ?? '') && /quick localisation/.test(s.detailEn ?? '')));
     assert.ok(full.evidence.some((e) => e.kind === 'worldmodel'));
     assert.ok(full.keyframes.length > 0);
+    // Every frame the reference pictures' entries name is counted on the analysis's scale (one
+    // frame a second here, the keyframes' "Bild n"), in the quick and in the full stage: the
+    // stand-in's best row is the first sample, 0.25 s into the clip, analysis frame 1; on the
+    // file's own 10 frames a second it would read "Bild 3".
+    const references = [...fix.evidence, ...full.evidence].filter((e) => e.kind === 'landmark');
+    assert.ok(references.length > 0);
+    for (const e of references) {
+      assert.equal(e.frame, 1, e.detail);
+      assert.match(e.detail, /^Bild 1 /);
+      assert.match(e.detailEn ?? '', /^Frame 1 /);
+    }
     for (const e of full.evidence) assert.ok(e.labelEn && e.detailEn, `full evidence ${e.kind} has English texts`);
     for (const step of full.trace ?? []) if (step.detail) assert.ok(step.detailEn, `full trace "${step.label}" has an English detail`);
     assert.equal(engine.outstanding, 0);

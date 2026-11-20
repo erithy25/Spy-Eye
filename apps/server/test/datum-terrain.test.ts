@@ -83,6 +83,65 @@ test('despike: a pit of the source is smoothed out, steep real relief stays', ()
   assert.equal(despike(valley, size), 0);
 });
 
+test('despike: the pit found as a whole at the edge and corner of the grid, and of mixed depth', () => {
+  const size = 21;
+  const flat = Array.from({ length: size * size }, (_, i) => (i * 7919) % 6);
+  // The Busan pit with its top left cell at (row, col): at a corner the window is cut to 3 × 3 to
+  // 3 × 4 cells, whose mean the deep cells pull down to that of the shallow one (-84).
+  for (const [row, col, cells] of [
+    [0, 0, [-259.1, -84.1, -399.7, -250.2]],
+    [0, 10, [-259.1, -84.1, -399.7, -250.2]],
+    [19, 19, [-259.1, -84.1, -399.7, -250.2]],
+    [10, 0, [-259.1, -84.1, -399.7, -250.2]],
+    [8, 8, [-400, -70, -400, -400]],
+  ] as const) {
+    const pit = [...flat];
+    const at = [row * size + col, row * size + col + 1, (row + 1) * size + col, (row + 1) * size + col + 1];
+    at.forEach((i, k) => (pit[i] = cells[k] as number));
+    assert.equal(despike(pit, size), 4, `pit at ${row},${col}`);
+    assert.ok(Math.min(...pit) >= 0, `pit at ${row},${col}: min ${Math.min(...pit)}`);
+  }
+});
+
+test('despike: a canyon, ridge or island one or two cells wide stays; a strip below sea level and its overshoot go', () => {
+  const size = 41;
+  // A V-shaped canyon across the grid, `depth` deep and `rim` metres wide at its rim (1000 m), its
+  // axis `shift` metres east of the middle column, sampled at `cell` metres: the Black Canyon of the
+  // Gunnison at its narrows (500 m deep, 340 m wide) in the ORTUNG grid of 12 km (150 m cells).
+  const canyon = (cell: number, depth: number, rim: number, shift: number): number[] =>
+    Array.from({ length: size * size }, (_, i) => 1000 - depth * Math.max(0, 1 - Math.abs(((i % size) - 20) * cell - shift) / (rim / 2)));
+  for (const [cell, depth, rim, shift] of [
+    [150, 500, 340, 0],
+    [150, 500, 340, 75],
+    [100, 250, 250, 50],
+    [37.5, 120, 80, 0],
+  ] as const) {
+    const h = canyon(cell, depth, rim, shift);
+    const before = [...h];
+    assert.equal(despike(h, size), 0, `canyon ${cell}/${depth}/${rim}/+${shift}`);
+    assert.deepEqual(h, before);
+  }
+  // A ridge (the canyon upside down) and an island two cells wide and seven long in the sea at 0 m.
+  const ridge = canyon(150, 500, 340, 0).map((h) => 2000 - h);
+  assert.equal(despike(ridge, size), 0, 'ridge');
+  const island = Array.from({ length: size * size }, (_, i) => (Math.floor(i / size) >= 17 && Math.floor(i / size) < 24 && (i % size === 20 || i % size === 21) ? 200 + (i % 7) * 10 : 0));
+  assert.equal(despike(island, size), 0, 'island');
+  // A pit of two cells on land (a hole of the source by a river in Moscow: 45 m in 118 m) goes:
+  // at the grid's scale no landform.
+  const moscow = Array.from({ length: size * size }, (_, i) => 118 + (i % 3));
+  moscow[20 * size + 20] = 44;
+  moscow[21 * size + 20] = 53;
+  assert.equal(despike(moscow, size), 2);
+  assert.ok(Math.min(...moscow) >= 118);
+  // A strip of holes along a pier (New York: -400 to -525 m over 13 cells among 0 to 2 m), and
+  // spikes of 300 to 600 m beside a strip in the sea (Tokyo): the source's errors at the coast.
+  const coast = Array.from({ length: size * size }, (_, i) => (i * 7919) % 3);
+  for (let r = 10; r < 23; r++) coast[r * size + 15] = -400 - ((r * 37) % 125);
+  for (let r = 12; r < 16; r++) coast[r * size + 16] = 300 + r * 20;
+  assert.equal(despike(coast, size), 17);
+  assert.ok(Math.min(...coast) >= 0 && Math.max(...coast) <= 2, `${Math.min(...coast)}..${Math.max(...coast)}`);
+});
+
 test('a place with only the world overview gives a coarse grid', async () => {
   // The world overview at zoom 4 (Medina: tile 4/9/6), written as a Terrarium tile of 600 to 760 m.
   const sharp = (await import('sharp')).default;
@@ -103,6 +162,44 @@ test('a place with only the world overview gives a coarse grid', async () => {
   assert.equal(grid.coarse, true);
   assert.ok((grid.sourceMetres ?? 0) > COARSE_SOURCE_M, `source ${grid.sourceMetres} m`);
   await fs.rm(path.join(process.env['DATUM_TERRAIN_DIR'] as string, '4'), { recursive: true, force: true });
+});
+
+test('terrain grid: a hole of the source is smoothed out, and the range is that of the cleaned heights', async () => {
+  // A fine tile (zoom 11, about 66 m per pixel) of a flat coast at 0 to 5 m in the South Pacific,
+  // with a hole of -400 m of 3 × 3 pixels in its middle: about 2 × 2 cells of a grid of 100 m
+  // (Busan in RAUM: -400 to 525 m before the cleaning, -44 to 525 m after).
+  const sharp = (await import('sharp')).default;
+  const fs = await import('node:fs/promises');
+  const [z, x, y] = [11, 170, 1203];
+  const raw = Buffer.alloc(256 * 256 * 3);
+  for (let i = 0; i < 256 * 256; i++) {
+    const row = Math.floor(i / 256);
+    const col = i % 256;
+    const hole = Math.abs(row - 128) <= 1 && Math.abs(col - 128) <= 1;
+    const h = (hole ? -400 : (i * 7919) % 6) + 32768;
+    raw[i * 3] = Math.floor(h / 256);
+    raw[i * 3 + 1] = Math.floor(h % 256);
+    raw[i * 3 + 2] = 0;
+  }
+  const dir = path.join(process.env['DATUM_TERRAIN_DIR'] as string, String(z), String(x));
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(dir, `${y}.png`), await sharp(raw, { raw: { width: 256, height: 256, channels: 3 } }).png().toBuffer());
+  try {
+    // The middle of the tile (Web Mercator), its hole under the grid's centre.
+    const n = 2 ** z;
+    const centre = { lat: (Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + 0.5)) / n))) * 180) / Math.PI, lon: ((x + 0.5) / n) * 360 - 180 };
+    const grid = await terrainGrid(centre, 2, 41);
+    assert.ok(grid, 'grid');
+    assert.equal(grid.sourceZoom, z);
+    assert.equal(grid.coarse, false);
+    const low = Math.min(...grid.heights);
+    assert.ok(low >= -1, `lowest cell ${low}`);
+    assert.ok(grid.minHeight >= -1, `range from ${grid.minHeight}`);
+    assert.equal(grid.minHeight, low, 'the range is that of the cleaned heights');
+    assert.equal(grid.maxHeight, Math.max(...grid.heights));
+  } finally {
+    await fs.rm(path.join(process.env['DATUM_TERRAIN_DIR'] as string, String(z)), { recursive: true, force: true });
+  }
 });
 
 test('horizon at Deutsches Eck shows the Ehrenbreitstein ridge to the east', needsTiles, async () => {
