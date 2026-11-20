@@ -299,3 +299,28 @@ test('nativeRun: the run is flagged while it lasts, and none starts once the pro
   assert.equal(called, false);
   assert.equal(Atomics.load(flags, FLAG_IN_RUN), 0);
 });
+
+test('nativeRun: overlapping runs of one thread are counted, the first to end does not clear the other', async () => {
+  // The world model's thread decodes the pictures of one prediction (sharp) while a session run
+  // of another is under way: the exit must wait until both have ended.
+  const flags = newThreadFlags();
+  let releaseLong: () => void = () => undefined;
+  const long = nativeRun(flags, () => new Promise<void>((resolve) => (releaseLong = resolve)));
+  const short = nativeRun(flags, async () => {
+    assert.equal(Atomics.load(flags, FLAG_IN_RUN), 2, 'both runs counted');
+  });
+  await short;
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 1, 'the longer run still counts after the shorter one ended');
+  releaseLong();
+  await long;
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 0);
+  // A refused run (the process exits) leaves the count of a run under way as it was.
+  let releaseThird: () => void = () => undefined;
+  const third = nativeRun(flags, () => new Promise<void>((resolve) => (releaseThird = resolve)));
+  Atomics.store(flags, FLAG_EXITING, 1);
+  await assert.rejects(nativeRun(flags, async () => undefined), (err: unknown) => err instanceof ProcessExitingError);
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 1);
+  releaseThird();
+  await third;
+  assert.equal(Atomics.load(flags, FLAG_IN_RUN), 0);
+});

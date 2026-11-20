@@ -114,9 +114,10 @@ export interface GeoclipOptions {
    */
   spin?: boolean;
   /**
-   * Wraps every call into onnxruntime (session creation and runs). The world model's thread
-   * passes nativeRun (ml/workerProtocol.ts), so that an exiting process waits for a run under way
-   * and no run starts once it exits. Default: the call itself.
+   * Wraps every call into native code: onnxruntime (session creation and runs) and sharp decoding
+   * the pictures (embedImages). The world model's thread passes nativeRun (ml/workerProtocol.ts),
+   * so that an exiting process waits for a run under way and no run starts once it exits.
+   * Default: the call itself.
    */
   runGuard?: <T>(job: () => Promise<T>) => Promise<T>;
 }
@@ -1066,11 +1067,18 @@ export class GeoClip {
     return normaliseRows(out, GEOCLIP_DIM);
   }
 
-  /** Image embeddings of encoded pictures (JPEG frames), L2-normalised rows. */
+  /**
+   * Image embeddings of encoded pictures (JPEG frames), L2-normalised rows. The pictures are
+   * decoded and resized by sharp, native code like a session run: in the world model's thread an
+   * exiting process that stopped the thread in the middle of it could abort (0xC0000409 on
+   * Windows, seen once in 24 stops of exit-windows), so it runs under the same guard
+   * (GeoclipOptions.runGuard, nativeRun) and the exit waits for it.
+   */
   async embedImages(images: readonly Buffer[]): Promise<Float32Array> {
+    if (this.stopped) throw this.stoppedError();
     const plane = 3 * GEOCLIP_IMAGE_SIZE * GEOCLIP_IMAGE_SIZE;
     const pixels = new Float32Array(images.length * plane);
-    await Promise.all(images.map((img, i) => preprocessImage(img, pixels, i * plane)));
+    await this.guard(() => Promise.all(images.map((img, i) => preprocessImage(img, pixels, i * plane))));
     return this.embedPixels(pixels, images.length);
   }
 

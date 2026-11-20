@@ -139,9 +139,10 @@ const EXIT_SETTLE_MS = 300;
  * on Windows). Only synchronous code can run here, so the threads are coordinated through their
  * shared flags (see nativeRun in workerProtocol.ts):
  *   1. FLAG_EXITING is set for every thread: from now on none of them starts a native run.
- *   2. A thread that is inside a run is waited for until the run has ended (at most
- *      EXIT_DRAIN_MS). Plain JavaScript in a thread (the world model scoring its gallery, say)
- *      is not waited for: stopping a thread there is safe, and it can take seconds under load.
+ *   2. A thread that is inside a run is waited for until its runs have ended (at most
+ *      EXIT_DRAIN_MS); a run is any native call, sharp decoding a picture in the thread included.
+ *      Plain JavaScript in a thread (the world model scoring its gallery, say) is not waited for:
+ *      stopping a thread there is safe, and it can take seconds under load.
  *   3. Every thread is asked to close and given EXIT_SETTLE_MS to end by itself.
  * Before this, the exit waited for each thread to release its sessions within 5 s; under load
  * the world model's thread spent longer than that in its gallery scoring, the exit went ahead
@@ -161,10 +162,12 @@ function drainAtExit(): void {
   const deadline = Date.now() + EXIT_DRAIN_MS;
   for (const [, flags] of all) {
     for (;;) {
-      if (Atomics.load(flags, FLAG_STATE) === THREAD_ENDED || Atomics.load(flags, FLAG_IN_RUN) === 0) break;
+      // The number of runs under way (nativeRun counts them): waited for until it is 0.
+      const runs = Atomics.load(flags, FLAG_IN_RUN);
+      if (Atomics.load(flags, FLAG_STATE) === THREAD_ENDED || runs <= 0) break;
       const left = deadline - Date.now();
       if (left <= 0) break;
-      Atomics.wait(flags, FLAG_IN_RUN, 1, left);
+      Atomics.wait(flags, FLAG_IN_RUN, runs, left);
     }
   }
   const settleBy = Date.now() + EXIT_SETTLE_MS;

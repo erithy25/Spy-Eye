@@ -27,7 +27,12 @@ export interface WorkerBoot {
  * sessions, then THREAD_CLOSED, and THREAD_ENDED once its event loop has run out (markEndOfThread).
  */
 export const FLAG_STATE = 0;
-/** Slot FLAG_IN_RUN: 1 while the thread is inside an onnxruntime call (see nativeRun), else 0. */
+/**
+ * Slot FLAG_IN_RUN: how many native runs of the thread are under way (see nativeRun), 0 when none.
+ * A count, not a flag: two runs of one thread can overlap (the world model's thread decodes the
+ * pictures of one prediction while a session run of another is under way), and the first to end
+ * must not clear the mark of the other.
+ */
 export const FLAG_IN_RUN = 1;
 /** Slot FLAG_EXITING: set to 1 by the exiting process; from then on no native run starts. */
 export const FLAG_EXITING = 2;
@@ -50,10 +55,11 @@ export class ProcessExitingError extends Error {
 }
 
 /**
- * Runs `job`, which calls into onnxruntime (a session run, a session's creation, a model's
- * load), with FLAG_IN_RUN set for its whole length. A thread that the exiting process stops while
- * it is inside such a call aborts the process (SIGABRT on Linux, 0xC0000409 on Windows); outside
- * of one, stopping it is safe, also in the middle of plain JavaScript.
+ * Runs `job`, which calls into native code (an onnxruntime session run, a session's creation, a
+ * model's load, or sharp decoding and resizing a picture in the thread), with FLAG_IN_RUN counted
+ * up for its whole length. A thread that the exiting process stops while it is inside such a call
+ * aborts the process (SIGABRT on Linux, 0xC0000409 on Windows); outside of one, stopping it is
+ * safe, also in the middle of plain JavaScript.
  *
  * The handshake with the exiting process (drainAtExit) cannot miss: the job marks the run first
  * and then looks at FLAG_EXITING, the process sets FLAG_EXITING first and then looks at
@@ -61,16 +67,16 @@ export class ProcessExitingError extends Error {
  * not start, or the process sees the run and waits for its end.
  */
 export async function nativeRun<T>(flags: Int32Array, job: () => Promise<T>): Promise<T> {
-  Atomics.store(flags, FLAG_IN_RUN, 1);
+  Atomics.add(flags, FLAG_IN_RUN, 1);
   if (Atomics.load(flags, FLAG_EXITING) === 1) {
-    Atomics.store(flags, FLAG_IN_RUN, 0);
+    Atomics.sub(flags, FLAG_IN_RUN, 1);
     Atomics.notify(flags, FLAG_IN_RUN);
     throw new ProcessExitingError();
   }
   try {
     return await job();
   } finally {
-    Atomics.store(flags, FLAG_IN_RUN, 0);
+    Atomics.sub(flags, FLAG_IN_RUN, 1);
     Atomics.notify(flags, FLAG_IN_RUN);
   }
 }

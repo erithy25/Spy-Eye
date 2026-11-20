@@ -104,6 +104,41 @@ test('preprocessing gives a 3 x 224 x 224 tensor, normalised per channel, centre
   assert.ok(Math.abs(edge - 111) <= 1, `edge at column ${edge}`);
 });
 
+test('decoding the pictures runs under the run guard, as a session run does (the exit waits for it)', async () => {
+  // sharp is native code: in the world model's thread an exit that stops the thread while it
+  // decodes can abort the process (0xC0000409 on Windows), so embedImages decodes inside the guard.
+  const jpeg = await sharp({ create: { width: 320, height: 240, channels: 3, background: { r: 90, g: 120, b: 150 } } }).jpeg().toBuffer();
+  let inside = 0;
+  let guarded = 0;
+  let decodedInside = false;
+  const model = new GeoClip({
+    runGuard: async <T>(job: () => Promise<T>): Promise<T> => {
+      guarded++;
+      inside++;
+      try {
+        return await job();
+      } finally {
+        inside--;
+      }
+    },
+  });
+  // The model itself is not needed: the embedding of the decoded pixels is replaced, and records
+  // whether the pixels were complete when it was asked.
+  (model as unknown as { embedPixels: (pixels: Float32Array, count: number) => Promise<Float32Array> }).embedPixels = async (pixels, count) => {
+    decodedInside = pixels.some((v) => v !== 0);
+    return new Float32Array(count * GEOCLIP_DIM);
+  };
+  const out = await model.embedImages([jpeg, jpeg]);
+  assert.equal(out.length, 2 * GEOCLIP_DIM);
+  assert.equal(guarded, 1, 'one guarded run for the decoding of both pictures');
+  assert.equal(inside, 0);
+  assert.ok(decodedInside, 'the pixels were decoded before the embedding');
+  // A stopped model decodes nothing.
+  model.stop();
+  await assert.rejects(model.embedImages([jpeg]));
+  assert.equal(guarded, 1);
+});
+
 test('float16 conversion keeps embedding values to 1e-3 and rounds special values', () => {
   const values = Float32Array.from([0, 1, -1, 0.5, -0.25, 0.1234, 1e-5, 65504, 1e6, -1e6]);
   const back = float16ToFloat32(float32ToFloat16(values));
