@@ -32,6 +32,8 @@ process.env['SICHT_OFFLINE'] = '1';
 const { DatumEngine, jobRank } = await import('../src/datum/engine.js');
 const { ENGINE_VERSION, OLDEST_SHOWN_VERSION } = await import('../src/datum/version.js');
 const { GrowableMatrix } = await import('../src/ml/math.js');
+const { FRAME_MATCH } = await import('../src/datum/locate.js');
+const { decodeFrame, tileLayout, writeTile } = await import('../src/ml/preprocess.js');
 
 const DIM = 16;
 
@@ -76,7 +78,7 @@ const gallery = {
   size: 3,
   // The localisation calls the gallery through its search thread; the stand-in answers directly.
   searchAsync(vectors: Float32Array, k: number): Promise<GalleryNeighbour[][]> {
-    return Promise.resolve(this.search(vectors, k));
+    return Promise.resolve(gallery.search(vectors, k));
   },
   search: (vectors: Float32Array, k: number): GalleryNeighbour[][] => {
     const rows = vectors.length / DIM;
@@ -107,6 +109,43 @@ const lateGallery = {
   size: 3,
   searchAsync: (vectors: Float32Array, k: number): Promise<GalleryNeighbour[][]> => Promise.resolve(lateSearch(vectors, k)),
   search: lateSearch,
+} as unknown as Gallery;
+
+/**
+ * Stand-in for the image model that tells only dark from light pictures: one vector for each, as
+ * the image model gives a picture sampled from the file and the analysis frame of the same shot
+ * nearly one vector (cosine 0.92 to 1.00, measured with SigLIP 2).
+ */
+const shadeModel = {
+  ...model,
+  embedPixels: async (pixels: Float32Array, count: number): Promise<Float32Array> => {
+    const plane = pixels.length / count;
+    const out = new Float32Array(count * DIM);
+    for (let i = 0; i < count; i++) {
+      let sum = 0;
+      for (let j = 0; j < plane; j++) sum += pixels[i * plane + j]!;
+      out.set(hashVector(sum / plane < 0 ? 'shade-dark' : 'shade-light'), i * DIM);
+    }
+    return out;
+  },
+};
+
+/** Stand-in gallery whose Deutsches Eck resembles the fourth picture sampled from the file most. */
+function fourthSearch(vectors: Float32Array, k: number): GalleryNeighbour[][] {
+  const rows = vectors.length / DIM;
+  const perFrame = Math.max(1, Math.round(rows / 12));
+  return Array.from({ length: rows }, (_, i) =>
+    [
+      { id: 'Q1', label: 'Deutsches Eck', lat: 50.3644, lon: 7.6062, country: 'DE', wikidata: 'Q1', similarity: Math.floor(i / perFrame) === 3 ? 0.95 : 0.9 },
+      { id: 'Q2', label: 'Brücke', lat: 48.85, lon: 2.35, country: 'FR', wikidata: 'Q2', similarity: 0.7 },
+      { id: 'Q3', label: 'Turm', lat: 41.9, lon: 12.5, country: 'IT', wikidata: 'Q3', similarity: 0.69 },
+    ].slice(0, k),
+  );
+}
+const fourthGallery = {
+  size: 3,
+  searchAsync: (vectors: Float32Array, k: number): Promise<GalleryNeighbour[][]> => Promise.resolve(fourthSearch(vectors, k)),
+  search: fourthSearch,
 } as unknown as Gallery;
 
 /**
@@ -248,7 +287,7 @@ interface Setup {
   dispose: () => Promise<void>;
 }
 
-async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number; gallery?: Gallery } = {}): Promise<Setup> {
+async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number; gallery?: Gallery; model?: typeof model } = {}): Promise<Setup> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-quick-'));
   const store = new MemoryStore(root);
   const events: Fix[] = [];
@@ -261,7 +300,7 @@ async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number; ga
   };
   const engine = new DatumEngine({
     store: store as unknown as Store,
-    model: model as unknown as EmbeddingModel,
+    model: (opts.model ?? model) as unknown as EmbeddingModel,
     hub: hub as unknown as EventHub,
     gallery: async () => opts.gallery ?? gallery,
     log: () => undefined,
@@ -326,6 +365,56 @@ async function analysed(store: MemoryStore, entry: VideoEntry): Promise<void> {
 /** A short test picture video (moving colour bars, 6 s) made with ffmpeg. */
 async function testVideo(file: string, seconds = 6): Promise<void> {
   const result = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', `testsrc=size=320x240:rate=10:duration=${seconds}`, '-pix_fmt', 'yuv420p', file]);
+  if (result.status !== 0) throw new Error(`ffmpeg failed: ${String(result.stderr)}`);
+}
+
+/**
+ * As `analysed`, with the vectors the pipeline would store: the whole frame of every analysis
+ * frame embedded by `embedder` (one tile a frame).
+ */
+async function analysedBy(store: MemoryStore, entry: VideoEntry, embedder: typeof model): Promise<void> {
+  await analysed(store, entry);
+  const size = embedder.imageSize;
+  const plane = 3 * size * size;
+  const vectors = new Float32Array(entry.frames.length * DIM);
+  for (const [i, f] of entry.frames.entries()) {
+    const decoded = await decodeFrame(store.framePath(entry.info.id, f.n));
+    const pixels = new Float32Array(plane);
+    await writeTile(decoded, tileLayout(decoded.width, decoded.height, 'standard')[0]!, size, embedder.imageMean, embedder.imageStd, pixels, 0);
+    vectors.set(await embedder.embedPixels(pixels, 1), i * DIM);
+  }
+  entry.embeddings = GrowableMatrix.fromData(vectors, DIM);
+}
+
+/**
+ * 13.2 s at 10 frames a second with one cut: dark until 3.5 s, light from there. The analysis's
+ * frame n shows the file's frame just before the middle of its second, (n - 0.5) s - 0.1 s: frame 4
+ * the dark one at 3.4 s, frame 5 the light one at 4.4 s; the localisation samples its fourth
+ * picture at 3.85 s (light), in frame 4's second, after the instant frame 4 shows.
+ */
+async function cutVideo(file: string): Promise<void> {
+  const result = spawnSync('ffmpeg', [
+    '-hide_banner', '-loglevel', 'error', '-y',
+    '-f', 'lavfi', '-i', 'color=c=0x202020:s=320x240:r=10:d=3.5',
+    '-f', 'lavfi', '-i', 'color=c=0xe0e0e0:s=320x240:r=10:d=9.7',
+    '-filter_complex', '[0:v][1:v]concat=n=2:v=1[v]', '-map', '[v]', '-pix_fmt', 'yuv420p', file,
+  ]);
+  if (result.status !== 0) throw new Error(`ffmpeg failed: ${String(result.stderr)}`);
+}
+
+/**
+ * 13.2 s at 10 frames a second in one dark shot with a flash: the file's frame at 3.4 s alone is
+ * light. That is the instant the analysis's frame 4 shows, so frame 4 is light and frames 3 and 5
+ * are dark; the fourth picture the localisation samples (3.85 s, in frame 4's second) is dark.
+ */
+async function flashVideo(file: string): Promise<void> {
+  const result = spawnSync('ffmpeg', [
+    '-hide_banner', '-loglevel', 'error', '-y',
+    '-f', 'lavfi', '-i', 'color=c=0x202020:s=320x240:r=10:d=3.4',
+    '-f', 'lavfi', '-i', 'color=c=0xe0e0e0:s=320x240:r=10:d=0.1',
+    '-f', 'lavfi', '-i', 'color=c=0x202020:s=320x240:r=10:d=9.7',
+    '-filter_complex', '[0:v][1:v][2:v]concat=n=3:v=1[v]', '-map', '[v]', '-pix_fmt', 'yuv420p', file,
+  ]);
   if (result.status !== 0) throw new Error(`ffmpeg failed: ${String(result.stderr)}`);
 }
 
@@ -556,6 +645,115 @@ test('quick stage: the last frame sampled from the file is named as the analysis
     assert.match(quickEck.detail, /^Bild 6 /);
     assert.match(quickEck.detailEn ?? '', /^Frame 6 /);
     assert.equal(fullEck.frame, quickEck.frame, fullEck.detail);
+  } finally {
+    await dispose();
+  }
+});
+
+test('a picture sampled just after a cut is named by the analysis frame that shows it, not by the frame its time lies in', { skip: NO_FFMPEG }, async () => {
+  // europa-rand's Elbasan at 78.84 s lies in frame 79, which shows the waterfall before the cut at
+  // 78.65 s ("Bild 79"); frame 80 shows Elbasan. Here: the light picture at 3.85 s lies in frame 4
+  // (dark, before the cut at 3.5 s); frame 5 shows it.
+  const dark = hashVector('shade-dark');
+  const light = hashVector('shade-light');
+  assert.ok(dark.reduce((sum, x, i) => sum + x * light[i]!, 0) < FRAME_MATCH.cut, 'the stand-in tells the shots apart, as a cut');
+  const { store, engine, dispose } = await setup({ gallery: fourthGallery, model: shadeModel });
+  try {
+    const entry = recording('cut', 'queued', 'Schnitt.mp4');
+    entry.info.durationSec = 13.2;
+    await add(store, entry);
+    await cutVideo(store.sourcePath(entry));
+    engine.quick('cut');
+    await until(() => engine.get('cut')?.status === 'ready' || engine.get('cut')?.status === 'error');
+    const quick = engine.get('cut')!;
+    assert.equal(quick.status, 'ready', quick.error ?? '');
+    // Before the analysis has written its frames the time alone names one: frame 4.
+    const quickEck = quick.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(quickEck, 'the quick fix names the reference picture');
+    assert.equal(quickEck.frame, 4, quickEck.detail);
+
+    await analysedBy(store, entry, shadeModel);
+    assert.equal(entry.frames.length, 13, 'the analysis writes 13 frames');
+    engine.enqueue('cut', true);
+    await until(() => engine.get('cut')?.stage === 'full', 120_000);
+    const fullEck = engine.get('cut')!.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(fullEck, 'the full fix names the reference picture');
+    assert.equal(fullEck.frame, 5, fullEck.detail);
+    assert.match(fullEck.detail, /^Bild 5 /);
+    assert.match(fullEck.detailEn ?? '', /^Frame 5 /);
+
+    // A recording the analysis has finished before its quick fix is computed: the quick stage
+    // checks the frame as the full stage does.
+    const done = recording('cut-done', 'queued', 'Schnitt2.mp4');
+    done.info.durationSec = 13.2;
+    await add(store, done);
+    await cutVideo(store.sourcePath(done));
+    await analysedBy(store, done, shadeModel);
+    engine.quick('cut-done');
+    await until(() => engine.get('cut-done')?.status === 'ready' || engine.get('cut-done')?.status === 'error');
+    const doneQuick = engine.get('cut-done')!;
+    assert.equal(doneQuick.stage, 'quick');
+    const doneEck = doneQuick.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(doneEck, 'the quick fix names the reference picture');
+    assert.equal(doneEck.frame, 5, doneEck.detail);
+  } finally {
+    await dispose();
+  }
+});
+
+test('the full stage without the quick stage\'s frames (after a restart) names the frame that shows a picture sampled just after a cut', { skip: NO_FFMPEG }, async () => {
+  // After a restart the engine keeps no sampled frames: init() queues the full stage of every
+  // stored fix of an older engine version, which samples the frames again and numbers them there.
+  const { store, engine, dispose } = await setup({ gallery: fourthGallery, model: shadeModel });
+  try {
+    const entry = recording('cut-fresh', 'queued', 'Schnitt3.mp4');
+    entry.info.durationSec = 13.2;
+    await add(store, entry);
+    await cutVideo(store.sourcePath(entry));
+    await analysedBy(store, entry, shadeModel);
+    engine.enqueue('cut-fresh', true);
+    // Without a quick fix the full stage is shown while it runs: wait for its result.
+    await until(() => engine.get('cut-fresh')?.stage === 'full' && (engine.get('cut-fresh')?.status === 'ready' || engine.get('cut-fresh')?.status === 'error'), 120_000);
+    const fix = engine.get('cut-fresh')!;
+    assert.equal(fix.status, 'ready', fix.error ?? '');
+    const sampledStep = fix.trace?.find((s) => s.label === 'Bilder für die Ortung gezogen');
+    assert.ok(sampledStep, 'the full stage samples its frames');
+    assert.doesNotMatch(sampledStep.detail ?? '', /Schnellortung/, 'sampled anew, not taken over from the quick stage');
+    const eck = fix.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(eck, 'the full fix names the reference picture');
+    assert.equal(eck.frame, 5, eck.detail);
+    assert.match(eck.detail, /^Bild 5 /);
+  } finally {
+    await dispose();
+  }
+});
+
+test('a flash on the instant of the frame the time names keeps that frame\'s number', { skip: NO_FFMPEG }, async () => {
+  // A change of frame 4 alone within one shot (a flash, a caption) moves the picture's cosine
+  // away from frame 4 as a cut would, but frames 3 and 5 on both sides show the shot: no cut, and
+  // the picture at 3.85 s keeps the frame its second names, in the quick and in the full stage.
+  const { store, engine, dispose } = await setup({ gallery: fourthGallery, model: shadeModel });
+  try {
+    const entry = recording('flash', 'queued', 'Blitz.mp4');
+    entry.info.durationSec = 13.2;
+    await add(store, entry);
+    await flashVideo(store.sourcePath(entry));
+    await analysedBy(store, entry, shadeModel);
+    engine.quick('flash');
+    await until(() => engine.get('flash')?.status === 'ready' || engine.get('flash')?.status === 'error');
+    const quick = engine.get('flash')!;
+    assert.equal(quick.status, 'ready', quick.error ?? '');
+    assert.equal(quick.stage, 'quick');
+    const quickEck = quick.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(quickEck, 'the quick fix names the reference picture');
+    assert.equal(quickEck.frame, 4, quickEck.detail);
+
+    engine.enqueue('flash', true);
+    await until(() => engine.get('flash')?.stage === 'full' && (engine.get('flash')?.status === 'ready' || engine.get('flash')?.status === 'error'), 120_000);
+    const fullEck = engine.get('flash')!.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(fullEck, 'the full fix names the reference picture');
+    assert.equal(fullEck.frame, 4, fullEck.detail);
+    assert.match(fullEck.detail, /^Bild 4 /);
   } finally {
     await dispose();
   }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
 import type { GeoclipPrediction } from '../src/datum/geoclip.js';
-import { DEFAULT_LOCATE_PARAMS, REGION_ROLE, analysisFrameCount, analysisFrameNumbers, decideLocation, frameAgreement, gpsCountries, poolTileRows, voteModes, weightNeighbours, type LocateEvidence, type WeightedRef } from '../src/datum/locate.js';
+import { DEFAULT_LOCATE_PARAMS, FRAME_MATCH, REGION_ROLE, analysisFrameCount, analysisFrameNumbers, decideLocation, frameAgreement, gpsCountries, poolTileRows, voteModes, weightNeighbours, type AnalysisFrames, type LocateEvidence, type WeightedRef } from '../src/datum/locate.js';
 import { filenameHints, judgeCreationTime, metadataFromProbe, parseIso6709, parseTagDate, parseTagDay } from '../src/datum/metadata.js';
 import { World, greatCircleKm, pointInRing, type LonLat } from '../src/datum/world.js';
 import { countryCorrect, scoredDecision } from '../src/scripts/datum/scoring.js';
@@ -504,6 +504,196 @@ test('analysisFrameNumbers: frames sampled from the file named on the analysis s
   // A time at the very end needs the clamp.
   assert.deepEqual(analysisFrameNumbers([12.01], 1), [13]);
   assert.deepEqual(analysisFrameNumbers([12.01], 1, analysisFrameCount(12.012, 1)), [12]);
+});
+
+/** Unit vector at `angle` (radians) in the plane of the first two axes of `dim` dimensions. */
+function shot(angle: number, dim = 8): Float32Array {
+  const v = new Float32Array(dim);
+  v[0] = Math.cos(angle);
+  v[1] = Math.sin(angle);
+  return v;
+}
+
+/** An analysis index of `tiles` rows per frame (the whole frame first, then crops of noise). */
+function analysisIndex(frames: { n: number; v: Float32Array }[], tiles = 2, dim = 8): AnalysisFrames {
+  const matrix = new Float32Array(frames.length * tiles * dim);
+  frames.forEach((f, i) => {
+    matrix.set(f.v, i * tiles * dim);
+    for (let t = 1; t < tiles; t++) matrix[(i * tiles + t) * dim + 7] = 1;
+  });
+  return { numbers: frames.map((f) => f.n), matrix, tiles, dim };
+}
+
+function sampledRows(rows: Float32Array[], dim = 8): { vectors: Float32Array; dim: number } {
+  const vectors = new Float32Array(rows.length * dim);
+  rows.forEach((r, i) => vectors.set(r, i * dim));
+  return { vectors, dim };
+}
+
+test('analysisFrameNumbers: at a cut the analysis frame that shows the picture, not the one the time lies in', () => {
+  // europa-rand: the picture sampled at 78.84 s (Elbasan) lies in frame 79, which shows the file at
+  // about 78.47 s, the waterfall before the cut at 78.65 s; frames 80 to 82 show Elbasan (cosines
+  // as measured with SigLIP 2: frame 79 0.52, frame 80 0.995, frame 81 0.978).
+  const waterfall = shot(0);
+  const sample = shot(Math.acos(0.52));
+  const elbasan = shot(Math.acos(0.52) - Math.acos(0.995));
+  const frames = analysisIndex([77, 78, 79, 80, 81, 82].map((n) => ({ n, v: n <= 79 ? waterfall : elbasan })));
+  assert.deepEqual(analysisFrameNumbers([78.8375], 1, 111), [79], 'the time alone names the waterfall');
+  assert.deepEqual(analysisFrameNumbers([78.8375], 1, 111, { sampled: sampledRows([sample]), frames }), [80]);
+  // The analysis's frames show the cut: frames 79 and 80 a cut apart (measured 0.52), frames 78 and
+  // 79 one shot (0.97).
+  assert.ok(dot(waterfall, elbasan) < FRAME_MATCH.cut);
+  // The other way round: a picture early in its second, before a cut that frame n shows already;
+  // frame n - 1 shows the picture.
+  const before = analysisIndex([
+    { n: 9, v: waterfall },
+    { n: 10, v: elbasan },
+    { n: 11, v: elbasan },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([9.1], 1, 11, { sampled: sampledRows([waterfall]), frames: before }), [9]);
+  // Within one shot (a pan) the neighbours differ by less than the margin: the time's frame stands,
+  // even where a neighbour resembles the picture a little more (weltreise at 4.0 s: frame 5 0.967,
+  // frame 4 0.989).
+  const pan = analysisIndex([
+    { n: 4, v: shot(Math.acos(0.989)) },
+    { n: 5, v: shot(-Math.acos(0.967)) },
+    { n: 6, v: shot(-Math.acos(0.958)) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([4.0], 1, 96, { sampled: sampledRows([shot(0)]), frames: pan }), [5]);
+  assert.ok(0.989 - 0.967 < FRAME_MATCH.margin && 0.995 - 0.52 >= FRAME_MATCH.margin);
+  // A neighbour that does not show the picture either (a shot shorter than an analysis interval)
+  // is not named: below FRAME_MATCH.same the time's frame stands.
+  const short = analysisIndex([
+    { n: 4, v: shot(Math.acos(0.6)) },
+    { n: 5, v: shot(-Math.acos(0.3)) },
+    { n: 6, v: shot(Math.acos(0.8)) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([4.5], 1, 6, { sampled: sampledRows([shot(0)]), frames: short }), [5]);
+  // Only frames the analysis wrote are named: a frame it skipped as unchanged shows the picture of
+  // the last one it wrote before, and a neighbour it skipped is that frame too.
+  const skipped = analysisIndex([
+    { n: 49, v: waterfall },
+    { n: 51, v: elbasan },
+    { n: 52, v: elbasan },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([49.6, 50.2], 1, 52, { sampled: sampledRows([waterfall, waterfall]), frames: skipped }), [49, 49]);
+  assert.deepEqual(analysisFrameNumbers([50.8], 1, 52, { sampled: sampledRows([elbasan]), frames: skipped }), [51]);
+  // Every row is checked on its own; the clamp to the last frame comes first, and a time past the
+  // instant the last frame shows has no frame on its side: the last frame stands.
+  const three = analysisIndex([
+    { n: 10, v: waterfall },
+    { n: 11, v: waterfall },
+    { n: 12, v: elbasan },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([10.5, 11.5, 12.4], 1, 12, { sampled: sampledRows([elbasan, elbasan, waterfall]), frames: three }), [12, 12, 12]);
+  // Where the analysis has no frame on the other side of frame n (its first frame), nothing shows
+  // that the change at frame n is a cut and not a change of frame n alone: frame n stands.
+  const first = analysisIndex([
+    { n: 1, v: waterfall },
+    { n: 2, v: elbasan },
+    { n: 3, v: elbasan },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([0.8], 1, 3, { sampled: sampledRows([elbasan]), frames: first }), [1]);
+  // Vectors of another model (another dimension) are not compared: the time decides.
+  assert.deepEqual(analysisFrameNumbers([78.8375], 1, 111, { sampled: sampledRows([sample], 8), frames: { ...frames, dim: 4 } }), [79]);
+});
+
+/** Unit vector with the given coordinates on the first axes of `dim` dimensions. */
+function unit(coordinates: number[], dim = 8): Float32Array {
+  const v = new Float32Array(dim);
+  const length = Math.hypot(...coordinates);
+  coordinates.forEach((c, i) => {
+    v[i] = c / length;
+  });
+  return v;
+}
+
+function dot(a: Float32Array, b: Float32Array): number {
+  return a.reduce((sum, x, i) => sum + x * b[i]!, 0);
+}
+
+test('analysisFrameNumbers: a change of frame n alone within one shot (a subtitle, a flash) keeps its number', () => {
+  // Axis 0 is the shot as sampled, axis 1 its movement over a second, axes 2 and 3 a burned-in
+  // subtitle and a flash (cosines as measured with SigLIP 2 on the reviewers' clips).
+  const picture = unit([1]);
+  // weltreise's stadium at 46.49 s, a subtitle on frame 47's instant only (46.47 s): frame 47 0.889,
+  // frame 46 0.945, frame 48 0.941. The time names frame 47, the same moment with the subtitle;
+  // frame 46, a second earlier, resembles the picture more, but frames 46 and 47 lie as far apart
+  // as a subtitle puts them (0.84), not as a cut does.
+  const subtitled = analysisIndex([
+    { n: 45, v: unit([0.9, 0.436]) },
+    { n: 46, v: unit([0.9445, 0.3285]) },
+    { n: 47, v: unit([0.8885, 0, 0.4589]) },
+    { n: 48, v: unit([0.941, -0.3384]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([46.4917], 1, 48, { sampled: sampledRows([picture]), frames: subtitled }), [47]);
+  // europa-rand's tower at 43.75 s, a dialogue line on frames 43 and 44 that ends before the
+  // sampled time: frame 44 0.791, frame 45 0.990; frames 44 and 45 0.78, as far apart as a
+  // subtitle puts them, not as a cut does.
+  const line = analysisIndex([
+    { n: 43, v: unit([0.78, 0.05, 0.62]) },
+    { n: 44, v: unit([0.791, 0, 0.612]) },
+    { n: 45, v: unit([0.99, 0.141]) },
+  ]);
+  const [lineFrame44, lineFrame45] = [44, 45].map((n) => line.matrix.subarray((n - 43) * 2 * 8, (n - 43) * 2 * 8 + 8));
+  assert.ok(dot(lineFrame44!, lineFrame45!) >= FRAME_MATCH.cut, 'a subtitle is no cut');
+  assert.deepEqual(analysisFrameNumbers([43.75], 1, 45, { sampled: sampledRows([picture]), frames: line }), [44]);
+  // A flash on frame 57's instant only (56.47 s), the picture at 56.53 s: frame 57 shows another
+  // picture as a cut would (0.5), but it is as far from frame 56 before it as from frame 58: a change
+  // of frame 57 alone, not a cut. Frame 57 stands.
+  const flash = analysisIndex([
+    { n: 55, v: unit([0.93, 0.37]) },
+    { n: 56, v: unit([0.96, 0.28]) },
+    { n: 57, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 58, v: unit([0.95, -0.31]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([56.525], 1, 58, { sampled: sampledRows([picture]), frames: flash }), [57]);
+  // The same frames with a cut after frame 57's instant (frames 56 and 57 one shot): frame 58 is named.
+  const cut = analysisIndex([
+    { n: 55, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 56, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 57, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 58, v: unit([0.95, -0.31]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([56.525], 1, 58, { sampled: sampledRows([picture]), frames: cut }), [58]);
+  // Only the neighbour on the time's side is asked: the picture at 56.525 s lies after the instant
+  // frame 57 shows (56.47 s), so frame 56 (55.47 s) shows a like picture only from before a cut that
+  // frames 57 and 58 show, and is not named.
+  const behind = analysisIndex([
+    { n: 55, v: unit([1]) },
+    { n: 56, v: unit([1]) },
+    { n: 57, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 58, v: unit([0.5, 0, 0, 0.866]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([56.525], 1, 58, { sampled: sampledRows([picture]), frames: behind }), [57]);
+});
+
+test('analysisFrameNumbers: at the first and the last frame nothing shows the far side, and frame n stands', () => {
+  // A cut seen from the analysis's last frame: frame 12 (the last) shows another shot than frame 11,
+  // the picture at 11.3 s lies before frame 12's instant (11.47 s) and resembles frame 11. Whether
+  // frame 12 is a cut or a flash on frame 12 alone, no frame 13 can tell: frame 12 stands.
+  const picture = unit([1]);
+  const last = analysisIndex([
+    { n: 10, v: unit([1]) },
+    { n: 11, v: unit([1]) },
+    { n: 12, v: unit([0.5, 0, 0, 0.866]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([11.3], 1, 12, { sampled: sampledRows([picture]), frames: last }), [12]);
+  // The same at the first frame: the picture at 0.6 s lies after frame 1's instant and resembles
+  // frame 2, frame 1 shows another shot, and there is no frame 0 to tell a cut from a flash.
+  const first = analysisIndex([
+    { n: 1, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 2, v: unit([1]) },
+    { n: 3, v: unit([1]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([0.6], 1, 3, { sampled: sampledRows([picture]), frames: first }), [1]);
+  // One frame further in, the far side exists and shows frame n's shot: the cut is named.
+  const inner = analysisIndex([
+    { n: 1, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 2, v: unit([0.5, 0, 0, 0.866]) },
+    { n: 3, v: unit([1]) },
+  ]);
+  assert.deepEqual(analysisFrameNumbers([1.6], 1, 3, { sampled: sampledRows([picture]), frames: inner }), [3]);
 });
 
 test('analysisFrameCount: the frames the analysis writes, from the duration', () => {

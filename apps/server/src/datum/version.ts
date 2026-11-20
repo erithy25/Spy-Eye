@@ -62,8 +62,20 @@
  *      "Bild 13" in a clip of 12 analysis frames (quick fixes), or say the countries begin with the
  *      GPS position's country, or are the world model's, where they are not; they are computed
  *      again.
+ *  16: where the analysis has run, a frame sampled from the file is named by the analysis frame
+ *      that shows its picture (locate.ts analysisFrameNumbers with `content`): the time's frame,
+ *      or at a cut between the instant that frame shows and the sampled time the neighbour on the
+ *      time's side, where it shows the picture (cosine at least FRAME_MATCH.same,
+ *      FRAME_MATCH.margin above the time's frame) and the analysis's own frames show the cut (the
+ *      time's frame and that neighbour below FRAME_MATCH.cut, the time's frame and its frame on the
+ *      other side at least FRAME_MATCH.same; a subtitle, a flash or a grey frame within one shot
+ *      keeps the time's frame), and never a frame the analysis skipped as unchanged (the last one
+ *      it wrote before, which can lie many seconds earlier).
+ *      Stored engine-15 fixes (2673aaa) name every frame by its time alone, and so "Bild 79", the
+ *      waterfall before the cut at 78.65 s, for europa-rand's Elbasan at 78.84 s wherever a
+ *      reference resembles that picture most; they are computed again.
  */
-export const ENGINE_VERSION = 15;
+export const ENGINE_VERSION = 16;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

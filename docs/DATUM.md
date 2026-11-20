@@ -67,7 +67,7 @@ deutschen Stücken gegen 3 niederländische „Roer“ die „Rur“, die Eger m
 | Reiter | Zeigt |
 | --- | --- |
 | ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel (nach einem Horizontabgleich an dem Punkt, für den er gilt, mit einer blassen Linie vom Ort dorthin); links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“; sind Morgen und Nachmittag gleich wahrscheinlich, „oder 14:30–18:15“ dazu, ebenso in der Ergebniskarte, und die Sonne des zweiten Fensters blass auf der Karte); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge, um ihre Mitte und links der Ergebniskarte, die sie nicht verdeckt; Namen der Karte weichen den Markierungen, ihren Beschriftungen und den Beschriftungen von Kreisen, Strahlen und Länderanteilen („± 25 km“, „☉ 123°“, „SCHATTEN“, „DE 38 %“), statt von ihnen zerschnitten zu werden (die Linien der Kreise, Strahlen und Blickkegel selbst laufen über die Namen hinweg); die Beschriftungen der Markierungen und Formen stehen ganz auf der Karte (eine Markierung am oberen Rand beschriftet sich darunter), und alle Beschriftungen weichen der Werkzeugleiste oben links wie den Zoomknöpfen; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n zeigt bei einer Aufnahme mit einem Bild je Sekunde die Sekunde von n − 1 bis n, aufgenommen etwa in ihrer Mitte), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (Wahrscheinlichkeit je Land, die Masse des Weltmodells, wo es den Ort gab, oder, wo ein Abschnitt den Ort zeigt, der Anteil jedes Lands an der Aufnahmezeit; das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
+| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n zeigt bei einer Aufnahme mit einem Bild je Sekunde die Sekunde von n − 1 bis n, aufgenommen etwa in ihrer Mitte; ein Bild, das die Ortung aus der Datei zieht, heißt nach dem Bild der Auswertung, das es zeigt: dem seiner Sekunde, nach einem Schnitt zwischen deren Mitte und dem Zeitpunkt, den die Bilder der Auswertung selbst zeigen, dem Nachbarn auf der Seite des Zeitpunkts (ein Untertitel, ein Blitz oder ein graues Bild innerhalb einer Einstellung ist kein Schnitt), und nie einem Bild, das die Auswertung als unverändert übersprungen hat, sondern dem letzten, das sie davor geschrieben hat, auch viele Sekunden früher; vor der Auswertung nennt die Schnellortung das Bild seiner Sekunde), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (Wahrscheinlichkeit je Land, die Masse des Weltmodells, wo es den Ort gab, oder, wo ein Abschnitt den Ort zeigt, der Anteil jedes Lands an der Aufnahmezeit; das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
 | RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit, „Sonne am Horizont, Schatten sehr lang“ bis 0,5° Höhe) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; liegt dort nur die Weltübersicht der Höhendaten vor (Zoomstufe 4, etwa 9 km je Messpunkt), sagt das Gelände es und zeichnet keine Höhenlinien; bei einer Aufnahme mit Zeitleiste der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
@@ -252,6 +252,46 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   vollständigen Ortung „Bild 12“. Die erste Länderschätzung sagt richtig, welche Liste die Länder
   der Ortung sind, wo die GPS-Angabe in keinem Land liegt und wo die Anteile der Abschnitte die
   Länder des Weltmodells ersetzen. Ortungen der Fassung 14 werden neu gerechnet.
+- **Fassung 16** nennt ein Bild aus der Datei nach dem Bild der Auswertung, das es zeigt, nicht nur
+  nach seiner Sekunde: Bild n zeigt die Datei bei einem Bild je Sekunde etwa bei n − 0,5 s, und
+  liegt zwischen diesem Augenblick und dem Zeitpunkt des gezogenen Bilds ein Schnitt, zeigt Bild n
+  eine andere Einstellung. Europa-Rand: das Bild bei 78,84 s (Elbasan) liegt in Sekunde 79, Bild 79 zeigt aber
+  78,47 s, den Wasserfall vor dem Schnitt bei 78,65 s; Bild 80 zeigt Elbasan. Wo die Auswertung
+  gelaufen ist, vergleicht die Ortung darum das gezogene Bild mit Bild n und seinem Nachbarn auf
+  der Seite des Zeitpunkts (Bild n + 1, wo der Zeitpunkt nach der Mitte der Sekunde liegt, sonst
+  Bild n − 1; Vektor des ganzen Bilds im Bildmodell) und nennt den Nachbarn nur, wo er das Bild
+  zeigt (Kosinus mindestens 0,9), ihm deutlich näher ist (mindestens 0,05 mehr als Bild n) und die
+  Bilder der Auswertung selbst den Schnitt zeigen: Bild n und der Nachbar so verschieden wie an
+  einem Szenenschnitt der Auswertung (Kosinus unter 0,72, der Schnitt der Szenen für SigLIP 2) und
+  Bild n eine Einstellung mit seinem Bild auf der anderen Seite (Kosinus mindestens 0,9). Gemessen
+  mit SigLIP 2 an den 84 gezogenen Bildern von Europa-Rand, Weltreise, Stadt-Land (auch mit GPS),
+  Datum-007, -021 und -025: das Bild, das das gezogene zeigt, 0,92 bis 1,00; ein Nachbar derselben
+  Einstellung höchstens 0,022 über Bild n (ein Schwenk); am Schnitt Bild 79 0,52 und Bild 80
+  0,995, Bild 79 und 80 untereinander 0,52, Bild 78 und 79 0,97. So heißt nur das Elbasan-Bild
+  anders („Bild 80“), alle übrigen 83 behalten ihre Nummer. Der Vergleich mit dem gezogenen Bild
+  allein genügt nicht: ein eingebrannter Untertitel, ein Blitz oder ein graues Bild nur im
+  Augenblick von Bild n rückt Bild n so weit vom gezogenen Bild ab wie ein Schnitt zwischen
+  ähnlichen Einstellungen (Dialog-Untertitel auf 7 × 50 s Europa-Rand und Weltreise bei 0,5 und
+  1 Bild je Sekunde: Bild n 0,74 bis 0,92; Schnitte zwischen ähnlichen Einstellungen 0,71 bis
+  0,80), und an den Clips der Prüfung von Fassung 16 nannte er für 213 Bilder innerhalb einer
+  Einstellung den Nachbarn, 34 davon in untertitelten echten Aufnahmen. Mit dem Schnitt aus den
+  Bildern der Auswertung keins davon (Untertitel lassen Bild n und den Nachbarn bei 0,73 bis 0,92;
+  ändert sich Bild n allein stärker, bleibt es unter 0,86 zu seinem Bild auf der anderen Seite);
+  die Schnitte mit Bild n und Nachbar unter 0,72 behalten den Nachbarn (Europa-Rand bei 1 und
+  2 Bildern je Sekunde, Europa-Schnitt, der unten genannte Zusammenschnitt). Schnitte zwischen
+  ähnlichen Einstellungen (Bild n und Nachbar 0,72 bis 0,81: Datum-007, Datum-044 und Reise-84s
+  bei 0,5 und 2 Bildern je Sekunde) und eine Einstellung, die nur Bild n zeigt (eine Sekunde lang;
+  für die Auswertung wie ein Blitz in Bild n), nennen wie vor Fassung 16 das Bild der Sekunde. Ein
+  Bild, das die Auswertung als unverändert übersprungen hat, wird nie genannt, sondern das letzte,
+  das sie davor geschrieben hat; es zeigt dasselbe, auch wenn es viele Sekunden früher liegt. Die
+  Schnellortung einer neuen Aufnahme läuft vor der Auswertung und nennt das Bild der Sekunde; die
+  vollständige Ortung, die sie ersetzt, prüft es. Im Knoten nachgeprüft an einem Zusammenschnitt
+  aus Europa-Rand (12 s Wasserfall mit einer Sekunde Elbasan ab 7,5 s): Die Referenzbilder
+  Medellín, Barcelona und Nikosia gleichen dem bei 7,5 s gezogenen Stadtbild; die Schnellortung
+  nennt „Bild 8“ (der Wasserfall), die vollständige Ortung „Bild 9“ (die Stadt); mit dem Schnitt
+  aus den Bildern der Auswertung nachgerechnet (die Bilder der Ortung zu denselben Zeitpunkten,
+  die Bilder der Auswertung wie die Pipeline sie schreibt), ebenfalls „Bild 9“.
+  Ortungen der Fassung 15 werden neu gerechnet.
 
 ### Gemessen an Zusammenschnitten
 

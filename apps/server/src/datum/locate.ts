@@ -24,6 +24,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { config } from '../config.js';
+import { dotAt } from '../ml/math.js';
 import { decodeFrame, tileLayout, writeTile, type PixelRect } from '../ml/preprocess.js';
 import type { DetailLevel } from '../types.js';
 import type { CountryProb, Evidence, FixCandidate, FixLocation } from './contract.js';
@@ -1376,13 +1377,153 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
  * or before the analysis has run analysisFrameCount (the quick stage); a time at the file's very
  * end (12.4 s of a clip of 12 analysis frames) would otherwise name a frame the analysis does not
  * have.
+ *
+ * The time alone cannot see a cut between the instant frame n shows and t: europa-rand's
+ * picture at 78.84 s (Elbasan) lies in frame 79, which shows the file at about 78.47 s, the
+ * waterfall before the cut at 78.65 s; frame 80 shows Elbasan. Where the analysis has run,
+ * `content` (the sampled pictures' whole-frame vectors and the analysis's index, see
+ * frameByContent) names the neighbour on the side of t where the analysis's own frames show such
+ * a cut, and names only frames the analysis wrote. Before it has run (the quick stage of a new
+ * upload) the time alone names the frame; the full fix that replaces the quick one checks it.
  */
-export function analysisFrameNumbers(times: readonly number[], sampleFps: number, last: number | null = null): number[] {
+export function analysisFrameNumbers(
+  times: readonly number[],
+  sampleFps: number,
+  last: number | null = null,
+  content: { sampled: SampledVectors; frames: AnalysisFrames } | null = null,
+): number[] {
   const fps = Number.isFinite(sampleFps) && sampleFps > 0 ? sampleFps : 1;
-  return times.map((t) => {
-    const n = Math.max(1, Math.floor(Math.max(0, t) * fps) + 1);
-    return last !== null && last >= 1 ? Math.min(last, n) : n;
+  return times.map((t, row) => {
+    const byTime = Math.max(1, Math.floor(Math.max(0, t) * fps) + 1);
+    const n = last !== null && last >= 1 ? Math.min(last, byTime) : byTime;
+    // Frame n shows the file just before the middle of its interval: t after that instant can lie
+    // past a cut that only frame n + 1 shows, t before it a cut that only frame n - 1 shows.
+    const side = t >= (n - 0.5) / fps ? 1 : -1;
+    return content ? frameByContent(n, side, row, content.sampled, content.frames) : n;
   });
+}
+
+/** Whole-frame vectors of the pictures sampled from the file: row i belongs to times[i]. */
+export interface SampledVectors {
+  vectors: Float32Array;
+  dim: number;
+}
+
+/** The frames the analysis wrote, with its index (for the content check of analysisFrameNumbers). */
+export interface AnalysisFrames {
+  /** FrameRecord.n of every frame the analysis wrote, ascending (a frame it found unchanged is not written). */
+  numbers: readonly number[];
+  /** The analysis's index: `tiles` rows of `dim` values per written frame, the whole frame first. */
+  matrix: Float32Array;
+  tiles: number;
+  dim: number;
+}
+
+/**
+ * Cosines of the image model for the content check (frameByContent). Measured with SigLIP 2 on the
+ * 84 pictures the localisation samples from europa-rand, weltreise, stadt-land, stadt-land-gps,
+ * datum-007, datum-021 and datum-025 against the analysis frames n - 1, n and n + 1: the frame
+ * showing the picture 0.92 to 1.00; a neighbour in the same shot at most 0.022 above frame n (a
+ * pan); across europa-rand's cut at 78.65 s frame 79 0.52, frame 80 0.995, frames 79 and 80 0.52,
+ * frames 78 and 79 0.97.
+ *
+ * Within one shot a change on frame n's instant alone moves its cosine to the picture as far as a
+ * cut between similar shots does (clips of the engine-16 review: dialogue subtitles on 7 × 50 s of
+ * europa-rand and weltreise at 0.5 and 1 fps put frame n at 0.74 to 0.92, the neighbour at 0.90 to
+ * 0.99; subtitles, flashes and grey frames on 7 dataset clips at 1 fps frame n at 0.80 to 0.93;
+ * cuts between similar shots gave frame n 0.71 to 0.80). The cosine to the picture alone named a
+ * neighbour for 213 pictures within one shot there (34 of them subtitled real footage). A
+ * neighbour is therefore named only where the analysis's own frames show a cut: frame n and the
+ * neighbour as far apart as the analysis's scene cut (`cut`; subtitles put them at 0.73 to 0.92,
+ * the flashes and grey frames of the dataset clips at 0.82 to 0.97), and frame n one shot with its
+ * frame on the other side (`same`; 0.94 to 0.99 at the cuts, below 0.86 where frame n alone
+ * changed further than the cut). On the same clips this names none of the 213 and keeps the cuts
+ * with frames n and n ± 1 below 0.72 (europa-rand's Elbasan at 1 fps and its cut at 69.6 s at
+ * 2 fps, europa-schnitt, europa-einschub's Elbasan at 7.5 s, a dataset clip, 8 generated cuts).
+ * Cuts between similar shots (frames n and n ± 1 0.72 to 0.81: datum-007, datum-044 and reise-84s
+ * at 0.5 and 2 fps, two dataset clips at 1 fps) and a shot that only frame n shows (one interval
+ * long, which looks to the analysis as a flash on frame n does) keep the time's frame, as before
+ * engine 16.
+ */
+export const FRAME_MATCH = {
+  /**
+   * A neighbour is named only where it shows the sampled picture: at least this cosine; and only
+   * where frame n shows the shot before the cut too: at least this cosine with its frame on the
+   * other side.
+   */
+  same: 0.9,
+  /** … and only where the neighbour is this much closer to the picture than frame n. */
+  margin: 0.05,
+  /**
+   * … and only where frame n and the neighbour lie a cut apart: below this cosine, the cut of the
+   * analysis's scenes for SigLIP 2 (pipeline.ts SCENE_THRESHOLDS, distance 0.28 between successive
+   * frames). Subtitles put them at 0.73 or more, europa-rand's cut at 0.52.
+   */
+  cut: 0.72,
+} as const;
+
+/** Index of the last of `numbers` (ascending) at or before `n`; -1 if there is none. */
+function lastAtOrBefore(numbers: readonly number[], n: number): number {
+  let lo = 0;
+  let hi = numbers.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if ((numbers[mid] as number) <= n) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return found;
+}
+
+/**
+ * The analysis frame that shows sampled picture `row`, given the frame `n` its time lies in and the
+ * `side` of the instant frame n shows on which the time lies (+1 after it, -1 before it). A frame
+ * the analysis did not write repeats the picture of the last one it wrote before (the pipeline
+ * skips a frame in which nothing changed), so each of n - 1, n and n + 1 is read as that written
+ * frame. Frame n's is named, unless a cut lies between the instant it shows and the sampled time,
+ * as the analysis's own frames show it:
+ *  - the neighbour on the time's side (n + side) shows the sampled picture (FRAME_MATCH.same) and
+ *    is clearly closer to it than frame n (FRAME_MATCH.margin);
+ *  - frame n and that neighbour lie a cut apart (FRAME_MATCH.cut);
+ *  - frame n is one shot with its frame on the other side (n - side, FRAME_MATCH.same; a frame
+ *    skipped as unchanged is that shot), so the change at frame n is a cut and not a change of
+ *    frame n alone (a flash, a caption, a grey frame); where the analysis has no frame on that
+ *    side (the first or the last), nothing shows it, and frame n stands.
+ * Then the neighbour is named. Within one shot (a subtitle that comes or goes, a pan) frame n
+ * keeps its number.
+ */
+function frameByContent(n: number, side: 1 | -1, row: number, sampled: SampledVectors, frames: AnalysisFrames): number {
+  const dim = frames.dim;
+  const tiles = Math.max(1, frames.tiles);
+  const numbers = frames.numbers;
+  if (sampled.dim !== dim || dim <= 0 || (row + 1) * dim > sampled.vectors.length) return n;
+  if (frames.matrix.length < numbers.length * tiles * dim) return n;
+  const home = lastAtOrBefore(numbers, n);
+  if (home < 0) return n;
+  // Frame n as the analysis wrote it (the last frame written at or before n).
+  const stay = numbers[home] as number;
+  const next = lastAtOrBefore(numbers, n + side);
+  if (next < 0 || next === home) return stay;
+  const far = n - side;
+  if (far < (numbers[0] as number) || far > (numbers[numbers.length - 1] as number)) return stay;
+  const farIndex = lastAtOrBefore(numbers, far);
+  const norm = (values: Float32Array, at: number): number => Math.sqrt(dotAt(values, at, values, at, dim));
+  const cosine = (a: Float32Array, at: number, b: Float32Array, bt: number): number => {
+    const scale = norm(a, at) * norm(b, bt);
+    return scale > 0 ? dotAt(a, at, b, bt, dim) / scale : 0;
+  };
+  const own = row * dim;
+  const rowAt = (index: number): number => index * tiles * dim;
+  const homeCosine = cosine(sampled.vectors, own, frames.matrix, rowAt(home));
+  const nextCosine = cosine(sampled.vectors, own, frames.matrix, rowAt(next));
+  if (nextCosine < FRAME_MATCH.same || nextCosine - homeCosine < FRAME_MATCH.margin) return stay;
+  if (cosine(frames.matrix, rowAt(home), frames.matrix, rowAt(next)) >= FRAME_MATCH.cut) return stay;
+  if (farIndex !== home && cosine(frames.matrix, rowAt(home), frames.matrix, rowAt(farIndex)) < FRAME_MATCH.same) return stay;
+  return numbers[next] as number;
 }
 
 /**

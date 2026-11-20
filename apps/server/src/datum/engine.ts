@@ -61,7 +61,7 @@ import {
   type StreetLevelOptions,
   type StreetLevelResult,
 } from './streetlevel.js';
-import { analysisFrameCount, analysisFrameNumbers, breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
+import { analysisFrameCount, analysisFrameNumbers, breathe, locate, sampleAndEmbedFrames, type AnalysisFrames, type LocateResult, type SampledFrames } from './locate.js';
 import {
   analyseSegments,
   clockText,
@@ -294,6 +294,19 @@ export interface SkyCandidate {
 export function moreSky(best: SkyCandidate | null, candidate: SkyCandidate): SkyCandidate | null {
   if (candidate.skyFraction <= 0.05) return best;
   return !best || candidate.skyFraction > best.skyFraction ? candidate : best;
+}
+
+/**
+ * The frames the analysis wrote, with its index, for the content check of analysisFrameNumbers;
+ * null before the analysis has run, or where its vectors are not the image model's of `dim`
+ * dimensions (an index being rebuilt for another model).
+ */
+function analysisFrames(entry: VideoEntry, dim: number): AnalysisFrames | null {
+  if (entry.info.status !== 'ready' || !entry.embeddings || entry.frames.length === 0) return null;
+  const tiles = Math.max(1, entry.info.tilesPerFrame);
+  const matrix = entry.embeddings.view();
+  if (entry.embeddings.dim !== dim || matrix.length < entry.frames.length * tiles * dim) return null;
+  return { numbers: entry.frames.map((f) => f.n), matrix, tiles, dim };
 }
 
 /** Evenly spread indices into `frames`, avoiding the very first and last frame. */
@@ -1253,15 +1266,18 @@ export class DatumEngine {
     const world: Promise<WorldModelResult | null> = worldJob.bounded ?? Promise.resolve(null);
     // The analysis's last frame: the one it wrote where it has run, else the one its fps filter
     // will write (analysisFrameCount), so that the quick and the full fix give one picture one
-    // number, and none the analysis lacks.
+    // number, and none the analysis lacks. Where the analysis has run already, its frames decide
+    // at a cut, as in the full stage; before, the time alone names the frame, and at a cut between
+    // the instant that frame shows and the sampled time the full fix names its neighbour instead.
     const written = entry.info.status === 'ready' ? (entry.frames[entry.frames.length - 1]?.n ?? null) : null;
     const lastFrame = written ?? analysisFrameCount(meta?.durationSec ?? entry.info.durationSec, entry.info.sampleFps);
+    const analysed = analysisFrames(entry, sampled.dim);
     const located = await locate({
       videoPath,
       frameVectors: sampled.vectors,
       dim: sampled.dim,
       // Named in the evidence on the analysis's scale (the keyframes', the stretches').
-      frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps, lastFrame),
+      frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps, lastFrame, analysed ? { sampled, frames: analysed } : null),
       ...(sampled.tiles ? { tiles: sampled.tiles } : {}),
       embedTexts: this.embedTexts,
       gallery,
@@ -1357,9 +1373,13 @@ export class DatumEngine {
     // landmark a hundredth ahead of a look-alike) the choice of frames decides; what runs should
     // be what was measured. The quick stage sampled exactly these frames already; without its
     // frames they are sampled now, and if that fails, the stored vectors of the analysis are used.
-    // Frames sampled from the file are named by the nearest analysis frame (analysisFrameNumbers),
+    // Frames sampled from the file are named by the analysis frame that shows them
+    // (analysisFrameNumbers: the time's frame, or at a cut the neighbour that shows the picture),
     // as these are: one scale for every frame number in the evidence.
     const lastFrame = entry.frames[entry.frames.length - 1]?.n ?? null;
+    const analysed = analysisFrames(entry, dim);
+    const renumber = (frames: { times: number[]; vectors: Float32Array; dim: number }): number[] =>
+      analysisFrameNumbers(frames.times, entry.info.sampleFps, lastFrame, analysed ? { sampled: frames, frames: analysed } : null);
     let locateFrames: { frameVectors: Float32Array; frameNumbers: number[]; tiles: { vectors: Float32Array; frameRow: number[]; tile: number[] } } = {
       frameVectors,
       frameNumbers,
@@ -1372,7 +1392,7 @@ export class DatumEngine {
     let worldSampled = false;
     const kept = this.sampled.get(id);
     if (kept?.tiles && kept.tiles.frameRow.length > 0 && kept.dim === dim) {
-      locateFrames = { frameVectors: kept.vectors, frameNumbers: analysisFrameNumbers(kept.times, entry.info.sampleFps, lastFrame), tiles: kept.tiles };
+      locateFrames = { frameVectors: kept.vectors, frameNumbers: renumber(kept), tiles: kept.tiles };
       const asked = this.worldFor(kept);
       world = asked.result;
       worldReused = asked.reused;
@@ -1394,7 +1414,7 @@ export class DatumEngine {
           },
         });
         if (sampled.tiles && sampled.tiles.frameRow.length > 0 && sampled.dim === dim) {
-          locateFrames = { frameVectors: sampled.vectors, frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps, lastFrame), tiles: sampled.tiles };
+          locateFrames = { frameVectors: sampled.vectors, frameNumbers: renumber(sampled), tiles: sampled.tiles };
           const asked: Promise<WorldModelResult | null> = worldJob.current ?? Promise.resolve(null);
           world = asked;
           worldSampled = true;

@@ -67,9 +67,15 @@ export interface Evidence {
   weight: number;
   /**
    * Frame of the video this evidence was read from, if any, on the analysis's scale (the
-   * numbering of Keyframe.frame: frame n lies at (n - 1) / sampleFps seconds, from engine 14 on
-   * for every kind; before, reference pictures and street-level pictures counted the file's own
-   * frames). On the entry of kind 'segments' it is the keyframe of the stretch the fix shows
+   * numbering of Keyframe.frame: frame n shows the interval from (n - 1) / sampleFps to
+   * n / sampleFps seconds, taken near its middle; from engine 14 on for every kind; before,
+   * reference pictures and street-level pictures counted the file's own frames). A picture the
+   * localisation sampled from the file is named by the analysis frame that shows it (engine 16 on,
+   * where the analysis has run; locate.ts analysisFrameNumbers): its interval's frame; where the
+   * analysis's frames show a cut between the instant that frame shows and the sampled time, the
+   * neighbour on the time's side; and where the analysis skipped the frame as unchanged, the last
+   * frame it wrote before, which shows the same picture and can lie many seconds earlier, cut or
+   * not. On the entry of kind 'segments' it is the keyframe of the stretch the fix shows
    * (FixSegment.keyframe.frame); absent there where the fix shows none of its stretches (see
    * Fix.segments).
    */
