@@ -400,7 +400,8 @@ test('a recording deleted while it is located gets no fix, no fix.json and no fo
       return readyFix(entry.info.id, 'gelöscht');
     });
     engine.enqueue('d');
-    await settle();
+    // Until the job is done, not a fixed time: deleting a folder takes longer on Windows.
+    await until(() => engine.queueLength === 0);
     await assert.rejects(fs.access(store.videoDir('d')), 'the folder of the deleted recording is not created again');
     assert.equal(engine.get('d'), null);
     assert.ok(!events.some((f) => f.videoId === 'd' && f.status === 'ready'), 'no fix announced for a deleted recording');
@@ -413,7 +414,7 @@ test('a recording deleted while it is located gets no fix, no fix.json and no fo
       throw new Error('Bild fehlt');
     });
     engine.enqueue('e');
-    await settle();
+    await until(() => engine.queueLength === 0);
     assert.ok(!events.some((f) => f.videoId === 'e' && f.status === 'error'));
     assert.equal(engine.prune(), 0);
   } finally {
