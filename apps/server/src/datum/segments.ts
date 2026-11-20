@@ -33,10 +33,10 @@
  * Everything here except analyseSegments is pure; analyseSegments is handed the gallery search,
  * the world model and the frame vectors, so that tests and the measurement can stand in for them.
  */
-import type { CountryProb, Evidence, FixLocation, FixSegment, FixSegmentPlace, FixSegmentRegion, FixSegmentSummary, GeoPoint, SunReport, TimeEstimate } from './contract.js';
+import type { CountryProb, Evidence, FixCandidate, FixLocation, FixSegment, FixSegmentPlace, FixSegmentRegion, FixSegmentSummary, GeoPoint, SunReport, TimeEstimate } from './contract.js';
 import type { GalleryNeighbour, GallerySearchOptions } from './gallery.js';
 import { massWithin, type GeoclipPrediction } from './geoclip.js';
-import { breathe, decideLocation, type LocateParams, type LocateResult, type RadiusTier } from './locate.js';
+import { REGION_ROLE, breathe, decideLocation, type LocateParams, type LocateResult, type RadiusTier } from './locate.js';
 import type { RegionName } from './regions.js';
 import { greatCircleKm, type EmbedTexts, type World } from './world.js';
 
@@ -1412,6 +1412,55 @@ export function wholeFileEvidence(e: Evidence, mix: WholeFileMix = 'places'): Ev
     detail: `Aus der Ortung der ganzen Datei, ${m.de}; „Ergebnis“ ist hier deren Antwort, nicht der oben gezeigte Ort. ${e.detail}`,
     detailEn: `From the fix of the whole file, ${m.en}; "result" here is its answer, not the place shown above. ${e.detailEn ?? e.detail}`,
     weight: 0,
+  };
+}
+
+/**
+ * The first country estimate of a fix whose countries are the stretches' shares of the recording
+ * time (verdictCountries): where it says the fix's countries are the world model's (locate.ts
+ * REGION_ROLE.world, the whole file's answer came from the world model), it says now that they are
+ * the stretches' shares, as the console heads them ("Anteil der Aufnahmezeit"). Every other entry,
+ * and every other estimate's role, stays as it is.
+ */
+export function stretchCountryEvidence(e: Evidence): Evidence {
+  if (e.kind !== 'region') return e;
+  const from = REGION_ROLE.world;
+  const to = REGION_ROLE.worldStretches;
+  const en = e.detailEn ?? e.detail;
+  if (!e.detail.endsWith(from.de) && !en.endsWith(from.en)) return e;
+  return {
+    ...e,
+    detail: e.detail.endsWith(from.de) ? `${e.detail.slice(0, -from.de.length)}${to.de}` : e.detail,
+    detailEn: en.endsWith(from.en) ? `${en.slice(0, -from.en.length)}${to.en}` : en,
+  };
+}
+
+/**
+ * The whole file's localisation with what its stretches change (engine.ts, DatumEngine.segment):
+ * where the verdict has an entry, the place it shows, its entry first, the places as candidates
+ * where a stretch replaced the place, and the stretches' countries where they stand for the fix
+ * (verdictCountries). The whole file's entries stay; where a stretch's place replaced its answer
+ * they are said to be of the whole file (wholeFileEvidence), and where the countries are the
+ * stretches' the country estimate says so (stretchCountryEvidence): it said "the fix's countries
+ * are the world model's" above bars headed "Anteil der Aufnahmezeit" (a world-model place in
+ * Paris for 40 of 60 s, Berlin for 20: Frankreich 67 %, Deutschland 33 %).
+ */
+export function placedByStretches(
+  located: LocateResult,
+  parts: { verdict: Pick<SegmentVerdict, 'evidence' | 'location' | 'replaced' | 'places'>; candidates: FixCandidate[] | null; countries: CountryProb[] | null },
+): LocateResult {
+  const { verdict } = parts;
+  if (verdict.evidence.length === 0) return located;
+  // What the whole file's frames mix with the stretch shown: other places, or the undetermined
+  // stretches of a recording of one recognised place (its entries say which).
+  const mix: WholeFileMix = verdict.places === 1 ? 'undetermined' : 'places';
+  const whole = verdict.replaced ? located.evidence.map((e) => wholeFileEvidence(e, mix)) : located.evidence;
+  return {
+    ...located,
+    location: verdict.location,
+    evidence: [...verdict.evidence, ...(parts.countries ? whole.map(stretchCountryEvidence) : whole)],
+    ...(parts.candidates ? { candidates: parts.candidates } : {}),
+    ...(parts.countries ? { countries: parts.countries } : {}),
   };
 }
 

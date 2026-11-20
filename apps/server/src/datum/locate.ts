@@ -763,6 +763,42 @@ export function gpsCountries(gps: FixLocation, pictures: readonly CountryProb[])
   return [{ iso, name: gps.countryName ?? iso, p: sure }, ...rest.map((c) => ({ ...c, p: c.p * scale }))];
 }
 
+/**
+ * What the first country estimate (the 'region' entry) says of itself where the fix's countries
+ * are not its own figures, appended to its detail (decideLocation). Each names the list the fix
+ * carries instead:
+ *   gps            the GPS position's country first (gpsCountries);
+ *   gpsNoCountry   a GPS position in no country (at sea, say): the place is the position's, the
+ *                  countries this estimate's (gpsCountries leaves the list as it is);
+ *   gpsNoCountryWorld the same where the world model replaced the gallery's answer: its countries;
+ *   world          the world model's probability per country where it replaced the gallery's answer;
+ *   worldStretches the stretches' shares of the recording time where a stretch is shown and the
+ *                  world model gave the whole file's place (segments.ts stretchCountryEvidence
+ *                  rewords `world` to this one: the engine replaces the countries after this).
+ */
+export const REGION_ROLE = {
+  gps: {
+    de: ' Das ist die Schätzung der Bilder allein: Den Ort und sein Land gibt die GPS-Angabe der Datei, die Länder der Ortung beginnen mit diesem.',
+    en: " This is the pictures' estimate alone: the GPS position in the file gives the place and its country, and the fix's countries begin with that one.",
+  },
+  gpsNoCountry: {
+    de: ' Den Ort gibt die GPS-Angabe der Datei; sie liegt in keinem Land (etwa auf See), die Länder der Ortung sind daher die dieser Schätzung.',
+    en: " The GPS position in the file gives the place; it lies in no country (at sea, for instance), so the fix's countries are those of this estimate.",
+  },
+  gpsNoCountryWorld: {
+    de: ' Den Ort gibt die GPS-Angabe der Datei; sie liegt in keinem Land (etwa auf See). Diese Schätzung gehört zum Ergebnis der Referenzgalerie, das das Weltmodell ersetzt hat; die Länder der Ortung sind die des Weltmodells (seine Wahrscheinlichkeit je Land).',
+    en: " The GPS position in the file gives the place; it lies in no country (at sea, for instance). This estimate belongs to the reference gallery's result, which the world model replaced; the fix's countries are the world model's (its probability per country).",
+  },
+  world: {
+    de: ' Diese Schätzung gehört zum Ergebnis der Referenzgalerie, das das Weltmodell ersetzt hat; die Länder der Ortung sind die des Weltmodells (seine Wahrscheinlichkeit je Land).',
+    en: " This estimate belongs to the reference gallery's result, which the world model replaced; the fix's countries are the world model's (its probability per country).",
+  },
+  worldStretches: {
+    de: ' Diese Schätzung gehört zum Ergebnis der Referenzgalerie, das das Weltmodell ersetzt hat; die Länder der Ortung sind die Anteile der Abschnitte an der Aufnahmezeit.',
+    en: " This estimate belongs to the reference gallery's result, which the world model replaced; the fix's countries are the stretches' shares of the recording time.",
+  },
+} as const satisfies Record<string, Named>;
+
 /** The pure decision: candidates, location and evidence from precomputed neighbours and prior. */
 export function decideLocation(world: World, ev: LocateEvidence, partial: Partial<LocateParams> = {}): LocateResult {
   const params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, ...partial };
@@ -1102,27 +1138,26 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
 
   // ---- evidence: zero-shot country prior
   // Its figures belong to the gallery's answer. Where the file's GPS decides the place, or the
-  // world model replaced the gallery's answer, the fix's countries are another list (led by the
-  // GPS position's country, or the world model's mass per country): the entry then says so and
-  // carries no weight, so that the page does not offer two country estimates for one result.
+  // world model replaced the gallery's answer, the entry says which list the fix's countries are
+  // (REGION_ROLE: led by the GPS position's country, this estimate's where the position lies in
+  // no country, or the world model's mass per country) and carries no weight: the place is not
+  // its, and the page does not offer two country estimates for one result.
   const replacedByWorld = worldModel?.replaced === true;
   const top3 = zeroShot.slice(0, 3);
   if (top3.length > 0) {
     const fused = countries.slice(0, 3);
-    const role: Named = metaLocation
-      ? {
-          de: ' Das ist die Schätzung der Bilder allein: Den Ort und sein Land gibt die GPS-Angabe der Datei, die Länder der Ortung beginnen mit diesem.',
-          en: " This is the pictures' estimate alone: the GPS position in the file gives the place and its country, and the fix's countries begin with that one.",
-        }
-      : replacedByWorld
-        ? {
-            de: ' Diese Schätzung gehört zum Ergebnis der Referenzgalerie, das das Weltmodell ersetzt hat; die Länder der Ortung sind die des Weltmodells (seine Wahrscheinlichkeit je Land).',
-            en: " This estimate belongs to the reference gallery's result, which the world model replaced; the fix's countries are the world model's (its probability per country).",
-          }
-        : {
-            de: ` Wirkt als weiche Gewichtung der Kandidaten; ohne passendes Referenzbild trägt es das Ergebnis allein (Land nur ab ${pct(params.countryMinP)}, sonst Kontinent oder kein Ort).`,
-            en: ` It weights the candidates softly; without a matching reference picture it carries the result alone (a country only from ${pctEn(params.countryMinP)}, otherwise a continent or no place).`,
-          };
+    const role: Named = metaLocation?.country
+      ? REGION_ROLE.gps
+      : metaLocation
+        ? replacedByWorld
+          ? REGION_ROLE.gpsNoCountryWorld
+          : REGION_ROLE.gpsNoCountry
+        : replacedByWorld
+          ? REGION_ROLE.world
+          : {
+              de: ` Wirkt als weiche Gewichtung der Kandidaten; ohne passendes Referenzbild trägt es das Ergebnis allein (Land nur ab ${pct(params.countryMinP)}, sonst Kontinent oder kein Ort).`,
+              en: ` It weights the candidates softly; without a matching reference picture it carries the result alone (a country only from ${pctEn(params.countryMinP)}, otherwise a continent or no place).`,
+            };
     evidence.push({
       kind: 'region',
       label: `Länderschätzung: ${top3.map((c) => `${c.name} ${pct(c.p)}`).join(', ')}`,
@@ -1325,20 +1360,42 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
 // ------------------------------------------------------------------ frame sampling
 
 /**
- * The analysis frame (FrameRecord.n, Keyframe.frame) nearest to each of `times` (seconds): frame n
- * of the pipeline lies at (n - 1) / sampleFps. The localisation samples its frames from the file at
- * times of its own and numbers them in the file's frame rate (SampledFrames.frameNumbers); the
- * engine renumbers them this way before they name a frame in the evidence, so that every frame
+ * The analysis frame (FrameRecord.n, Keyframe.frame) that shows each of `times` (seconds). The
+ * pipeline's fps filter (media/ffmpeg.ts extractFrames) gives frame n the picture of the interval
+ * [(n - 1) / sampleFps, n / sampleFps), taken near its middle: frame 70 of a 1-fps analysis shows
+ * the file at about 69.5 s (measured with ffmpeg 6.1 against seeks on europa-rand, weltreise and
+ * stadt-land: correlation 1.00 at +0.45 to +0.50 s, 0.17 to 0.83 at +0.0 s). So a time t lies in
+ * frame floor(t · sampleFps) + 1; rounding named the next frame for every time in the second half
+ * of an interval ("Bild 71", a waterfall, for the church at 69.56 s). The localisation samples
+ * its frames from the file at times of its own and numbers them in the file's frame rate
+ * (SampledFrames.frameNumbers); the engine renumbers them this way before they name a frame in
+ * the evidence, so that every frame
  * number the console shows is on one scale (the file's count read "Bild 1020" beside the
  * keyframes' "Bild 42", and "Bild 228" in a clip of twelve analysis frames). `last`, where known,
- * is the analysis's last frame, beyond which no number goes.
+ * is the analysis's last frame, beyond which no number goes: the frames it wrote (the full stage),
+ * or before the analysis has run analysisFrameCount (the quick stage); a time at the file's very
+ * end (12.4 s of a clip of 12 analysis frames) would otherwise name a frame the analysis does not
+ * have.
  */
 export function analysisFrameNumbers(times: readonly number[], sampleFps: number, last: number | null = null): number[] {
   const fps = Number.isFinite(sampleFps) && sampleFps > 0 ? sampleFps : 1;
   return times.map((t) => {
-    const n = Math.max(1, Math.round(Math.max(0, t) * fps) + 1);
+    const n = Math.max(1, Math.floor(Math.max(0, t) * fps) + 1);
     return last !== null && last >= 1 ? Math.min(last, n) : n;
   });
+}
+
+/**
+ * The number of frames the analysis writes for a file of `durationSec` seconds, and so its last
+ * frame number: ffmpeg's fps filter (media/ffmpeg.ts extractFrames) writes one frame per instant
+ * (n − 1) / sampleFps before the file's end rounded to the nearest instant, round(d · sampleFps),
+ * at least one (12 at 1 fps for clips of 11.92, 12.0 and 12.012 s; 9 for 9.32 s; checked on the 60
+ * reference clips at 0.5, 1, 2 and 4 fps). Null where the duration is unknown.
+ */
+export function analysisFrameCount(durationSec: number | null | undefined, sampleFps: number): number | null {
+  if (durationSec === null || durationSec === undefined || !Number.isFinite(durationSec) || durationSec <= 0) return null;
+  const fps = Number.isFinite(sampleFps) && sampleFps > 0 ? sampleFps : 1;
+  return Math.max(1, Math.round(durationSec * fps));
 }
 
 export interface SampledFrames {

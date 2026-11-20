@@ -47,23 +47,27 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 Jeder Beleg, jeder Schritt des Ablaufs und jede Begründung kommt vom Knoten auf Deutsch und auf
 Englisch; die Konsole zeigt die Sprache, die eingestellt ist. Die Karte trägt die deutschen Namen
 der OpenStreetMap; auf Englisch nennt sie Orte, Stadtteile und Flüsse mit ihrem englischen Namen
-(„8th Arrondissement“, „River Thames“) aus einer Tabelle, die `src/scripts/map/placeNamesEn.ts` aus den
+(„8th Arrondissement“, „Thames“) aus einer Tabelle, die `src/scripts/map/placeNamesEn.ts` aus den
 zwischengespeicherten Quellkacheln schreibt; neu gezogene Kacheln tragen ihn selbst. Jede
 Beschriftung heißt dabei wie das Objekt, aus dem sie gezogen ist (`name:en`, sonst der örtliche
 Name): Steht ein deutscher Name für Orte mit verschiedenen englischen Namen, gilt der englische nur
 an seiner Stelle der Kachel (Homburg im Saarland bleibt „Homburg“, das belgische Homburg heißt
 „Hombourg“; die Weser bleibt die Weser, die Vesdre, deren deutscher Name Weser ist, heißt
 „Vesdre“). Die Stücke eines Flusses, die bis zu 150 km auseinander liegen (auch die in
-Quellkacheln, aus denen keine Kachel der Konsole gezogen ist), tragen einen Namen: den, den die
-meisten Stücke mit eigenem englischen Namen nennen, bei Gleichstand mit dem deutschen diesen (die
-Mosel ist „Moselle“, der Teltowkanal „Teltow Canal“, die Spree bleibt „Spree“).
+Quellkacheln, aus denen keine Kachel der Konsole gezogen ist), tragen einen Namen: den `name:en`,
+den die meisten ihrer Stücke mit `name:en` tragen; hat keines eines, den örtlichen Namen, den die
+meisten Stücke tragen, wobei die Stücke mit dem deutschen als örtlichem Namen mitzählen; bei
+Gleichstand mit dem deutschen diesen (die Mosel ist „Moselle“, der Teltowkanal „Teltow Canal“, die
+Weiße Elster „Weisse Elster“, die Spree bleibt „Spree“; die Rur ohne `name:en` bleibt mit 19
+deutschen Stücken gegen 3 niederländische „Roer“ die „Rur“, die Eger mit 3 gegen 3 tschechische
+„Ohře“ die „Eger“).
 
 ## Bedienung
 
 | Reiter | Zeigt |
 | --- | --- |
 | ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel (nach einem Horizontabgleich an dem Punkt, für den er gilt, mit einer blassen Linie vom Ort dorthin); links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“; sind Morgen und Nachmittag gleich wahrscheinlich, „oder 14:30–18:15“ dazu, ebenso in der Ergebniskarte, und die Sonne des zweiten Fensters blass auf der Karte); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge, um ihre Mitte und links der Ergebniskarte, die sie nicht verdeckt; Namen der Karte weichen den Markierungen, ihren Beschriftungen und den Beschriftungen von Kreisen, Strahlen und Länderanteilen („± 25 km“, „☉ 123°“, „SCHATTEN“, „DE 38 %“), statt von ihnen zerschnitten zu werden (die Linien der Kreise, Strahlen und Blickkegel selbst laufen über die Namen hinweg); die Beschriftungen der Markierungen und Formen stehen ganz auf der Karte (eine Markierung am oberen Rand beschriftet sich darunter), und alle Beschriftungen weichen der Werkzeugleiste oben links wie den Zoomknöpfen; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n liegt bei einer Aufnahme mit einem Bild je Sekunde in Sekunde n − 1), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (Wahrscheinlichkeit je Land, die Masse des Weltmodells, wo es den Ort gab, oder, wo ein Abschnitt den Ort zeigt, der Anteil jedes Lands an der Aufnahmezeit; das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
+| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n zeigt bei einer Aufnahme mit einem Bild je Sekunde die Sekunde von n − 1 bis n, aufgenommen etwa in ihrer Mitte), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (Wahrscheinlichkeit je Land, die Masse des Weltmodells, wo es den Ort gab, oder, wo ein Abschnitt den Ort zeigt, der Anteil jedes Lands an der Aufnahmezeit; das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
 | RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit, „Sonne am Horizont, Schatten sehr lang“ bis 0,5° Höhe) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; liegt dort nur die Weltübersicht der Höhendaten vor (Zoomstufe 4, etwa 9 km je Messpunkt), sagt das Gelände es und zeichnet keine Höhenlinien; bei einer Aufnahme mit Zeitleiste der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
@@ -121,7 +125,10 @@ der auf int8 verkleinerten Form.
   (mehrere Orte, oder ein Ort, der die Antwort der ganzen Datei ersetzt), sind die Länder die der
   Abschnitte nach ihrer Zeit, auch wo das Weltmodell den Ort gab: Die Konsole überschreibt sie dann
   „Anteil der Aufnahmezeit“, lässt sie in der Reihenfolge des Knotens (das Land des Orts zuerst)
-  und nennt einen Unterschied als Anteil der Aufnahmezeit, nicht als Wahrscheinlichkeit.
+  und nennt einen Unterschied als Anteil der Aufnahmezeit, nicht als Wahrscheinlichkeit. Der Beleg
+  der ersten Länderschätzung sagt dann seit Fassung 15, dass die Länder der Ortung die Anteile der
+  Abschnitte an der Aufnahmezeit sind; zuvor nannte er sie die des Weltmodells (Paris 40 s, Berlin
+  20 s, der Ort der ganzen Datei vom Weltmodell in Paris: Frankreich 67 %, Deutschland 33 %).
 - **Sicherheitsangabe.** Antwortet das Weltmodell, gilt ein eigenes Modell der Sicherheit, das
   an der Abstimmungshälfte eingestellt ist; ohne Weltmodell gilt das bisherige der Galerie.
 - **Rechnen.** Modell und Vergleich mit den 100 000 Orten laufen in einem eigenen Thread, einmal
@@ -198,9 +205,12 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   die Länder mit dem Land der Position, mit der Sicherheit der Ortung (0,98); die Schätzung der
   Bilder teilt sich den Rest und steht vollständig im Beleg „Länderschätzung“, der ohne Gewicht
   sagt, dass sie die der Bilder allein ist (Cork, Irland: „IE 98 %“ statt „Deutschland 74 %,
-  Irland 2 %“). Die Karte in BEFUND zeigt die Position mit ihrem Kreis, nicht den ersten
-  Kandidaten der Bilder, und die Kandidatenliste markiert keinen als den Ort. Gemessen wird jeder
-  Abschnitt des Orts, nicht nur der längste:
+  Irland 2 %“). Liegt die Position in keinem Land (auf See, mehr als 30 km von jeder Stadt, etwa
+  54,6° N 7,0° O in der Nordsee), bleiben die Länder die der Bilder (oder die des Weltmodells, wo
+  es die Antwort der Galerie ersetzt hat); der Beleg sagt seit Fassung 15 genau das, statt dass
+  sie mit dem Land der Position begännen. Die Karte in BEFUND zeigt die Position mit ihrem Kreis,
+  nicht den ersten Kandidaten der Bilder, und die Kandidatenliste markiert keinen als den Ort.
+  Gemessen wird jeder Abschnitt des Orts, nicht nur der längste:
   - Liegt ein Abschnitt keine 25 km von der Position, liegt der Ort dort, nach derselben Regel wie
     die Kette der Antworten (eine Fahrt Dortmund, Bochum, Essen, 32 km von Ende zu Ende, mit der
     GPS-Angabe an einem der beiden Enden: kein Beleg).
@@ -229,12 +239,19 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   gerechnet: Sie haben ihn nicht oder in seiner ersten Form, die den Ort nur am längsten Abschnitt
   maß und den verworfenen Ort nicht erkannte.
 - **Fassung 14** nennt die Bilder, die die Ortung aus der Datei zieht (Referenzbilder,
-  Straßenbilder), mit der Nummer des nächsten Bilds der Auswertung, wie Schlüsselbilder,
-  Abschnitte und Horizont; zuvor stand „Bild 1020“ (Bild der Datei bei 30 Bildern je Sekunde)
+  Straßenbilder), mit der Nummer des Bilds der Auswertung, dessen Sekunde sie zeigt, wie
+  Schlüsselbilder, Abschnitte und Horizont; zuvor stand „Bild 1020“ (Bild der Datei bei 30 Bildern je Sekunde)
   neben „Bild 42“. Bei GPS beginnen die Länder mit dem Land der Position; die erste
   Länderschätzung zählt bei GPS und bei einer Antwort des Weltmodells nicht und sagt, wessen sie
   ist. Der Horizontbeleg beschreibt sein Suchraster als Quadrat (Ecken 4,2 km bei ± 3 km) und
   sagt, wenn der beste Punkt an dessen Rand liegt. Ortungen der Fassung 13 werden neu gerechnet.
+- **Fassung 15** nennt auch in der Schnellortung kein Bild hinter dem letzten der Auswertung: Die
+  Auswertung schreibt round(Dauer · Bilder je Sekunde) Bilder (12 bei 12,012 s und einem Bild je
+  Sekunde, an allen 60 Referenzclips bei 0,5, 1, 2 und 4 Bildern je Sekunde nachgemessen), das
+  letzte der zwölf Bilder der Schnellortung bei 11,5 s hieß aber „Bild 13“ und nach der
+  vollständigen Ortung „Bild 12“. Die erste Länderschätzung sagt richtig, welche Liste die Länder
+  der Ortung sind, wo die GPS-Angabe in keinem Land liegt und wo die Anteile der Abschnitte die
+  Länder des Weltmodells ersetzen. Ortungen der Fassung 14 werden neu gerechnet.
 
 ### Gemessen an Zusammenschnitten
 
@@ -829,7 +846,10 @@ englischen Namen aus Wikidata (`labelDe`, `labelEn` in `gallery.json` und `manif
 `pnpm datum:fetch` holt fehlende einmal nach, `pnpm datum:labels` allein), damit eine Ortung
 „Nowodewitschi-Kloster, Moskau“ und „Novodevichy Convent, Moscow“ heißt, statt die Sprachen zu
 mischen. Je Video zwölf Bilder, jedes als Ganzes und
-in drei quadratischen Ausschnitten (so legt die Analyse sie ohnehin ab). Die Schwellen und Radien
+in drei quadratischen Ausschnitten (so legt die Analyse sie ohnehin ab). Gemessen wird das Bild:
+Die Ortung wird ohne die Angaben der Datei entschieden (`scripts/datum/scoring.ts`), denn eine
+GPS-Angabe gäbe den Ort und seit Fassung 14 das erste Land vor; ob ein Video GPS trägt, steht je
+Video als `gpsInFile` (bei allen 60 nicht). Die Schwellen und Radien
 der Ortung wurden nur an der einen Hälfte der Videos eingestellt (Abstimmungshälfte, gerade
 Nummern); die andere Hälfte (Prüfhälfte, ungerade Nummern) wurde nur gemessen. Gemessen am
 18. November 2026 mit `pnpm datum:evaluate --params default` (die Parameter der Galerie so, wie

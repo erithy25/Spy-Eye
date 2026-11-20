@@ -51,8 +51,19 @@
  *      entry describes its search square (corners radius·√2) and says when the best point lies on
  *      its edge. Stored engine-13 fixes (98b3b89) carry the file's frame numbers, the pictures'
  *      countries under a GPS place and the old texts, and are computed again.
+ *  15: a frame sampled from the file is named by the analysis frame whose interval holds it
+ *      (floor, not round: "Bild 71" named the frame after the church at 69.56 s); the quick stage
+ *      names its frames no further than the analysis's last frame
+ *      (locate.ts analysisFrameCount: round(duration · sampleFps)), as the full stage does; the
+ *      first country estimate says which list the fix's countries are where the GPS position lies
+ *      in no country (this estimate's, or the world model's: REGION_ROLE.gpsNoCountry*), and where
+ *      the stretches' shares of the recording time replace the world model's countries
+ *      (segments.ts stretchCountryEvidence). Stored engine-14 fixes (0eaf247, 42ab6cc) may name
+ *      "Bild 13" in a clip of 12 analysis frames (quick fixes), or say the countries begin with the
+ *      GPS position's country, or are the world model's, where they are not; they are computed
+ *      again.
  */
-export const ENGINE_VERSION = 14;
+export const ENGINE_VERSION = 15;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

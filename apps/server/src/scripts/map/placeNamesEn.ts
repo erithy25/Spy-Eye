@@ -13,14 +13,15 @@
  * town of Homburg in the Saarland is "Homburg", the Belgian village whose German name is Homburg is
  * "Hombourg"): such names are written per tile and point, the others by name (englishNames); the
  * pieces of one river, with its pieces in the source tiles no shipped tile was made from, take the
- * name most of those that name themselves carry (the Mosel is "Moselle"). Tiles
- * extracted from now on carry the English name themselves (`e`, extractTiles.ts); this table covers
- * those extracted before.
+ * `name:en` most of those with one carry (the Mosel is "Moselle"), else the local name most of
+ * them carry (the German Rur's 19 pieces against the 3 Dutch "Roer": "Rur"). Tiles extracted from
+ * now on carry the English name themselves (`e`, extractTiles.ts); this table covers those
+ * extracted before.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { repoRoot } from '../../config.js';
-import { englishNames, englishOf, nameOf, namesEnglish, type EnglishNames, type LabelEnglish } from './englishNames.js';
+import { englishNames, englishOf, englishSource, nameOf, type EnglishNames, type EnglishSource, type LabelEnglish } from './englishNames.js';
 import { decodeTile, type MvtLayer } from './mvt.js';
 
 const PUBLIC_MAP = path.join(repoRoot, 'apps', 'web', 'public', 'map');
@@ -98,7 +99,7 @@ async function main(): Promise<void> {
     const tile = `${z}/${x}/${y}`;
     const source = await sourceTile(versions, z, x, y);
     // The English name of each place of the source tile at its point (as extractTiles.ts placed it).
-    const placeAt = new Map<string, { en: string | null; says: boolean }>();
+    const placeAt = new Map<string, { en: string | null; from: EnglishSource }>();
     const placeLayer = source?.get('place');
     if (placeLayer) {
       const k = scale(placeLayer);
@@ -108,7 +109,7 @@ async function main(): Promise<void> {
         for (const point of f.geometry) {
           const px = Math.round((point[0] as number) * k);
           const py = Math.round((point[1] as number) * k);
-          placeAt.set(`${de}@${px},${py}`, { en: englishOf(f, de) ?? null, says: namesEnglish(f, de) });
+          placeAt.set(`${de}@${px},${py}`, { en: englishOf(f, de) ?? null, from: englishSource(f, de) });
         }
       }
     }
@@ -118,7 +119,7 @@ async function main(): Promise<void> {
       else places.push({ tile, x: p.p[0], y: p.p[1], ...lonLat(z, x, y, p.p[0], p.p[1]), de: p.n, ...own });
     }
     // Rivers and canals by the first point of each line (simplify and pack keep it, rounded).
-    const riverAt = new Map<string, { en: string | null; says: boolean }>();
+    const riverAt = new Map<string, { en: string | null; from: EnglishSource }>();
     const waterLayer = source?.get('waterway');
     if (waterLayer) {
       const k = scale(waterLayer);
@@ -127,7 +128,7 @@ async function main(): Promise<void> {
         if (!de || f.type !== 2) continue;
         for (const g of f.geometry) {
           if (g.length < 2) continue;
-          riverAt.set(`${de}@${Math.round((g[0] as number) * k)},${Math.round((g[1] as number) * k)}`, { en: englishOf(f, de) ?? null, says: namesEnglish(f, de) });
+          riverAt.set(`${de}@${Math.round((g[0] as number) * k)},${Math.round((g[1] as number) * k)}`, { en: englishOf(f, de) ?? null, from: englishSource(f, de) });
         }
       }
     }
@@ -164,7 +165,7 @@ async function main(): Promise<void> {
         for (const g of f.geometry) {
           if (g.length < 2) continue;
           const [px, py] = [Math.round((g[0] as number) * k), Math.round((g[1] as number) * k)];
-          pieces.push({ tile: `${z}/${x}/${y}`, x: px, y: py, ...lonLat(z, x, y, px, py), de, en: englishOf(f, de) ?? null, says: namesEnglish(f, de) });
+          pieces.push({ tile: `${z}/${x}/${y}`, x: px, y: py, ...lonLat(z, x, y, px, py), de, en: englishOf(f, de) ?? null, from: englishSource(f, de) });
         }
       }
     }

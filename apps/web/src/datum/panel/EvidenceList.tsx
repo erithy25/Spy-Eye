@@ -162,7 +162,9 @@ const WHOLE_FILE = /^(?:Ganze Datei \(gemischt\)|Whole file \(mixed\)): /;
  * does not show two sets of percentages in its titles. The panel "Länder" gives the countries of
  * the result: this estimate fused with the gallery, or the world model's where it replaced the
  * gallery's answer, or led by the GPS position's country; the node's detail of this entry then
- * says that its figures are the replaced estimate, or the pictures' alone (engine 14 on).
+ * says that its figures are the replaced estimate, or the pictures' alone (engine 14 on), and which
+ * list the fix carries where the stretches' shares are the countries or the GPS position lies in no
+ * country (engine 15 on; server: locate.ts REGION_ROLE).
  */
 function entryText(entry: Evidence, lang: ReturnType<typeof useLang>, at: GeoPoint | null): { title: string; detail: string } {
   const { t, pick } = lang;

@@ -90,6 +90,26 @@ const gallery = {
 } as unknown as Gallery;
 
 /**
+ * Stand-in gallery whose Deutsches Eck resembles the later query rows more: the reference
+ * picture's best frame is the last one sampled from the file.
+ */
+function lateSearch(vectors: Float32Array, k: number): GalleryNeighbour[][] {
+  const rows = vectors.length / DIM;
+  return Array.from({ length: rows }, (_, i) =>
+    [
+      { id: 'Q1', label: 'Deutsches Eck', lat: 50.3644, lon: 7.6062, country: 'DE', wikidata: 'Q1', similarity: 0.9 + (0.05 * (i + 1)) / rows },
+      { id: 'Q2', label: 'Brücke', lat: 48.85, lon: 2.35, country: 'FR', wikidata: 'Q2', similarity: 0.7 },
+      { id: 'Q3', label: 'Turm', lat: 41.9, lon: 12.5, country: 'IT', wikidata: 'Q3', similarity: 0.69 },
+    ].slice(0, k),
+  );
+}
+const lateGallery = {
+  size: 3,
+  searchAsync: (vectors: Float32Array, k: number): Promise<GalleryNeighbour[][]> => Promise.resolve(lateSearch(vectors, k)),
+  search: lateSearch,
+} as unknown as Gallery;
+
+/**
  * Stand-in for the world model: a prediction concentrated at the Deutsches Eck (it agrees with
  * the gallery), counting how often it is asked and for how many frames.
  */
@@ -228,7 +248,7 @@ interface Setup {
   dispose: () => Promise<void>;
 }
 
-async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number } = {}): Promise<Setup> {
+async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number; gallery?: Gallery } = {}): Promise<Setup> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'datum-quick-'));
   const store = new MemoryStore(root);
   const events: Fix[] = [];
@@ -243,7 +263,7 @@ async function setup(opts: { world?: WorldStandIn; quickWorldWaitMs?: number } =
     store: store as unknown as Store,
     model: model as unknown as EmbeddingModel,
     hub: hub as unknown as EventHub,
-    gallery: async () => gallery,
+    gallery: async () => opts.gallery ?? gallery,
     log: () => undefined,
     holdout: false,
     background: (id) => background.has(id),
@@ -502,6 +522,40 @@ test('quick stage: located from the file alone, before the analysis, every text 
     for (const e of full.evidence) assert.ok(e.labelEn && e.detailEn, `full evidence ${e.kind} has English texts`);
     for (const step of full.trace ?? []) if (step.detail) assert.ok(step.detailEn, `full trace "${step.label}" has an English detail`);
     assert.equal(engine.outstanding, 0);
+  } finally {
+    await dispose();
+  }
+});
+
+test('quick stage: the last frame sampled from the file is named as the analysis\'s last frame, as in the full stage', { skip: NO_FFMPEG }, async () => {
+  const { store, engine, dispose } = await setup({ gallery: lateGallery });
+  try {
+    // 6 s at one analysis frame a second: the pipeline's fps filter writes 6 frames (round(d·fps),
+    // not 7). The quick stage samples its last frame at 5.75 s, nearest to "frame 7"; the analysis
+    // has none, its last is frame 6.
+    const entry = recording('late', 'queued', 'Spät.mp4');
+    await add(store, entry);
+    await testVideo(store.sourcePath(entry));
+    engine.quick('late');
+    await until(() => engine.get('late')?.status === 'ready' || engine.get('late')?.status === 'error');
+    const quick = engine.get('late')!;
+    assert.equal(quick.status, 'ready', quick.error ?? '');
+    assert.equal(quick.stage, 'quick');
+    const quickEck = quick.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(quickEck, 'the quick fix names the reference picture');
+
+    await analysed(store, entry);
+    const last = entry.frames[entry.frames.length - 1]?.n;
+    assert.equal(last, 6, 'the analysis writes six frames');
+    engine.enqueue('late', true);
+    await until(() => engine.get('late')?.stage === 'full', 120_000);
+    const fullEck = engine.get('late')!.evidence.find((e) => e.kind === 'landmark' && e.refLabel === 'Deutsches Eck');
+    assert.ok(fullEck, 'the full fix names the reference picture');
+    // One picture, one number, and one that the analysis has.
+    assert.equal(quickEck.frame, last, quickEck.detail);
+    assert.match(quickEck.detail, /^Bild 6 /);
+    assert.match(quickEck.detailEn ?? '', /^Frame 6 /);
+    assert.equal(fullEck.frame, quickEck.frame, fullEck.detail);
   } finally {
     await dispose();
   }

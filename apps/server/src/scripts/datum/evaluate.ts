@@ -43,6 +43,7 @@ const { CONFIDENCE_FEATURES, DEFAULT_LOCATE_PARAMS, decideLocation, poolTileRows
   '../../datum/locate.js'
 );
 const { WorldModelService } = await import('../../datum/geoclipService.js');
+const { countryCorrect, scoredDecision } = await import('./scoring.js');
 type GeoclipPrediction = import('../../datum/geoclip.js').GeoclipPrediction;
 type DetailLevel = import('../../types.js').DetailLevel;
 type LocateParams = import('../../datum/locate.js').LocateParams;
@@ -182,11 +183,12 @@ function evidenceFor(p: Prepared, mode: Mode, withMetadata: boolean, withGeo = f
 }
 
 function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams, withGeo = false): ModeOutcome {
-  // The evaluation measures the picture: GPS in the file would answer trivially, so metadata
-  // is reported but the visual estimate is scored.
-  const ev = evidenceFor(p, mode, true, withGeo);
+  // The evaluation measures the picture: GPS in the file would answer trivially (the place, and
+  // the first country since engine 14), so the decision is made without the file's metadata
+  // (scoring.ts scoredDecision); whether a clip has GPS is reported (gpsInFile).
+  const ev = evidenceFor(p, mode, false, withGeo);
   const neighbours = ev.neighbours.map((row) => row.slice(0, params.k));
-  const r = decideLocation(world, { ...ev, neighbours }, params);
+  const r = scoredDecision(world, { ...ev, neighbours }, params);
   const loc = r.diagnostics.visual;
   const lat = loc?.lat ?? 0;
   const lon = loc?.lon ?? 0;
@@ -207,7 +209,7 @@ function runMode(world: WorldT, p: Prepared, mode: Mode, params: LocateParams, w
     topSimilarity: r.diagnostics.topSimilarity,
     topReference: top?.label ?? null,
     topReferenceIsSameItem: sameItem,
-    countryCorrect: p.truthIsos.length > 0 ? p.truthIsos.includes(r.countries[0]?.iso ?? '') : null,
+    countryCorrect: countryCorrect(r, p.truthIsos),
     level: r.diagnostics.level,
     countryTopP: r.diagnostics.countryTop?.p ?? 0,
     continentTop: r.diagnostics.continentTop?.code ?? null,

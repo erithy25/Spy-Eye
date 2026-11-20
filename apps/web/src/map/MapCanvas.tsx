@@ -148,7 +148,7 @@ const FG = '#ededed';
 const MID = '#8a8a8a';
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
 
-interface ViewState {
+export interface ViewState {
   /** Centre in world coordinates 0..1. */
   x: number;
   y: number;
@@ -420,6 +420,26 @@ export function globeInsetPoint(width: number, height: number, radius: number, i
 }
 
 /**
+ * The centre that shows a requested view at `zoom` on a map of `width` x `height` (CSS pixels):
+ * (lat, lon) in the middle of the area left of `insetRight` (the centre is moved that half width
+ * east of it; flatInsetCentre, globeInsetPoint), in the middle of the map without an inset or
+ * before the map has a size.
+ */
+export function viewTarget(v: Pick<MapView, 'lat' | 'lon' | 'insetRight'>, zoom: number, width: number, height: number, globe: boolean): ViewState {
+  const inset = v.insetRight ?? 0;
+  if (inset <= 0 || width === 0 || height === 0) return { ...project(v.lat, v.lon), zoom };
+  if (globe) {
+    // The globe turns (it is always centred in the view): by at most 30°, so that a small globe
+    // (the whole Earth) does not turn the places around (lat, lon) to its far side.
+    const g = makeGlobe(v.lat, v.lon, zoom, width, height);
+    const at = globeInsetPoint(width, height, g.r, inset);
+    const c = unprojectGlobe(g, at.x, at.y);
+    return c ? { ...project(c.lat, c.lon), zoom } : { ...project(v.lat, v.lon), zoom };
+  }
+  return { ...flatInsetCentre(v.lat, v.lon, zoom, inset), zoom };
+}
+
+/**
  * The text the base map writes for a place: the tile's German name, or in English (`english`, the
  * German country names to the English ones, null in German) a country by that table and every
  * other place by its English name (placeNameEn: the tile's own, the tables of the shipped tiles,
@@ -433,6 +453,67 @@ export function placeLabelText(p: Pick<PlaceLabel, 'name' | 'nameEn' | 'cls'>, e
 /** The text the base map writes for a river or canal: in English its English name ("Themse" is the Thames). */
 export function riverLabelText(l: Pick<LineLabel, 'name' | 'nameEn'>, english: boolean): string {
   return english ? riverNameEn(l) : l.name;
+}
+
+/**
+ * Writes the base map's names of places (most important first) and rivers (longest first) at their
+ * points on the screen, each where it keeps clear of `boxes`, which it joins. In the console's
+ * language: `english` maps the German country names to the English ones, null in German
+ * (MapCanvas countryNamesRef); in English countries by it, every other place by its English name
+ * (placeLabelText), rivers too ("Themse" is the Thames, riverLabelText).
+ */
+export function drawBaseNames(
+  ctx: CanvasRenderingContext2D,
+  places: { p: PlaceLabel; x: number; y: number }[],
+  rivers: { l: LineLabel; x: number; y: number }[],
+  english: ReadonlyMap<string, string> | null,
+  zoom: number,
+  boxes: Box[],
+): void {
+  const free = (b: Box): boolean => !boxes.some((o) => overlaps(b, o));
+  places.sort((a, b) => a.p.rank - b.p.rank);
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.lineJoin = 'round';
+  for (const { p, x, y } of places) {
+    const font = placeFont(p.cls, zoom);
+    ctx.font = `${font.weight} ${font.size}px ${FONT}`;
+    setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
+    const text = placeLabelText(p, english);
+    const w = ctx.measureText(text).width + 8;
+    const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
+    if (!free(box)) continue;
+    boxes.push(box);
+    ctx.strokeStyle = BG;
+    ctx.lineWidth = 3;
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = font.color;
+    ctx.fillText(text, x, y);
+  }
+  const riverNames = new Map<string, { x: number; y: number }[]>();
+  rivers.sort((a, b) => b.l.length - a.l.length);
+  for (const { l, x, y } of rivers) {
+    const name = riverLabelText(l, english !== null);
+    const earlier = riverNames.get(name) ?? [];
+    if (earlier.some((e) => Math.hypot(e.x - x, e.y - y) < 420)) continue;
+    ctx.font = `400 italic 10px ${FONT}`;
+    setSpacing(ctx, '0.3em');
+    const w = ctx.measureText(name).width + 8;
+    const box = { x0: x - w / 2, y0: y - w / 4, x1: x + w / 2, y1: y + w / 4 };
+    if (!free(box)) continue;
+    boxes.push(box);
+    earlier.push({ x, y });
+    riverNames.set(name, earlier);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(l.angle);
+    ctx.strokeStyle = BG;
+    ctx.lineWidth = 3;
+    ctx.strokeText(name, 0, 0);
+    ctx.fillStyle = '#6f6f6f';
+    ctx.fillText(name, 0, 0);
+    ctx.restore();
+  }
 }
 
 /**
@@ -908,23 +989,9 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const cursorCanvas = useRef<HTMLCanvasElement>(null);
   /**
    * The centre and zoom that show a requested view: (lat, lon) in the middle of the area left of
-   * `insetRight` (the centre is moved that half width east of it).
+   * `insetRight` (viewTarget).
    */
-  const targetOf = (v: MapView): ViewState => {
-    const zoom = viewZoom(v);
-    const inset = v.insetRight ?? 0;
-    const { width, height } = size.current;
-    if (inset <= 0 || width === 0 || height === 0) return { ...project(v.lat, v.lon), zoom };
-    if (globe) {
-      // The globe turns (it is always centred in the view): by at most 30°, so that a small globe
-      // (the whole Earth) does not turn the places around (lat, lon) to its far side.
-      const g = makeGlobe(v.lat, v.lon, zoom, width, height);
-      const at = globeInsetPoint(width, height, g.r, inset);
-      const c = unprojectGlobe(g, at.x, at.y);
-      return c ? { ...project(c.lat, c.lon), zoom } : { ...project(v.lat, v.lon), zoom };
-    }
-    return { ...flatInsetCentre(v.lat, v.lon, zoom, inset), zoom };
-  };
+  const targetOf = (v: MapView): ViewState => viewTarget(v, viewZoom(v), size.current.width, size.current.height, globe);
   /** A view framed by the map's size (reachKm, insetRight), until the user moves it: framed again on resizing. */
   const framed = useRef<MapView | null>(view.reachKm !== undefined || (view.insetRight ?? 0) > 0 ? view : null);
   const state = useRef<ViewState>({ ...project(view.lat, view.lon), zoom: viewZoom(view) });
@@ -1130,53 +1197,9 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         }
       }
     }
-    places.sort((a, b) => a.p.rank - b.p.rank);
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.lineJoin = 'round';
-    for (const { p, x, y } of places) {
-      const font = placeFont(p.cls, zoom);
-      ctx.font = `${font.weight} ${font.size}px ${FONT}`;
-      setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
-      // The tiles carry German names; in English (the country names are loaded) countries, and
-      // every other place by its English name (placeLabelText).
-      const text = placeLabelText(p, countryNamesRef.current);
-      const w = ctx.measureText(text).width + 8;
-      const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
-      if (!free(box)) continue;
-      boxes.push(box);
-      ctx.strokeStyle = BG;
-      ctx.lineWidth = 3;
-      ctx.strokeText(text, x, y);
-      ctx.fillStyle = font.color;
-      ctx.fillText(text, x, y);
-    }
-    const riverNames = new Map<string, { x: number; y: number }[]>();
-    rivers.sort((a, b) => b.l.length - a.l.length);
-    const englishRivers = countryNamesRef.current !== null;
-    for (const { l, x, y } of rivers) {
-      // In English rivers too by their English names ("Themse" is the Thames).
-      const name = riverLabelText(l, englishRivers);
-      const earlier = riverNames.get(name) ?? [];
-      if (earlier.some((e) => Math.hypot(e.x - x, e.y - y) < 420)) continue;
-      ctx.font = `400 italic 10px ${FONT}`;
-      setSpacing(ctx, '0.3em');
-      const w = ctx.measureText(name).width + 8;
-      const box = { x0: x - w / 2, y0: y - w / 4, x1: x + w / 2, y1: y + w / 4 };
-      if (!free(box)) continue;
-      boxes.push(box);
-      earlier.push({ x, y });
-      riverNames.set(name, earlier);
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(l.angle);
-      ctx.strokeStyle = BG;
-      ctx.lineWidth = 3;
-      ctx.strokeText(name, 0, 0);
-      ctx.fillStyle = '#6f6f6f';
-      ctx.fillText(name, 0, 0);
-      ctx.restore();
-    }
+    // The tiles carry German names; in English (the country names are loaded) the base map writes
+    // them in English (drawBaseNames).
+    drawBaseNames(ctx, places, rivers, countryNamesRef.current, zoom, boxes);
     setSpacing(ctx, '0px');
 
     if (zoom >= 12.5) {

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import type { CountryProb, Evidence, Fix, FixCandidate, FixLocation, FixSegment, SunReport, TerrainGrid, TimeEstimate } from '../src/datum/contract.js';
-import { englishNames, type LabelEnglish } from '../src/scripts/map/englishNames.js';
+import { englishNames, englishSource, type EnglishSource, type LabelEnglish } from '../src/scripts/map/englishNames.js';
+import type { MvtFeature } from '../src/scripts/map/mvt.js';
 import { sunPath, sunState } from '../src/datum/sun.js';
 import { segmentCountries } from '../src/datum/segments.js';
 import { localToUtc } from '../src/datum/timezones.js';
@@ -208,7 +209,7 @@ test('English map names: districts, cities, rivers', () => {
   // The tile's own English name first; names alike in both stay.
   assert.equal(placeNameEn({ name: 'Wien', nameEn: 'Vienna (tile)' }), 'Vienna (tile)');
   assert.equal(placeNameEn({ name: 'Koblenz' }), 'Koblenz');
-  assert.equal(riverNameEn({ name: 'Themse' }), 'River Thames');
+  assert.equal(riverNameEn({ name: 'Themse' }), 'Thames');
   assert.equal(riverNameEn({ name: 'Donau' }), 'Danube');
   assert.equal(riverNameEn({ name: 'Rhein' }), 'Rhine');
   assert.equal(riverNameEn({ name: 'Mosel', nameEn: 'Moselle' }), 'Moselle');
@@ -222,7 +223,7 @@ test('English map names: districts, cities, rivers', () => {
   assert.equal(placeLabelText({ name: 'Gablonz an der Neiße', nameEn: 'Jablonec nad Nisou', cls: 'town' }, english), 'JABLONEC NAD NISOU');
   assert.equal(placeLabelText({ name: 'Köln', cls: 'city' }, null), 'KÖLN');
   assert.equal(placeLabelText({ name: '8. Arrondissement von Paris', cls: 'suburb' }, null), '8. Arrondissement von Paris');
-  assert.equal(riverLabelText({ name: 'Themse' }, true), 'River Thames');
+  assert.equal(riverLabelText({ name: 'Themse' }, true), 'Thames');
   assert.equal(riverLabelText({ name: 'Themse' }, false), 'Themse');
 });
 
@@ -254,7 +255,7 @@ test('English map names: a German name of features named differently in English 
 });
 
 test('English map names: the table follows each feature, and the pieces of one river', () => {
-  const at = (tile: string, de: string, en: string | null, lat: number, lon: number, x = 100, y = 200, says = true): LabelEnglish => ({ tile, x, y, lat, lon, de, en, says });
+  const at = (tile: string, de: string, en: string | null, lat: number, lon: number, x = 100, y = 200, from: EnglishSource = 'en'): LabelEnglish => ({ tile, x, y, lat, lon, de, en, from });
   const places = englishNames([
     // Homburg (Saar) keeps its name in English; the Belgian village is Hombourg.
     at('8/133/87', 'Homburg', null, 49.32, 7.34),
@@ -276,37 +277,85 @@ test('English map names: the table follows each feature, and the pieces of one r
       ['9/264/171', [['Falkenburg@100,200', 'Valkenburg']]],
     ],
   );
-  // Rivers: the Mosel's pieces with and without their English name, 20 km apart, are one river,
-  // named as most of its pieces that name themselves; the Vesdre (German name Weser) 260 km from
-  // the Weser is another. A piece with no English name of its own says nothing (the Teltowkanal's
-  // shipped pieces: its English name is on pieces of other tiles); one whose English name is the
-  // German one says that (the Spree, against the Sorbian "Sprewa"; the Warche on a tie).
+  // Rivers: the Mosel's pieces with and without `name:en`, 20 km apart, are one river, named as
+  // most of its pieces with `name:en` (not the local "La Moselle" of more pieces); the Vesdre
+  // (German name Weser) 260 km from the Weser is another. The Teltowkanal's shipped pieces have
+  // the German name only: its `name:en` is on pieces of other tiles. A `name:en` that is the German
+  // name says that (the Spree, against the Sorbian "Sprewa"; the Warche, against the local
+  // "La Warche" of as many pieces).
   const rivers = englishNames(
     [
       at('9/265/172', 'Mosel', 'Moselle', 50.0, 7.0),
-      at('9/265/173', 'Mosel', null, 49.85, 6.9, 100, 200, false),
-      at('9/265/173', 'Mosel', 'La Moselle', 49.7, 6.8, 300, 400),
+      at('9/265/173', 'Mosel', null, 49.85, 6.9, 100, 200, 'local'),
+      at('9/265/173', 'Mosel', 'La Moselle', 49.7, 6.8, 300, 400, 'local'),
+      at('9/265/173', 'Mosel', 'La Moselle', 49.68, 6.7, 500, 600, 'local'),
       at('9/265/174', 'Mosel', 'Moselle', 49.6, 6.6),
-      at('8/134/85', 'Weser', null, 52.6, 9.1, 100, 200, false),
-      at('8/134/84', 'Weser', null, 53.1, 8.8, 100, 200, false),
+      at('8/134/85', 'Weser', null, 52.6, 9.1, 100, 200, 'local'),
+      at('8/134/84', 'Weser', null, 53.1, 8.8, 100, 200, 'local'),
       at('9/264/172', 'Weser', 'Vesdre', 50.6, 5.9),
-      at('12/2199/1345', 'Teltowkanal', null, 52.39, 13.25, 100, 200, false),
-      at('12/2199/1344', 'Teltowkanal', null, 52.41, 13.3, 100, 200, false),
+      at('12/2199/1345', 'Teltowkanal', null, 52.39, 13.25, 100, 200, 'local'),
+      at('12/2199/1344', 'Teltowkanal', null, 52.41, 13.3, 100, 200, 'local'),
       at('11/1100/671', 'Spree', null, 52.52, 13.4),
       at('11/1100/672', 'Spree', null, 52.45, 13.6),
       at('10/529/345', 'Warche', null, 50.42, 6.1),
-      at('9/264/172', 'Warche', 'La Warche', 50.43, 6.0),
+      at('9/264/172', 'Warche', 'La Warche', 50.43, 6.0, 100, 200, 'local'),
     ],
     150,
     [
       at('12/2201/1344', 'Teltowkanal', 'Teltow Canal', 52.38, 13.45),
       at('12/2201/1345', 'Teltowkanal', 'Teltow Canal', 52.37, 13.5),
       at('11/1099/671', 'Spree', 'Sprewa', 52.5, 13.3),
-      at('12/2198/1342', 'Spree', null, 52.51, 13.35, 0, 0, false),
+      at('12/2198/1342', 'Spree', null, 52.51, 13.35, 0, 0, null),
     ],
   );
   assert.deepEqual([...rivers.byName].sort(), [['Mosel', 'Moselle'], ['Teltowkanal', 'Teltow Canal']]);
   assert.deepEqual([...rivers.byTile].map(([tile, m]) => [tile, [...m]]), [['9/264/172', [['Weser@100,200', 'Vesdre']]]]);
+});
+
+test('English map names: a river none of whose pieces has name:en is named as most of its pieces are locally', () => {
+  const feature = (properties: Record<string, string>): MvtFeature => ({ type: 2, properties, geometry: [] });
+  // Where a piece's English name comes from: `name:en`, else its local name in Latin letters, the
+  // German one included (the German Rur's pieces), else nowhere.
+  assert.equal(englishSource(feature({ name: 'Rur', 'name:de': 'Rur' }), 'Rur'), 'local');
+  assert.equal(englishSource(feature({ name: 'Roer', 'name:de': 'Rur' }), 'Rur'), 'local');
+  assert.equal(englishSource(feature({ name: 'Mosel', 'name:en': 'Moselle' }), 'Mosel'), 'en');
+  assert.equal(englishSource(feature({ name: 'Spree', 'name:en': 'Spree' }), 'Spree'), 'en');
+  assert.equal(englishSource(feature({ name: 'Рейн', 'name:de': 'Rhein' }), 'Rhein'), null);
+  // The Rur as the source tiles have it: 19 German pieces "Rur", 3 Dutch "Roer", none with
+  // `name:en`. It stays "Rur" (it was "Roer": the Dutch name counted, the German one did not).
+  const piece = (de: string, local: string, lat: number, lon: number, i: number): LabelEnglish => ({ tile: '9/264/171', x: i, y: i, lat, lon, de, en: local === de ? null : local, from: 'local' });
+  const rur = [
+    ...Array.from({ length: 19 }, (_, i) => piece('Rur', 'Rur', 50.5 + i * 0.03, 6.3 + i * 0.01, i)),
+    ...Array.from({ length: 3 }, (_, i) => piece('Rur', 'Roer', 51.1 + i * 0.03, 6.0 - i * 0.02, 19 + i)),
+  ];
+  // The Eger: 3 German pieces "Eger", 3 Czech "Ohře": a tie keeps the German name.
+  const eger = [
+    ...Array.from({ length: 3 }, (_, i) => piece('Eger', 'Eger', 50.1, 12.0 + i * 0.1, i)),
+    ...Array.from({ length: 3 }, (_, i) => piece('Eger', 'Ohře', 50.2, 12.5 + i * 0.2, 3 + i)),
+  ];
+  // The Amel: 4 Belgian pieces "Amblève", 3 German "Amel": "Amblève". One piece with `name:en`
+  // outweighs any number by their local name (the Saane: "Saane/Sarine" on 2, "La Sarine" on 23).
+  const amel = [
+    ...Array.from({ length: 4 }, (_, i) => piece('Amel', 'Amblève', 50.4, 5.8 + i * 0.05, i)),
+    ...Array.from({ length: 3 }, (_, i) => piece('Amel', 'Amel', 50.35, 6.1 + i * 0.05, 4 + i)),
+  ];
+  const saane = [
+    ...Array.from({ length: 23 }, (_, i) => piece('Saane', 'La Sarine', 46.5 + i * 0.01, 7.1, i)),
+    { ...piece('Saane', 'Saane/Sarine', 46.8, 7.15, 23), from: 'en' as const },
+    { ...piece('Saane', 'Saane/Sarine', 46.82, 7.16, 24), from: 'en' as const },
+  ];
+  // A river of pieces that say nothing keeps the German name.
+  const mute = [{ ...piece('Zorn', 'Zorn', 48.7, 7.6, 0), from: null }];
+  const table = englishNames([...rur, ...eger, ...amel, ...saane, ...mute], 150);
+  assert.deepEqual([...table.byName].sort(), [['Amel', 'Amblève'], ['Saane', 'Saane/Sarine']]);
+  assert.equal(table.byTile.size, 0);
+  // The table of the shipped tiles, regenerated with this rule.
+  assert.equal(riverNameEn({ name: 'Rur' }), 'Rur');
+  assert.equal(riverNameEn({ name: 'Eger' }), 'Eger');
+  assert.equal(riverNameEn({ name: 'Mosel' }), 'Moselle');
+  assert.equal(riverNameEn({ name: 'Teltowkanal' }), 'Teltow Canal');
+  assert.equal(riverNameEn({ name: 'Weiße Elster' }), 'Weisse Elster');
+  assert.equal(riverNameEn({ name: 'Spree' }), 'Spree');
 });
 
 function grid(over: Partial<TerrainGrid>): TerrainGrid {

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
-import { DEFAULT_LOCATE_PARAMS, analysisFrameNumbers, decideLocation, frameAgreement, gpsCountries, poolTileRows, voteModes, weightNeighbours, type WeightedRef } from '../src/datum/locate.js';
+import type { GeoclipPrediction } from '../src/datum/geoclip.js';
+import { DEFAULT_LOCATE_PARAMS, REGION_ROLE, analysisFrameCount, analysisFrameNumbers, decideLocation, frameAgreement, gpsCountries, poolTileRows, voteModes, weightNeighbours, type LocateEvidence, type WeightedRef } from '../src/datum/locate.js';
 import { filenameHints, judgeCreationTime, metadataFromProbe, parseIso6709, parseTagDate, parseTagDay } from '../src/datum/metadata.js';
 import { World, greatCircleKm, pointInRing, type LonLat } from '../src/datum/world.js';
+import { countryCorrect, scoredDecision } from '../src/scripts/datum/scoring.js';
 import { interleaveByContinent } from '../src/scripts/datum/selection.js';
 
 /** Deterministic pseudo-random numbers. */
@@ -362,6 +364,107 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
   assert.match(plain.detail, /weiche Gewichtung/);
 });
 
+/** A world model concentrated at Paris (it replaces a weak gallery answer in Germany). */
+function parisWorldModel(): GeoclipPrediction {
+  const count = 50;
+  const coords = new Float32Array(count * 2);
+  const probs = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    coords[i * 2] = 48.86 + (i % 5) * 0.01;
+    coords[i * 2 + 1] = 2.35 + Math.floor(i / 5) * 0.01;
+    probs[i] = 1 / count;
+  }
+  return {
+    frames: 12,
+    aggregation: 'mixture',
+    probs,
+    coords,
+    support: Uint32Array.from({ length: count }, (_, i) => i),
+    top: [{ lat: 48.86, lon: 2.35, p: 0.02 }],
+    modes: [{ lat: 48.86, lon: 2.35, p: 0.9, peak: { lat: 48.86, lon: 2.35, p: 0.02 }, spreadKm: 2 }],
+    refined: null,
+    best: { lat: 48.86, lon: 2.35 },
+    countries: [{ iso: 'FR', name: 'Frankreich', p: 1 }],
+    timing: { embedMs: 0, scoreMs: 0, refineMs: 0 },
+  };
+}
+
+test('decideLocation: GPS in no country (at sea) gives the place; the country estimate says the countries are its own', () => {
+  const world = fixtureWorld();
+  const n = (id: string, lat: number, lon: number, s: number): GalleryNeighbour => ({ id, label: id, lat, lon, country: 'DE', wikidata: null, similarity: s });
+  const atSea = (lat: number, lon: number): LocateEvidence['metadata'] => ({
+    creationUtc: null, creationDate: null, location: { lat, lon }, altitude: null, device: null, raw: {},
+    durationSec: null, fps: null, width: null, height: null,
+  });
+  const ev = { neighbours: [[n('a', 52.5, 13.4, 0.4), n('b', 48.1, 11.6, 0.38)]], countryCosines: new Float32Array([0.12, 0.08]), frameNumbers: [1], hints: null };
+  // 56.5 N 3 E: north of both fixture countries, far from every city: no country.
+  const sea = decideLocation(world, { ...ev, metadata: atSea(56.5, 3) });
+  assert.equal(sea.location?.method, 'metadata');
+  assert.equal(sea.location?.country, null);
+  // gpsCountries leaves the list as it is: the fix's countries are the pictures' estimate.
+  const pictures = decideLocation(world, { ...ev, metadata: null });
+  assert.deepEqual(sea.countries, pictures.countries);
+  assert.equal(sea.countries[0]?.iso, 'DE');
+  const region = sea.evidence.find((e) => e.kind === 'region');
+  assert.ok(region);
+  assert.equal(region.weight, 0, 'the GPS position gives the place');
+  // Not "the fix's countries begin with that one": the position has no country.
+  assert.doesNotMatch(region.detail, /beginnen mit diesem/);
+  assert.doesNotMatch(region.detailEn ?? '', /begin with that one/);
+  assert.ok(region.detail.endsWith(REGION_ROLE.gpsNoCountry.de), region.detail);
+  assert.ok(region.detailEn?.endsWith(REGION_ROLE.gpsNoCountry.en), region.detailEn);
+  assert.match(region.detail, /in keinem Land/);
+  assert.match(region.detailEn ?? '', /in no country/);
+
+  // Where the world model replaced the gallery's answer, the countries are its own (Frankreich).
+  const seaWorld = decideLocation(world, { ...ev, metadata: atSea(56.5, 3), geoclip: parisWorldModel() });
+  assert.equal(seaWorld.diagnostics.worldModel?.replaced, true);
+  assert.equal(seaWorld.location?.method, 'metadata');
+  assert.equal(seaWorld.countries[0]?.iso, 'FR');
+  const regionWorld = seaWorld.evidence.find((e) => e.kind === 'region');
+  assert.ok(regionWorld?.detail.endsWith(REGION_ROLE.gpsNoCountryWorld.de), regionWorld?.detail);
+  assert.ok(regionWorld?.detailEn?.endsWith(REGION_ROLE.gpsNoCountryWorld.en), regionWorld?.detailEn);
+  assert.equal(regionWorld?.weight, 0);
+
+  // With a country (Paris) the text stays: the countries begin with the position's.
+  const paris = decideLocation(world, { ...ev, metadata: atSea(48.8584, 2.2945) });
+  assert.equal(paris.countries[0]?.iso, 'FR');
+  assert.ok(paris.evidence.find((e) => e.kind === 'region')?.detail.endsWith(REGION_ROLE.gps.de));
+});
+
+test('evaluation: the pictures are scored, not GPS in the file (scoring.ts)', () => {
+  const world = fixtureWorld();
+  const n = (id: string, lat: number, lon: number, s: number): GalleryNeighbour => ({ id, label: id, lat, lon, country: 'DE', wikidata: null, similarity: s });
+  // The pictures say Germany; the file's GPS position (and the truth) is the Eiffel Tower.
+  const ev: LocateEvidence = {
+    neighbours: [[n('a', 52.5, 13.4, 0.4), n('b', 48.1, 11.6, 0.38)]],
+    countryCosines: new Float32Array([0.12, 0.08]),
+    frameNumbers: [1],
+    metadata: {
+      creationUtc: null, creationDate: null, location: { lat: 48.8584, lon: 2.2945 }, altitude: null, device: null, raw: {},
+      durationSec: null, fps: null, width: null, height: null,
+    },
+    hints: null,
+  };
+  const truth = ['FR'];
+  // The node's decision puts the GPS country first: scored, every clip with GPS would be right.
+  const node = decideLocation(world, ev, DEFAULT_LOCATE_PARAMS);
+  assert.equal(node.countries[0]?.iso, 'FR');
+  assert.equal(countryCorrect(node, truth), true);
+  // The measurement scores the pictures' answer: Germany, wrong.
+  const scored = scoredDecision(world, ev, DEFAULT_LOCATE_PARAMS);
+  assert.equal(scored.diagnostics.method, 'region');
+  assert.equal(scored.countries[0]?.iso, 'DE');
+  assert.equal(countryCorrect(scored, truth), false);
+  // What else the measurement reads does not depend on the metadata.
+  assert.deepEqual(scored.diagnostics.visual, node.diagnostics.visual);
+  assert.deepEqual(scored.diagnostics.countryTop, node.diagnostics.countryTop);
+  assert.equal(scored.diagnostics.radiusTier, node.diagnostics.radiusTier);
+  // Without GPS the decision is the node's.
+  assert.deepEqual(scoredDecision(world, { ...ev, metadata: null }, DEFAULT_LOCATE_PARAMS).countries, scored.countries);
+  assert.equal(countryCorrect(scored, []), null, 'no truth country, no score');
+});
+
 test('gpsCountries: the GPS country first with its confidence, the rest in proportion', () => {
   const gps = { lat: 51.9, lon: -8.46, radiusKm: 0.05, confidence: 0.98, method: 'metadata' as const, label: 'Cork', country: 'IE', countryName: 'Irland' };
   const pictures = [
@@ -380,14 +483,53 @@ test('gpsCountries: the GPS country first with its confidence, the rest in propo
 });
 
 test('analysisFrameNumbers: frames sampled from the file named on the analysis scale', () => {
-  // Frame n of the analysis lies at (n - 1) / sampleFps: 0 s is frame 1, 41 s frame 42.
+  // Frame n of the analysis shows the interval [(n - 1) / sampleFps, n / sampleFps): 0 s is frame
+  // 1, 41 s frame 42.
   assert.deepEqual(analysisFrameNumbers([0, 6, 34, 41], 1), [1, 7, 35, 42]);
-  // Nearest frame; at 2 fps twice as many.
-  assert.deepEqual(analysisFrameNumbers([2.4, 2.6], 1), [3, 4]);
-  assert.deepEqual(analysisFrameNumbers([2.4], 2), [6]);
-  // Never past the analysis's last frame where it is known (a clip of 12 s has 13).
-  assert.deepEqual(analysisFrameNumbers([11.9, 12.4], 1, 13), [13, 13]);
+  // The frame whose interval holds the time, not the nearest start: 2.4 s and 2.6 s both lie in
+  // frame 3 (2 to 3 s); europa-rand's church at 69.5625 s is frame 70, not the waterfall of 71.
+  assert.deepEqual(analysisFrameNumbers([2.4, 2.6], 1), [3, 3]);
+  assert.deepEqual(analysisFrameNumbers([69.5625], 1, 111), [70]);
+  assert.deepEqual(analysisFrameNumbers([9.5, 10.5, 11.5], 1, 12), [10, 11, 12]);
+  // At 2 fps twice as many: 2.4 s lies in frame 5 (2.0 to 2.5 s).
+  assert.deepEqual(analysisFrameNumbers([2.4, 2.5], 2), [5, 6]);
+  // Never past the analysis's last frame where it is known: ffmpeg's fps filter writes 12 frames
+  // for a clip of 12 s at one a second (frames 1..12 at 0..11 s), not 13.
+  assert.deepEqual(analysisFrameNumbers([11.9, 12.4], 1, 12), [12, 12]);
   assert.deepEqual(analysisFrameNumbers([-1], 1), [1]);
+  // The last of twelve frames sampled from us-vessel.mp4 (12.012 s) lies at 11.511 s: frame 12,
+  // the last the analysis has, with the quick stage's clamp and without it.
+  assert.deepEqual(analysisFrameNumbers([11.511], 1), [12]);
+  assert.deepEqual(analysisFrameNumbers([11.511], 1, analysisFrameCount(12.012, 1)), [12]);
+  // A time at the very end needs the clamp.
+  assert.deepEqual(analysisFrameNumbers([12.01], 1), [13]);
+  assert.deepEqual(analysisFrameNumbers([12.01], 1, analysisFrameCount(12.012, 1)), [12]);
+});
+
+test('analysisFrameCount: the frames the analysis writes, from the duration', () => {
+  // As ffmpeg's fps filter writes them (measured on the reference clips): round(d · fps).
+  assert.equal(analysisFrameCount(12.012, 1), 12);
+  assert.equal(analysisFrameCount(12, 1), 12);
+  assert.equal(analysisFrameCount(11.92, 1), 12);
+  assert.equal(analysisFrameCount(9.32, 1), 9);
+  assert.equal(analysisFrameCount(12.012, 0.5), 6);
+  assert.equal(analysisFrameCount(12.012, 2), 24);
+  assert.equal(analysisFrameCount(9.32, 4), 37);
+  // At least one; none without a duration.
+  assert.equal(analysisFrameCount(0.2, 1), 1);
+  assert.equal(analysisFrameCount(null, 1), null);
+  assert.equal(analysisFrameCount(undefined, 1), null);
+  assert.equal(analysisFrameCount(0, 1), null);
+  assert.equal(analysisFrameCount(Number.NaN, 1), null);
+  // Twelve frames at the middle of equal segments (the localisation's), any clip and rate: none
+  // past the analysis's last frame.
+  for (const d of [3, 9, 9.32, 11.92, 12, 12.012, 36.5, 61.2]) {
+    for (const fps of [0.5, 1, 2, 4]) {
+      const times = Array.from({ length: 12 }, (_, i) => (d * (i + 0.5)) / 12);
+      const last = analysisFrameCount(d, fps) as number;
+      assert.ok(Math.max(...analysisFrameNumbers(times, fps, last)) <= last, `${d} s at ${fps} fps`);
+    }
+  }
 });
 
 test('countryAt falls back to the nearest border within 10 km; flat priors give no 25 km fix', () => {

@@ -3,24 +3,31 @@ import { test } from 'node:test';
 import type { Evidence, Fix, FixLocation, FixSegment } from '../src/datum/contract.js';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
 import type { GeoclipPrediction } from '../src/datum/geoclip.js';
+import { REGION_ROLE, decideLocation } from '../src/datum/locate.js';
 import { slimFix } from '../src/datum/routes.js';
 import {
   analyseSegments,
   buildWindows,
   clockText,
+  DEFAULT_SEGMENT_PARAMS,
   isAnchor,
   mergeWindows,
+  placedByStretches,
   planWorldFrames,
   segmentCountries,
   segmentVerdict,
   spreadIndices,
+  stretchCountryEvidence,
   summariseSegments,
   toSegments,
+  verdictCountries,
   wholeFileEvidence,
   type SegmentFrame,
   type WindowAnswer,
 } from '../src/datum/segments.js';
 import { World, type LonLat } from '../src/datum/world.js';
+// The console's helper (pure; its imports are types only).
+import { countryListOf } from '../../web/src/datum/segments.ts';
 
 const box = (w: number, s: number, e: number, n: number): LonLat[] => [
   [w, s],
@@ -790,4 +797,92 @@ test('analyseSegments: the gallery is searched in parts of whole windows; a stop
     stopped.analysis.windows.map((w) => w.location !== null),
     [true, true, false, false, false, false],
   );
+});
+
+/** A world model concentrated at Paris (it replaces a weak gallery answer in Germany). */
+function parisWorldModel(): GeoclipPrediction {
+  const count = 50;
+  const coords = new Float32Array(count * 2);
+  const probs = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    coords[i * 2] = 48.86 + (i % 5) * 0.01;
+    coords[i * 2 + 1] = 2.35 + Math.floor(i / 5) * 0.01;
+    probs[i] = 1 / count;
+  }
+  return {
+    frames: 12,
+    aggregation: 'mixture',
+    probs,
+    coords,
+    support: Uint32Array.from({ length: count }, (_, i) => i),
+    top: [{ lat: 48.86, lon: 2.35, p: 0.02 }],
+    modes: [{ lat: 48.86, lon: 2.35, p: 0.9, peak: { lat: 48.86, lon: 2.35, p: 0.02 }, spreadKm: 2 }],
+    refined: null,
+    best: { lat: 48.86, lon: 2.35 },
+    countries: [{ iso: 'FR', name: 'Frankreich', p: 1 }],
+    timing: { embedMs: 0, scoreMs: 0, refineMs: 0 },
+  };
+}
+
+test('stretches: where their shares are the countries, the country estimate says so, not "the world model\'s"', () => {
+  const world = fixtureWorld();
+  const n = (id: string, lat: number, lon: number, s: number): GalleryNeighbour => ({ id, label: id, lat, lon, country: 'DE', wikidata: null, similarity: s });
+  // The whole file: a weak gallery answer in Germany, replaced by the world model's Paris.
+  const located = decideLocation(world, {
+    neighbours: [[n('a', 52.5, 13.4, 0.4), n('b', 48.1, 11.6, 0.38)]],
+    countryCosines: new Float32Array([0.12, 0.08]),
+    frameNumbers: [1],
+    metadata: null,
+    hints: null,
+    geoclip: parisWorldModel(),
+  });
+  assert.equal(located.location?.method, 'worldmodel');
+  assert.equal(located.diagnostics.worldModel?.replaced, true);
+  const before = located.evidence.find((e) => e.kind === 'region');
+  assert.ok(before);
+  assert.ok(before.detail.endsWith(REGION_ROLE.world.de), 'the whole file\'s countries are the world model\'s');
+  const rejected = located.diagnostics.gallery;
+  const at = (lat: number, lon: number, country: string, label: string): FixLocation => ({ lat, lon, radiusKm: 25, confidence: 0.8, method: 'landmark', label, country, countryName: country });
+  const seg = (a: number, b: number, location: FixLocation, place: number): FixSegment => ({
+    startSec: a, endSec: b, firstFrame: a + 1, lastFrame: b, keyframe: { frame: a + 2, time: a + 1, imageUrl: `f${a}` }, location, place, windows: 1,
+  });
+  const placed = (segments: FixSegment[]): { fix: Pick<Fix, 'countries' | 'segments' | 'location'>; region: Evidence | undefined; replaced: boolean } => {
+    const verdict = segmentVerdict(segments, located.location, { gps: false, sameKm: DEFAULT_SEGMENT_PARAMS.sameKm, rejected });
+    const result = placedByStretches(located, { verdict, candidates: null, countries: verdictCountries(verdict, segments) });
+    return { fix: { countries: result.countries, segments, location: result.location }, region: result.evidence.find((e) => e.kind === 'region'), replaced: verdict.replaced };
+  };
+
+  // Paris 0–40 s (agrees with the whole file, which stands), Berlin 40–60 s: the countries are the
+  // stretches' shares, the console heads them "Anteil der Aufnahmezeit".
+  const agrees = placed([seg(0, 40, at(48.86, 2.35, 'FR', 'Paris'), 1), seg(40, 60, at(52.52, 13.4, 'DE', 'Berlin'), 2)]);
+  assert.equal(agrees.replaced, false);
+  assert.deepEqual(agrees.fix.countries.map((c) => [c.iso, Number(c.p.toFixed(3))]), [['FR', 0.667], ['DE', 0.333]]);
+  assert.equal(countryListOf(agrees.fix), 'shares');
+  assert.ok(agrees.region, 'the country estimate stays');
+  assert.equal(agrees.region.weight, 0);
+  assert.doesNotMatch(agrees.region.detail, /die des Weltmodells/);
+  assert.doesNotMatch(agrees.region.detailEn ?? '', /the world model's \(its probability/);
+  assert.ok(agrees.region.detail.endsWith(REGION_ROLE.worldStretches.de), agrees.region.detail);
+  assert.ok(agrees.region.detailEn?.endsWith(REGION_ROLE.worldStretches.en), agrees.region.detailEn);
+  // The rest of the entry is the whole file's, unchanged.
+  assert.equal(agrees.region.detail.slice(0, -REGION_ROLE.worldStretches.de.length), before.detail.slice(0, -REGION_ROLE.world.de.length));
+
+  // Lyon 0–40 s replaces the place, Berlin 40–60 s: the entry is the whole file's (wrapped) and
+  // says the same of the countries.
+  const replaced = placed([seg(0, 40, at(45.76, 4.84, 'FR', 'Lyon'), 1), seg(40, 60, at(52.52, 13.4, 'DE', 'Berlin'), 2)]);
+  assert.equal(replaced.replaced, true);
+  assert.equal(countryListOf(replaced.fix), 'shares');
+  assert.match(replaced.region?.label ?? '', /^Ganze Datei \(gemischt\): /);
+  assert.ok(replaced.region?.detail.endsWith(REGION_ROLE.worldStretches.de), replaced.region?.detail);
+  assert.ok(replaced.region?.detailEn?.endsWith(REGION_ROLE.worldStretches.en), replaced.region?.detailEn);
+
+  // One place that agrees keeps the whole file's countries (the world model's): the entry stays.
+  const one = placed([seg(0, 60, at(48.86, 2.35, 'FR', 'Paris'), 1)]);
+  assert.equal(one.region?.detail, before.detail);
+
+  // Other entries and roles are left alone.
+  const sun: Evidence = { kind: 'sun', label: 'Sonne', detail: before.detail, weight: 0.2 };
+  assert.equal(stretchCountryEvidence(sun), sun);
+  const plain: Evidence = { ...before, detail: 'Länderschätzung ohne Rolle.', detailEn: 'Country estimate without role.' };
+  assert.equal(stretchCountryEvidence(plain), plain);
 });

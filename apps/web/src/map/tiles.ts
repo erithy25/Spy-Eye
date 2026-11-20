@@ -16,7 +16,7 @@ export interface Manifest {
   source: string;
 }
 
-interface RawTile {
+export interface RawTile {
   water?: number[][];
   urban?: number[][];
   wood?: number[][];
@@ -153,7 +153,12 @@ function labelSpot(vertices: number[], name: string): LineLabel | null {
   return null;
 }
 
-function build(z: number, x: number, y: number, raw: RawTile): Tile {
+/**
+ * A tile (z, x, y) from its shipped JSON: its paths, and its labels with their English names (the
+ * tile's own, else placeNames.ts tileNameEn for the labels whose German name stands for features
+ * named differently in English). Exported for the tests (they stand in for Path2D).
+ */
+export function buildTile(z: number, x: number, y: number, raw: RawTile): Tile {
   const geom: TileGeometry = {
     water: [],
     urban: [],
@@ -294,7 +299,7 @@ export class TileSource {
     fetch(`${this.base}/${k}.json`)
       .then((r) => (r.ok ? (r.json() as Promise<RawTile>) : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((raw) => {
-        this.tiles.set(k, build(z, x, y, raw));
+        this.tiles.set(k, buildTile(z, x, y, raw));
         this.loading.delete(k);
         this.notify();
       })

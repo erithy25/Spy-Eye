@@ -22,18 +22,25 @@ export const englishOf = (f: MvtFeature, german: string): string | undefined => 
 };
 
 /**
- * Whether a feature says what it is called in English: it carries `name:en`, or its local name
- * differs from the German one (englishOf takes that). A piece of a river without either says
- * nothing about the river's English name (englishNames).
+ * Where a feature's English name (englishOf) comes from, for the vote of the pieces of a river
+ * (englishNames): 'en' from its `name:en`; 'local' from its local name, which it has instead, in
+ * Latin letters, the German one or another (the German Rur's pieces "Rur", the Dutch ones "Roer");
+ * null from neither (no local name, or one in another script): it says nothing.
  */
-export const namesEnglish = (f: MvtFeature, german: string): boolean => String(f.properties['name:en'] ?? '').trim() !== '' || englishOf(f, german) !== undefined;
+export type EnglishSource = 'en' | 'local' | null;
+
+export const englishSource = (f: MvtFeature, german: string): EnglishSource => {
+  if (String(f.properties['name:en'] ?? '').trim() !== '') return 'en';
+  const local = String(f.properties['name_en'] ?? f.properties['name'] ?? '').trim();
+  return local === german || englishOf(f, german) !== undefined ? 'local' : null;
+};
 
 /**
  * One label of a shipped tile: the tile ("z/x/y"), the label's point in it (a place's point, a
  * river's first point, tile units) and on the Earth, its German name, and the English name of the
- * feature it was made from (null: the German name stands in English too). `says` false: the
- * feature has no English name of its own (namesEnglish), which counts for a place (its name is the
- * same in English) and not for a piece of a river.
+ * feature it was made from (null: the German name stands in English too). `from`: where that
+ * English name comes from (englishSource; undefined: `name:en`), which decides the vote of the
+ * pieces of a river and nothing for a place.
  */
 export interface LabelEnglish {
   tile: string;
@@ -43,7 +50,7 @@ export interface LabelEnglish {
   lon: number;
   de: string;
   en: string | null;
-  says?: boolean;
+  from?: EnglishSource;
 }
 
 /** The English names of a kind of label: by German name, and by tile and point where one name stands for several. */
@@ -70,12 +77,14 @@ function km(a: { lat: number; lon: number }, b: { lat: number; lon: number }): n
  * The labels of one German name as one feature each, or, with `linkKm`, as rivers: labels within
  * `linkKm` of each other (one after the other) belong to one river, with the pieces of `others`
  * (features of the source tiles no shipped label was made from) between them. Its pieces are
- * tagged unevenly (the Mosel: "Moselle" on 22 of its labels, "La Moselle" on 7, no English name
- * on 172; the Teltowkanal "Teltow Canal" on 6 pieces, none of them shipped): every label of a river
- * has the English name most of the pieces that say one carry (the German one where most say that:
- * the Spree is "Spree" on 12 pieces, the Sorbian "Sprewa" on 3), the German one of a tie with it
- * (the Warche: "Warche" on 4, "La Warche" on 4), else the alphabetically first; a river none of
- * whose pieces says one keeps the German name.
+ * tagged unevenly (the Mosel: `name:en` "Moselle" on 22 of its pieces, the local name only on the
+ * others, "La Moselle" on 7 and "Mosel" on 172; the Teltowkanal "Teltow Canal" on 6 pieces, none
+ * of them shipped; the Rur no `name:en` at all, "Rur" on its 19 German pieces and "Roer" on its 3
+ * Dutch ones). Every label of a river has the English name most of its pieces with `name:en`
+ * carry (the German one where most say that: the Spree is "Spree" on 15 pieces, "Sprewa" on 3);
+ * where none of them has one, the local name most of its pieces carry, the German one counted
+ * (the Rur stays "Rur"); of a tie the German one, else the alphabetically first. A river none of
+ * whose pieces says anything (englishSource null) keeps the German name.
  */
 function asFeatures(list: readonly LabelEnglish[], linkKm: number, others: readonly LabelEnglish[]): LabelEnglish[] {
   if (linkKm <= 0) return [...list];
@@ -88,17 +97,21 @@ function asFeatures(list: readonly LabelEnglish[], linkKm: number, others: reado
   for (let i = 0; i < all.length; i++) {
     for (let j = i + 1; j < all.length; j++) if (km(all[i] as LabelEnglish, all[j] as LabelEnglish) <= linkKm) river[root(i)] = root(j);
   }
-  // The German name stands for "" among the votes.
-  const votes = new Map<number, Map<string, number>>();
+  // The votes of each river: of its pieces with `name:en`, else of those by their local name. The
+  // German name stands for "" among them.
+  const votes = new Map<number, { from: 'en' | 'local'; counts: Map<string, number> }>();
   all.forEach((l, i) => {
-    if (l.says === false) return;
-    const counts = votes.get(root(i)) ?? new Map<string, number>();
+    const from = l.from === undefined ? 'en' : l.from;
+    if (from === null) return;
+    const had = votes.get(root(i));
+    if (had?.from === 'en' && from === 'local') return;
+    const counts = had?.from === from ? had.counts : new Map<string, number>();
     counts.set(l.en ?? '', (counts.get(l.en ?? '') ?? 0) + 1);
-    votes.set(root(i), counts);
+    votes.set(root(i), { from, counts });
   });
   return list.map((l, i) => {
     // Most votes; of a tie the German name, else the alphabetically first.
-    const ranked = [...(votes.get(root(i)) ?? new Map<string, number>()).entries()].sort((a, b) => b[1] - a[1] || Number(b[0] === '') - Number(a[0] === '') || a[0].localeCompare(b[0]));
+    const ranked = [...(votes.get(root(i))?.counts ?? new Map<string, number>()).entries()].sort((a, b) => b[1] - a[1] || Number(b[0] === '') - Number(a[0] === '') || a[0].localeCompare(b[0]));
     const best = ranked[0];
     return best ? { ...l, en: best[0] === '' ? null : best[0] } : l;
   });
@@ -106,7 +119,7 @@ function asFeatures(list: readonly LabelEnglish[], linkKm: number, others: reado
 
 /**
  * Sorts the labels' English names into a table by German name and one by tile. A German name all
- * of whose labels have one English name that differs gets it by name ("Themse" → "River Thames").
+ * of whose labels have one English name that differs gets it by name ("Themse" → "Thames").
  * Where the labels of one German name disagree, each feature keeps its own: the town of Homburg in
  * the Saarland is "Homburg" in English as well, the Belgian village whose German name is Homburg
  * is "Hombourg"; the name gets no entry (the German stands), and every label of it whose English

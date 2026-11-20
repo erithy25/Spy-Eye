@@ -61,13 +61,14 @@ import {
   type StreetLevelOptions,
   type StreetLevelResult,
 } from './streetlevel.js';
-import { analysisFrameNumbers, breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
+import { analysisFrameCount, analysisFrameNumbers, breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
 import {
   analyseSegments,
   clockText,
   coarseRegions,
   DEFAULT_SEGMENT_PARAMS,
   multiPlaceTimeEvidence,
+  placedByStretches,
   segmentVerdict,
   spaceStretches,
   spreadIndices,
@@ -78,7 +79,6 @@ import {
   summariseSegments,
   toSegments,
   verdictCountries,
-  wholeFileEvidence,
   type SegmentVerdict,
   type WholeFileMix,
 } from './segments.js';
@@ -1251,12 +1251,17 @@ export class DatumEngine {
     });
 
     const world: Promise<WorldModelResult | null> = worldJob.bounded ?? Promise.resolve(null);
+    // The analysis's last frame: the one it wrote where it has run, else the one its fps filter
+    // will write (analysisFrameCount), so that the quick and the full fix give one picture one
+    // number, and none the analysis lacks.
+    const written = entry.info.status === 'ready' ? (entry.frames[entry.frames.length - 1]?.n ?? null) : null;
+    const lastFrame = written ?? analysisFrameCount(meta?.durationSec ?? entry.info.durationSec, entry.info.sampleFps);
     const located = await locate({
       videoPath,
       frameVectors: sampled.vectors,
       dim: sampled.dim,
       // Named in the evidence on the analysis's scale (the keyframes', the stretches').
-      frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps),
+      frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps, lastFrame),
       ...(sampled.tiles ? { tiles: sampled.tiles } : {}),
       embedTexts: this.embedTexts,
       gallery,
@@ -1446,19 +1451,11 @@ export class DatumEngine {
     // What the whole file's frames mix with the stretch shown: other places, or the undetermined
     // stretches of a recording of one recognised place (its entries say which).
     const mix: WholeFileMix = parts.verdict.places === 1 ? 'undetermined' : 'places';
-    const placed: LocateResult =
-      parts.verdict.evidence.length > 0
-        ? {
-            ...located,
-            location: parts.verdict.location,
-            // Where a stretch's place replaced the whole file's answer, the whole file's entries
-            // speak of that answer ("1 km from the result: a recognition", "which stands"): they
-            // stay, said to be of the whole file and without weight.
-            evidence: [...parts.verdict.evidence, ...(parts.verdict.replaced ? located.evidence.map((e) => wholeFileEvidence(e, mix)) : located.evidence)],
-            ...(parts.candidates ? { candidates: parts.candidates } : {}),
-            ...(parts.countries ? { countries: parts.countries } : {}),
-          }
-        : located;
+    // Where a stretch's place replaced the whole file's answer, the whole file's entries speak of
+    // that answer ("1 km from the result: a recognition", "which stands"): they stay, said to be of
+    // the whole file and without weight; where the countries are the stretches', the country
+    // estimate says so (segments.ts placedByStretches).
+    const placed: LocateResult = placedByStretches(located, parts);
 
     // Street-level pictures around a recognised place (streetlevel.ts streetLevelPlan), when the
     // node's setting allows it. The stage is mostly waiting for the picture services, so it runs
