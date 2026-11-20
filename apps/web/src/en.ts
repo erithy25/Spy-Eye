@@ -615,6 +615,22 @@ export const EN: Record<string, string> = {
   Sichtfeld: 'Field of view',
   Silhouette: 'Skyline',
   'Sonne unter dem Horizont': 'Sun below the horizon',
+  'Sonne am Horizont, Schatten sehr lang': 'Sun at the horizon, shadows very long',
+  'gespeicherte Wahl: ein': 'stored choice: on',
+  'gespeicherte Wahl: aus': 'stored choice: off',
+  'Weltmodell, je Land': 'World model, per country',
+  'Grund etwa {h} m ü. NN · Höhendaten nur grob': 'Ground about {h} m ASL · coarse elevation only',
+  'Höhendaten hier nur grob (Weltübersicht, etwa {km} km je Messpunkt): kein Geländeumriss, die Fläche ist geglättet.':
+    'Elevation here is coarse only (world overview, about {km} km per sample): no terrain outline, the surface is smoothed.',
+  '{a} oder {b}': '{a} or {b}',
+  '{a} · oder {range} ({b})': '{a} · or {range} ({b})',
+  'oder {range}': 'or {range}',
+  'oder {az}, Länge {ratio} ({range})': 'or {az}, length {ratio} ({range})',
+  'Land des Orts oben': 'Country of the place above',
+  'Der Ort oben liegt in {land} ({p}): dort hat das Weltmodell seine stärkste Häufung, in anderen Ländern mehr verteilte Wahrscheinlichkeit.':
+    'The place above lies in {land} ({p}): the world model has its strongest cluster there, and more probability spread over other countries.',
+  'Der Ort oben liegt in {land} ({p}); die Liste ist die Wahrscheinlichkeit je Land über alle Hinweise.':
+    'The place above lies in {land} ({p}); the list is the probability per country over all the evidence.',
   Sonnenhöhe: 'Sun elevation',
   Stützung: 'Support',
   Tag: 'Day',
@@ -752,6 +768,9 @@ export const EN: Record<string, string> = {
   'Raum aus Bild 1 aufgebaut': 'Space built from frame 1',
   'Raum aus Bild 2 aufgebaut': 'Space built from frame 2',
   'Raum aus Bild 3 aufgebaut': 'Space built from frame 3',
+  'Raum aus Schlüsselbild 1 aufgebaut': 'Space built from keyframe 1',
+  'Raum aus Schlüsselbild 2 aufgebaut': 'Space built from keyframe 2',
+  'Raum aus Schlüsselbild 3 aufgebaut': 'Space built from keyframe 3',
   'Gelände geprüft': 'Terrain checked',
   'Licht und Sonnenstand bestimmt': 'Light and sun position determined',
 

@@ -2,21 +2,22 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent
 import type { VideoInfo } from '../../api';
 import { formatScore } from '../../format';
 import { useLang } from '../../i18n';
-import { MapCanvas, type MapMarker, type MapShape } from '../../map/MapCanvas';
+import { MapCanvas, type MapMarker, type MapShape, type MapView } from '../../map/MapCanvas';
 import { Dialog } from '../../ui';
 import { VIDEO_ACCEPT, dragHasFiles, droppedFolderName, filesFromDrop, pickedFolderName, uploads, useUploads } from '../../uploads';
+import type { SunReport, TimeEstimate } from '../../../../server/src/datum/contract';
 import { fetchCountries, fetchTerrain, type CountryShape, type DatasetDeleteResult, type Fix } from '../api';
 import { terrainContours, type ContourSet } from '../contours';
 import { datasets, groupRecordings, useDatasets, type DatasetGroup } from '../datasets';
 import { DeleteDatasetDialog } from '../DeleteDatasetDialog';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
-import { referenceInstant, utcOffset } from '../panel/common';
+import { referenceInstant, rivalWindow, sunInWindow, utcOffset } from '../panel/common';
 import { DatumSettingsPanel } from '../Settings';
 import { TRUTH_ACCEPT, useTruthUpload } from '../TruthUpload';
 import { isTruthFile } from '../truthFile';
 import { UPLOAD_OPTIONS, UploadDialog, type Picked } from '../UploadDialog';
-import { nearestWithin, placesText, reachKm, routeGeometry, segmentSummary, wholeFilePlace, type StretchChoice } from '../segments';
-import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
+import { nearestWithin, placesText, routeFrame, routeGeometry, segmentSummary, wholeFilePlace, type StretchChoice } from '../segments';
+import { bestWindowText, kmText, rivalText, useFullFix, windowsText, zoomForRadius } from '../useFixes';
 import { OrtungList, progressText, type GroupActions } from './OrtungList';
 
 export interface DatumViewProps {
@@ -37,7 +38,51 @@ export interface StretchProps {
 }
 
 // The whole Earth: the globe is sized to fit the map area (`fit`), centred on Europe and Africa.
-const WORLD = { lat: 24, lon: 12, zoom: 2.25, fit: true };
+const WORLD: MapView = { lat: 24, lon: 12, zoom: 2.25, fit: true };
+
+/**
+ * The map's right side the result card covers (CSS pixels): its width and its distance from the
+ * right edge (datum.css .dt-hud: 312 + 64) and a gap.
+ */
+const RESULT_CARD_PX = 312 + 64 + 16;
+
+/**
+ * The view cone of a heading `length` km long. A heading from the terrain horizon was solved at
+ * the point whose horizon fits (HorizonMatch.at, RAUM's standpoint), which can lie up to about
+ * 4 km from the fix: the cone is drawn there, with a faint line from the fix to it.
+ */
+export function headingShapes(fix: Fix, loc: { lat: number; lon: number }, length: number): MapShape[] {
+  const heading = fix.heading;
+  if (!heading) return [];
+  const at = heading.method === 'horizon' && fix.horizon?.matched && fix.horizon.at ? fix.horizon.at : loc;
+  const apart = nearestWithin(loc, [at], 0.05) === null;
+  const out: MapShape[] = [];
+  if (apart) out.push({ kind: 'line', points: [[loc.lat, loc.lon], [at.lat, at.lon]], style: 'faint' });
+  out.push({ kind: 'wedge', lat: at.lat, lon: at.lon, azimuthDeg: heading.deg, spreadDeg: heading.fovDeg, lengthKm: length, style: 'solid' });
+  return out;
+}
+
+/**
+ * The sun and shadow direction at a place, rays `length` km long, at the estimated time (the
+ * sun of SunReport.at, the middle of the best window). Where morning and afternoon are as likely
+ * (rivalWindow), the other window's sun too, faint, so that the map does not present one side of
+ * an even split as the direction of the light. `labels` false leaves the rays unnamed (a map of
+ * the whole globe, where they are a few pixels long).
+ */
+export function sunShapes(at: { lat: number; lon: number }, report: SunReport | null, time: TimeEstimate, length: number, tr: (s: string) => string, labels: boolean): MapShape[] {
+  const out: MapShape[] = [];
+  const sun = report?.at ?? null;
+  if (!report || !sun || sun.elevationDeg <= -6) return out;
+  const said = (label: string): { label?: string } => (labels ? { label } : {});
+  out.push({ kind: 'ray', lat: at.lat, lon: at.lon, azimuthDeg: sun.azimuthDeg, lengthKm: length, style: 'strong', arrow: false, ...said(`☉ ${Math.round(sun.azimuthDeg)}°`) });
+  out.push({ kind: 'ray', lat: at.lat, lon: at.lon, azimuthDeg: sun.shadowAzimuthDeg, lengthKm: length * 0.6, style: 'dotted', arrow: true, ...said(tr('Schatten')) });
+  const rival = rivalWindow(time);
+  const other = rival ? sunInWindow(report, time.timezone, rival) : null;
+  if (other && other.elevationDeg > -6) {
+    out.push({ kind: 'ray', lat: at.lat, lon: at.lon, azimuthDeg: other.azimuthDeg, lengthKm: length * 0.8, style: 'faint', arrow: false, ...said(`${tr('oder')} ☉ ${Math.round(other.azimuthDeg)}°`) });
+  }
+  return out;
+}
 
 /** Map geometry for one fix: uncertainty, candidates, sun and shadow, view cone, ground truth. */
 export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[], withCountries: boolean, tr: (s: string) => string, locale: string): MapShape[] {
@@ -48,8 +93,12 @@ export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[],
     const top = Math.max(0.0001, ...fix.countries.map((c) => c.p));
     for (const c of countries) {
       const p = probs.get(c.iso);
-      if (!p || p / top < 0.08) continue;
-      shapes.push({ kind: 'area', rings: c.polygons, opacity: p / top, label: `${c.iso} ${Math.round(p * 100)} %`, labelAt: c.centroid });
+      // The place's own country is drawn and named however little it holds (the world model's
+      // best point can lie in a country with a small share of its mass), so that the marker does
+      // not stand in an unshaded country beside one shaded in full.
+      const own = c.iso === loc.country;
+      if (!p || (p / top < 0.08 && !own)) continue;
+      shapes.push({ kind: 'area', rings: c.polygons, opacity: own ? Math.max(0.2, p / top) : p / top, label: `${c.iso} ${Math.round(p * 100)} %`, labelAt: c.centroid });
     }
   }
   for (const c of fix.candidates.slice(1, 5)) {
@@ -58,15 +107,8 @@ export function fixShapes(fix: Fix, full: Fix | null, countries: CountryShape[],
   if (loc) {
     shapes.push({ kind: 'circle', lat: loc.lat, lon: loc.lon, radiusKm: Math.max(0.05, loc.radiusKm), style: 'dashed', label: `± ${kmText(loc.radiusKm, locale)}` });
     const len = Math.max(0.4, Math.min(1500, loc.radiusKm * 1.8));
-    const sun = (full ?? fix).sun?.at ?? null;
-    if (sun && sun.elevationDeg > -6) {
-      shapes.push({ kind: 'ray', lat: loc.lat, lon: loc.lon, azimuthDeg: sun.azimuthDeg, lengthKm: len, style: 'strong', label: `☉ ${Math.round(sun.azimuthDeg)}°`, arrow: false });
-      shapes.push({ kind: 'ray', lat: loc.lat, lon: loc.lon, azimuthDeg: sun.shadowAzimuthDeg, lengthKm: len * 0.6, style: 'dotted', label: tr('Schatten'), arrow: true });
-    }
-    const heading = (full ?? fix).heading;
-    if (heading) {
-      shapes.push({ kind: 'wedge', lat: loc.lat, lon: loc.lon, azimuthDeg: heading.deg, spreadDeg: heading.fovDeg, lengthKm: len * 0.8, style: 'solid' });
-    }
+    shapes.push(...sunShapes(loc, (full ?? fix).sun, fix.time, len, tr, true));
+    shapes.push(...headingShapes(full ?? fix, loc, len * 0.8));
     if (fix.truth) {
       shapes.push({ kind: 'line', points: [[loc.lat, loc.lon], [fix.truth.lat, fix.truth.lon]], style: 'faint' });
     }
@@ -114,6 +156,7 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
   const zone = fix.time.timezone ? utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun)) : '';
   // A place wider than ± 1 500 km fixes no time zone: said next to the offset, as in BEFUND.
   const doubt = zone !== '' ? zoneDoubt(lang, loc) : null;
+  const rival = rivalText(fix.time);
   return (
     <div className="dt-hud">
       <div className="dt-hud-place">{placeText(lang, loc, fix)}</div>
@@ -122,7 +165,8 @@ function ResultCard({ fix, video, go }: { fix: Fix; video: VideoInfo | null; go:
       </div>
       <div className="dt-hud-clock">{bestWindowText(fix) ?? '––:––'}</div>
       <div className="dt-hud-note" title={[fix.time.timezone ?? '', doubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>
-        {[method, zone, doubt?.text ?? ''].filter((x) => x !== '').join(' · ')}
+        {/* Morning and afternoon as likely (rivalWindow): the other window first. */}
+        {[rival ? t('oder {range}', { range: rival }) : '', method, zone, doubt?.text ?? ''].filter((x) => x !== '').join(' · ')}
       </div>
       {/* Confidence and, with a ground truth, the deviation: one grid, so that both rows align. */}
       <div className="dt-hud-conf">
@@ -163,6 +207,25 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const dragDepth = useRef(0);
+  // The tool bar over the map's top left corner: the map's labels keep clear of it (its width
+  // follows the language and what it offers).
+  const toolsRef = useRef<HTMLDivElement | null>(null);
+  const [toolsBox, setToolsBox] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    const el = toolsRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      // Its own offset in the map area plus a margin of 6 px.
+      const width = el.offsetLeft + el.offsetWidth + 6;
+      const height = el.offsetTop + el.offsetHeight + 6;
+      setToolsBox((prev) => (prev && Math.round(prev.width) === Math.round(width) && Math.round(prev.height) === Math.round(height) ? prev : { width, height }));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   // Where the files of the hidden pickers go: a dataset's id, or 'new' (the upload dialog).
   const pickTarget = useRef<string>('new');
   const fileInput = useRef<HTMLInputElement>(null);
@@ -239,7 +302,7 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
         lon: fix.location.lon,
         shape: 'fix',
         label: isSel || fixes.length <= 12 ? caseLabel(video.name) : '',
-        ...(isSel ? { sub: bestWindowText(fix) ?? placeText(lang, fix.location, fix) } : {}),
+        ...(isSel ? { sub: windowsText(fix.time, t) ?? placeText(lang, fix.location, fix) } : {}),
         selected: isSel,
         dim: selected !== null && !isSel,
       });
@@ -388,17 +451,16 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
     setNotice({ text: parts.join(' · '), ok: true });
   };
 
-  // A recording of several places: turned to its place, as far out as its farthest place.
-  const reach = current?.location && route ? reachKm(current.location, route.places) : 0;
-  const view = current?.location
-    ? {
-        lat: current.location.lat,
-        lon: current.location.lon,
-        // A route around the world shows the whole Earth (sized to the map, as the world view).
-        ...(route && reach > 2500
-          ? { zoom: WORLD.zoom, fit: true }
-          : { zoom: route ? zoomForRadius(Math.max(5, reach * 0.6), current.location.lat) : zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }),
-      }
+  // A recording of several places: all of them in the area left of the result card (which covers
+  // the map's right side, RESULT_CARD_PX), around their middle; a route around the world shows the
+  // whole Earth there (sized to that area).
+  const frame = current?.location && route ? routeFrame(route.places) : null;
+  const view: MapView = current?.location
+    ? frame
+      ? frame.reachKm > 2500
+        ? { lat: frame.lat, lon: frame.lon, zoom: WORLD.zoom, fit: true, insetRight: RESULT_CARD_PX }
+        : { lat: frame.lat, lon: frame.lon, zoom: zoomForRadius(Math.max(5, frame.reachKm), frame.lat), reachKm: Math.max(5, frame.reachKm * 1.12), insetRight: RESULT_CARD_PX }
+      : { lat: current.location.lat, lon: current.location.lon, zoom: zoomForRadius(Math.max(0.3, current.location.radiusKm), current.location.lat) }
     : WORLD;
   const viewKey = current?.location ? `${current.videoId}:${current.computedAt}` : 'world';
   const selectedVideo = selected ? (videoById.get(selected) ?? null) : null;
@@ -469,9 +531,9 @@ function OrtungView({ videos, can, fixes, byId, selected, select, go }: DatumVie
       </aside>
 
       <section className="dt-map">
-        <MapCanvas view={view} viewKey={viewKey} markers={markers} shapes={shapes} minZoom={1} maxZoom={16} fly globe onSelect={onMapSelect} />
+        <MapCanvas view={view} viewKey={viewKey} markers={markers} shapes={shapes} minZoom={1} maxZoom={16} fly globe onSelect={onMapSelect} clearTopLeft={toolsBox} />
         {current && <ResultCard fix={current} video={selectedVideo} go={go} />}
-        <div className="dt-map-tools">
+        <div className="dt-map-tools" ref={toolsRef}>
           {anyTruth && (
             <label className="check">
               <input type="checkbox" checked={showTruth} onChange={(e) => setShowTruth(e.target.checked)} />

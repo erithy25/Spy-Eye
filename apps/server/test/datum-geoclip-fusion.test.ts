@@ -132,6 +132,13 @@ test('GeoCLIP puts almost nothing near the gallery answer: its point replaces it
   assert.match(r.location?.labelEn ?? '', /Lyon/);
   assert.equal(r.location?.country, 'FR');
   assert.equal(r.countries[0]?.iso, 'FR', 'the countries are GeoCLIP\'s');
+  // The first country estimate belongs to the replaced gallery answer: said, and without weight.
+  const region = r.evidence.find((x) => x.kind === 'region');
+  assert.ok(region);
+  assert.equal(region.weight, 0);
+  assert.match(region.detail, /das das Weltmodell ersetzt hat/);
+  assert.match(region.detailEn ?? '', /which the world model replaced/);
+  assert.doesNotMatch(region.detail, /weiche Gewichtung/);
   // 0.8 of the mass within 25 km of the answer: the concentrated tier's radius.
   const concentration = r.diagnostics.worldModel?.concentration ?? 0;
   assert.ok(concentration > 0.79 && concentration < 0.81);

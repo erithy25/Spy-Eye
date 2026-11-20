@@ -6,7 +6,7 @@ import { TerrainView } from '../space/TerrainView';
 import { caseLabel, placeText, zoneDoubt } from '../labels';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
 import { chosenStretch, placesLowerBound, segmentSummary, spaceOfFix, spacedStretches, spanText, stretchClock, stretchSpaces, timedStretches, wholeFileShown } from '../segments';
-import { useFullFix, windowText } from '../useFixes';
+import { useFullFix, windowsText } from '../useFixes';
 import type { DatumViewProps, StretchProps } from './Ortung';
 
 type Mode = 'video' | 'gelaende';
@@ -90,7 +90,8 @@ export function Raum({ videos, byId, selected, go, stretch, chooseStretch }: Dat
   // no horizon match (it is computed for the stretch the fix shows).
   const standpoint = keyFix ? (fix.horizon?.at ?? loc) : loc;
   const place = loc ? placeText(lang, loc, fix) : t('Ort unbestimmt');
-  const time = clock ? windowText(clock.time) : null;
+  // Morning and afternoon as likely: both windows (the sun drawn is that of the first).
+  const time = clock ? windowsText(clock.time, t) : null;
   // A place of ± 7 500 km fixes no time zone: said next to the time, as in BEFUND.
   const doubt = time && clock?.time.timezone ? zoneDoubt(lang, loc) : null;
   const summarised = segments ? segmentSummary(fix) : null;

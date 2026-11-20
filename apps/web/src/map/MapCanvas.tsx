@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { formatCoordinate, fromUtm, metresPerPixel, project, toMgrs, toUtm, unproject, worldSize } from './geo';
 import { useLang } from '../i18n';
 import { EXTENT, tileSource, type LineLabel, type PlaceLabel, type Tile, type TileLayers } from './tiles';
+import { placeNameEn, riverNameEn } from './placeNames';
 import {
   angleBetween,
   cellOutline,
@@ -74,87 +75,6 @@ const TILE_COUNTRY_EN: Record<string, string> = {
   Zypern: 'Cyprus',
 };
 
-/** City labels of the map tiles (German exonyms) and their English names; the others are the same in both. */
-const CITY_EN: Record<string, string> = {
-  'Addis Abeba': 'Addis Ababa',
-  Algier: 'Algiers',
-  Aschgabat: 'Ashgabat',
-  Athen: 'Athens',
-  Bagdad: 'Baghdad',
-  Belgrad: 'Belgrade',
-  Bischkek: 'Bishkek',
-  Brügge: 'Bruges',
-  Brünn: 'Brno',
-  Brüssel: 'Brussels',
-  Bukarest: 'Bucharest',
-  Damaskus: 'Damascus',
-  Danzig: 'Gdańsk',
-  Daressalam: 'Dar es Salaam',
-  'Den Haag': 'The Hague',
-  Dschibuti: 'Djibouti',
-  Dschidda: 'Jeddah',
-  Dschuba: 'Juba',
-  Duschanbe: 'Dushanbe',
-  Eriwan: 'Yerevan',
-  Florenz: 'Florence',
-  'Frankfurt am Main': 'Frankfurt',
-  Genf: 'Geneva',
-  'Guatemala-Stadt': 'Guatemala City',
-  Havanna: 'Havana',
-  'Ho-Chi-Minh-Stadt': 'Ho Chi Minh City',
-  Hongkong: 'Hong Kong',
-  Jaunde: 'Yaoundé',
-  Kairo: 'Cairo',
-  Kalkutta: 'Kolkata',
-  Kapstadt: 'Cape Town',
-  Karatschi: 'Karachi',
-  Khartum: 'Khartoum',
-  Kiew: 'Kyiv',
-  Kischinau: 'Chișinău',
-  Köln: 'Cologne',
-  Kopenhagen: 'Copenhagen',
-  Krakau: 'Kraków',
-  'Kuwait-Stadt': 'Kuwait City',
-  Laibach: 'Ljubljana',
-  Lissabon: 'Lisbon',
-  Lüttich: 'Liège',
-  Mailand: 'Milan',
-  Maschhad: 'Mashhad',
-  Maskat: 'Muscat',
-  Mekka: 'Mecca',
-  'Mexiko-Stadt': 'Mexico City',
-  Mogadischu: 'Mogadishu',
-  Moskau: 'Moscow',
-  Mülhausen: 'Mulhouse',
-  München: 'Munich',
-  Neapel: 'Naples',
-  'Neu-Delhi': 'New Delhi',
-  Nikosia: 'Nicosia',
-  Nürnberg: 'Nuremberg',
-  Peking: 'Beijing',
-  Pjöngjang: 'Pyongyang',
-  Prag: 'Prague',
-  Riad: 'Riyadh',
-  Rom: 'Rome',
-  'Sankt Petersburg': 'Saint Petersburg',
-  Singapur: 'Singapore',
-  Straßburg: 'Strasbourg',
-  Taipeh: 'Taipei',
-  Taschkent: 'Tashkent',
-  Teheran: 'Tehran',
-  Tiflis: 'Tbilisi',
-  Tokio: 'Tokyo',
-  Tripolis: 'Tripoli',
-  'Ulan Bator': 'Ulaanbaatar',
-  Urumtschi: 'Ürümqi',
-  Venedig: 'Venice',
-  Warschau: 'Warsaw',
-  Wien: 'Vienna',
-  Windhuk: 'Windhoek',
-  'Zona Metropolitana de Monterrey': 'Monterrey',
-  Zürich: 'Zurich',
-};
-
 /** Point reached from (lat, lon) after `km` along the great circle with initial bearing `azimuthDeg`. */
 export function destination(lat: number, lon: number, azimuthDeg: number, km: number): [number, number] {
   const d = km / R_EARTH_KM;
@@ -172,6 +92,16 @@ export interface MapView {
   zoom: number;
   /** Globe only: size the whole Earth to fit the map area instead of using `zoom`. */
   fit?: boolean;
+  /**
+   * Width covered on the right by something drawn over the map (CSS pixels, e.g. a result card):
+   * (lat, lon) is centred in the area left of it, and `reachKm` fitted into that area.
+   */
+  insetRight?: number;
+  /**
+   * Show this far around (lat, lon) (km): the zoom is chosen from the map's size so that a circle
+   * of this radius fits the free area (`zoom` stands until the map has a size).
+   */
+  reachKm?: number;
 }
 
 interface MapCanvasProps {
@@ -198,6 +128,12 @@ interface MapCanvasProps {
    * flat map at that latitude.
    */
   globe?: boolean;
+  /**
+   * A rectangle from the top left corner covered by something drawn over the map (CSS pixels,
+   * e.g. a tool bar): markers' and shapes' labels and place names keep clear of it, as of the zoom
+   * buttons' corner.
+   */
+  clearTopLeft?: { width: number; height: number } | null;
 }
 
 /** A screen position; `v` is false for a point on the far side of the globe (always true flat). */
@@ -442,40 +378,221 @@ function strokeStyleFor(ctx: CanvasRenderingContext2D, style: ShapeStyle | undef
 const ZOOM_CLEAR_X = 46;
 const ZOOM_CLEAR_Y = 70;
 
-/** Draws DATUM geometry: country likelihood, uncertainty circles, view wedges, sun and shadow rays. */
+/** A screen rectangle a label or a marker takes (CSS pixels). */
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+const overlaps = (a: Box, b: Box): boolean => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+
+/**
+ * Where a shape wants its label (a circle's radius, a ray's end, an area's share): the point and
+ * the side the text goes from it ('left': starting there, 'center': centred on it).
+ */
+interface ShapeLabelRequest {
+  text: string;
+  x: number;
+  y: number;
+  align: 'left' | 'center';
+}
+
+/** The labels of the shapes, where they want them (shapeLabelRequests), without drawing anything. */
+function shapeLabelRequests(shapes: readonly MapShape[], toScreen: (lat: number, lon: number) => ScreenPoint, zoom: number, width: number, height: number): ShapeLabelRequest[] {
+  const out: ShapeLabelRequest[] = [];
+  for (const s of shapes) {
+    if (s.kind === 'area') {
+      if (!s.label || !s.labelAt || zoom >= 6.5) continue;
+      const p = toScreen(s.labelAt[1], s.labelAt[0]);
+      if (p.v && p.x > 0 && p.y > 0 && p.x < width && p.y < height) out.push({ text: s.label, x: p.x, y: p.y, align: 'center' });
+    }
+  }
+  for (const s of shapes) {
+    if (s.kind === 'circle' && s.label) {
+      const [la, lo] = destination(s.lat, s.lon, 45, s.radiusKm);
+      const p = toScreen(la, lo);
+      if (p.v) out.push({ text: s.label, x: p.x + 6, y: p.y - 6, align: 'left' });
+    } else if (s.kind === 'ray' && s.label) {
+      const [la, lo] = destination(s.lat, s.lon, s.azimuthDeg, s.lengthKm);
+      const p = toScreen(la, lo);
+      if (p.v) out.push({ text: s.label, x: p.x + 6, y: p.y, align: 'left' });
+    }
+  }
+  return out;
+}
+
+/** A marker as the overlay lays it out: its symbol's place and size, and its label's, if any. */
+interface MarkerPlacement {
+  m: MapMarker;
+  x: number;
+  y: number;
+  /** Radius of the symbol (a stretch's ring widened by its number). */
+  r: number;
+  label: { text: string; second: string | undefined; x: number; y: number; box: Box } | null;
+}
+
+/** A shape's label where it found room (the left edge of its text). */
+interface ShapeLabelPlacement {
+  text: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * One layout for everything the overlay writes (marker symbols, marker labels, the labels of the
+ * shapes), free of each other, and the boxes they take, so that the base map's place names give
+ * way to them instead of being cut ("PARI", "MO⑤AU"). In order: the zoom buttons' corner and a
+ * tool bar's corner (MapCanvasProps.clearTopLeft), every
+ * marker symbol, the labels of selected and alerting markers (always shown), the labels of the
+ * shapes (a share of a country, a radius, a ray: tried at their place and around it, left out
+ * where none is free), then the other markers' labels (left out where none is free).
+ */
+export function overlayLayout(
+  ctx: CanvasRenderingContext2D,
+  markers: readonly MapMarker[],
+  shapes: readonly MapShape[],
+  toScreen: (lat: number, lon: number) => ScreenPoint,
+  zoom: number,
+  width: number,
+  height: number,
+  clearTopLeft: { width: number; height: number } | null = null,
+): { markers: MarkerPlacement[]; shapeLabels: ShapeLabelPlacement[]; boxes: Box[] } {
+  const boxes: Box[] = [{ x0: width - ZOOM_CLEAR_X, y0: 0, x1: width, y1: ZOOM_CLEAR_Y }];
+  if (clearTopLeft && clearTopLeft.width > 0 && clearTopLeft.height > 0) boxes.push({ x0: 0, y0: 0, x1: clearTopLeft.width, y1: clearTopLeft.height });
+  const placed: MarkerPlacement[] = [];
+  for (const m of markers) {
+    const p = toScreen(m.lat, m.lon);
+    // Markers on the far side of the globe and far off the view are not drawn.
+    if (!p.v || p.x < -60 || p.y < -30 || p.x > width + 60 || p.y > height + 30) continue;
+    let r = m.shape === 'incident' ? 13 : m.shape === 'node' ? 6 : m.shape === 'fix' || m.shape === 'segment' ? 7 : 5;
+    if (m.shape === 'segment') {
+      ctx.font = `${m.selected ? 700 : 500} 9px ${FONT}`;
+      setSpacing(ctx, '0px');
+      r = Math.max(r, ctx.measureText(m.label).width / 2 + 3);
+    }
+    placed.push({ m, x: p.x, y: p.y, r, label: null });
+    boxes.push({ x0: p.x - r - 2, y0: p.y - r - 2, x1: p.x + r + 2, y1: p.y + r + 2 });
+  }
+  // A label's tries keep clear of its own symbol by construction (r + 7 beside it, r + 10 above
+  // or below), so one test against every box serves.
+  const free = (b: Box): boolean => b.x1 <= width - 4 && b.x0 >= 4 && !boxes.some((o) => overlaps(b, o));
+  const placeMarkerLabel = (pl: MarkerPlacement, forced: boolean): void => {
+    const { m, x, y, r } = pl;
+    const named = m.shape === 'segment' ? (m.sub ?? '') : m.label;
+    if (named === '') return;
+    const severity = m.alert ?? 0;
+    ctx.font = `${m.selected || severity > 0 ? 700 : 500} 10px ${FONT}`;
+    setSpacing(ctx, '0.08em');
+    const text = named.toUpperCase();
+    const second = m.shape === 'segment' ? undefined : m.sub;
+    let tw = ctx.measureText(text).width;
+    if (second) {
+      ctx.font = `400 9px ${FONT}`;
+      tw = Math.max(tw, ctx.measureText(second).width);
+    }
+    const tries = [
+      { lx: x + r + 7, ly: y, below: second ? 18 : 7 },
+      { lx: x - r - 7 - tw, ly: y, below: second ? 18 : 7 },
+      { lx: x - tw / 2, ly: y - r - 10 - (second ? 12 : 0), below: second ? 18 : 7 },
+      { lx: x - tw / 2, ly: y + r + 10, below: second ? 18 : 7 },
+    ];
+    for (const at of tries) {
+      const box = { x0: at.lx - 2, y0: at.ly - 7, x1: at.lx + tw + 2, y1: at.ly + at.below };
+      if (free(box)) {
+        pl.label = { text, second, x: at.lx, y: at.ly, box };
+        boxes.push(box);
+        return;
+      }
+    }
+    if (!forced) return;
+    const first = tries[0] as (typeof tries)[number];
+    const box = { x0: first.lx - 2, y0: first.ly - 7, x1: first.lx + tw + 2, y1: first.ly + first.below };
+    pl.label = { text, second, x: first.lx, y: first.ly, box };
+    boxes.push(box);
+  };
+  const forced = (pl: MarkerPlacement): boolean => pl.m.selected === true || (pl.m.alert ?? 0) > 0;
+  for (const pl of placed) if (forced(pl)) placeMarkerLabel(pl, true);
+  const shapeLabels: ShapeLabelPlacement[] = [];
+  ctx.font = `500 9px ${FONT}`;
+  setSpacing(ctx, '0.12em');
+  for (const req of shapeLabelRequests(shapes, toScreen, zoom, width, height)) {
+    const text = req.text.toUpperCase();
+    const w = ctx.measureText(text).width;
+    const left = req.align === 'center' ? req.x - w / 2 : req.x;
+    const tries: [number, number][] =
+      req.align === 'center'
+        ? [[left, req.y], [left, req.y + 13], [left, req.y - 13], [left + w / 2 + 8, req.y], [left - w / 2 - 8, req.y], [left, req.y + 26], [left, req.y - 26]]
+        : [[left, req.y], [req.x - 12 - w, req.y], [left, req.y - 13], [left, req.y + 13], [left, req.y - 26], [left, req.y + 26]];
+    for (const [tx, ty] of tries) {
+      // Kept on the map and clear of the zoom buttons in the top right corner.
+      const limit = ty < ZOOM_CLEAR_Y ? width - ZOOM_CLEAR_X : width - 6;
+      const x0 = Math.max(6, Math.min(tx, limit - w));
+      const box = { x0: x0 - 2, y0: ty - 6, x1: x0 + w + 2, y1: ty + 6 };
+      if (box.y0 < 0 || box.y1 > height || !free(box)) continue;
+      shapeLabels.push({ text, x: x0, y: ty });
+      boxes.push(box);
+      break;
+    }
+  }
+  setSpacing(ctx, '0px');
+  for (const pl of placed) if (!forced(pl)) placeMarkerLabel(pl, false);
+  return { markers: placed, shapeLabels, boxes };
+}
+
+/** What overlayLayout depends on besides the view: where markers stand, what they and the shapes say. */
+function layoutKey(markers: readonly MapMarker[], shapes: readonly MapShape[]): string {
+  const m = markers.map((x) => `${x.id}|${x.lat}|${x.lon}|${x.shape}|${x.label}|${x.sub ?? ''}|${x.selected ? 1 : 0}|${(x.alert ?? 0) > 0 ? 1 : 0}`).join(';');
+  const s = shapes
+    .map((x) =>
+      !('label' in x) || !x.label
+        ? ''
+        : x.kind === 'area'
+          ? `a|${x.label}|${(x.labelAt ?? []).join(',')}`
+          : x.kind === 'circle'
+            ? `c|${x.label}|${x.lat},${x.lon},${x.radiusKm}`
+            : x.kind === 'ray'
+              ? `r|${x.label}|${x.lat},${x.lon},${x.azimuthDeg},${x.lengthKm}`
+              : '',
+    )
+    .join(';');
+  return `${m}#${s}`;
+}
+
+/** Draws the shapes' labels where overlayLayout placed them. */
+function drawShapeLabels(ctx: CanvasRenderingContext2D, labels: readonly ShapeLabelPlacement[]): void {
+  if (labels.length === 0) return;
+  ctx.font = `500 9px ${FONT}`;
+  setSpacing(ctx, '0.12em');
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+  for (const l of labels) {
+    ctx.strokeStyle = BG;
+    ctx.lineWidth = 3;
+    ctx.strokeText(l.text, l.x, l.y);
+    ctx.fillStyle = '#bdbdbd';
+    ctx.fillText(l.text, l.x, l.y);
+  }
+  setSpacing(ctx, '0px');
+}
+
+/**
+ * Draws DATUM geometry: country likelihood, uncertainty circles, view wedges, sun and shadow rays.
+ * Their labels are laid out with the markers' (overlayLayout) and drawn by drawShapeLabels.
+ */
 function drawShapes(
   ctx: CanvasRenderingContext2D,
   shapes: MapShape[],
   toScreen: (lat: number, lon: number) => ScreenPoint,
   zoom: number,
-  width: number,
-  height: number,
   globe: Globe | null,
 ): void {
   if (shapes.length === 0) return;
-  // toScreen works in CSS pixels; width and height are the CSS size of the view.
+  // toScreen works in CSS pixels.
   const world = worldSize(zoom);
-  const label = (text: string, x: number, y: number, align: CanvasTextAlign = 'left'): void => {
-    ctx.font = `500 9px ${FONT}`;
-    setSpacing(ctx, '0.12em');
-    const upper = text.toUpperCase();
-    const w = ctx.measureText(upper).width;
-    // Kept on the map and clear of the zoom buttons in the top right corner.
-    let left = align === 'right' || align === 'end' ? x - w : align === 'center' ? x - w / 2 : x;
-    const limit = y < ZOOM_CLEAR_Y ? width - ZOOM_CLEAR_X : width - 6;
-    if (left + w > limit) left = limit - w;
-    if (left < 6) left = 6;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = BG;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([]);
-    ctx.strokeText(upper, left, y);
-    ctx.fillStyle = '#bdbdbd';
-    ctx.fillText(upper, left, y);
-    setSpacing(ctx, '0px');
-  };
   // Long lines are split so that they follow the projection (great circles look curved on the map).
   const geoPath = (pts: [number, number][]): void => {
     if (globe) {
@@ -530,10 +647,6 @@ function drawShapes(
     ctx.lineWidth = 0.8;
     ctx.setLineDash([]);
     ctx.stroke();
-    if (s.label && s.labelAt && zoom < 6.5) {
-      const p = toScreen(s.labelAt[1], s.labelAt[0]);
-      if (p.v && p.x > 0 && p.y > 0 && p.x < width && p.y < height) label(s.label, p.x, p.y, 'center');
-    }
   }
   for (const s of shapes) {
     switch (s.kind) {
@@ -544,11 +657,6 @@ function drawShapes(
         geoPath(pts);
         strokeStyleFor(ctx, s.style);
         ctx.stroke();
-        if (s.label) {
-          const [la, lo] = destination(s.lat, s.lon, 45, s.radiusKm);
-          const p = toScreen(la, lo);
-          if (p.v) label(s.label, p.x + 6, p.y - 6);
-        }
         break;
       }
       case 'ray': {
@@ -572,7 +680,6 @@ function drawShapes(
           ctx.lineTo(end.x - 9 * Math.cos(ang + 0.35), end.y - 9 * Math.sin(ang + 0.35));
           ctx.stroke();
         }
-        if (s.label) label(s.label, end.x + 6, end.y);
         break;
       }
       case 'wedge': {
@@ -710,9 +817,11 @@ function onControl(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('button, a, input, select, .geo-zoom') !== null;
 }
 
-export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children, fly = false, globe = false }: MapCanvasProps) {
+export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, minZoom = 5, maxZoom = 15.5, readouts = true, grid = false, label, children, fly = false, globe = false, clearTopLeft = null }: MapCanvasProps) {
   const gridRef = useRef(grid);
   gridRef.current = grid;
+  const clearRef = useRef(clearTopLeft);
+  clearRef.current = clearTopLeft;
   const globeRef = useRef(globe);
   globeRef.current = globe;
   /**
@@ -722,16 +831,24 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
    */
   const size = useRef({ width: 0, height: 0, dpr: 1 });
   /** Zoom at which the whole globe fills most of the shorter side of the map area. */
-  const fitZoom = (): number | null => {
+  const fitZoom = (insetRight = 0): number | null => {
     const { width, height } = size.current;
     if (width === 0 || height === 0) return null;
-    return Math.log2((0.44 * Math.min(width, height) * 2 * Math.PI) / 256);
+    return Math.log2((0.44 * Math.min(Math.max(120, width - insetRight), height) * 2 * Math.PI) / 256);
   };
   /** Whether the current view still is the fitted whole-Earth view (until the user zooms). */
   const fitted = useRef(globe && view.fit === true);
   const viewZoom = (v: MapView): number => {
+    const { width, height } = size.current;
+    if (v.reachKm !== undefined && width > 0 && height > 0) {
+      // The circle's radius takes 0.42 of the free area's shorter side.
+      const free = Math.max(120, width - (v.insetRight ?? 0));
+      const mpp = (Math.max(0.05, v.reachKm) * 1000) / (0.42 * Math.min(free, height));
+      const c = globe ? 1 : Math.cos((Math.max(-80, Math.min(80, v.lat)) * Math.PI) / 180);
+      return Math.max(minZoom, Math.min(maxZoom, Math.log2((156543.03 * c) / mpp)));
+    }
     if (!globe) return v.zoom;
-    const fit = v.fit ? fitZoom() : null;
+    const fit = v.fit ? fitZoom(v.insetRight ?? 0) : null;
     if (fit !== null) return Math.max(minZoom, Math.min(maxZoom, fit));
     const c = Math.cos((Math.max(-80, Math.min(80, v.lat)) * Math.PI) / 180);
     return Math.max(minZoom, Math.min(maxZoom, v.zoom - Math.log2(c)));
@@ -742,6 +859,27 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   // The crosshair has a layer of its own: moving the pointer redraws two hairlines, not every
   // circle, country area and contour line of the overlay.
   const cursorCanvas = useRef<HTMLCanvasElement>(null);
+  /**
+   * The centre and zoom that show a requested view: (lat, lon) in the middle of the area left of
+   * `insetRight` (the centre is moved that half width east of it).
+   */
+  const targetOf = (v: MapView): ViewState => {
+    const zoom = viewZoom(v);
+    const shift = (v.insetRight ?? 0) / 2;
+    const { width, height } = size.current;
+    if (shift <= 0 || width === 0 || height === 0) return { ...project(v.lat, v.lon), zoom };
+    if (globe) {
+      // The globe turns (it is always centred in the view): by at most 30°, so that a small globe
+      // (the whole Earth) does not turn the places around (lat, lon) to its far side.
+      const g = makeGlobe(v.lat, v.lon, zoom, width, height);
+      const c = unprojectGlobe(g, width / 2 + Math.min(shift, 0.5 * g.r), height / 2);
+      return c ? { ...project(c.lat, c.lon), zoom } : { ...project(v.lat, v.lon), zoom };
+    }
+    const p = project(v.lat, v.lon);
+    return { x: p.x + shift / worldSize(zoom), y: p.y, zoom };
+  };
+  /** A view framed by the map's size (reachKm, insetRight), until the user moves it: framed again on resizing. */
+  const framed = useRef<MapView | null>(view.reachKm !== undefined || (view.insetRight ?? 0) > 0 ? view : null);
   const state = useRef<ViewState>({ ...project(view.lat, view.lon), zoom: viewZoom(view) });
   const markersRef = useRef(markers);
   /** German country name -> name in the console language; null while the console is German. */
@@ -749,6 +887,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const linksRef = useRef(links ?? []);
   const shapesRef = useRef(shapes ?? []);
   const dirty = useRef({ base: true, overlay: true, cursor: true });
+  /** What the base map's place names last gave way to (layoutKey). */
+  const layoutShown = useRef('');
   /** Position under the pointer, passed to the readout once per frame instead of per event. */
   const cursorGeo = useRef<{ lat: number; lon: number } | null>(null);
   const frame = useRef<number | null>(null);
@@ -908,7 +1048,9 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // Labels are placed after all geometry, most important first, without overlaps.
-    const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    // What the overlay writes takes its room first: place names give way to markers, their labels
+    // and the shapes' labels instead of being cut by them.
+    const boxes: Box[] = overlayLayout(ctx, markersRef.current, shapesRef.current, toScreen, zoom, width, height, clearRef.current).boxes;
     if (gridRef.current) {
       drawGrid(ctx, zoom, width, height, boxes, geoAt, (lat, lon) => toScreen(lat, lon));
     }
@@ -949,10 +1091,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const font = placeFont(p.cls, zoom);
       ctx.font = `${font.weight} ${font.size}px ${FONT}`;
       setSpacing(ctx, p.cls === 'country' ? '0.24em' : p.cls === 'city' || p.cls === 'town' ? '0.14em' : '0.06em');
-      // The tiles carry German names; in English (the country names are loaded) countries and the
-      // German exonyms of cities are named in English.
+      // The tiles carry German names; in English (the country names are loaded) countries, and
+      // every other place by its English name (placeNameEn: the tile's own, the table of the
+      // shipped tiles, the German exonyms of cities).
       const english = countryNamesRef.current;
-      const name = !english ? p.name : p.cls === 'country' ? (english.get(p.name) ?? p.name) : (CITY_EN[p.name] ?? p.name);
+      const name = !english ? p.name : p.cls === 'country' ? (english.get(p.name) ?? p.name) : placeNameEn(p);
       const text = p.cls === 'city' || p.cls === 'town' || p.cls === 'country' ? name.toUpperCase() : name;
       const w = ctx.measureText(text).width + 8;
       const box = { x0: x - w / 2, y0: y - font.size * 0.75, x1: x + w / 2, y1: y + font.size * 0.75 };
@@ -966,25 +1109,28 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
     }
     const riverNames = new Map<string, { x: number; y: number }[]>();
     rivers.sort((a, b) => b.l.length - a.l.length);
+    const englishRivers = countryNamesRef.current !== null;
     for (const { l, x, y } of rivers) {
-      const earlier = riverNames.get(l.name) ?? [];
+      // In English rivers too by their English names ("Themse" is the Thames).
+      const name = englishRivers ? riverNameEn(l) : l.name;
+      const earlier = riverNames.get(name) ?? [];
       if (earlier.some((e) => Math.hypot(e.x - x, e.y - y) < 420)) continue;
       ctx.font = `400 italic 10px ${FONT}`;
       setSpacing(ctx, '0.3em');
-      const w = ctx.measureText(l.name).width + 8;
+      const w = ctx.measureText(name).width + 8;
       const box = { x0: x - w / 2, y0: y - w / 4, x1: x + w / 2, y1: y + w / 4 };
       if (!free(box)) continue;
       boxes.push(box);
       earlier.push({ x, y });
-      riverNames.set(l.name, earlier);
+      riverNames.set(name, earlier);
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(l.angle);
       ctx.strokeStyle = BG;
       ctx.lineWidth = 3;
-      ctx.strokeText(l.name, 0, 0);
+      ctx.strokeText(name, 0, 0);
       ctx.fillStyle = '#6f6f6f';
-      ctx.fillText(l.name, 0, 0);
+      ctx.fillText(name, 0, 0);
       ctx.restore();
     }
     setSpacing(ctx, '0px');
@@ -1038,8 +1184,11 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const { width, height, dpr } = size.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom, width, height, globeRef.current ? currentGlobe() : null);
+      drawShapes(ctx, shapesRef.current, toScreen, state.current.zoom, globeRef.current ? currentGlobe() : null);
       const list = markersRef.current;
+      // Symbols and labels of the markers and the shapes' labels, laid out together (the base map
+      // gave way to the same layout).
+      const layout = overlayLayout(ctx, list, shapesRef.current, toScreen, state.current.zoom, width, height, clearRef.current);
       const positions = new Map<string, { x: number; y: number }>();
       // Markers on the far side of the globe are not drawn (their positions stay unset).
       for (const m of list) {
@@ -1066,15 +1215,10 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'left';
       // Quiet markers first so that alerting and selected ones stay on top.
-      const order = [...list].sort((a, b) => (a.alert ?? 0) + (a.selected ? 5 : 0) - ((b.alert ?? 0) + (b.selected ? 5 : 0)));
-      // The zoom buttons sit in the top right corner: no label goes under them.
-      const labelBoxes: { x0: number; y0: number; x1: number; y1: number }[] = [{ x0: width - ZOOM_CLEAR_X, y0: 0, x1: width, y1: ZOOM_CLEAR_Y }];
-      for (const m of order) {
-        const p = positions.get(m.id);
-        if (!p || p.x < -60 || p.y < -30 || p.x > width + 60 || p.y > height + 30) continue;
+      const rank = (m: MapMarker): number => (m.alert ?? 0) + (m.selected ? 5 : 0);
+      const order = [...layout.markers].sort((a, b) => rank(a.m) - rank(b.m));
+      for (const { m, x, y, r } of order) {
         const severity = m.alert ?? 0;
-        let r = m.shape === 'incident' ? 13 : m.shape === 'node' ? 6 : m.shape === 'fix' || m.shape === 'segment' ? 7 : 5;
-
         if (severity > 0) {
           const period = severity === 3 ? 1300 : severity === 2 ? 1900 : 2600;
           for (let ring = 0; ring < (severity === 3 ? 2 : 1); ring++) {
@@ -1082,7 +1226,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
             ctx.strokeStyle = `rgba(237,237,237,${(1 - phase) * 0.75})`;
             ctx.lineWidth = severity === 3 ? 1.5 : 1;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, r + 3 + phase * 22, 0, Math.PI * 2);
+            ctx.arc(x, y, r + 3 + phase * 22, 0, Math.PI * 2);
             ctx.stroke();
           }
         }
@@ -1090,56 +1234,38 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
           ctx.strokeStyle = `rgba(237,237,237,${0.25 + 0.6 * (m.glow ?? 0)})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, r + 5 + 8 * (m.glow ?? 0), 0, Math.PI * 2);
+          ctx.arc(x, y, r + 5 + 8 * (m.glow ?? 0), 0, Math.PI * 2);
           ctx.stroke();
         }
-
         const color = m.dim ? '#4a4a4a' : severity > 0 || m.selected ? FG : '#b4b4b4';
         if (m.shape === 'segment') {
           // A stretch of a recording: its number in a ring, filled when chosen; the name beside it.
-          // The name keeps clear of a ring widened by its number.
-          r = drawSegment(ctx, m, p.x, p.y, r, color);
-          if (!m.sub) continue;
+          drawSegment(ctx, m, x, y, r, color);
+          continue;
         }
-        if (m.shape !== 'segment') drawShape(ctx, m.shape, p.x, p.y, r);
+        drawShape(ctx, m.shape, x, y, r);
         const hollow = m.shape === 'incident' || m.shape === 'fix' || m.shape === 'truth';
-        if (m.shape !== 'segment') {
-          ctx.fillStyle = m.selected || severity > 0 ? (hollow ? 'transparent' : FG) : BG;
-          if (!hollow) ctx.fill();
-          ctx.strokeStyle = color;
-          ctx.lineWidth = m.shape === 'incident' || (m.shape === 'fix' && m.selected) ? 1.5 : 1.2;
-          ctx.stroke();
-        }
-
-        const named = m.shape === 'segment' ? (m.sub ?? '') : m.label;
-        if (named === '') continue;
+        ctx.fillStyle = m.selected || severity > 0 ? (hollow ? 'transparent' : FG) : BG;
+        if (!hollow) ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = m.shape === 'incident' || (m.shape === 'fix' && m.selected) ? 1.5 : 1.2;
+        ctx.stroke();
+      }
+      drawShapeLabels(ctx, layout.shapeLabels);
+      for (const { m, label } of order) {
+        if (!label) continue;
+        const severity = m.alert ?? 0;
         ctx.font = `${m.selected || severity > 0 ? 700 : 500} 10px ${FONT}`;
         setSpacing(ctx, '0.08em');
-        const text = named.toUpperCase();
-        const second = m.shape === 'segment' ? undefined : m.sub;
-        const tw = ctx.measureText(text).width;
-        let lx = p.x + r + 7;
-        let ly = p.y;
-        let box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (second ? 18 : 7) };
-        const clash = (b: typeof box): boolean =>
-          b.x1 > width - 4 || b.x0 < 4 || labelBoxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
-        if (clash(box)) {
-          lx = p.x - r - 7 - tw;
-          box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + (second ? 18 : 7) };
-          if (clash(box)) {
-            lx = p.x - tw / 2;
-            ly = p.y - r - 10;
-            box = { x0: lx - 2, y0: ly - 7, x1: lx + tw + 2, y1: ly + 7 };
-            if (clash(box) && !m.selected && severity === 0) continue;
-          }
-        }
-        labelBoxes.push(box);
-        // A plate behind the label keeps it legible over the place names of the base map.
+        const { box, text, second, x: lx, y: ly } = label;
+        // A plate behind the label keeps it legible over the map's lines (place names gave way).
         ctx.fillStyle = 'rgba(5,5,5,0.86)';
         ctx.fillRect(box.x0 - 2, box.y0 - 1, box.x1 - box.x0 + 4, box.y1 - box.y0 + 2);
         ctx.strokeStyle = BG;
         ctx.lineWidth = 3.5;
         ctx.lineJoin = 'round';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         ctx.strokeText(text, lx, ly);
         ctx.fillStyle = m.dim ? '#5a5a5a' : severity > 0 || m.selected ? FG : '#c8c8c8';
         ctx.fillText(text, lx, ly);
@@ -1215,8 +1341,13 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const rect = el.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       size.current = { width: rect.width, height: rect.height, dpr };
-      if (globeRef.current && fitted.current) {
-        // The fitted globe follows the size of the map area (the first size arrives only now).
+      if (framed.current && rect.width > 0 && rect.height > 0) {
+        // A view framed by the size of the map area (a route beside the result card) follows it
+        // (the first size arrives only now).
+        state.current = targetOf(framed.current);
+        setZoomShown(state.current.zoom);
+      } else if (globeRef.current && fitted.current) {
+        // So does the fitted globe.
         const z = fitZoom();
         if (z !== null) {
           state.current.zoom = Math.max(minZoom, Math.min(maxZoom, z));
@@ -1277,7 +1408,8 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   const firstView = useRef(true);
   useEffect(() => {
     fitted.current = globe && view.fit === true;
-    const target = { ...project(view.lat, view.lon), zoom: viewZoom(view) };
+    framed.current = view.reachKm !== undefined || (view.insetRight ?? 0) > 0 ? view : null;
+    const target = targetOf(view);
     if (flight.current !== null) cancelAnimationFrame(flight.current);
     flight.current = null;
     const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1324,8 +1456,14 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
   }, [viewKey]);
 
   useEffect(() => {
-    schedule('overlay');
-  }, [markers, links, shapes, schedule]);
+    // The base map too where what the overlay writes has moved: its place names give way to the
+    // markers and labels (overlayLayout). A change of emphasis alone (glow, an alert's pulse)
+    // redraws the overlay only.
+    const key = `${layoutKey(markers, shapes ?? [])}#${clearTopLeft ? `${Math.round(clearTopLeft.width)}x${Math.round(clearTopLeft.height)}` : ''}`;
+    const moved = key !== layoutShown.current;
+    layoutShown.current = key;
+    schedule(moved ? 'both' : 'overlay');
+  }, [markers, links, shapes, schedule, clearTopLeft]);
 
   const zoomAt = useCallback(
     (delta: number, px: number, py: number) => {
@@ -1333,6 +1471,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       const next = Math.max(minZoom, Math.min(maxZoom, s.zoom + delta));
       if (next === s.zoom) return;
       fitted.current = false;
+      framed.current = null;
       if (globeRef.current) {
         // Keep the place under the pointer where it is: zoom, then turn the globe back under it.
         const before = geoAt(px, py);
@@ -1401,6 +1540,7 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
         const step = 96 / worldSize(state.current.zoom);
+        if (e.key.startsWith('Arrow')) framed.current = null;
         if (globeRef.current && e.key.startsWith('Arrow')) {
           const d = { ArrowLeft: [96, 0], ArrowRight: [-96, 0], ArrowUp: [0, 96], ArrowDown: [0, -96] }[e.key];
           if (!d) return;
@@ -1430,7 +1570,10 @@ export function MapCanvas({ view, viewKey, markers, links, shapes, onSelect, min
         if (d) {
           const dx = e.clientX - d.x;
           const dy = e.clientY - d.y;
-          if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
+          if (Math.abs(dx) + Math.abs(dy) > 3) {
+            d.moved = true;
+            framed.current = null;
+          }
           if (d.moved && globeRef.current) {
             turnGlobe(dx, dy);
             d.x = e.clientX;

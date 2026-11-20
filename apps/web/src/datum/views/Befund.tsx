@@ -7,10 +7,10 @@ import { recompute, rel, fetchCountries, type CountryShape } from '../api';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf, zoneDoubt } from '../labels';
 import { CandidateList, ClockDial, CountryBars, EvidenceList, FixSummary, SkylineFrame, SunDial } from '../panel';
 import { SegmentTimeline } from '../panel/SegmentTimeline';
-import { chosenStretch, dialClock, GLOBE_REACH_KM, nextKey, placesLowerBound, placesText, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchMapReach, stretchSpaces, timedStretches, wholeFileShapes, wholeFileShown } from '../segments';
+import { chosenStretch, dialClock, GLOBE_REACH_KM, leadSegment, nextKey, placesLowerBound, placesText, routeGeometry, segmentIndexAt, segmentSummary, spanText, stretchClock, stretchMapReach, stretchSpaces, timedStretches, wholeFileShapes, wholeFileShown } from '../segments';
 import { kindMethod, referenceInstant, utcOffset } from '../panel/common';
-import { bestWindowText, kmText, useFullFix, zoomForRadius } from '../useFixes';
-import { fixShapes, type DatumViewProps, type StretchProps } from './Ortung';
+import { bestWindowText, firstCandidateIsFix, fixMapView, kmText, useFullFix, windowLabelText, zoomForRadius } from '../useFixes';
+import { fixShapes, headingShapes, sunShapes, type DatumViewProps, type StretchProps } from './Ortung';
 
 /** The length of a recording as a clock reads it: 0:12, 4:05, 1:02:05. */
 function lengthText(seconds: number): string {
@@ -30,7 +30,9 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   // Where the video cannot play, the picture in its place: the chosen stretch's keyframe, or the
   // keyframe thumbnail clicked last (whichever was chosen last).
   const [keyPicked, setKeyPicked] = useState(false);
-  const [candidate, setCandidate] = useState(0);
+  // The candidate chosen in the list, or -1: none chosen, the map shows the fix's own place (for a
+  // file with GPS that is the position, not the pictures' first candidate).
+  const [candidate, setCandidate] = useState(-1);
   // The picture under the video's place: the video itself, or the keyframe with its skyline drawn.
   const [showSkyline, setShowSkyline] = useState(false);
   /**
@@ -66,7 +68,7 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
     const matched = fix?.heading ? (fix.heading.frame ?? fix.evidence.find((e) => e.kind === 'horizon')?.frame ?? null) : null;
     setKeyIndex(Math.max(0, fix?.keyframes.findIndex((k) => k.frame === matched) ?? 0));
     setKeyPicked(false);
-    setCandidate(0);
+    setCandidate(-1);
   }
   const segments = fix?.segments && fix.segments.length > 1 ? fix.segments : null;
   const summarised = useMemo(() => segmentSummary(fix), [fix]);
@@ -81,7 +83,11 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   // With stretches the map turns to the chosen one (or the first located; a chosen candidate goes
   // first; an undetermined stretch of a fix that shows none: the fix's own place) and shows as far
   // as the farthest of the others, so that the route stays in view around it.
-  const pickedCandidate = fix && candidate > 0 ? (fix.candidates[candidate] ?? null) : null;
+  const pickedCandidate = fix && candidate >= 0 ? (fix.candidates[candidate] ?? null) : null;
+  // Whether the first candidate is the fix's own place (it is, unless the file's GPS decided the
+  // place, or a stretch's): the list then marks it while none is chosen, and choosing it is
+  // choosing the fix.
+  const firstIsFix = fix ? firstCandidateIsFix(fix) : false;
   const segmentAt = pickedCandidate ?? chosen?.location ?? (whole && fix ? fix.location : null) ?? segments?.find((s) => s.location)?.location ?? null;
   const reach = fix && segments && segmentAt ? stretchMapReach(fix, segmentAt) : null;
 
@@ -89,11 +95,19 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   // time order, the chosen one emphasised with its circle; otherwise the fix with its geometry.
   const route = useMemo(() => {
     if (!fix || !segments) return null;
+    // Keyed by stretch (a click chooses one, as the timeline's bars do), numbered by place, as
+    // ORTUNG and the timeline's "Ort n von m" number them; the chosen marker names its stretch.
     const stops = segments.flatMap((s, i) => (s.location ? [{ key: i + 1, lat: s.location.lat, lon: s.location.lon }] : []));
-    return routeGeometry(stops, segment + 1, 'seg:', (key) => {
-      const loc = segments[key - 1]?.location;
-      return loc ? placeText(lang, loc, fix) : '';
-    });
+    return routeGeometry(
+      stops,
+      segment + 1,
+      'seg:',
+      (key) => {
+        const loc = segments[key - 1]?.location;
+        return loc ? `${placeText(lang, loc, fix)} · ${lang.t('Abschnitt {n}', { n: key })}` : '';
+      },
+      (key) => String(segments[key - 1]?.place ?? key),
+    );
   }, [fix, segments, segment, lang]);
   const shapes = useMemo(() => {
     if (!fix) return [];
@@ -104,9 +118,21 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
     const out = whole && segmentAt ? wholeFileShapes(fix, segmentAt, fixShapes(fix, fix, countries, false, t, locale)) : [];
     if (route.line) out.push(route.line);
     const loc = chosen?.location;
-    if (loc) out.push({ kind: 'circle', lat: loc.lat, lon: loc.lon, radiusKm: Math.max(0.05, loc.radiusKm), style: 'dashed', label: `± ${kmText(loc.radiusKm, locale)}` });
+    if (loc) {
+      // The chosen stretch with its own geometry: its circle, and the sun and shadow direction at
+      // its own time (stretchClock: the fix's for the stretch it shows), as ORTUNG draws them for
+      // a place; the heading only on the stretch the fix shows (it was matched on its keyframe).
+      // On a map of the whole globe without labels, as wholeFileShapes does.
+      const far = stretchMapReach(fix, loc) > GLOBE_REACH_KM;
+      const said = (label: string): { label?: string } => (far ? {} : { label });
+      out.push({ kind: 'circle', lat: loc.lat, lon: loc.lon, radiusKm: Math.max(0.05, loc.radiusKm), style: 'dashed', ...said(`± ${kmText(loc.radiusKm, locale)}`) });
+      const len = Math.max(0.4, Math.min(1500, loc.radiusKm * 1.8));
+      const own = stretchClock(fix, segment);
+      if (own) out.push(...sunShapes(loc, own.sun, own.time, len, t, !far));
+      if (segment === leadSegment(fix)) out.push(...headingShapes(fix, loc, len * 0.8));
+    }
     return out;
-  }, [fix, route, whole, segmentAt, chosen, countries, t, locale]);
+  }, [fix, route, whole, segmentAt, chosen, segment, countries, t, locale]);
   const markers = useMemo<MapMarker[]>(() => {
     if (!fix?.location) return [];
     // With stretches their numbered markers stand for the fix, unless it shows none of them (its
@@ -117,8 +143,9 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
     const own: MapMarker = { id: fix.videoId, lat: fix.location.lat, lon: fix.location.lon, shape: 'fix', label: placeText(lang, fix.location, fix), selected: !route || (whole && !chosen?.location) };
     const out: MapMarker[] = route ? [...route.markers, ...(whole ? [own] : [])] : [own];
     if (fix.truth) out.push({ id: 'truth', lat: fix.truth.lat, lon: fix.truth.lon, shape: 'truth', label: t('Wahrheit') });
-    const c = fix.candidates[candidate];
-    if (c && candidate > 0) out.push({ id: 'cand', lat: c.lat, lon: c.lon, shape: 'incident', label: placeText(lang, c, fix) });
+    // A chosen candidate (choosing the first where it is the fix's own place chooses the fix).
+    const c = candidate >= 0 ? fix.candidates[candidate] : undefined;
+    if (c) out.push({ id: 'cand', lat: c.lat, lon: c.lon, shape: 'incident', label: placeText(lang, c, fix) });
     return out;
   }, [fix, route, whole, chosen, candidate, t, lang]);
 
@@ -129,7 +156,7 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
   const chooseSegment = (index: number): void => {
     setSegment(index);
     setKeyPicked(false);
-    setCandidate(0);
+    setCandidate(-1);
     const s = segments?.[index];
     const el = player.current;
     if (s && el && !el.error) {
@@ -167,7 +194,9 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
           ? 'Das Video wird noch auf Gesichter geprüft; bis dahin wird das Schlüsselbild gezeigt.'
           : 'Das Video lässt sich hier nicht abspielen. Gezeigt wird das Schlüsselbild.',
     );
-  const focus = fix.candidates[candidate] ?? fix.location;
+  // The map of a fix without stretches: the fix's own place and radius, so that its circle is in
+  // view (as in ORTUNG); a candidate only where one is chosen in the list.
+  const focus = fixMapView(fix, candidate, GLOBE_REACH_KM);
   // The map of a fix with stretches turns to segmentAt (above). zoomForRadius(r) - 0.6 puts r
   // about 112 px from the centre, inside the 280 px high map; beyond GLOBE_REACH_KM the whole globe.
   const segmentView =
@@ -259,7 +288,8 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
           <span className="label">{t('Uhrzeit')}</span>
           <b>{bestWindowText(fix) ?? '––:––'}</b>
           <span className="low" title={[fix.time.timezone ?? '', headerZoneDoubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>
-            {fix.time.windows[0] ? t(fix.time.windows[0].label) : t('nicht bestimmbar')}
+            {/* With an even split of morning and afternoon, the other window too (rivalWindow). */}
+            {fix.time.windows[0] ? windowLabelText(fix.time, t) : t('nicht bestimmbar')}
             {fix.time.timezone ? ` · ${utcOffset(fix.time.timezone, referenceInstant(fix.time, fix.sun))}` : ''}
             {fix.time.timezone && headerZoneDoubt ? ` · ${headerZoneDoubt.text}` : ''}
           </span>
@@ -352,7 +382,7 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
 
         <div className="dt-col">
           <section className="dt-section">
-            <EvidenceList evidence={fix.evidence} at={loc} />
+            <EvidenceList evidence={fix.evidence} at={loc} decided={loc?.method ?? null} />
           </section>
           <section className="dt-section">
             {/* With a time per stretch the dials show the chosen one: say which. */}
@@ -415,7 +445,7 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
                 />
               ) : focus ? (
                 <MapCanvas
-                  view={{ lat: focus.lat, lon: focus.lon, zoom: zoomForRadius(Math.max(0.3, (focus as { radiusKm: number }).radiusKm), focus.lat) - 0.6 }}
+                  view={focus}
                   viewKey={`${fix.videoId}:${fix.computedAt}:${candidate}`}
                   markers={markers}
                   shapes={shapes}
@@ -433,10 +463,18 @@ function BefundView({ videos, can, byId, selected, go, stretch, chooseStretch }:
             <FixSummary fix={fix} />
           </section>
           <section className="dt-section">
-            <CandidateList candidates={fix.candidates} selected={candidate} onSelect={setCandidate} fix={fix} />
+            {/* None chosen: the first is marked where it is the fix's own place; with GPS (the
+                position decides) none is, the pictures' candidates are the ones below the place.
+                Choosing the chosen one again, or the first where it is the fix, returns to the fix. */}
+            <CandidateList
+              candidates={fix.candidates}
+              selected={candidate >= 0 ? candidate : firstIsFix ? 0 : -1}
+              onSelect={(i) => setCandidate(i === candidate || (i === 0 && firstIsFix) ? -1 : i)}
+              fix={fix}
+            />
           </section>
           <section className="dt-section">
-            <CountryBars countries={fix.countries} limit={5} />
+            <CountryBars countries={fix.countries} limit={5} answer={loc?.country ?? null} worldModel={loc?.method === 'worldmodel'} />
           </section>
         </div>
       </div>

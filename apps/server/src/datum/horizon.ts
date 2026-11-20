@@ -358,22 +358,23 @@ export function matchSkyline(
 }
 
 /**
- * Searches a square grid of `steps × steps` positions within ±radiusKm of a centre for the place
- * whose terrain horizon fits the skyline best (lowest error). Null when no elevation data covers
- * the area.
+ * Searches a square grid of `steps × steps` positions within ±radiusKm of a centre (north–south
+ * and east–west; its corners lie radiusKm·√2 away) for the place whose terrain horizon fits the
+ * skyline best (lowest error). `edge` says that the best lies on the grid's outer ring, so that
+ * the search did not enclose it. Null when no elevation data covers the area.
  */
 export async function refinePosition(
   skyline: number[],
   imageAspect: number,
   center: GeoPoint,
   opts: { radiusKm?: number; steps?: number; horizonRadiusKm?: number; fovRange?: [number, number] } = {},
-): Promise<{ point: GeoPoint; match: SkylineMatch } | null> {
+): Promise<{ point: GeoPoint; match: SkylineMatch; edge: boolean } | null> {
   const radiusKm = opts.radiusKm ?? 2;
   const steps = Math.max(1, Math.round(opts.steps ?? 5));
   const horizonKm = opts.horizonRadiusKm ?? 15;
   const field = await loadHeightField(center, radiusKm + horizonKm + 0.5, Math.max(10, (horizonKm * 1000) / 500));
   if (!field || field.metresPerPixel > MAX_HORIZON_CELL_M) return null;
-  let best: { point: GeoPoint; match: SkylineMatch } | null = null;
+  let best: { point: GeoPoint; match: SkylineMatch; edge: boolean } | null = null;
   for (let r = 0; r < steps; r++) {
     for (let c = 0; c < steps; c++) {
       // Each profile is some 80 ms of arithmetic; the 25 of a search would hold the node's only
@@ -389,7 +390,8 @@ export async function refinePosition(
       if (!profile) continue;
       const match = matchSkyline(skyline, imageAspect, profile, opts.fovRange ? { fovRange: opts.fovRange } : {});
       if (match.score <= 0) continue;
-      if (!best || match.errorDeg < best.match.errorDeg) best = { point, match };
+      const edge = steps > 1 && (r === 0 || c === 0 || r === steps - 1 || c === steps - 1);
+      if (!best || match.errorDeg < best.match.errorDeg) best = { point, match, edge };
     }
   }
   return best;

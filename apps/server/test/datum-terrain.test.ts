@@ -8,7 +8,7 @@ import { test } from 'node:test';
 // points at an empty folder so that downloads in progress do not change the results.
 process.env['DATUM_TERRAIN_DIR'] = mkdtempSync(path.join(os.tmpdir(), 'datum-terrain-'));
 
-const { heightAt, terrainAvailable, terrainGrid, offsetPoint } = await import('../src/datum/terrain.js');
+const { heightAt, terrainAvailable, terrainGrid, offsetPoint, despike, COARSE_SOURCE_M } = await import('../src/datum/terrain.js');
 const { horizonProfile, horizonProfileFromSampler, matchSkyline, imageRay, refinePosition } = await import('../src/datum/horizon.js');
 
 const DEUTSCHES_ECK = { lat: 50.3644, lon: 7.6058 };
@@ -54,11 +54,55 @@ test('terrain grid around Koblenz', needsTiles, async () => {
   const [w, s, e, n] = grid.bbox;
   assert.ok(w < DEUTSCHES_ECK.lon && e > DEUTSCHES_ECK.lon && s < DEUTSCHES_ECK.lat && n > DEUTSCHES_ECK.lat);
   assert.ok(grid.sourceZoom >= 10 && grid.sourceZoom <= 14, `zoom ${grid.sourceZoom}`);
+  assert.equal(grid.coarse, false);
   // Centre sample agrees with the point query.
   const centre = grid.heights[32 * 65 + 32] as number;
   const direct = (await heightAt(DEUTSCHES_ECK.lat, DEUTSCHES_ECK.lon)) as number;
   assert.ok(Math.abs(centre - direct) < 25, `${centre} vs ${direct}`);
   assert.equal(await terrainGrid({ lat: -40, lon: -140 }, 5), null);
+});
+
+test('despike: a pit of the source is smoothed out, steep real relief stays', () => {
+  const size = 21;
+  // Flat coast at 0 to 5 m with a 2 × 2 hole of the source (Busan: -260, -84, -400, -250).
+  const flat = Array.from({ length: size * size }, (_, i) => (i * 7919) % 6);
+  const pit = [...flat];
+  pit[5 * size + 14] = -259.1;
+  pit[5 * size + 15] = -84.1;
+  pit[6 * size + 14] = -399.7;
+  pit[6 * size + 15] = -250.2;
+  assert.equal(despike(pit, size), 4);
+  assert.ok(Math.min(...pit) >= 0, `min ${Math.min(...pit)}`);
+  assert.deepEqual(pit.filter((_, i) => ![5 * size + 14, 5 * size + 15, 6 * size + 14, 6 * size + 15].includes(i)), flat.filter((_, i) => ![5 * size + 14, 5 * size + 15, 6 * size + 14, 6 * size + 15].includes(i)));
+  // A cone 500 m high, 60 m per cell on its flanks, and a V-shaped valley 300 m deep: real relief.
+  const cone = Array.from({ length: size * size }, (_, i) => Math.max(0, 500 - 60 * Math.hypot(Math.floor(i / size) - 10, (i % size) - 10)));
+  const before = [...cone];
+  assert.equal(despike(cone, size), 0);
+  assert.deepEqual(cone, before);
+  const valley = Array.from({ length: size * size }, (_, i) => 300 + 75 * Math.min(4, Math.abs((i % size) - 10)));
+  assert.equal(despike(valley, size), 0);
+});
+
+test('a place with only the world overview gives a coarse grid', async () => {
+  // The world overview at zoom 4 (Medina: tile 4/9/6), written as a Terrarium tile of 600 to 760 m.
+  const sharp = (await import('sharp')).default;
+  const raw = Buffer.alloc(256 * 256 * 3);
+  for (let i = 0; i < 256 * 256; i++) {
+    const h = 600 + ((i % 256) / 255) * 160 + 32768;
+    raw[i * 3] = Math.floor(h / 256);
+    raw[i * 3 + 1] = Math.floor(h % 256);
+    raw[i * 3 + 2] = 0;
+  }
+  const dir = path.join(process.env['DATUM_TERRAIN_DIR'] as string, '4', '9');
+  const fs = await import('node:fs/promises');
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(dir, '6.png'), await sharp(raw, { raw: { width: 256, height: 256, channels: 3 } }).png().toBuffer());
+  const grid = await terrainGrid({ lat: 24.4648, lon: 39.604 }, 8, 161);
+  assert.ok(grid, 'grid');
+  assert.equal(grid.sourceZoom, 4);
+  assert.equal(grid.coarse, true);
+  assert.ok((grid.sourceMetres ?? 0) > COARSE_SOURCE_M, `source ${grid.sourceMetres} m`);
+  await fs.rm(path.join(process.env['DATUM_TERRAIN_DIR'] as string, '4'), { recursive: true, force: true });
 });
 
 test('horizon at Deutsches Eck shows the Ehrenbreitstein ridge to the east', needsTiles, async () => {
@@ -222,6 +266,13 @@ test('refinePosition finds the place and heading of a skyline seen at Deutsches 
   assert.ok(Math.hypot(dNorth, dEast) < 50, `found ${dNorth.toFixed(0)} m N, ${dEast.toFixed(0)} m E of the truth`);
   assert.ok(angleDiff(result.match.headingDeg, 95) <= 2, `heading ${result.match.headingDeg}`);
   assert.ok(Math.abs(result.match.fovDeg - 58) <= 5, `fov ${result.match.fovDeg}`);
+  // The truth lies inside the grid (1 km south and west of its centre), not on its edge.
+  assert.equal(result.edge, false);
+  // Started 2 km north and east of the truth, the ±2 km grid has it at its south-west corner,
+  // 2.8 km from the centre: found there, and said to lie on the edge.
+  const corner = await refinePosition(skyline, aspect, offsetPoint(DEUTSCHES_ECK, 2000, 2000), { radiusKm: 2, steps: 5 });
+  assert.ok(corner, 'corner result');
+  assert.equal(corner.edge, true);
   assert.equal(await refinePosition(skyline, aspect, { lat: -40, lon: -140 }), null);
 });
 

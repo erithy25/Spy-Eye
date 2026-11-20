@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GalleryNeighbour } from '../src/datum/gallery.js';
-import { DEFAULT_LOCATE_PARAMS, decideLocation, frameAgreement, poolTileRows, voteModes, weightNeighbours, type WeightedRef } from '../src/datum/locate.js';
+import { DEFAULT_LOCATE_PARAMS, analysisFrameNumbers, decideLocation, frameAgreement, gpsCountries, poolTileRows, voteModes, weightNeighbours, type WeightedRef } from '../src/datum/locate.js';
 import { filenameHints, judgeCreationTime, metadataFromProbe, parseIso6709, parseTagDate, parseTagDay } from '../src/datum/metadata.js';
 import { World, greatCircleKm, pointInRing, type LonLat } from '../src/datum/world.js';
 import { interleaveByContinent } from '../src/scripts/datum/selection.js';
@@ -342,6 +342,52 @@ test('decideLocation: strong landmark, weak retrieval falls back to the country,
   assert.equal(withGps.location?.radiusKm, 0.05);
   assert.equal(withGps.location?.country, 'FR');
   assert.ok(withGps.diagnostics.visual, 'the visual estimate is still computed');
+  // The countries follow the place the GPS position gives: its country first, with the fix's
+  // confidence; the pictures (a German neighbour) share the rest.
+  assert.equal(withGps.countries[0]?.iso, 'FR');
+  assert.equal(withGps.countries[0]?.p, 0.98);
+  assert.equal(withGps.countries[0]?.name, 'Frankreich');
+  assert.equal(withGps.countries[1]?.iso, 'DE');
+  assert.ok(Math.abs(withGps.countries.reduce((sum, c) => sum + c.p, 0) - 1) < 1e-9);
+  // The pictures' own estimate stays in the region entry, which says whose it is and decides nothing.
+  const region = withGps.evidence.find((e) => e.kind === 'region');
+  assert.ok(region);
+  assert.equal(region.weight, 0);
+  assert.match(region.detail, /Schätzung der Bilder allein/);
+  assert.match(region.detailEn ?? '', /pictures' estimate alone/);
+  assert.match(region.detail, /Deutschland \d+ %/);
+  // Without GPS the entry weights the candidates as before.
+  const plain = strong.evidence.find((e) => e.kind === 'region');
+  assert.ok(plain && plain.weight > 0);
+  assert.match(plain.detail, /weiche Gewichtung/);
+});
+
+test('gpsCountries: the GPS country first with its confidence, the rest in proportion', () => {
+  const gps = { lat: 51.9, lon: -8.46, radiusKm: 0.05, confidence: 0.98, method: 'metadata' as const, label: 'Cork', country: 'IE', countryName: 'Irland' };
+  const pictures = [
+    { iso: 'DE', name: 'Deutschland', p: 0.74 },
+    { iso: 'GB', name: 'Vereinigtes Königreich', p: 0.15 },
+    { iso: 'IE', name: 'Irland', p: 0.02 },
+    { iso: 'US', name: 'Vereinigte Staaten', p: 0.09 },
+  ];
+  const out = gpsCountries(gps, pictures);
+  assert.deepEqual(out.map((c) => c.iso), ['IE', 'DE', 'GB', 'US']);
+  assert.equal(out[0]?.p, 0.98);
+  assert.ok(Math.abs((out[1]?.p ?? 0) / (out[2]?.p ?? 1) - 0.74 / 0.15) < 1e-9, 'the pictures keep their proportions');
+  assert.ok(Math.abs(out.reduce((s, c) => s + c.p, 0) - 1) < 1e-9);
+  // Over sea (no country) the pictures' list stands.
+  assert.deepEqual(gpsCountries({ ...gps, country: null, countryName: null }, pictures), pictures);
+});
+
+test('analysisFrameNumbers: frames sampled from the file named on the analysis scale', () => {
+  // Frame n of the analysis lies at (n - 1) / sampleFps: 0 s is frame 1, 41 s frame 42.
+  assert.deepEqual(analysisFrameNumbers([0, 6, 34, 41], 1), [1, 7, 35, 42]);
+  // Nearest frame; at 2 fps twice as many.
+  assert.deepEqual(analysisFrameNumbers([2.4, 2.6], 1), [3, 4]);
+  assert.deepEqual(analysisFrameNumbers([2.4], 2), [6]);
+  // Never past the analysis's last frame where it is known (a clip of 12 s has 13).
+  assert.deepEqual(analysisFrameNumbers([11.9, 12.4], 1, 13), [13, 13]);
+  assert.deepEqual(analysisFrameNumbers([-1], 1), [1]);
 });
 
 test('countryAt falls back to the nearest border within 10 km; flat priors give no 25 km fix', () => {

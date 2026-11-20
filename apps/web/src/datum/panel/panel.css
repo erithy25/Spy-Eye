@@ -448,6 +448,16 @@
   text-transform: uppercase;
 }
 
+/* The shadow of a second clock window as likely as the first (morning or afternoon). */
+.dp-shadow-alt line,
+.dp-shadow-alt .dp-shadow-head {
+  stroke: var(--low);
+}
+
+.dp-shadow-alt .dp-shadow-label {
+  fill: var(--low);
+}
+
 .dp-zenith {
   stroke: var(--low);
   stroke-width: 1;
@@ -928,6 +938,30 @@
 
 .dp-country-rest .dp-country-bar > span {
   background: var(--low);
+}
+
+/* The country of the place the result states: marked, and listed below the first ones where it is
+   not among them. */
+.dp-country-answer .dp-country-iso {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dp-country-answer {
+  color: var(--fg);
+}
+
+.dp-country-extra {
+  border-top: 1px dashed var(--line);
+  margin-top: 4px;
+  padding-top: 7px;
+}
+
+.dp-country-note {
+  margin: 8px 0 0;
+  color: var(--low);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 /* ---------- fix summary ---------- */

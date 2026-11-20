@@ -20,11 +20,11 @@ interface RawTile {
   urban?: number[][];
   wood?: number[][];
   bld?: number[][];
-  ww?: Record<string, { n?: string; l: number[] }[]>;
+  ww?: Record<string, { n?: string; e?: string; l: number[] }[]>;
   rd?: Record<string, number[][]>;
   br?: number[][];
   bd?: Record<string, number[][]>;
-  pl?: { n: string; c: string; r: number; p: [number, number] }[];
+  pl?: { n: string; e?: string; c: string; r: number; p: [number, number] }[];
   pk?: { n: string; h: number; p: [number, number] }[];
   poi?: { k: string; n: string; p: [number, number] }[];
   ct?: { h: number; l: number[] }[];
@@ -32,6 +32,8 @@ interface RawTile {
 
 export interface PlaceLabel {
   name: string;
+  /** English name where the tile carries one that differs (tiles extracted with it; else placeNames.ts). */
+  nameEn?: string;
   /** city | town | village | suburb | quarter | hamlet | neighbourhood */
   cls: string;
   rank: number;
@@ -41,6 +43,8 @@ export interface PlaceLabel {
 
 export interface LineLabel {
   name: string;
+  /** English name where the tile carries one that differs. */
+  nameEn?: string;
   x: number;
   y: number;
   angle: number;
@@ -188,7 +192,7 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
       (isStream ? geom.streams : geom.rivers).push(vertices);
       if (item.n) {
         const spot = labelSpot(vertices, item.n);
-        if (spot) riverLabels.push(spot);
+        if (spot) riverLabels.push(item.e ? { ...spot, nameEn: item.e } : spot);
       }
     }
   }
@@ -220,7 +224,7 @@ function build(z: number, x: number, y: number, raw: RawTile): Tile {
     boundaries,
     contours,
     contoursIndex,
-    places: (raw.pl ?? []).map((p) => ({ name: p.n, cls: p.c, rank: p.r, x: p.p[0], y: p.p[1] })),
+    places: (raw.pl ?? []).map((p) => ({ name: p.n, ...(p.e ? { nameEn: p.e } : {}), cls: p.c, rank: p.r, x: p.p[0], y: p.p[1] })),
     peaks: (raw.pk ?? []).map((p) => ({ name: p.n, height: p.h, x: p.p[0], y: p.p[1] })),
     pois: (raw.poi ?? []).map((p) => ({ kind: p.k, name: p.n, x: p.p[0], y: p.p[1] })),
     riverLabels,

@@ -56,6 +56,34 @@ test('console: stretches at one point share a marker with a short label, and cli
   assert.equal(routeGeometry([{ key: 7, lat: 1, lon: 2 }], null, 'seg:', String).markers[0]!.label, '7');
 });
 
+test('console: BEFUND keys its markers by stretch and numbers them by place, as ORTUNG does', () => {
+  // europa-rand: stretches 2, 4 and 5 are places 1, 2 and 3 (1, 3 and 6 undetermined).
+  const place = new Map([[2, 1], [4, 2], [5, 3]]);
+  const stops = [
+    { key: 2, lat: 52.528, lon: 11.518 },
+    { key: 4, lat: 41.113, lon: 20.082 },
+    { key: 5, lat: 55.744, lon: 37.598 },
+  ];
+  const { markers, keys } = routeGeometry(stops, 4, 'seg:', (k) => `Abschnitt ${k}`, (k) => String(place.get(k) ?? k));
+  assert.deepEqual(markers.map((m) => m.label), ['1', '2', '3']);
+  // The click still chooses the stretch.
+  assert.deepEqual(keys.get('seg:4'), [4]);
+  assert.equal(markers[1]!.sub, 'Abschnitt 4');
+  // Stretches of one place at one point: one number, no "+1" for the same place again.
+  const back = routeGeometry(
+    [
+      { key: 1, lat: 1, lon: 2 },
+      { key: 3, lat: 1, lon: 2 },
+      { key: 2, lat: 5, lon: 6 },
+    ],
+    3,
+    'seg:',
+    String,
+    (k) => (k === 2 ? '2' : '1'),
+  );
+  assert.deepEqual(back.markers.map((m) => m.label), ['1', '2']);
+});
+
 test('console: the count of places is a lower bound with undetermined stretches or a joined place', () => {
   const t = (de: string, vars?: Record<string, string | number>): string => de.replace('{n}', String(vars?.n ?? ''));
   const plain = [seg(0, 30, loc(48.86, 2.35), 1), seg(30, 60, loc(52.52, 13.4), 2)];

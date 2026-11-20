@@ -43,8 +43,16 @@
  *      stretches away from it named for a place the world model joined, and a place the whole
  *      file's world model rejected said to be that one. Stored engine-12 fixes lack the entry or
  *      carry its first form (commit a3b32a9) and are computed again.
+ *  14: frames the localisation samples from the file (reference and street-level pictures) are
+ *      named on the analysis scale (`Evidence.frame` as `Keyframe.frame`: frame n at
+ *      (n − 1) / sampleFps s), not the file's own frame count; with GPS the countries begin with
+ *      the position's country (locate.ts gpsCountries); the first country estimate carries no
+ *      weight and says whose it is where the GPS or the world model gives the place; the horizon
+ *      entry describes its search square (corners radius·√2) and says when the best point lies on
+ *      its edge. Stored engine-13 fixes (98b3b89) carry the file's frame numbers, the pictures'
+ *      countries under a GPS place and the old texts, and are computed again.
  */
-export const ENGINE_VERSION = 13;
+export const ENGINE_VERSION = 14;
 
 /** Stored fixes from this version on are shown while they are computed again (see above). */
 export const OLDEST_SHOWN_VERSION = 5;

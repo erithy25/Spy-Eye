@@ -7,7 +7,7 @@ import { rel, renameDataset, type Fix } from '../api';
 import { datasets, type DatasetGroup } from '../datasets';
 import { caseLabel, countryText, placeText, radiusHint, radiusText, stageOf } from '../labels';
 import { placesText, wholeFilePlace } from '../segments';
-import { bestWindowText, kmText } from '../useFixes';
+import { bestWindowText, kmText, rivalText } from '../useFixes';
 
 /**
  * The picture of a recording: its middle keyframe, chosen as the node chooses the one keyframe of
@@ -128,8 +128,11 @@ const FixRow = memo(function FixRow({ video, fix, selected, select, mayDelete }:
   } else if (loc) {
     // The parts break between them rather than be cut: the deviation from a ground truth comes
     // before the count of places, so that it stays on the first line.
+    // Morning and afternoon as likely (rivalWindow): the other window beside the clock's.
+    const rival = fix ? rivalText(fix.time) : null;
     const parts = [
       radiusText(lang, loc),
+      rival ? t('oder {range}', { range: rival }) : '',
       whole ? t('aus der ganzen Datei') : '',
       fix?.truth?.errorKm != null ? `${t('Abweichung')} ${kmText(fix.truth.errorKm, locale)}` : '',
       places,

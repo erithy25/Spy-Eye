@@ -5,7 +5,7 @@ import { useLang } from '../../i18n';
 import { rel } from '../api';
 import { countryText, placeText, radiusHint, radiusText, zoneDoubt } from '../labels';
 import { barLayout, coarseText, numberFits, spanText, stretchClock, timedStretches, timelinePlacesText } from '../segments';
-import { kmText, windowText } from '../useFixes';
+import { kmText, windowLabelText, windowText } from '../useFixes';
 import { kindMethod, referenceInstant, utcOffset } from './common';
 
 export interface SegmentTimelineProps {
@@ -156,7 +156,7 @@ export function SegmentTimeline({ fix, segments, selected, onSelect, places, atL
                 {clock ? (
                   <span className="dt-seg-sub" title={[clock.time.timezone ?? '', doubt?.hint ?? ''].filter((x) => x !== '').join(' · ')}>
                     {t('Uhrzeit')} {windowText(clock.time) ?? '––:––'}
-                    {clock.time.windows[0] ? ` · ${t(clock.time.windows[0].label)}` : ` · ${t('nicht bestimmbar')}`}
+                    {clock.time.windows[0] ? ` · ${windowLabelText(clock.time, t)}` : ` · ${t('nicht bestimmbar')}`}
                     {clock.time.timezone ? ` · ${utcOffset(clock.time.timezone, referenceInstant(clock.time, clock.sun))}` : ''}
                     {clock.time.timezone && doubt ? ` · ${doubt.text}` : ''}
                   </span>

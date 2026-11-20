@@ -308,6 +308,7 @@ export class PlatformNode {
       truths: new TruthBook(path.join(cfg.dataDir, 'datum', 'truth.json')),
       background: (videoId) => this.isBackgroundRecording(videoId),
       foregroundElsewhere: () => this.pipeline.foregroundActive,
+      warmCountryTexts: true,
     });
 
     this.live = new LiveIngest({

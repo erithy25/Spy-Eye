@@ -333,10 +333,74 @@ export async function heightAt(lat: number, lon: number): Promise<number | null>
 }
 
 /**
+ * Elevation sources coarser than this (metres per pixel) say nothing about the local relief: the
+ * world overview at zoom 4 (about 9 km per pixel) where no finer tile was fetched. The same limit
+ * as the horizon's (horizon.ts MAX_HORIZON_CELL_M): a grid from such a source is `coarse`.
+ */
+export const COARSE_SOURCE_M = 200;
+
+/** A pit this far below its neighbourhood's median (m), and a spike this far above it, is an error of the source. */
+const PIT_M = 60;
+const SPIKE_M = 150;
+/** ... unless the neighbourhood itself varies that much (multiples of its median absolute deviation). */
+const PIT_MAD = 4;
+const SPIKE_MAD = 6;
+
+/**
+ * Replaces isolated pits and spikes of the elevation source by the median of their 5 × 5
+ * neighbourhood, in place; returns how many cells it changed. The tiles have holes of several
+ * hundred metres on some coasts (Busan: one 2 × 2 pit of −400 m among 0 to 60 m, the finer zoom
+ * reads 3 m there), which set the relief range shown and a crater in the 3D terrain. A cell counts
+ * as such only where it lies more than PIT_M below (SPIKE_M above) the median of the 25 around it
+ * and more than PIT_MAD (SPIKE_MAD) times their median absolute deviation: steep valleys and
+ * summits vary as much around them and stay. Every test reads the heights as they came, so a
+ * cluster of up to 2 × 2 bad cells is found as a whole.
+ */
+export function despike(heights: number[], size: number): number {
+  const src = Float64Array.from(heights);
+  const w = size + 1;
+  // Summed heights, to screen every cell against its window's mean in constant time.
+  const sums = new Float64Array(w * w);
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) sums[(r + 1) * w + c + 1] = (src[r * size + c] as number) + (sums[r * w + c + 1] as number) + (sums[(r + 1) * w + c] as number) - (sums[r * w + c] as number);
+  }
+  let changed = 0;
+  const window: number[] = [];
+  for (let r = 0; r < size; r++) {
+    const r0 = Math.max(0, r - 2);
+    const r1 = Math.min(size - 1, r + 2);
+    for (let c = 0; c < size; c++) {
+      const c0 = Math.max(0, c - 2);
+      const c1 = Math.min(size - 1, c + 2);
+      const n = (r1 - r0 + 1) * (c1 - c0 + 1);
+      const sum = (sums[(r1 + 1) * w + c1 + 1] as number) - (sums[r0 * w + c1 + 1] as number) - (sums[(r1 + 1) * w + c0] as number) + (sums[r0 * w + c0] as number);
+      const v = src[r * size + c] as number;
+      // The bad cells pull the mean towards them: a loose screen, the median decides.
+      const mean = sum / n;
+      if (v > mean - PIT_M / 2 && v < mean + SPIKE_M / 2) continue;
+      window.length = 0;
+      for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) window.push(src[rr * size + cc] as number);
+      window.sort((a, b) => a - b);
+      const median = window[Math.floor(window.length / 2)] as number;
+      const deviations = window.map((x) => Math.abs(x - median)).sort((a, b) => a - b);
+      const mad = deviations[Math.floor(deviations.length / 2)] as number;
+      if (v < median - Math.max(PIT_M, PIT_MAD * mad) || v > median + Math.max(SPIKE_M, SPIKE_MAD * mad)) {
+        heights[r * size + c] = median;
+        changed++;
+      }
+    }
+  }
+  return changed;
+}
+
+/**
  * Regular grid of heights around a centre (`size` × `size` samples over 2 · radiusKm, row-major
  * from the north-west corner), from the zoom that best matches the sample spacing. Null when no
  * tile covers the area. Samples without data take the nearest valid height of their row/column
- * neighbourhood (or the minimum), so the grid is always complete.
+ * neighbourhood (or the minimum), so the grid is always complete; isolated pits and spikes of the
+ * source are smoothed out (despike), and the range is that of the cleaned grid. `coarse` says that
+ * the finest source here is coarser than COARSE_SOURCE_M (the world overview): the grid is then an
+ * interpolated plate, no outline of the terrain.
  */
 export async function terrainGrid(center: GeoPoint, radiusKm: number, size = 129): Promise<TerrainGrid | null> {
   size = Math.max(2, Math.min(1025, Math.round(size)));
@@ -364,6 +428,14 @@ export async function terrainGrid(center: GeoPoint, radiusKm: number, size = 129
   }
   if (!Number.isFinite(min)) return null;
   if (missing > 0) fillMissing(heights, size, min);
+  if (despike(heights, size) > 0) {
+    min = Infinity;
+    max = -Infinity;
+    for (const h of heights) {
+      if (h < min) min = h;
+      if (h > max) max = h;
+    }
+  }
   const sw = offsetPoint(center, -half, -half);
   const ne = offsetPoint(center, half, half);
   return {
@@ -375,6 +447,8 @@ export async function terrainGrid(center: GeoPoint, radiusKm: number, size = 129
     maxHeight: Math.round(max * 10) / 10,
     cellMetres,
     sourceZoom: field.zoom,
+    sourceMetres: Math.round(field.metresPerPixel * 10) / 10,
+    coarse: field.metresPerPixel > COARSE_SOURCE_M,
   };
 }
 

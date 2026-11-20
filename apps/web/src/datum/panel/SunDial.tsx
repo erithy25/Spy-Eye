@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Heading, SunPathPoint, SunReport, TimeEstimate } from '../../../../server/src/datum/contract';
 import { formatDecimal } from '../../format';
 import { useLang } from '../../i18n';
-import { fmtDeg, fmtElev, fmtLongDate, hhmm, localMinutes, norm360, polar, windowSpan } from './common';
+import { fmtDeg, fmtElev, fmtLongDate, hhmm, localMinutes, norm360, polar, rivalWindow, sunInWindow, sunOnPath, windowSpan } from './common';
 import './panel.css';
 
 export interface SunDialProps {
@@ -29,33 +29,11 @@ function xy(az: number, el: number): [number, number] {
   return polar(CX, CY, (R * (90 - Math.max(0, Math.min(90, el)))) / 90, az);
 }
 
-function lerpAz(a: number, b: number, f: number): number {
-  const d = ((((b - a) % 360) + 540) % 360) - 180;
-  return norm360(a + d * f);
-}
-
 /** Sun position at an instant, interpolated along the path. */
-function sampleAt(path: SunPathPoint[], t: number): { az: number; el: number } | null {
-  if (path.length === 0) return null;
-  const first = path[0] as SunPathPoint;
-  const last = path[path.length - 1] as SunPathPoint;
-  if (t <= first.t) return { az: first.az, el: first.el };
-  if (t >= last.t) return { az: last.az, el: last.el };
-  let lo = 0;
-  let hi = path.length - 1;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if ((path[mid] as SunPathPoint).t <= t) lo = mid;
-    else hi = mid;
-  }
-  const a = path[lo] as SunPathPoint;
-  const b = path[hi] as SunPathPoint;
-  const f = (t - a.t) / (b.t - a.t);
-  return { az: lerpAz(a.az, b.az, f), el: a.el + (b.el - a.el) * f };
-}
+const sampleAt = sunOnPath;
 
 /** Polyline through the sun positions of local minutes `from`..`from + span`, above the horizon only. */
-function trace(path: SunPathPoint[], tOf: (m: number) => number, from: number, span: number, step: number): string {
+function trace(path: readonly SunPathPoint[], tOf: (m: number) => number, from: number, span: number, step: number): string {
   let d = '';
   let pen = false;
   for (let m = from; m <= from + span + 0.001; m += step) {
@@ -180,10 +158,8 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
   }
 
   // ---- shadow ----
-  let shadow: ReactNode = null;
-  if (at && at.shadowRatio !== null && at.elevationDeg > 0) {
-    const length = R * Math.max(0.2, Math.min(0.9, 0.16 + at.shadowRatio * 0.24));
-    const a = at.shadowAzimuthDeg;
+  const shadowArrow = (a: number, ratio: number, alt: boolean): ReactNode => {
+    const length = R * Math.max(0.2, Math.min(0.9, 0.16 + ratio * 0.24));
     const [tx, ty] = polar(CX, CY, length, a);
     const [h0x, h0y] = polar(tx, ty, 7, a + 180 - 24);
     const [h1x, h1y] = polar(tx, ty, 7, a + 180 + 24);
@@ -191,16 +167,26 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
     const [mx, my] = polar(CX, CY, length / 2, a);
     const flip = norm360(a) > 180;
     const rotation = a - 90 + (flip ? 180 : 0);
-    shadow = (
-      <g className="dp-shadow">
+    return (
+      <g className={alt ? 'dp-shadow dp-shadow-alt' : 'dp-shadow'}>
         <line x1={CX} y1={CY} x2={tx} y2={ty} />
         <path d={`M${h0x} ${h0y}L${tx} ${ty}L${h1x} ${h1y}`} className="dp-shadow-head" />
-        <text x={0} y={-4} textAnchor="middle" transform={`translate(${mx.toFixed(2)} ${my.toFixed(2)}) rotate(${rotation.toFixed(2)})`} className="dp-shadow-label">
-          {t('Schatten')}
-        </text>
+        {/* The second window's shadow carries no label: it points roughly towards the shown sun,
+            where a label would lie on the sun's time; the shadow row below names it. */}
+        {!alt && (
+          <text x={0} y={-4} textAnchor="middle" transform={`translate(${mx.toFixed(2)} ${my.toFixed(2)}) rotate(${rotation.toFixed(2)})`} className="dp-shadow-label">
+            {t('Schatten')}
+          </text>
+        )}
       </g>
     );
-  }
+  };
+  const shadow: ReactNode = at && at.shadowRatio !== null && at.elevationDeg > 0 ? shadowArrow(at.shadowAzimuthDeg, at.shadowRatio, false) : null;
+  // A second window as likely as the first, on the other side of noon (rivalWindow): its shadow,
+  // fainter, so that the dial does not present one side of an even split as the answer.
+  const rival = rivalWindow(time);
+  const rivalSun = rival ? sunInWindow(sun, zone, rival) : null;
+  const rivalShadow: ReactNode = shadow && rivalSun && rivalSun.shadowRatio !== null ? shadowArrow(rivalSun.shadowAzimuthDeg, rivalSun.shadowRatio, true) : null;
 
   // ---- sun now ----
   let sunMark: ReactNode = null;
@@ -267,6 +253,7 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
         {hours}
         {horizonEvent(sun.sunrise, t('Aufgang'), 'rise')}
         {horizonEvent(sun.sunset, t('Untergang'), 'set')}
+        {rivalShadow}
         {shadow}
         <path d={`M${CX - 3} ${CY}H${CX + 3}M${CX} ${CY - 3}V${CY + 3}`} className="dp-zenith" />
         {sunMark}
@@ -292,9 +279,19 @@ export function SunDial({ sun, heading, time }: SunDialProps) {
           <dt>{t('Schatten')}</dt>
           <dd>
             {at && at.shadowRatio !== null && at.elevationDeg > 0 ? (
-              t('{az}, Länge {ratio} × Objekthöhe', { az: fmtDeg(at.shadowAzimuthDeg), ratio: formatDecimal(at.shadowRatio, 1) })
+              <>
+                {t('{az}, Länge {ratio} × Objekthöhe', { az: fmtDeg(at.shadowAzimuthDeg), ratio: formatDecimal(at.shadowRatio, 1) })}
+                {rival && rivalSun && rivalSun.shadowRatio !== null && (
+                  <span className="dp-low">
+                    {' '}
+                    {t('oder {az}, Länge {ratio} ({range})', { az: fmtDeg(rivalSun.shadowAzimuthDeg), ratio: formatDecimal(rivalSun.shadowRatio, 1), range: `${hhmm(rival.startMin)}–${hhmm(rival.endMin)}` })}
+                  </span>
+                )}
+              </>
             ) : (
-              <span className="dp-low">{at ? t('Sonne unter dem Horizont') : '—'}</span>
+              // A sun up to 0.5° above the horizon casts shadows too long to state (the server gives
+              // no ratio there): it is at the horizon, not below it.
+              <span className="dp-low">{at ? (at.elevationDeg > 0 ? t('Sonne am Horizont, Schatten sehr lang') : t('Sonne unter dem Horizont')) : '—'}</span>
             )}
           </dd>
         </div>

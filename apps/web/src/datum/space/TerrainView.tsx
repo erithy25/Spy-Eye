@@ -47,6 +47,7 @@ import {
 } from './hud';
 import { formatCoordinate } from '../../map/geo';
 import { hhmm, localMinutes } from '../panel/common';
+import { terrainSource } from '../contours';
 import { sunEdges } from './sunEdges';
 import './space.css';
 
@@ -110,6 +111,20 @@ function imageRay(u: number, y: number, aspect: number, fovDeg: number, pitchDeg
   return { azOff: Math.atan2(X, forward) / DEG, el: Math.atan2(up, Math.hypot(X, forward)) / DEG };
 }
 
+/** Within this far of an edge of the view (px), a label centred on its point would be cut: it goes inwards. */
+const EDGE_LABEL_PX = 72;
+
+/**
+ * Where the walk starts: at the standpoint (the grid's centre), 5 cm behind it along the heading.
+ * Exactly on it, the mesh vertex under the eye (and with the view level, every vertex of the row
+ * across the view through it) lies in the camera's own plane (clip w = 0); software rendering
+ * (SwiftShader, Chromium without a graphics card) then shades the triangles around it flat in two
+ * halves with a hard seam. Behind it by a few centimetres, they lie in front of the eye.
+ */
+function walkStart(yaw: number): [number, number, number] {
+  return [-0.05 * Math.sin(yaw), EYE, 0.05 * Math.cos(yaw)];
+}
+
 /* ------------------------------------------------------------------ model */
 
 interface TerrainModel {
@@ -128,6 +143,10 @@ interface TerrainModel {
   mLon: number;
   center: { lat: number; lon: number };
   peak: { x: number; z: number; h: number };
+  /** The source is the world overview (terrainSource): a plate, no outline; no contour lines. */
+  coarse: boolean;
+  /** Metres per pixel of the source. */
+  sourceMetres: number;
   heightAt(x: number, z: number): number | null;
   toLatLon(x: number, z: number): { lat: number; lon: number };
 }
@@ -178,6 +197,7 @@ function buildModel(t: TerrainGrid, cam: { lat: number; lon: number }): TerrainM
     return (heights[k]! * (1 - fx) + heights[k + 1]! * fx) * (1 - fz) + (heights[k + size]! * (1 - fx) + heights[k + size + 1]! * fx) * fz;
   };
   const base = heightAt(0, 0) ?? heights[Math.floor(size / 2) * size + Math.floor(size / 2)]!;
+  const source = terrainSource(t);
   return {
     size,
     xs,
@@ -192,6 +212,8 @@ function buildModel(t: TerrainGrid, cam: { lat: number; lon: number }): TerrainM
     mLon,
     center: cam,
     peak,
+    coarse: source.coarse,
+    sourceMetres: source.metres,
     heightAt,
     toLatLon: (x, z) => ({ lat: cam.lat - z / mLat, lon: cam.lon + x / mLon }),
   };
@@ -244,6 +266,7 @@ float gridLine(vec2 p, float step) {
   return (1.0 - min(min(a.x, a.y), 1.0)) * (1.0 - smoothstep(0.2, 0.55, max(w.x, w.y)));
 }
 float contour(float h, float step) {
+  if (step <= 0.0) return 0.0;
   float g = h / step;
   float w = max(fwidth(g), 1e-5);
   float a = abs(fract(g - 0.5) - 0.5) / w;
@@ -511,7 +534,7 @@ class TerrainEngine {
       { target: [0, 0, 0], distance: model.extent * 2.1, yaw: headingRad, pitch: 0.62 },
       { minDistance: 40, maxDistance: model.extent * 8, ground: groundY, clamp },
     );
-    this.walk = new FirstPersonControls(wrap, { position: [0, EYE, 0], yaw: headingRad, pitch: 0 }, { speed: 5, runFactor: 8, ground: groundY, eyeHeight: EYE, clamp });
+    this.walk = new FirstPersonControls(wrap, { position: walkStart(headingRad), yaw: headingRad, pitch: 0 }, { speed: 5, runFactor: 8, ground: groundY, eyeHeight: EYE, clamp });
     this.walk.enabled = false;
     this.detachOrbit = this.orbit.attach();
     this.detachWalk = this.walk.attach();
@@ -566,7 +589,7 @@ class TerrainEngine {
     if (next === 'walk') {
       const live = this.hooks.live();
       const yaw = ((live.headingDeg ?? 0) * Math.PI) / 180;
-      this.walk.setHome({ position: [0, EYE, 0], yaw, pitch: 0 }, true);
+      this.walk.setHome({ position: walkStart(yaw), yaw, pitch: 0 }, true);
       this.walk.update(0);
     }
     this.orbit.enabled = false;
@@ -1066,13 +1089,23 @@ class TerrainEngine {
     const sunAt = a.sun && live.sun ? P(a.sun) : null;
     // Sunrise and sunset labels give way to the sun's own label.
     const clear = (s: { x: number; y: number }): boolean => !sunAt || Math.hypot(s.x - sunAt.x, s.y - sunAt.y) > 110;
+    // Centred under their point, but kept whole at the edges of the view (P keeps points up to
+    // 40 px outside it): from the point inwards there.
+    const edgeAnchor = (x: number): { x: number; align: CanvasTextAlign } =>
+      x < EDGE_LABEL_PX ? { x: Math.max(0, x), align: 'left' } : x > W - EDGE_LABEL_PX ? { x: Math.min(W, x), align: 'right' } : { x, align: 'center' };
     if (a.rise) {
       const s = P(a.rise.p);
-      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, t('AUFGANG'), fmtUtc(a.rise.t), 'center');
+      if (s && clear(s)) {
+        const at = edgeAnchor(s.x);
+        drawAnchor(ctx, at.x, s.y + 10, t('AUFGANG'), fmtUtc(a.rise.t), at.align);
+      }
     }
     if (a.set) {
       const s = P(a.set.p);
-      if (s && clear(s)) drawAnchor(ctx, s.x, s.y + 10, t('UNTERGANG'), fmtUtc(a.set.t), 'center');
+      if (s && clear(s)) {
+        const at = edgeAnchor(s.x);
+        drawAnchor(ctx, at.x, s.y + 10, t('UNTERGANG'), fmtUtc(a.set.t), at.align);
+      }
     }
     if (sunAt && live.sun) {
       drawSun(ctx, sunAt.x, sunAt.y, live.sun.elevationDeg <= 0, t('SONNE'), `${fmtAz(live.sun.azimuthDeg)} · ${fmtSigned(live.sun.elevationDeg, 1)}°`, sunAt.x > W - 330);
@@ -1104,6 +1137,8 @@ class TerrainEngine {
 }
 
 function contourStep(m: TerrainModel): [number, number] {
+  // From the world overview the lines would be those of an interpolated plate: none.
+  if (m.coarse) return [0, 0];
   const relief = m.maxH - m.minH;
   if (relief > 200) return [20, 100];
   if (relief > 60) return [5, 25];
@@ -1206,7 +1241,11 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, su
       setText(cursorRef.current, `${tr('STANDPUNKT')} ${formatCoordinate(m?.center.lat ?? 0, m?.center.lon ?? 0)}`);
       setText(
         cursorSubRef.current,
-        m ? tr('Grund {h} m ü. NN · Relief {min}–{max} m', { h: fmt(m.base, 0), min: fmt(m.minH, 0), max: fmt(m.maxH, 0) }) : '',
+        m
+          ? m.coarse
+            ? tr('Grund etwa {h} m ü. NN · Höhendaten nur grob', { h: fmt(m.base, 0) })
+            : tr('Grund {h} m ü. NN · Relief {min}–{max} m', { h: fmt(m.base, 0), min: fmt(m.minH, 0), max: fmt(m.maxH, 0) })
+          : '',
       );
     }
     setMpp((v) => {
@@ -1311,6 +1350,14 @@ export function TerrainView({ terrain, loading = false, camera, sun, sunPath, su
 
       {ready && (
         <>
+          {/* Only the world overview here: said, so that the plate is not read as the terrain. */}
+          {built?.coarse && (
+            <p className="sv-readout sv-coarse" role="note">
+              {t('Höhendaten hier nur grob (Weltübersicht, etwa {km} km je Messpunkt): kein Geländeumriss, die Fläche ist geglättet.', {
+                km: fmt(built.sourceMetres / 1000, 0),
+              })}
+            </p>
+          )}
           <div className="sv-panel sv-tr" data-hud-control>
             <div className="sv-group" role="group" aria-label={t('Ansicht')}>
               <button type="button" aria-pressed={mode === 'orbit'} title={`${t('Übersicht')} (P)`} onClick={() => go('orbit')}>

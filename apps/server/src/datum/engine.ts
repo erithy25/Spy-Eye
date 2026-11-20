@@ -61,7 +61,7 @@ import {
   type StreetLevelOptions,
   type StreetLevelResult,
 } from './streetlevel.js';
-import { breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
+import { analysisFrameNumbers, breathe, locate, sampleAndEmbedFrames, type LocateResult, type SampledFrames } from './locate.js';
 import {
   analyseSegments,
   clockText,
@@ -168,6 +168,14 @@ export interface DatumEngineOptions {
   streetLevel?: StreetLevelHooks;
   /** Longest the quick stage waits for the world model (ms); default QUICK_WORLD_WAIT_MS (tests). */
   quickWorldWaitMs?: number;
+  /**
+   * Prepare at start, in the background, what the first localisation needs besides the world
+   * model: the reference gallery and the country text vectors (1 185 prompts through the text
+   * model, some 40 s on four cores where no cache file exists yet, e.g. a checkout that skipped
+   * `pnpm datum:prepare`). Without it the first quick fix of a fresh installation waits for them.
+   * The node sets it; tests leave it off.
+   */
+  warmCountryTexts?: boolean;
 }
 
 /** What tests replace of the street-level comparison (streetlevel.ts). */
@@ -577,6 +585,7 @@ export class DatumEngine {
   async init(): Promise<void> {
     // The world model loads in its own thread meanwhile (see warmWorld).
     this.warmWorld();
+    if (this.opts.warmCountryTexts) this.warmCountryTexts();
     for (const info of this.opts.store.infos()) {
       // Already queued or computed in this run (its index was rebuilt before init): the stored
       // fix is older than that.
@@ -739,6 +748,21 @@ export class DatumEngine {
     if (this.warmed || !this.world) return;
     this.warmed = true;
     this.world.warm();
+  }
+
+  /**
+   * The gallery (which waits for the image model) and then the country text vectors, in the
+   * background (DatumEngineOptions.warmCountryTexts). A localisation that starts meanwhile waits
+   * for the same computation (World.countryTextVectors caches it per embedTexts, and the build per
+   * cache file) instead of starting it again. A failure only leaves the work to the first
+   * localisation, as before.
+   */
+  private warmCountryTexts(): void {
+    void this.opts
+      .gallery()
+      .then(() => loadWorld())
+      .then((world) => (this.stopped ? null : world.countryTextVectors(this.embedTexts)))
+      .catch(() => undefined);
   }
 
   /**
@@ -1231,7 +1255,8 @@ export class DatumEngine {
       videoPath,
       frameVectors: sampled.vectors,
       dim: sampled.dim,
-      frameNumbers: sampled.frameNumbers,
+      // Named in the evidence on the analysis's scale (the keyframes', the stretches').
+      frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps),
       ...(sampled.tiles ? { tiles: sampled.tiles } : {}),
       embedTexts: this.embedTexts,
       gallery,
@@ -1327,6 +1352,9 @@ export class DatumEngine {
     // landmark a hundredth ahead of a look-alike) the choice of frames decides; what runs should
     // be what was measured. The quick stage sampled exactly these frames already; without its
     // frames they are sampled now, and if that fails, the stored vectors of the analysis are used.
+    // Frames sampled from the file are named by the nearest analysis frame (analysisFrameNumbers),
+    // as these are: one scale for every frame number in the evidence.
+    const lastFrame = entry.frames[entry.frames.length - 1]?.n ?? null;
     let locateFrames: { frameVectors: Float32Array; frameNumbers: number[]; tiles: { vectors: Float32Array; frameRow: number[]; tile: number[] } } = {
       frameVectors,
       frameNumbers,
@@ -1339,7 +1367,7 @@ export class DatumEngine {
     let worldSampled = false;
     const kept = this.sampled.get(id);
     if (kept?.tiles && kept.tiles.frameRow.length > 0 && kept.dim === dim) {
-      locateFrames = { frameVectors: kept.vectors, frameNumbers: kept.frameNumbers, tiles: kept.tiles };
+      locateFrames = { frameVectors: kept.vectors, frameNumbers: analysisFrameNumbers(kept.times, entry.info.sampleFps, lastFrame), tiles: kept.tiles };
       const asked = this.worldFor(kept);
       world = asked.result;
       worldReused = asked.reused;
@@ -1361,7 +1389,7 @@ export class DatumEngine {
           },
         });
         if (sampled.tiles && sampled.tiles.frameRow.length > 0 && sampled.dim === dim) {
-          locateFrames = { frameVectors: sampled.vectors, frameNumbers: sampled.frameNumbers, tiles: sampled.tiles };
+          locateFrames = { frameVectors: sampled.vectors, frameNumbers: analysisFrameNumbers(sampled.times, entry.info.sampleFps, lastFrame), tiles: sampled.tiles };
           const asked: Promise<WorldModelResult | null> = worldJob.current ?? Promise.resolve(null);
           world = asked;
           worldSampled = true;
@@ -1640,7 +1668,7 @@ export class DatumEngine {
         const depthMs = Math.round(disparity.ms);
         const sky = Math.round(grid.skyFraction * 100);
         const pitch = Math.round(grid.pitchDeg);
-        mark(`Raum aus Bild ${keyframes.length + 1} aufgebaut`, {
+        mark(`Raum aus Schlüsselbild ${keyframes.length + 1} aufgebaut`, {
           de: `Tiefe in ${depthMs} ms, Himmel ${sky} %, Neigung ${pitch}°`,
           en: `depth in ${depthMs} ms, sky ${sky}%, pitch ${pitch}°`,
         });
@@ -1732,6 +1760,12 @@ export class DatumEngine {
             const offsetKm = haversineKm(location.lat, location.lon, refined.point.lat, refined.point.lon);
             const where = offsetKm < 0.05 ? 'am geschätzten Ort selbst' : `${distanceText(offsetKm)} vom geschätzten Ort`;
             const whereEn = offsetKm < 0.05 ? 'at the estimated place itself' : `${distanceTextEn(offsetKm)} from the estimated place`;
+            // The grid is a square of ±searchKm north–south and east–west: its corners lie
+            // searchKm·√2 away, which the text says, so that a best point there is within it.
+            const grid = `an ${steps * steps} Punkten eines quadratischen Rasters von ±${distanceText(searchKm)} nach Nord, Süd, Ost und West um den geschätzten Ort (die Ecken ${distanceText(searchKm * Math.SQRT2)} entfernt)`;
+            const gridEn = `at ${steps * steps} points of a square grid of ±${distanceTextEn(searchKm)} north, south, east and west of the estimated place (its corners ${distanceTextEn(searchKm * Math.SQRT2)} away)`;
+            const edge = refined.edge ? '; dieser Punkt liegt am Rand des Rasters, ein noch besserer kann weiter draußen liegen' : '';
+            const edgeEn = refined.edge ? '; that point lies on the edge of the grid, a still better one may lie farther out' : '';
             const headingDeg = Math.round(refined.match.headingDeg);
             const fov = Math.round(refined.match.fovDeg);
             const pitch = Math.round(refined.match.pitchDeg);
@@ -1739,8 +1773,8 @@ export class DatumEngine {
               kind: 'horizon',
               label: `Geländehorizont passt bei Blickrichtung ${headingDeg}°`,
               labelEn: `Terrain horizon matches at heading ${headingDeg}°`,
-              detail: `Die Himmelslinie des Videos wurde mit den aus Höhendaten berechneten Horizonten an ${steps * steps} Punkten bis ${distanceText(searchKm)} um den geschätzten Ort verglichen; am besten passt der Horizont ${where} (mittlere Abweichung ${refined.match.errorDeg.toFixed(2).replace('.', ',')}°, Bildwinkel ${fov}°, Kameraneigung ${pitch}°). Die Blickrichtung gilt nur, wenn der Ort stimmt; in Städten enthalten die Höhendaten auch Gebäude.`,
-              detailEn: `The skyline of the video was compared with the horizons computed from elevation data at ${steps * steps} points up to ${distanceTextEn(searchKm)} around the estimated place; the horizon ${whereEn} fits best (mean deviation ${refined.match.errorDeg.toFixed(2)}°, field of view ${fov}°, camera pitch ${pitch}°). The heading holds only if the place is right; in cities the elevation data include buildings.`,
+              detail: `Die Himmelslinie des Videos wurde mit den aus Höhendaten berechneten Horizonten ${grid} verglichen; am besten passt der Horizont ${where} (mittlere Abweichung ${refined.match.errorDeg.toFixed(2).replace('.', ',')}°, Bildwinkel ${fov}°, Kameraneigung ${pitch}°)${edge}. Die Blickrichtung gilt nur, wenn der Ort stimmt, und von diesem Punkt aus; in Städten enthalten die Höhendaten auch Gebäude.`,
+              detailEn: `The skyline of the video was compared with the horizons computed from elevation data ${gridEn}; the horizon ${whereEn} fits best (mean deviation ${refined.match.errorDeg.toFixed(2)}°, field of view ${fov}°, camera pitch ${pitch}°)${edgeEn}. The heading holds only if the place is right, and from that point; in cities the elevation data include buildings.`,
               weight: 0.35,
               frame: bestSky.frame,
             });

@@ -5,7 +5,8 @@ import { haversineKm } from '../../map/geo';
 import { pressable } from '../../ui';
 import { rel } from '../api';
 import { nameText } from '../labels';
-import { Meter, fmtCoord, fmtKm, fmtScore, kindMethod, kindRank, webLink } from './common';
+import { Meter, fmtCoord, fmtKm, fmtScore, kindMethod, webLink } from './common';
+import { groupEvidence } from './evidenceOrder';
 import './panel.css';
 
 export interface EvidenceListProps {
@@ -14,29 +15,11 @@ export interface EvidenceListProps {
   onSelect?: (item: Evidence) => void;
   /** Place of the fix; with it a street-level picture says how far from the fix it was taken. */
   at?: GeoPoint | null;
-}
-
-interface Group {
-  kind: EvidenceKind;
-  items: Evidence[];
-  total: number;
-}
-
-function groupEvidence(evidence: Evidence[]): Group[] {
-  const groups = new Map<EvidenceKind, Group>();
-  for (const item of evidence) {
-    const group = groups.get(item.kind) ?? { kind: item.kind, items: [], total: 0 };
-    group.items.push(item);
-    group.total += item.weight;
-    groups.set(item.kind, group);
-  }
-  for (const group of groups.values()) group.items.sort((a, b) => b.weight - a.weight);
-  // What decided the fix first; equal weight keeps the order of KIND_ORDER. Two exceptions lead:
-  // a weighed file tag (GPS, recording time) is a fact of the file, and the stretches' entry says
-  // how the place above relates to the timeline (which stretch it is, or why the whole file's
-  // answer stays above). That entry can carry no weight, which would otherwise put it last.
-  const head = (g: Group): number => (g.kind === 'metadata' && g.total > 0.0001 ? 0 : g.kind === 'segments' ? 1 : 2);
-  return [...groups.values()].sort((a, b) => head(a) - head(b) || b.total - a.total || kindRank(a.kind) - kindRank(b.kind));
+  /**
+   * What decided the place (FixLocation.method): its entries lead, after a weighed file tag and
+   * the stretches' entry. Without it the groups follow their weight alone.
+   */
+  decided?: EvidenceKind | null;
 }
 
 /**
@@ -175,8 +158,11 @@ const WHOLE_FILE = /^(?:Ganze Datei \(gemischt\)|Whole file \(mixed\)): /;
  * Title and explanation of an entry as the console words them. The node's texts are used, except
  * where they repeat what the entry shows anyway: a reference picture is named by its place (the
  * similarity is in the caption under the picture, and the distance is written in the console's
- * number format); the first country estimate drops its shares, which the fused countries of the
- * panel give, so that the page does not show two sets of percentages for the same thing.
+ * number format); the first country estimate drops its shares from the title, so that the page
+ * does not show two sets of percentages in its titles. The panel "Länder" gives the countries of
+ * the result: this estimate fused with the gallery, or the world model's where it replaced the
+ * gallery's answer, or led by the GPS position's country; the node's detail of this entry then
+ * says that its figures are the replaced estimate, or the pictures' alone (engine 14 on).
  */
 function entryText(entry: Evidence, lang: ReturnType<typeof useLang>, at: GeoPoint | null): { title: string; detail: string } {
   const { t, pick } = lang;
@@ -197,10 +183,10 @@ function entryText(entry: Evidence, lang: ReturnType<typeof useLang>, at: GeoPoi
   return { title: `${whole}${title}`, detail };
 }
 
-export function EvidenceList({ evidence, onSelect, at = null }: EvidenceListProps) {
+export function EvidenceList({ evidence, onSelect, at = null, decided = null }: EvidenceListProps) {
   const lang = useLang();
   const { t } = lang;
-  const groups = groupEvidence(evidence);
+  const groups = groupEvidence(evidence, decided);
   const item = (entry: Evidence, i: number, withPicture: boolean) => {
     const nil = entry.weight <= 0.0001;
     const text = entryText(entry, lang, at);

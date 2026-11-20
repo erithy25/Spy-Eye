@@ -224,6 +224,22 @@
   border-top-color: var(--low, #828282);
 }
 
+/* the world overview only: no terrain outline here */
+.sv-coarse {
+  /* Below the compass tape (drawn 14 px down, about 60 px deep at any size). */
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100% - 340px));
+  margin: 0;
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  color: var(--fg, #ededed);
+  border: 1px solid var(--mid, #a8a8a8);
+}
+
 /* loading and error */
 .sv-status {
   position: absolute;

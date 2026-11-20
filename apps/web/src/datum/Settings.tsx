@@ -101,10 +101,12 @@ export function DatumSettingsPanel({ can }: DatumSettingsPanelProps) {
         <div className="dt-set-key">{t('Straßenbildvergleich')}</div>
         <div className="dt-set-body">
           <div className="dt-set-state">
+            {/* The state that holds (switched off by the environment it is off, whatever is
+                stored); the stored choice, which returns without that, is said after the reason. */}
             {mayChange ? (
               <label className="check">
-                <input type="checkbox" checked={street.enabled} disabled={action.busy || street.forcedOff} onChange={(e) => toggle(e.target.checked)} />
-                {street.enabled ? t('eingeschaltet') : t('ausgeschaltet')}
+                <input type="checkbox" checked={active} disabled={action.busy || street.forcedOff} onChange={(e) => toggle(e.target.checked)} />
+                {active ? t('eingeschaltet') : t('ausgeschaltet')}
               </label>
             ) : (
               <b>{active ? t('eingeschaltet') : t('ausgeschaltet')}</b>
@@ -115,6 +117,7 @@ export function DatumSettingsPanel({ can }: DatumSettingsPanelProps) {
                 {street.offline ? t('abgeschaltet: der Knoten läuft offline (SICHT_OFFLINE)') : t('durch die Umgebung abgeschaltet (DATUM_STREETLEVEL)')}
               </span>
             )}
+            {mayChange && street.forcedOff && <span className="low">· {street.enabled ? t('gespeicherte Wahl: ein') : t('gespeicherte Wahl: aus')}</span>}
           </div>
           <p className="hint" title={t('Panoramax und, mit Schlüssel, Mapillary erfahren dabei, welche Gegend untersucht wird.')}>
             {t('Vergleicht mit öffentlichen Straßenbildern rund um den Ort. Videos verlassen den Knoten nicht.')}

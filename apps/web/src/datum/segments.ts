@@ -194,23 +194,48 @@ export function nearestWithin<T extends { lat: number; lon: number }>(at: { lat:
   return best;
 }
 
+/**
+ * The middle of a set of places (the mean of their directions from the Earth's centre) and how
+ * far the farthest lies from it (km): the frame ORTUNG shows a recording of several places in.
+ * Null without points.
+ */
+export function routeFrame(points: readonly { lat: number; lon: number }[]): { lat: number; lon: number; reachKm: number } | null {
+  if (points.length === 0) return null;
+  const r = Math.PI / 180;
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  for (const p of points) {
+    x += Math.cos(p.lat * r) * Math.cos(p.lon * r);
+    y += Math.cos(p.lat * r) * Math.sin(p.lon * r);
+    z += Math.sin(p.lat * r);
+  }
+  // Points spread evenly round the globe have no middle: the first stands for it.
+  const first = points[0] as { lat: number; lon: number };
+  const mid = Math.hypot(x, y, z) < 1e-9 ? first : { lat: Math.atan2(z, Math.hypot(x, y)) / r, lon: Math.atan2(y, x) / r };
+  return { lat: mid.lat, lon: mid.lon, reachKm: reachKm(mid, points) };
+}
+
 /** The farthest of `points` from `from` (km); 0 without points. */
 export function reachKm(from: { lat: number; lon: number }, points: readonly { lat: number; lon: number }[]): number {
   return points.reduce((m, p) => Math.max(m, km(from, p)), 0);
 }
 
 /**
- * Markers for the located stretches of a recording, numbered `label(i)`, and the route through
- * them in time order. Stretches at the same point share one marker (a place the recording comes
- * back to, or a stretch that takes its place's point): it shows one number, the chosen one where
- * it is among them, and how many more ("3+2"); `keys` lists them all by marker id, so that a click
- * can go through them. `chosen` is emphasised.
+ * Markers for the located stretches of a recording and the route through them in time order. A
+ * marker is numbered `display(key)` (the key itself by default; BEFUND keys its markers by
+ * stretch and numbers them by place, as ORTUNG and the timeline's "Ort n von m" do). Stretches at
+ * the same point share one marker (a place the recording comes back to, or a stretch that takes
+ * its place's point): it shows one number, the chosen one's where it is among them, and how many
+ * other numbers it stands for ("3+2"; none where they all show the same); `keys` lists them all
+ * by marker id, so that a click can go through them. `chosen` is emphasised.
  */
 export function routeGeometry(
   stops: readonly { key: number; lat: number; lon: number }[],
   chosen: number | null,
   idPrefix: string,
   name: (key: number) => string,
+  display: (key: number) => string = String,
 ): { markers: MapMarker[]; line: MapShape | null; keys: Map<string, number[]> } {
   const markers: MapMarker[] = [];
   const at = new Map<string, MapMarker>();
@@ -227,7 +252,7 @@ export function routeGeometry(
       }
       continue;
     }
-    const m: MapMarker = { id: `${idPrefix}${s.key}`, lat: s.lat, lon: s.lon, shape: 'segment', label: String(s.key), ...(s.key === chosen ? { selected: true, sub: name(s.key) } : {}) };
+    const m: MapMarker = { id: `${idPrefix}${s.key}`, lat: s.lat, lon: s.lon, shape: 'segment', label: display(s.key), ...(s.key === chosen ? { selected: true, sub: name(s.key) } : {}) };
     at.set(pos, m);
     keys.set(m.id, [s.key]);
     markers.push(m);
@@ -236,7 +261,9 @@ export function routeGeometry(
     const list = keys.get(m.id) as number[];
     if (list.length < 2) continue;
     const shown = chosen !== null && list.includes(chosen) ? chosen : (list[0] as number);
-    m.label = `${shown}+${list.length - 1}`;
+    const others = new Set(list.map(display));
+    others.delete(display(shown));
+    m.label = others.size > 0 ? `${display(shown)}+${others.size}` : display(shown);
   }
   const points: [number, number][] = [];
   for (const s of stops) {

@@ -1198,7 +1198,9 @@ export function SpaceView({ gridUrl, imageUrl, label, headingDeg = null, fovDeg,
   const sunLine = sun
     ? sun.elevationDeg > 0.5
       ? `${t('Sonne')} ${fmt(sun.elevationDeg, 0)}° · ${t('Schatten')} 1 : ${fmt(1 / Math.tan((sun.elevationDeg * Math.PI) / 180), 1)}${headingDeg === null ? ` · ${t('Richtung im Bild unbekannt')}` : ''}`
-      : t('Sonne unter dem Horizont')
+      : sun.elevationDeg > 0
+        ? t('Sonne am Horizont, Schatten sehr lang')
+        : t('Sonne unter dem Horizont')
     : null;
 
   // Inside a tab (embedded) there is nothing to leave: Esc goes back, but the line does not offer it.

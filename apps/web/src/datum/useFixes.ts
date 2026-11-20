@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { NodeConnection } from '../useNode';
 import type { TimeEstimate } from '../../../server/src/datum/contract';
 import { fetchFix, fetchFixes, type Fix } from './api';
+import { rivalWindow } from './panel/common';
 
 /** The full list of fixes, with the announcements the console had received when it asked for it. */
 interface Base {
@@ -210,6 +211,31 @@ export function useFullFix(videoId: string | null, summary: Fix | undefined): { 
   return { fix: shown, error };
 }
 
+/**
+ * Whether a fix's first candidate is its own place (within 1 km): so for an answer of the pictures;
+ * not where the file's GPS gave the place (the candidates are the pictures').
+ */
+export function firstCandidateIsFix(fix: Pick<Fix, 'location' | 'candidates'>): boolean {
+  const loc = fix.location;
+  const first = fix.candidates[0];
+  if (!loc || !first) return false;
+  const r = Math.PI / 180;
+  const x = Math.sin(((first.lat - loc.lat) * r) / 2) ** 2 + Math.cos(loc.lat * r) * Math.cos(first.lat * r) * Math.sin(((first.lon - loc.lon) * r) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(x))) < 1;
+}
+
+/**
+ * The view of BEFUND's map for a fix without stretches: the fix's own place and radius, so that
+ * its circle is in view (as ORTUNG shows it), or the candidate chosen in the list (`candidate`,
+ * -1 for none); beyond `globeKm` the whole globe. zoomForRadius(r) - 0.6 puts r about 112 px from
+ * the centre, inside the 280 px high map. Null without a place.
+ */
+export function fixMapView(fix: Pick<Fix, 'location' | 'candidates'>, candidate: number, globeKm: number): { lat: number; lon: number; zoom: number } | null {
+  const focus = (candidate >= 0 ? fix.candidates[candidate] : undefined) ?? fix.location ?? fix.candidates[0] ?? null;
+  if (!focus) return null;
+  return { lat: focus.lat, lon: focus.lon, zoom: focus.radiusKm > globeKm ? 1.4 : zoomForRadius(Math.max(0.3, focus.radiusKm), focus.lat) - 0.6 };
+}
+
 /** Map zoom at which a circle of `radiusKm` fills about a third of a 1000 px wide view. */
 export function zoomForRadius(radiusKm: number, lat: number): number {
   const mpp = (radiusKm * 1000) / 170;
@@ -225,6 +251,34 @@ export function minutesText(min: number): string {
 /** Best clock window of a fix as "14:10–15:40", or null. */
 export function bestWindowText(fix: Fix): string | null {
   return windowText(fix.time);
+}
+
+/**
+ * The second clock window as "14:30–18:15" where it is as likely as the first and lies on the
+ * other side of noon (rivalWindow), else null: said beside the first wherever the time is shown.
+ */
+export function rivalText(time: TimeEstimate): string | null {
+  const w = rivalWindow(time);
+  return w ? `${minutesText(w.startMin)}–${minutesText(w.endMin)}` : null;
+}
+
+/** The time of day in one line: "06:25–10:15 oder 14:30–18:15" for an even split, else the best window. */
+export function windowsText(time: TimeEstimate, t: (de: string, vars?: Record<string, string | number>) => string): string | null {
+  const best = windowText(time);
+  const rival = rivalText(time);
+  return best !== null && rival !== null ? t('{a} oder {b}', { a: best, b: rival }) : best;
+}
+
+/**
+ * The name of the best window ("Morgen"), and with an even split the other one with its span:
+ * "Morgen · oder 14:30–18:15 (Nachmittag)". '' without a window.
+ */
+export function windowLabelText(time: TimeEstimate, t: (de: string, vars?: Record<string, string | number>) => string): string {
+  const first = time.windows[0];
+  if (!first) return '';
+  const rival = rivalWindow(time);
+  const range = rivalText(time);
+  return rival && range ? t('{a} · oder {range} ({b})', { a: t(first.label), b: t(rival.label), range }) : t(first.label);
 }
 
 export function kmText(km: number, locale: string): string {

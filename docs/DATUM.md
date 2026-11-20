@@ -45,15 +45,18 @@ vor, die ein Analyst prüft. Palantir führt vorhandene Daten zusammen; DATUM er
 | Abschnitte | Nur in der vollständigen Ortung: die Szenen der Auswertung als Fenster, jedes für sich mit Galerie, Länderschätzung und Weltmodell geortet, sichere Antworten zu Orten zusammengefasst; jeder Abschnitt mit Ort bekommt Uhrzeit und Sonnenstand aus seinen eigenen Bildern, die längsten einen eigenen Raum (Abschnitt [Mehrere Orte in einer Aufnahme](#mehrere-orte-in-einer-aufnahme)) | eine Zeitleiste mit einem Abschnitt je Ort, wenn die Bilder mindestens zwei Orte zeigen oder (seit Fassung 12) einen erkannten Ort und mindestens einen unbestimmten Abschnitt, mit Uhrzeit je Abschnitt mit Ort und grober Region für unbestimmte Abschnitte, wo sie gemessen trägt; sonst unverändert |
 
 Jeder Beleg, jeder Schritt des Ablaufs und jede Begründung kommt vom Knoten auf Deutsch und auf
-Englisch; die Konsole zeigt die Sprache, die eingestellt ist.
+Englisch; die Konsole zeigt die Sprache, die eingestellt ist. Die Karte trägt die deutschen Namen
+der OpenStreetMap; auf Englisch nennt sie Orte, Stadtteile und Flüsse mit ihrem englischen Namen
+(„8th Arrondissement“, „River Thames“) aus einer Tabelle, die `src/scripts/map/placeNamesEn.ts` aus den
+zwischengespeicherten Quellkacheln schreibt; neu gezogene Kacheln tragen ihn selbst.
 
 ## Bedienung
 
 | Reiter | Zeigt |
 | --- | --- |
-| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel; links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
-| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert und verbunden; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern, Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands, Kandidaten, Länder |
-| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; bei einer Aufnahme mit Zeitleiste der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
+| ORTUNG | Weltkarte im Stil der Konsole mit allen Aufnahmen, Unsicherheitskreisen, Sonnen- und Schattenrichtung, Blickkegel (nach einem Horizontabgleich an dem Punkt, für den er gilt, mit einer blassen Linie vom Ort dorthin); links die Liste mit Uhrzeit (bei mehreren Orten „7 Orte“, bei einem erkannten Ort mit unbestimmten Abschnitten „1 erkannter Ort · 1 unbestimmt“; sind Morgen und Nachmittag gleich wahrscheinlich, „oder 14:30–18:15“ dazu, ebenso in der Ergebniskarte, und die Sonne des zweiten Fensters blass auf der Karte); eine gewählte Aufnahme mehrerer Orte zeigt ihre Orte nummeriert und den Weg in zeitlicher Folge, um ihre Mitte und links der Ergebniskarte, die sie nicht verdeckt; Namen der Karte weichen Markierungen, Kreisen, Strahlen und Länderanteilen, statt von ihnen zerschnitten zu werden, und alle Beschriftungen der Werkzeugleiste oben links wie den Zoomknöpfen; in den Kartenwerkzeugen der Knopf „Einstellungen“ |
+| BEFUND | Video, bei mehreren Orten oder einem erkannten Ort mit unbestimmten Abschnitten darunter die Zeitleiste der Abschnitte (ein Klick springt im Video an den Anfang und zeigt Ort, Radius, Uhrzeit und Schlüsselbild, bei einem unbestimmten Abschnitt die grobe Region, wo es eine gibt; beim Abspielen folgt die Wahl dem Video; die Karte zeigt alle Orte nummeriert wie in der ORTUNG und unter der Zeitleiste („Ort 2 von 3“) und verbunden, der gewählte Abschnitt mit Kreis, Sonnen- und Schattenrichtung zu seiner eigenen Uhrzeit; Uhr und Sonnenstand folgen dem gewählten Abschnitt und nennen ihn, der Kopf bleibt bei der Ortung), Himmelslinie, Belege mit Referenzbildern und Straßenbildern (zuerst die Methode, die den Ort bestimmt hat, dann die übrigen Belege des Orts, dann die der Uhrzeit; „Bild n“ zählt die Bilder der Auswertung, Bild n liegt bei einer Aufnahme mit einem Bild je Sekunde in Sekunde n − 1), Koordinaten und MGRS, Uhr mit Zeitfenstern und Sonnenauf- und -untergang, Polardiagramm des Sonnenstands (bei gleich wahrscheinlichem Morgen und Nachmittag mit dem Schatten beider Fenster), Karte um den Ort der Ortung mit ihrem Kreis (ein gewählter Kandidat dreht sie zu sich; bei GPS ist kein Kandidat der Ort), Kandidaten, Länder (das Land des Orts oben markiert und, wo es nicht unter den ersten fünf steht, darunter genannt) |
+| RAUM | Begehbarer Raum aus dem Video (W A S D, Maus, Q E, Shift; der Himmel des Bildes bleibt beim Gehen als Kuppel stehen; unten links Sonnenhöhe und Schattenlänge zur geschätzten Zeit, „Sonne am Horizont, Schatten sehr lang“ bis 0,5° Höhe) und das Gelände um den Fundort mit Sonnenbahn, Horizont und Standpunkt zum Hineingehen; liegt dort nur die Weltübersicht der Höhendaten vor (Zoomstufe 4, etwa 9 km je Messpunkt), sagt das Gelände es und zeichnet keine Höhenlinien; bei einer Aufnahme mit Zeitleiste der Raum des in BEFUND gewählten Abschnitts, darüber die Zeitleiste zum Wechseln |
 | SUCHE | Freitextsuche über alle Aufnahmen |
 | BESTAND | Videos und Ordner hochladen |
 | MESSUNG | Abweichung jeder Ortung gegen die Grundwahrheit des Referenzbestands; am Ende der Abschnitt „Einstellungen der Ortung“ |
@@ -98,6 +101,15 @@ der auf int8 verkleinerten Form.
   Beleg „Weltmodell“, der sagt, was es geschätzt hat und ob es bestätigt oder ersetzt hat.
 - **Kreis.** 25 km, wenn mindestens 20 % seiner Wahrscheinlichkeit im Umkreis von 25 km um den
   besten Ort liegen; sonst 1 500 km. Die Konsole schreibt dazu „Weltmodell: Region ± N km“.
+- **Länder.** Ersetzt das Weltmodell die Antwort, sind die Länder der Ortung seine
+  Wahrscheinlichkeit je Land. Der Ort oben ist seine stärkste Häufung; bei einer weit gestreuten
+  Antwort (± 1 500 km) kann das Land dieses Orts dabei wenig tragen: reise-96s nennt oben Medina,
+  Saudi-Arabien (4 %), die Liste beginnt mit Italien (16 %). Die Konsole markiert das Land des Orts
+  in der Liste, nennt es unter den ersten fünf, wo es dort fehlt, und sagt den Unterschied; die
+  Karte der ORTUNG schattiert und beschriftet es, so wenig es trägt. „Land richtig“ unter [Was
+  gemessen ist](#was-gemessen-ist) ist das erste Land dieser Liste. Die erste Länderschätzung
+  (Text-Bild-Modell mit den Ländern der Referenzbilder) gehört dann zur ersetzten Antwort der
+  Galerie: Ihr Beleg sagt das und zählt nicht (seit Fassung 14).
 - **Sicherheitsangabe.** Antwortet das Weltmodell, gilt ein eigenes Modell der Sicherheit, das
   an der Abstimmungshälfte eingestellt ist; ohne Weltmodell gilt das bisherige der Galerie.
 - **Rechnen.** Modell und Vergleich mit den 100 000 Orten laufen in einem eigenen Thread, einmal
@@ -170,7 +182,12 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   wo und wie weit: „Die Bilder zeigen einen Ort 325 km von der GPS-Angabe“, mit dem längsten
   Abschnitt abseits der Position, seinem Radius, seiner Sicherheit und seinem eigenen Abstand; auch
   bei einer Aufnahme aus einem Abschnitt. Ob die Aufnahme geschnitten ist oder die GPS-Angabe zu
-  einer anderen gehört, bleibt zu prüfen; der Ort oben ist die Position. Gemessen wird jeder
+  einer anderen gehört, bleibt zu prüfen; der Ort oben ist die Position. Seit Fassung 14 beginnen
+  die Länder mit dem Land der Position, mit der Sicherheit der Ortung (0,98); die Schätzung der
+  Bilder teilt sich den Rest und steht vollständig im Beleg „Länderschätzung“, der ohne Gewicht
+  sagt, dass sie die der Bilder allein ist (Cork, Irland: „IE 98 %“ statt „Deutschland 74 %,
+  Irland 2 %“). Die Karte in BEFUND zeigt die Position mit ihrem Kreis, nicht den ersten
+  Kandidaten der Bilder, und die Kandidatenliste markiert keinen als den Ort. Gemessen wird jeder
   Abschnitt des Orts, nicht nur der längste:
   - Liegt ein Abschnitt keine 25 km von der Position, liegt der Ort dort, nach derselben Regel wie
     die Kette der Antworten (eine Fahrt Dortmund, Bochum, Essen, 32 km von Ende zu Ende, mit der
@@ -199,6 +216,13 @@ Fassung 10 ortet die vollständige Ortung jede Aufnahme zusätzlich Abschnitt f�
   den Beleg ohne Gewicht aus dem Punkt „GPS in der Datei“. Ortungen der Fassung 12 werden neu
   gerechnet: Sie haben ihn nicht oder in seiner ersten Form, die den Ort nur am längsten Abschnitt
   maß und den verworfenen Ort nicht erkannte.
+- **Fassung 14** nennt die Bilder, die die Ortung aus der Datei zieht (Referenzbilder,
+  Straßenbilder), mit der Nummer des nächsten Bilds der Auswertung, wie Schlüsselbilder,
+  Abschnitte und Horizont; zuvor stand „Bild 1020“ (Bild der Datei bei 30 Bildern je Sekunde)
+  neben „Bild 42“. Bei GPS beginnen die Länder mit dem Land der Position; die erste
+  Länderschätzung zählt bei GPS und bei einer Antwort des Weltmodells nicht und sagt, wessen sie
+  ist. Der Horizontbeleg beschreibt sein Suchraster als Quadrat (Ecken 4,2 km bei ± 3 km) und
+  sagt, wenn der beste Punkt an dessen Rand liegt. Ortungen der Fassung 13 werden neu gerechnet.
 
 ### Gemessen an Zusammenschnitten
 
@@ -411,7 +435,8 @@ Sekunde.
   104 kB auf der Platte, zwölf weitere also 1,2 MB je Aufnahme.
 - **Horizont je Abschnitt, gemessen und nicht übernommen.** Für die 12 Abschnitte mit Raum des
   20-Minuten-Schnitts kostete der Horizontabgleich, wie ihn der gezeigte Abschnitt bekommt (25
-  Punkte um den Ort, nur bei höchstens 15 km Radius, sonst nur das Profil), zusammen 16,4 s Rechnung
+  Punkte eines quadratischen Rasters von ± 0,6 bis ± 3 km um den Ort, die Ecken also bis 4,2 km
+  entfernt; nur bei höchstens 15 km Radius, sonst nur das Profil), zusammen 16,4 s Rechnung
   im Hauptthread (sechs Abgleiche zu je 1,6 bis 3,4 s) und ergab eine Blickrichtung
   (Glenfinnan-Viadukt, mittlere Abweichung 0,16°). Das ist rund doppelt so viel wie Räume und
   Uhrzeiten zusammen (7,2 und 8,8 s); der Horizont bleibt beim gezeigten Abschnitt.
@@ -733,6 +758,14 @@ durch andere Arbeiten belastet (Last 2,5 bis 6,2 auf vier Kernen); alle Zeiten s
 - **Schnellortung.** Das Weltmodell beginnt, sobald die zwölf Bilder gelesen sind, und läuft
   neben dem Bildmodell. Es verlängert die Schnellortung um etwa 3 s; selbst rechnet es 5,2 bis
   5,7 s in seinem Thread.
+- **Erste Ortung einer neuen Installation.** Die Länderschätzung braucht die Textvektoren aller
+  Länder (237 Länder × 5 Sätze durch das Textmodell, rund 42 s auf vier Kernen). Sie liegen danach
+  in `<DATA_DIR>/datum/country-text-<Modell>-<Schlüssel>.bin`, einmal je Checkout und Modell, für
+  alle Knoten des Prozesses. Die Zeiten der Tabelle sind mit dieser Datei gemessen; `pnpm
+  datum:prepare` schreibt sie. Fehlt sie, rechnet der Knoten sie seit Fassung 14 gleich beim Start
+  im Hintergrund (nach dem Laden der Referenzgalerie); eine Schnellortung in dieser Zeit wartet
+  nur auf den Rest dieser Rechnung. Vorher kam die ganze Rechnung in die erste Schnellortung
+  (gemessen 51,2 s statt 10,0 s nach einem Neustart mit der Datei).
 - **Vollständige Ortung.** Fast die ganze Zeit bis dahin braucht die Auswertung des Videos (Arc
   de Triomphe: 258 s). Die Ortung danach dauerte 3,0 s ohne Straßenbilder, davon 0 ms für das
   Weltmodell, dessen Antwort aus der Schnellortung übernommen wird. Mit Straßenbildern (Arc de
@@ -892,7 +925,11 @@ Einordnung:
 - Die Messung zeigt bekannte Bauwerke, die vermutlich in den Trainingsdaten von GeoCLIP liegen.
   Anonymes Material wird schlechter abschneiden.
 - Die Uhrzeit folgt aus der Sonnenhöhe; Vormittag und Nachmittag sind daraus allein nicht zu
-  unterscheiden, die Konsole zeigt dann beide Fenster.
+  unterscheiden, die Konsole zeigt dann beide Fenster: Ist das zweite Fenster mindestens 0,8-mal
+  so wahrscheinlich wie das erste und liegt auf der anderen Seite des Mittags, nennen Kopf von
+  BEFUND, Liste, Ergebniskarte und RAUM es mit „oder 14:30–18:15“, und Polardiagramm und Karte
+  zeigen seinen Schatten und seine Sonne blass neben denen des ersten. Sonnenstand, Schatten und
+  Licht im Gelände gehören zur Mitte des ersten Fensters.
 - Der Raum ist aus einem Bild geschätzt: geometrisch plausibel, nicht vermessen. Was im Bild
   verdeckt ist, fehlt im Raum.
 - Die Horizontprüfung braucht markantes Gelände und Höhendaten am Ort; im Flachland greift sie
@@ -902,7 +939,17 @@ Einordnung:
   Blickrichtungen ohne Aussagekraft (acht Treffer im Referenzbestand, davon fünf in Städten oder
   am falschen Ort); seit der Reliefschwelle bleiben drei im Bergland und zwei in Städten.
 - Höhendaten und Kartendetails liegen für die Regionen des Referenzbestands vor, sonst nur grob
-  (Welt in Zoomstufe 4).
+  (Welt in Zoomstufe 4, etwa 9 km je Messpunkt). Das Gelände in RAUM ist dort eine geglättete
+  Fläche ohne Umriss: Der Knoten kennzeichnet ein solches Raster (`TerrainGrid.coarse`), und die
+  Konsole sagt es im Gelände, zeichnet keine Höhenlinien (auch nicht auf der Karte der ORTUNG)
+  und nennt statt der Spanne des Reliefs nur die ungefähre Höhe. Das betrifft die meisten Orte
+  außerhalb der Regionen des Referenzbestands, auch erkannte Bauwerke dort (Qubāʾ-Moschee).
+- Die Höhendaten haben an manchen Küsten einzelne Löcher von mehreren hundert Metern (Busan:
+  −400 m an der Uferlinie, die feinere Zoomstufe misst dort 3 m). Der Knoten ersetzt eine Zelle,
+  die mehr als 60 m unter (150 m über) dem Median ihrer 5 × 5 Nachbarn liegt und mehr als das
+  Vier- (Sechs-)fache von deren mittlerer Abweichung, durch diesen Median; steile Täler und Gipfel
+  bleiben. Die Spanne des Reliefs gilt für das bereinigte Raster (Busan: −44 bis 525 m statt −400
+  bis 525 m).
 - Die Grundwahrheit ist die Koordinate des Wikidata-Objekts (etwa der Mittelpunkt eines
   Bauwerks), nicht der Standort der Kamera; Abweichungen unter einem Kilometer sind daher nicht
   aussagekräftig.

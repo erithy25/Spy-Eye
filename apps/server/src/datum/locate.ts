@@ -746,6 +746,23 @@ export function poolTileRows(
   };
 }
 
+/**
+ * The countries of a fix whose place the file's GPS position gives: that position's country first,
+ * with the fix's confidence, and the pictures' estimate sharing the rest in its own proportions (it
+ * stays in full in the 'region' entry). Without it the panel "Länder" named the pictures' country
+ * under a place in another one (Cork, Ireland ± 50 m above "Deutschland 74 %, Irland 2 %"). Over
+ * sea or outside every country the pictures' list stands.
+ */
+export function gpsCountries(gps: FixLocation, pictures: readonly CountryProb[]): CountryProb[] {
+  const iso = gps.country;
+  if (!iso) return [...pictures];
+  const sure = Math.max(0, Math.min(1, gps.confidence));
+  const rest = pictures.filter((c) => c.iso !== iso);
+  const restMass = rest.reduce((sum, c) => sum + c.p, 0);
+  const scale = restMass > 0 ? (1 - sure) / restMass : 0;
+  return [{ iso, name: gps.countryName ?? iso, p: sure }, ...rest.map((c) => ({ ...c, p: c.p * scale }))];
+}
+
 /** The pure decision: candidates, location and evidence from precomputed neighbours and prior. */
 export function decideLocation(world: World, ev: LocateEvidence, partial: Partial<LocateParams> = {}): LocateResult {
   const params: LocateParams = { ...DEFAULT_LOCATE_PARAMS, ...partial };
@@ -1084,21 +1101,35 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   }
 
   // ---- evidence: zero-shot country prior
+  // Its figures belong to the gallery's answer. Where the file's GPS decides the place, or the
+  // world model replaced the gallery's answer, the fix's countries are another list (led by the
+  // GPS position's country, or the world model's mass per country): the entry then says so and
+  // carries no weight, so that the page does not offer two country estimates for one result.
+  const replacedByWorld = worldModel?.replaced === true;
   const top3 = zeroShot.slice(0, 3);
   if (top3.length > 0) {
+    const fused = countries.slice(0, 3);
+    const role: Named = metaLocation
+      ? {
+          de: ' Das ist die Schätzung der Bilder allein: Den Ort und sein Land gibt die GPS-Angabe der Datei, die Länder der Ortung beginnen mit diesem.',
+          en: " This is the pictures' estimate alone: the GPS position in the file gives the place and its country, and the fix's countries begin with that one.",
+        }
+      : replacedByWorld
+        ? {
+            de: ' Diese Schätzung gehört zum Ergebnis der Referenzgalerie, das das Weltmodell ersetzt hat; die Länder der Ortung sind die des Weltmodells (seine Wahrscheinlichkeit je Land).',
+            en: " This estimate belongs to the reference gallery's result, which the world model replaced; the fix's countries are the world model's (its probability per country).",
+          }
+        : {
+            de: ` Wirkt als weiche Gewichtung der Kandidaten; ohne passendes Referenzbild trägt es das Ergebnis allein (Land nur ab ${pct(params.countryMinP)}, sonst Kontinent oder kein Ort).`,
+            en: ` It weights the candidates softly; without a matching reference picture it carries the result alone (a country only from ${pctEn(params.countryMinP)}, otherwise a continent or no place).`,
+          };
     evidence.push({
       kind: 'region',
       label: `Länderschätzung: ${top3.map((c) => `${c.name} ${pct(c.p)}`).join(', ')}`,
       labelEn: `Country estimate: ${top3.map((c) => `${countryNameEn(c)} ${pctEn(c.p)}`).join(', ')}`,
-      detail: `Zero-shot-Vergleich der Bilder mit Beschreibungen aller Länder (Straßen, Landschaft, Gebäude), mit einem milden Bevölkerungsprior. Zusammen mit den Ländern der ähnlichsten Referenzbilder: ${countries
-        .slice(0, 3)
-        .map((c) => `${c.name} ${pct(c.p)}`)
-        .join(', ')}. Wirkt als weiche Gewichtung der Kandidaten; ohne passendes Referenzbild trägt es das Ergebnis allein (Land nur ab ${pct(params.countryMinP)}, sonst Kontinent oder kein Ort).`,
-      detailEn: `Zero-shot comparison of the frames with descriptions of every country (streets, landscape, buildings), with a mild population prior. Combined with the countries of the most similar reference pictures: ${countries
-        .slice(0, 3)
-        .map((c) => `${countryNameEn(c)} ${pctEn(c.p)}`)
-        .join(', ')}. It weights the candidates softly; without a matching reference picture it carries the result alone (a country only from ${pctEn(params.countryMinP)}, otherwise a continent or no place).`,
-      weight: method === 'region' ? (top3[0] as CountryProb).p : (top3[0] as CountryProb).p * 0.3,
+      detail: `Zero-shot-Vergleich der Bilder mit Beschreibungen aller Länder (Straßen, Landschaft, Gebäude), mit einem milden Bevölkerungsprior. Zusammen mit den Ländern der ähnlichsten Referenzbilder: ${fused.map((c) => `${c.name} ${pct(c.p)}`).join(', ')}.${role.de}`,
+      detailEn: `Zero-shot comparison of the frames with descriptions of every country (streets, landscape, buildings), with a mild population prior. Combined with the countries of the most similar reference pictures: ${fused.map((c) => `${countryNameEn(c)} ${pctEn(c.p)}`).join(', ')}.${role.en}`,
+      weight: metaLocation || replacedByWorld ? 0 : method === 'region' ? (top3[0] as CountryProb).p : (top3[0] as CountryProb).p * 0.3,
     });
   }
 
@@ -1121,7 +1152,7 @@ export function decideLocation(world: World, ev: LocateEvidence, partial: Partia
   return {
     location,
     candidates,
-    countries: countriesOut,
+    countries: metaLocation ? gpsCountries(metaLocation, countriesOut) : countriesOut,
     evidence,
     diagnostics: {
       features: features(level),
@@ -1293,10 +1324,29 @@ export async function locate(input: LocateInput): Promise<LocateResult> {
 
 // ------------------------------------------------------------------ frame sampling
 
+/**
+ * The analysis frame (FrameRecord.n, Keyframe.frame) nearest to each of `times` (seconds): frame n
+ * of the pipeline lies at (n - 1) / sampleFps. The localisation samples its frames from the file at
+ * times of its own and numbers them in the file's frame rate (SampledFrames.frameNumbers); the
+ * engine renumbers them this way before they name a frame in the evidence, so that every frame
+ * number the console shows is on one scale (the file's count read "Bild 1020" beside the
+ * keyframes' "Bild 42", and "Bild 228" in a clip of twelve analysis frames). `last`, where known,
+ * is the analysis's last frame, beyond which no number goes.
+ */
+export function analysisFrameNumbers(times: readonly number[], sampleFps: number, last: number | null = null): number[] {
+  const fps = Number.isFinite(sampleFps) && sampleFps > 0 ? sampleFps : 1;
+  return times.map((t) => {
+    const n = Math.max(1, Math.round(Math.max(0, t) * fps) + 1);
+    return last !== null && last >= 1 ? Math.min(last, n) : n;
+  });
+}
+
 export interface SampledFrames {
   vectors: Float32Array;
   dim: number;
+  /** Frame numbers in the file's own frame rate (see analysisFrameNumbers for the shown ones). */
   frameNumbers: number[];
+  /** Second of the video of every kept frame, in row order. */
   times: number[];
   /** Tile vectors with the pipeline's tiling (only when opts.detail is not 'fast'). */
   tiles?: { vectors: Float32Array; frameRow: number[]; tile: number[] };

@@ -66,9 +66,12 @@ export interface Evidence {
   /** Contribution to the decision, 0..1. */
   weight: number;
   /**
-   * Frame number in the video this evidence was read from, if any. On the entry of kind
-   * 'segments' it is the keyframe of the stretch the fix shows (FixSegment.keyframe.frame); absent
-   * there where the fix shows none of its stretches (see Fix.segments).
+   * Frame of the video this evidence was read from, if any, on the analysis's scale (the
+   * numbering of Keyframe.frame: frame n lies at (n - 1) / sampleFps seconds, from engine 14 on
+   * for every kind; before, reference pictures and street-level pictures counted the file's own
+   * frames). On the entry of kind 'segments' it is the keyframe of the stretch the fix shows
+   * (FixSegment.keyframe.frame); absent there where the fix shows none of its stretches (see
+   * Fix.segments).
    */
   frame?: number;
   /**
@@ -187,7 +190,10 @@ export interface SunState {
   elevationDeg: number;
   /** Direction shadows point to (azimuth + 180, normalised). */
   shadowAzimuthDeg: number;
-  /** Shadow length divided by object height (1 / tan(elevation)); null when the sun is down. */
+  /**
+   * Shadow length divided by object height (1 / tan(elevation)); null when the sun stands at most
+   * 0.5° high (below the horizon, or so low that the length means nothing: elevationDeg tells which).
+   */
   shadowRatio: number | null;
 }
 
@@ -538,4 +544,12 @@ export interface TerrainGrid {
   cellMetres: number;
   /** Elevation zoom level of the source tiles. */
   sourceZoom: number;
+  /** Metres per pixel of the source tiles at this latitude (absent from older nodes). */
+  sourceMetres?: number;
+  /**
+   * The source is coarser than any local relief (the world overview at zoom 4, about 9 km per
+   * pixel, where no finer tile exists): the grid is an interpolated plate, no terrain outline.
+   * The console then draws no contour lines and says so. Absent from older nodes.
+   */
+  coarse?: boolean;
 }

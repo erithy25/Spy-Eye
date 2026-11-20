@@ -22,6 +22,20 @@ export interface ContourSet {
 
 const STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
 
+/** Sources coarser than this (m per pixel) say nothing of the local relief (server: terrain.ts COARSE_SOURCE_M). */
+export const COARSE_SOURCE_M = 200;
+
+/**
+ * Metres per pixel of a grid's elevation source, and whether it is the world overview (coarser
+ * than COARSE_SOURCE_M, about 9 km per pixel at zoom 4) rather than terrain: the grid is then an
+ * interpolated plate, without an outline of the terrain. Grids of older nodes carry only the
+ * source zoom.
+ */
+export function terrainSource(grid: Pick<TerrainGrid, 'sourceZoom' | 'sourceMetres' | 'coarse' | 'center'>): { metres: number; coarse: boolean } {
+  const metres = grid.sourceMetres ?? (156543.03 * Math.cos((grid.center.lat * Math.PI) / 180)) / 2 ** grid.sourceZoom;
+  return { metres, coarse: grid.coarse ?? metres > COARSE_SOURCE_M };
+}
+
 /** Interval that gives about `target` lines over the height range. */
 export function contourInterval(range: number, target = 14): number {
   const raw = range / Math.max(1, target);
@@ -30,11 +44,13 @@ export function contourInterval(range: number, target = 14): number {
 
 /**
  * Lines at every multiple of the interval between the lowest and highest sample. Null when the
- * grid is too coarse to say anything about the local relief, or flat.
+ * grid is too coarse to say anything about the local relief (its spacing, or its source: the world
+ * overview interpolated to the spacing asked for), or flat.
  */
 export function terrainContours(grid: TerrainGrid, maxCellMetres = 150): ContourSet | null {
   const { size, heights, bbox } = grid;
   if (!(grid.cellMetres > 0) || grid.cellMetres > maxCellMetres) return null;
+  if (terrainSource(grid).coarse) return null;
   if (size < 3 || heights.length !== size * size) return null;
   const range = grid.maxHeight - grid.minHeight;
   if (!(range >= 2)) return null;

@@ -487,6 +487,13 @@ export class World {
     return cached;
   }
 
+  /**
+   * Builds of the cached text vectors under way, by cache file: the nodes of one process share one
+   * model, so a second engine (or the warm-up at start, DatumEngineOptions.warmCountryTexts) waits
+   * for the build already running instead of embedding the 1 185 prompts again beside it.
+   */
+  private static readonly building = new Map<string, Promise<Float32Array>>();
+
   private async buildTextVectors(embedTexts: EmbedTexts): Promise<Float32Array> {
     const countries = this.countries();
     const prompts: string[] = [];
@@ -505,8 +512,11 @@ export class World {
         // not cached yet
       }
     }
-    const vectors = await this.embedCountryPrompts(embedTexts, prompts, countries.length);
-    if (cacheFile) {
+    if (!cacheFile) return this.embedCountryPrompts(embedTexts, prompts, countries.length);
+    const running = World.building.get(cacheFile);
+    if (running) return running;
+    const job = (async () => {
+      const vectors = await this.embedCountryPrompts(embedTexts, prompts, countries.length);
       try {
         await fs.mkdir(path.dirname(cacheFile), { recursive: true });
         const tmp = `${cacheFile}.${process.pid}.tmp`;
@@ -515,8 +525,10 @@ export class World {
       } catch {
         // a read-only data directory only costs the recomputation
       }
-    }
-    return vectors;
+      return vectors;
+    })().finally(() => World.building.delete(cacheFile));
+    World.building.set(cacheFile, job);
+    return job;
   }
 
   private async embedCountryPrompts(embedTexts: EmbedTexts, prompts: string[], countryCount: number): Promise<Float32Array> {
@@ -614,7 +626,10 @@ let shared: Promise<World> | null = null;
 
 /**
  * The node's world data, loaded once per process. The country text vectors of the shared model
- * are cached under <dataDir>/datum.
+ * (one per process, whatever its nodes) are cached under the process's DATA_DIR/datum
+ * (config.dataDir), not under a node's own data directory from a nodes file: one file serves every
+ * node of the checkout, and a node's data restored from a prepared snapshot keeps it. Tests set
+ * DATA_DIR so that a stand-in model's vectors never reach the real cache.
  */
 export function loadWorld(): Promise<World> {
   shared ??= World.load().then((world) => {

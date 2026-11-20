@@ -376,6 +376,8 @@ const WORLD_CITY_RANK: Record<number, number> = { 0: 0, 1: 0, 2: 1, 3: 2, 4: 3 }
 
 interface PlaceOut {
   n: string;
+  /** English name (`name:en`, else the local `name`) where it differs from `n`. */
+  e?: string;
   c: string;
   r: number;
   p: [number, number];
@@ -386,7 +388,7 @@ interface TileOut {
   urban?: number[][];
   wood?: number[][];
   bld?: number[][];
-  ww?: Record<string, { n?: string; l: number[] }[]>;
+  ww?: Record<string, { n?: string; e?: string; l: number[] }[]>;
   rd?: Record<string, number[][]>;
   br?: number[][];
   bd?: Record<string, number[][]>;
@@ -397,6 +399,14 @@ interface TileOut {
 }
 
 const nameOf = (f: MvtFeature): string => String(f.properties['name:de'] ?? f.properties['name'] ?? f.properties['name:latin'] ?? '').trim();
+/**
+ * The English console's name of a feature whose German one is `german`: `name:en`, else the local
+ * `name`, where it differs and is written in Latin letters; undefined otherwise (the German stands).
+ */
+const englishOf = (f: MvtFeature, german: string): string | undefined => {
+  const en = String(f.properties['name:en'] ?? f.properties['name_en'] ?? f.properties['name'] ?? '').trim();
+  return en !== '' && en !== german && /^[\u0000-\u024f\u1e00-\u1eff\u2000-\u206f]+$/.test(en) ? en : undefined;
+};
 
 function convert(layers: Map<string, MvtLayer>, z: number): TileOut {
   const out: TileOut = {};
@@ -438,7 +448,7 @@ function convert(layers: Map<string, MvtLayer>, z: number): TileOut {
 
   const waterway = layers.get('waterway');
   if (waterway) {
-    const groups: Record<string, { n?: string; l: number[] }[]> = {};
+    const groups: Record<string, { n?: string; e?: string; l: number[] }[]> = {};
     for (const f of rescale(waterway)) {
       if (f.type !== 2) continue;
       const cls = String(f.properties['class']);
@@ -448,7 +458,8 @@ function convert(layers: Map<string, MvtLayer>, z: number): TileOut {
         const s = simplify(g, tolerance);
         if (s.length < 4) continue;
         const name = nameOf(f);
-        (groups[key] ??= []).push(name && key !== 's' ? { n: name, l: pack(s) } : { l: pack(s) });
+        const en = name ? englishOf(f, name) : undefined;
+        (groups[key] ??= []).push(name && key !== 's' ? { n: name, ...(en ? { e: en } : {}), l: pack(s) } : { l: pack(s) });
       }
     }
     if (Object.keys(groups).length > 0) out.ww = groups;
@@ -520,7 +531,8 @@ function convert(layers: Map<string, MvtLayer>, z: number): TileOut {
         }
       }
       if (!found) continue;
-      pl.push({ n: name, c: cls, r: Number(f.properties['rank'] ?? 10) + rank * 10, p: found });
+      const en = cls !== 'country' ? englishOf(f, name) : undefined;
+      pl.push({ n: name, ...(en ? { e: en } : {}), c: cls, r: Number(f.properties['rank'] ?? 10) + rank * 10, p: found });
     }
     if (pl.length > 0) out.pl = pl;
   }
